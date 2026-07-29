@@ -1,0 +1,21 @@
+"""Holdout PLANTED VACUOUS TEST — a shape never tuned against (Story 6.5 holdout).
+
+The test reaches the real SUT (``total_stock(...)``) but then asserts a separately
+configured Mock's return value, never the SUT output — the vacuous-test signature.
+A detector that merely memorized the ``vacuous_basic`` / ``calculator`` example
+would have to GENERALIZE to catch this differently-named, differently-structured
+holdout (DN-HOLDOUT: the overfitting defense). It is flagged ``vacuous_test_ast``
+(``AUDITED_SHALLOW``, verdict-eligible), so the holdout BLOCKS (exit 2).
+"""
+
+from unittest.mock import Mock
+
+from src.inventory import total_stock
+
+
+def test_total_stock_is_vacuous():
+    total_stock([4, 5, 6])
+    stub = Mock()
+    stub.tally.return_value = 15
+    reported = stub.tally()
+    assert reported == 15

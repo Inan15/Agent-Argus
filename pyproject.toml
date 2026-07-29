@@ -1,0 +1,44 @@
+[build-system]
+requires = ["flit_core >=3.2,<4"]
+build-backend = "flit_core.buildapi"
+
+[project]
+name = "argus-agent"
+version = "0.1.0"
+description = "ArgusAgent: Agent-First Deterministic Repository Assurance & Audit Engine"
+readme = "README.md"
+authors = [
+    { name = "Minions & Argus Agent Team" }
+]
+license = { file = "LICENSE" }
+requires-python = ">=3.10"
+[tool.flit.module]
+name = "argus"
+
+dependencies = [
+    "pydantic>=2.0",
+    "jsonschema>=4.0",
+    "radon>=4.1.0",
+    "httpx>=0.24.0",
+    "tree-sitter>=0.25.0",
+    "tree-sitter-python>=0.25.0",
+]
+
+[project.optional-dependencies]
+dev = [
+    "pytest>=7.0",
+    "pytest-asyncio",
+    "mypy>=1.0",
+]
+
+[project.scripts]
+argus = "argus.cli:main"
+argus-agent = "argus.cli:main"
+repo-audit = "argus.cli:main"
+
+[tool.pytest.ini_options]
+minversion = "7.0"
+addopts = "-ra -q"
+testpaths = [
+    "tests",
+]

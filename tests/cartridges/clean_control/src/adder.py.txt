@@ -1,0 +1,5 @@
+"""Clean-control SUT module #1 (the false-accusation floor cartridge)."""
+
+
+def add(left, right):
+    return left + right

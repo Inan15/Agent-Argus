@@ -1,0 +1,21 @@
+"""Non-ASCII-named PLANTED VACUOUS TEST (cartridge ``nonascii_unicode``, Story 3.5).
+
+Both the directory (Cyrillic ``тесты``) and the imported SUT path (``café``) are
+non-ASCII. The test reaches the SUT but asserts a Mock's own configured value,
+not the real ``somme_totale`` output — so it is flagged ``vacuous_test_ast``
+(``AUDITED_SHALLOW``, verdict-eligible), making the cartridge BLOCK (exit 2). The
+non-ASCII paths must round-trip intact across a ``C``/``POSIX`` locale leg AND a
+UTF-8 leg, byte-identical (AI-E1-1, the Epic-1-FAIL class).
+"""
+
+from unittest.mock import Mock
+
+from src.café_calc import somme_totale
+
+
+def test_somme_totale_is_vacuous():
+    somme_totale([1, 2, 3])
+    fake = Mock()
+    fake.calculate.return_value = 6
+    pretended = fake.calculate()
+    assert pretended == 6

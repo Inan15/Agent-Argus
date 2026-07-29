@@ -1,0 +1,24 @@
+"""The PLANTED HEURISTIC-ONLY VACUOUS TEST (Story 7.1, distinct class).
+
+This test passes (green on GitHub / Sonar) but is meaningless: it REACHES the SUT
+(total_amount / average_amount are called) yet makes NO assertion at all — the
+assertion density is 0 over a non-trivial statement body, so it is heuristically
+vacuous. It is NOT AST-corroborated: the Tier-A corroboration path requires BOTH a
+SUT call AND a mock-domination signal (at least one assertion site AND at least one
+mock site). This test has NO mocks and NO assertions, so corroboration is withheld
+and the finding stays HEURISTIC-ONLY / advisory — the heuristic vacuous rule class,
+advisory and verdict-ineligible. This is a DISTINCT defect-rule class from the
+AST-corroborated vacuous rule — the golden-key seam Story 7.1 adds to the corpus.
+"""
+
+from src.orders import average_amount, total_amount
+
+
+def test_orders_pipeline_runs_without_asserting():
+    data = [10, 20, 30]
+    summed = total_amount(data)
+    averaged = average_amount(data)
+    combined = summed + averaged
+    rendered = str(combined)
+    width = len(rendered)
+    truthy = width > 0

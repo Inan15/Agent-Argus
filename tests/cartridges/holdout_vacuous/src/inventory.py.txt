@@ -1,0 +1,20 @@
+"""Holdout SUT — a clean inventory module the detectors were NOT tuned against.
+
+Story 6.5 (FR20) hidden-holdout cartridge. ``inventory.py`` is a genuine,
+well-formed NON-test Python module with real definitions, so the pipeline grades
+it ``audited_deep`` (FR7-grounded). Its planted defect lives in the test file: a
+vacuous test that asserts a stub's return value rather than the real SUT output.
+The names / structure here were chosen AFTER the 6.1–6.4 detectors were frozen
+and were never used to shape any detector heuristic (DN-HOLDOUT).
+"""
+
+
+def total_stock(quantities):
+    running = 0
+    for amount in quantities:
+        running = running + amount
+    return running
+
+
+def restock(level, delta):
+    return level + delta

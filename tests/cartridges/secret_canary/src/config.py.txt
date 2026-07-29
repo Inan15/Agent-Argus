@@ -1,0 +1,25 @@
+"""A production module carrying a planted source sentinel + several secret shapes (cartridge).
+
+This cartridge is the secret-containment property fixture (Story 4.4). It plants a
+distinctive NON-secret source sentinel (proves no plain audited source byte is
+retained) plus one of every secret SHAPE the 2.5 detector families recognize:
+an AWS access-key id, an AWS secret-access-key assignment, a PEM private-key
+header, a token/password assignment, and a high-entropy string literal.
+"""
+
+SECRET_CANARY_SOURCE_SENTINEL_q9ZxLmNrTaBcDeF1234567890ABCDEFghij = "marker-only-distinctive-source-byte"
+
+
+def aws_client():
+    aws_access_key_id = "AKIASECRETCANARY12AB"
+    aws_secret_access_key = "SecretCanaryAwsSeCrEtVaLuE0123456789abcde"
+    return aws_access_key_id, aws_secret_access_key
+
+
+def token_client():
+    api_token = "SecretCanaryTokenValueZZZ987654321abcDEF"
+    password = "SecretCanaryPasswordValueQQQ12345678zzz"
+    return api_token, password
+
+
+PEM_HEADER = "-----BEGIN RSA PRIVATE KEY-----"

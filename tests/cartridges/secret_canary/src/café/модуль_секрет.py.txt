@@ -1,0 +1,12 @@
+"""A non-ASCII-path module with a non-ASCII / Cyrillic secret value (cartridge, AI-E1-1).
+
+The file PATH is non-ASCII (café/Cyrillic) AND it carries a non-ASCII Cyrillic
+secret value assigned to a secret-shaped key — proving containment holds for
+non-ASCII secrets + non-ASCII paths.
+"""
+
+
+def подключить():
+    пароль = "пароль_секрет_SecretCanary_значение_0123456789"
+    api_key = "SecretCanaryNonAsciiKeyЗначение0123456789ZZ"
+    return пароль, api_key

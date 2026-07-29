@@ -1,0 +1,15 @@
+"""Orphan-cartridge SUT — one LIVE function + one genuinely DEAD function.
+
+``add`` is referenced by the test (a name-match call edge), so it is NOT an
+orphan. ``unused_helper`` is referenced by NOTHING anywhere in the repo and is
+not on the exclusion/entrypoint set — it is the planted orphan the Story 6.3
+detector must surface as an advisory finding (FR12).
+"""
+
+
+def add(left, right):
+    return left + right
+
+
+def unused_helper(value):
+    return value * 2

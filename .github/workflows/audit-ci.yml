@@ -1,0 +1,42 @@
+name: ArgusAgent Repository Audit & Assurance CI
+
+on:
+  push:
+    branches: [ master, main ]
+  pull_request:
+    branches: [ master, main ]
+
+jobs:
+  audit-assurance-ci:
+    name: Run Argus Quality Gates & Audit Suite
+    runs-on: ubuntu-latest
+    strategy:
+      matrix:
+        python-version: ["3.10", "3.11", "3.12"]
+
+    steps:
+      - name: Checkout Repository
+        uses: actions/checkout@v4
+
+      - name: Set up Python ${{ matrix.python-version }}
+        uses: actions/setup-python@v5
+        with:
+          python-version: ${{ matrix.python-version }}
+          cache: 'pip'
+
+      - name: Install Dependencies
+        run: |
+          python -m pip install --upgrade pip
+          pip install .[dev]
+          pip install tree-sitter tree-sitter-python radon bandit vulture
+
+      - name: Run Static Analysis & Security Scans
+        run: |
+          echo "=== MYPY TYPE CHECK ==="
+          mypy argus
+          echo "=== BANDIT SECURITY SCAN ==="
+          bandit -r argus -f txt
+
+      - name: Run Pytest & Coverage Assurance Gate
+        run: |
+          pytest --cov=argus --cov-report=term-missing --cov-report=xml --cov-fail-under=80

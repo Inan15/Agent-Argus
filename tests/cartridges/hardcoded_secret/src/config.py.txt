@@ -1,0 +1,11 @@
+"""A production-code module carrying planted hardcoded secrets (cartridge)."""
+
+
+def aws_client():
+    aws_secret_access_key = "PLANTEDxAbCdEfGhIjKlMnOpQrStUvWxYz012345"
+    return aws_secret_access_key
+
+
+def api_client():
+    api_key = "пароль_секрет_значение_PLANTED_1234567"
+    return api_key

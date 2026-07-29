@@ -1,0 +1,5 @@
+"""Clean-control SUT module #2 (the false-accusation floor cartridge)."""
+
+
+def multiply(left, right):
+    return left * right

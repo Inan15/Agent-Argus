@@ -1,0 +1,20 @@
+"""Cross-partition seam cartridge (Story 7.1, distinct class) — chain node 19.
+
+This cartridge is a single 45-file COHESION CHAIN: each module calls the next, so
+the 1.4 graph links all 45 files into ONE cohesion component. Under the DEFAULT
+NFR-SC1 limits (<=40 files/unit) that component is OVERSIZED, so the REAL 2.4
+partition_repository splits it into multiple bounded units via
+_split_oversized_component — a chain edge that crosses the split boundary
+becomes a REAL CutEdge. The REAL 6.4 Prosecutor cut-edge pass then emits a
+genuine advisory rule_id="cross_partition" finding through the UNMODIFIED
+run_audit_detailed pipeline (no harness change). cross_partition is a
+NOT-already-labeled, CONFIRMED-emitted rule class — the second distinct class
+Story 7.1 adds, and a never-tuned HOLDOUT (the overfitting defense).
+"""
+
+
+from src.chain20 import step20
+
+
+def step19():
+    return step20()

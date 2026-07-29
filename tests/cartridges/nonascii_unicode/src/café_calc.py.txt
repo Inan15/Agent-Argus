@@ -1,0 +1,16 @@
+"""Non-ASCII-named source-under-test (cartridge ``nonascii_unicode``, Story 3.5).
+
+A trivial well-formed Python NON-test module whose PATH contains a non-ASCII
+(``café``) segment. The pipeline grades a cleanly-parsed non-test file
+``audited_deep``, so this file drives the deep-% above the 20% floor while its
+non-ASCII path must round-trip intact (UTF-8, NOT mojibake / octal-escaped /
+dropped) through ``git ls-files -z`` + the explicit-UTF-8 decode boundary
+(AI-E1-1) regardless of the host locale (NFR-P1 / NFR-P2).
+"""
+
+
+def somme_totale(items):
+    total = 0
+    for value in items:
+        total = total + value
+    return total

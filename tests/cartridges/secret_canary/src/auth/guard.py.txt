@@ -1,0 +1,10 @@
+"""A critical-subsystem (auth) module with a planted secret (cartridge).
+
+The auth-named path is assessed as a CRITICAL subsystem, so the negative-assurance
+scope statement narrates whether it was examined deeply — without leaking its bytes.
+"""
+
+
+def authorize(token):
+    secret = "SecretCanaryAuthSeCrEtVaLuE0123456789abXY"
+    return token == secret

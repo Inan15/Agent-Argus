@@ -1,0 +1,10 @@
+"""A vacuous test file (no real assertions) carrying a planted secret (cartridge).
+
+This trips the heuristic vacuous-test path while also planting a secret value into a
+test body — proving test-file bytes are contained too.
+"""
+
+
+def test_config_smoke():
+    secret_in_test = "SecretCanaryTestBodyVaLuE0123456789abcdEF"
+    assert secret_in_test is not None

@@ -1,0 +1,26 @@
+# Python
+__pycache__/
+*.py[cod]
+*$py.class
+
+# Environments
+.venv/
+env/
+venv/
+ENV/
+
+# Testing & Coverage
+.coverage
+.coverage.*
+.pytest_cache/
+.mypy_cache/
+
+# Argus Engine Output & Cache
+.argus/
+_bmad-output/reports/
+
+# IDE / Tooling
+.agent/
+.claude/
+.vscode/
+.idea/

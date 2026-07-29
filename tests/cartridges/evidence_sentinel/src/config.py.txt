@@ -1,0 +1,8 @@
+"""A production-code module with a planted source sentinel + a planted secret (cartridge)."""
+
+EVIDENCE_SENTINEL_zXqW7vKpLmNrTaBcDeF1234567890ABCDEF = "marker-only-distinctive-source-byte"
+
+
+def aws_client():
+    aws_secret_access_key = "PLANTEDxAbCdEfGhIjKlMnOpQrStUvWxYz012345"
+    return aws_secret_access_key

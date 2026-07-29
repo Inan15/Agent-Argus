@@ -1,0 +1,20 @@
+"""Source-under-test for the heuristic-only vacuous-test cartridge (Story 7.1).
+
+A trivial, well-formed SUT module. The pipeline grades a cleanly-parsed Python
+NON-test file ``audited_deep`` (the V1 claim-emitted deep path) so the ledger
+clears the 20% floor and the verdict is driven by the deep-% gate — NOT
+INSUFFICIENT_COVERAGE.
+"""
+
+
+def total_amount(orders):
+    running = 0
+    for order in orders:
+        running = running + order
+    return running
+
+
+def average_amount(orders):
+    if not orders:
+        return 0
+    return total_amount(orders) / len(orders)

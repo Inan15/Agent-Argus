@@ -1,0 +1,11 @@
+"""A genuine test that references ``add`` (so ``add`` is NOT an orphan).
+
+It does NOT reference ``unused_helper`` — that function is the planted dead code.
+"""
+
+from src.calc import add
+
+
+def test_add_real_output():
+    assert add(2, 3) == 5
+    assert add(0, 0) == 0

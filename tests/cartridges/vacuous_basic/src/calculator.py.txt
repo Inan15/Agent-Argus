@@ -1,0 +1,17 @@
+"""Source-under-test for the vacuous-test cartridge (cartridge #1).
+
+A trivial, well-formed SUT module. The pipeline grades a cleanly-parsed Python
+NON-test file ``audited_deep`` (the V1 claim-emitted deep path) so the ledger
+clears the 20% floor and the verdict is BLOCKED (not INSUFFICIENT_COVERAGE).
+"""
+
+
+def compute_total(items):
+    total = 0
+    for value in items:
+        total = total + value
+    return total
+
+
+def apply_discount(total, rate):
+    return total - (total * rate)

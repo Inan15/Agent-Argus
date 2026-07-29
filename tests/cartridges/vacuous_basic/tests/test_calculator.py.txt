@@ -1,0 +1,22 @@
+"""The PLANTED VACUOUS TEST (cartridge #1) — the defect APAA must flag 🔴.
+
+This test passes (green on GitHub / Sonar) but is meaningless: it constructs a
+Mock, asserts the Mock's own configured return value, and never asserts the real
+``compute_total`` SUT output. It reaches the SUT (``compute_total(...)`` is
+called) but the assertion derives from a mock, not the SUT result — so it is
+flagged by BOTH the heuristic AND the Tier-A vacuous-path AST subset
+(``vacuous_test_ast``, ``AUDITED_SHALLOW``, verdict-eligible). That AST
+corroboration is what makes the BLOCKED verdict legitimate (not a false 🔴).
+"""
+
+from unittest.mock import Mock
+
+from src.calculator import compute_total
+
+
+def test_compute_total_is_vacuous():
+    compute_total([1, 2, 3])
+    fake = Mock()
+    fake.calculate.return_value = 6
+    pretended = fake.calculate()
+    assert pretended == 6
