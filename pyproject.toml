@@ -30,6 +30,9 @@ dev = [
     "pytest-asyncio",
     "mypy>=1.0",
 ]
+llm = [
+    "litellm>=1.0.0",
+]
 
 [project.scripts]
 argus = "argus.cli:main"

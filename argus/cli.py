@@ -145,6 +145,20 @@ def build_parser() -> argparse.ArgumentParser:
         default="",
         help="Output directory path for generated Markdown reports.",
     )
+    audit.add_argument(
+        "--ignore-path",
+        action="append",
+        dest="ignore_paths",
+        default=[],
+        help="Path glob pattern to ignore / treat as mock fixture (can specify multiple).",
+    )
+    audit.add_argument(
+        "--ignore-pattern",
+        action="append",
+        dest="ignore_patterns",
+        default=[],
+        help="Secret string pattern to exclude from findings (can specify multiple).",
+    )
     return parser
 
 
@@ -194,6 +208,8 @@ def main(argv: list[str] | None = None) -> int:
         enabled_passes=enabled_passes,
         enabled_reports=enabled_reports,
         report_dir=args.report_dir or "",
+        ignore_paths=tuple(args.ignore_paths or ()),
+        ignore_patterns=tuple(args.ignore_patterns or ()),
     )
 
 

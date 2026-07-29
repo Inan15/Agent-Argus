@@ -260,8 +260,8 @@ def radon_invoker(file_path: str, source: str) -> ToolInvocation:
     returned :class:`ToolInvocation` carries only the closed outcome + ``int`` metrics.
     """
     try:
-        from radon.complexity import cc_visit
-        from radon.raw import analyze
+        from radon.complexity import cc_visit  # type: ignore[import-untyped]
+        from radon.raw import analyze  # type: ignore[import-untyped]
     except Exception:  # noqa: BLE001 — import missing -> unavailable, never raise (AR10)
         return ToolInvocation(file_path=file_path, outcome=ToolOutcome.UNAVAILABLE)
 

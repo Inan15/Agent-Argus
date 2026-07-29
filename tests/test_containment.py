@@ -132,8 +132,35 @@ def test_ensure_tree_creates_exactly_the_fixed_subdirs(tmp_path: Path) -> None:
     assert children == ["assignments", "cache", "decisions", "findings", "state"]
 
 
+from argus.shared.workspace_containment import (
+    WorkspaceArtifactWriter,
+    WorkspaceContainmentError as MinionsWorkspaceContainmentError,
+)
+
+
+def test_workspace_artifact_writer_materialize_and_containment(tmp_path: Path) -> None:
+    """Test WorkspaceArtifactWriter enabled property, materialization, and traversal rejection."""
+    disabled_writer = WorkspaceArtifactWriter("")
+    assert not disabled_writer.enabled
+    with pytest.raises(WorkspaceContainmentError, match="disabled"):
+        disabled_writer.materialize("run-1", "file.py", "code")
+
+    writer = WorkspaceArtifactWriter(str(tmp_path))
+    assert writer.enabled
+
+    locator = writer.materialize("run-1", "src/mod.py", "print('hello')")
+    assert locator == "run-1/src/mod.py"
+    written_file = tmp_path / "run-1" / "src" / "mod.py"
+    assert written_file.exists()
+    assert written_file.read_text(encoding="utf-8") == "print('hello')"
+
+    with pytest.raises(WorkspaceContainmentError, match="escapes"):
+        writer.materialize("run-1", "../../../escape.txt", "evil")
+
+
 def _snapshot(root: Path) -> set[str]:
     """All paths under *root* (relative POSIX) — for asserting no FS mutation."""
     if not root.exists():
         return set()
     return {p.relative_to(root).as_posix() for p in root.rglob("*")}
+

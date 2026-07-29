@@ -71,8 +71,14 @@ def _is_contained(candidate: Path, root: Path) -> bool:
     ``WorkspaceArtifactWriter._is_contained`` (AR7 reuse-canonical, no fork).
     """
     try:
-        return candidate.is_relative_to(root) and candidate != root
-    except ValueError:
+        c = candidate.resolve()
+        r = root.resolve()
+        if c.drive and r.drive:
+            if c.drive.upper() == r.drive.upper():
+                c = Path(c.drive.upper() + str(c)[len(c.drive):])
+                r = Path(r.drive.upper() + str(r)[len(r.drive):])
+        return c.is_relative_to(r) and c != r
+    except (ValueError, RuntimeError):
         return False
 
 

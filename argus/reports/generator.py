@@ -93,8 +93,9 @@ def render_security_review_report(
     for f in secret_findings[:100]:  # Cap table view at 100 entries for readability
         rule_id = str(f.get("rule_id", "hardcoded_secret"))
         file_path = str(f.get("file_path", ""))
-        line_no = f.get("line_number")
-        locator = format_locator_link(file_path, int(line_no) if line_no is not None else None)
+        line_no_val = f.get("line_number")
+        line_no_int = int(line_no_val) if isinstance(line_no_val, (int, str)) and str(line_no_val).isdigit() else None
+        locator = format_locator_link(file_path, line_no_int)
         
         snippet = str(f.get("snippet", f.get("matched_string", "")))
         masked_snippet = mask_secret(snippet) if snippet else "High Entropy Token"
@@ -108,8 +109,8 @@ def render_security_review_report(
         lines.append(f"*Note: Showing first 100 of {len(secret_findings)} secret findings. Full log stored in evidence bundle.*")
     lines.append("")
     lines.append("### Recommended Remediation:")
-    lines.append("1. Move plaintext credentials, private keys, or API tokens to environment variables or a secret vault.")
-    lines.append("2. Rotate any credentials exposed in source control.")
+    lines.append("1. **Secrets**: Revoke any active exposed credentials and transition to environment variables or secret managers.")
+    lines.append("2. **False Positives**: Use inline annotations `# argus:ignore secret_scan` or add file paths to `ignore_paths` in audit request.")
     lines.append("")
     return "\n".join(lines)
 
@@ -125,7 +126,7 @@ def render_architecture_review_report(
     ]
     
     lines: list[str] = []
-    lines.append("# 🏛️ Architecture & Modularity Review Report")
+    lines.append("# Architecture & Modularity Review Report")
     lines.append("")
     lines.append(f"- **Cross-Partition Analysis**: {'COMPLETED' if 'prosecutor' in request.enabled_passes else 'SKIPPED'}")
     lines.append(f"- **Orphan Code Analysis**: {'COMPLETED' if 'orphan' in request.enabled_passes else 'SKIPPED'}")
@@ -142,8 +143,9 @@ def render_architecture_review_report(
     for f in arch_findings[:100]:
         rule_id = str(f.get("rule_id", f.get("detector_id", "architecture_finding")))
         file_path = str(f.get("file_path", ""))
-        line_no = f.get("line_number")
-        locator = format_locator_link(file_path, int(line_no) if line_no is not None else None)
+        line_no_val = f.get("line_number")
+        line_no_int = int(line_no_val) if isinstance(line_no_val, (int, str)) and str(line_no_val).isdigit() else None
+        locator = format_locator_link(file_path, line_no_int)
         details = str(f.get("message", "Architectural boundary/reference finding"))
         rows.append([f"`{rule_id}`", locator, details])
 

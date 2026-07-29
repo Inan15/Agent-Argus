@@ -7,9 +7,8 @@ LLM substrate (architecture Decision E / cross-cutting #7):
 - ``ports`` — the PURE-importable ``LLMDispatchPort`` Protocol + the frozen
   ``LLMDispatchInput`` / ``LLMRecording`` DTOs + the typed no-crash errors.
   Importing it pulls NO provider code and NO FastAPI.
-- ``minions_llm_adapter`` — the IMPURE adapter that implements the port over a
-  reused ``minions_core.providers.orchestrator.LLMProviderOrchestrator`` (the
-  ONE module in ``argus.audit`` allowed to import ``providers``).
+- ``open_llm_adapter`` — the open-source multi-provider adapter (LiteLLM + HTTPX).
+- ``minions_llm_adapter`` — the backward-compatible adapter wrapper.
 - ``deep_audit`` — the thin V1 seam that depends on the PORT TYPE, never the
   adapter (DIP). The deep AST-grounding logic is Story 6.2.
 

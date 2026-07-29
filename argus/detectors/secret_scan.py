@@ -74,6 +74,7 @@ import math
 import re
 from collections import Counter
 from fractions import Fraction
+from typing import Sequence
 
 from pydantic import BaseModel, ConfigDict, Field
 
@@ -297,6 +298,8 @@ class SecretScanDetector:
         source: str,
         ast_entry: AstIndexEntry,
         coverage_envelope_slice: str | None = None,
+        ignore_paths: Sequence[str] = (),
+        ignore_patterns: Sequence[str] = (),
     ) -> DetectorResult:
         """Scan *file_path* for hardcoded secrets and emit REDACTED findings (AR8).
 
@@ -323,6 +326,9 @@ class SecretScanDetector:
                 degraded=(DegradedCondition(file_path=file_path, reason="secret_scan_failed"),)
             )
 
+        from argus.detectors.secret_suppression import SecretSuppressionEngine
+
+        source_lines = source.splitlines()
         findings = []
         seen: set[tuple[int, int, str]] = set()
         for match in sorted(
@@ -332,10 +338,24 @@ class SecretScanDetector:
             if identity in seen:
                 continue
             seen.add(identity)
+
+            line_text = (
+                source_lines[match.start_line - 1]
+                if 1 <= match.start_line <= len(source_lines)
+                else None
+            )
+            is_suppressed, _reason = SecretSuppressionEngine.evaluate_suppression(
+                file_path=file_path,
+                snippet=match.value,
+                line_content=line_text,
+                ignore_paths=ignore_paths,
+                ignore_patterns=ignore_patterns,
+            )
+            if is_suppressed:
+                continue
+
             ast_span = _ast_span_for_line(ast_entry.definitions, match.start_line)
             # ── PRODUCER-SIDE REDACTION (the keystone) ──
-            # Compute the redaction-safe evidence, then DISCARD the raw value. The
-            # value never enters the draft / locator / rule_id / envelope-slice.
             self._evidence_for(match)
             draft = FindingDraft(
                 file_path=file_path,
@@ -349,6 +369,7 @@ class SecretScanDetector:
             findings.append(
                 build_recording(draft, depth_supported=None, claim_present=False)
             )
+
 
         recording_ids = tuple(f.recording_id for f in findings)
         entry = grade_entry(

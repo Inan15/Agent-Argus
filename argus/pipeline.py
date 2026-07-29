@@ -418,8 +418,17 @@ def _detect_per_file(
             )
         )
         if "security" in enabled_passes:
-            secret_result = secret_detector.run(file_path=rel, source=source, ast_entry=entry)
+            ignore_paths = request.ignore_paths if request else ()
+            ignore_patterns = request.ignore_patterns if request else ()
+            secret_result = secret_detector.run(
+                file_path=rel,
+                source=source,
+                ast_entry=entry,
+                ignore_paths=ignore_paths,
+                ignore_patterns=ignore_patterns,
+            )
             findings.extend(secret_result.findings)
+
         if is_test_file(rel):
             if "vacuous" in enabled_passes:
                 result = detector.run(file_path=rel, source=source, ast_entry=entry)

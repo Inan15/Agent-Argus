@@ -6,23 +6,23 @@
 
 `$X` is sized EMPIRICALLY to cover the full-repo partition plan, folding the V1 deterministic zero-token contributions (`files_indexed` + `python_files` + `detector_passes` — the SAME recipe `pipeline._build_cost_ledger` uses, REUSED via the 3.1 `account_spend` accountant, no fork) across ALL units into a running `int`-credit total, then applying a 5/4 headroom.
 
-- **V1 deterministic total: 300 credits**
-- **Headroom (5/4): +75 credits**
-- **Sized ceiling `$X`: 375 credits** (int — never a float, AR4)
-- Build-cost proxy (total physical LOC): 14708
-- **NFR-C1 baseline ratio (audit-cost / build-cost proxy): `75/3677`** (Fraction/marker — never a float)
+- **V1 deterministic total: 315 credits**
+- **Headroom (5/4): +78 credits**
+- **Sized ceiling `$X`: 393 credits** (int — never a float, AR4)
+- Build-cost proxy (total physical LOC): 15082
+- **NFR-C1 baseline ratio (audit-cost / build-cost proxy): `315/15082`** (Fraction/marker — never a float)
 
 ## Per-unit contribution basis
 
 | partition_id (12ch) | files | python_files | unit_credits | clears 20% floor |
 |---|---|---|---|---|
-| `1d878fd2e258` | 17 | 17 | 85 | True |
-| `3eb7f5a266e0` | 3 | 3 | 15 | True |
-| `a0d26c321a1b` | 40 | 40 | 200 | True |
+| `1ea4f10ffd3a` | 5 | 5 | 25 | True |
+| `3ea554fa085d` | 40 | 40 | 200 | True |
+| `57bf6ff1f6f3` | 18 | 18 | 90 | True |
 
 ## 3.2 halt demonstration (the ceiling halts + downgrades if breached)
 
-- Under `BudgetConfig(ceiling_credits=375)` the run FITS (`ceiling_reached is False`): **True**
+- Under `BudgetConfig(ceiling_credits=393)` the run FITS (`ceiling_reached is False`): **True**
 - Under a ceiling ONE credit below the total the run BREACHES (`ceiling_reached is True`, the ≥-is-a-breach REUSE): **True** — the 3.2 halt→skip→downgrade→report path fires.
 
 ## OI3 invariant preserved

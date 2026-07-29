@@ -262,3 +262,30 @@ def test_dispatch_error_message_carries_no_response_bytes() -> None:
     assert "reason=" in str(err)
     assert isinstance(drift, LLMDispatchError)
     assert drift.pinned == "a" and drift.captured == "b"
+
+
+def test_open_llm_adapter_builds_messages_and_calculates_credits() -> None:
+    """Verify OpenLLMAdapter builds prompt messages from input and computes non-zero credits."""
+    from argus.audit.open_llm_adapter import OpenLLMAdapter, credits_to_str
+
+    adapter = OpenLLMAdapter(model="mock-model", provider_id="test-provider", api_base=None)
+    req = LLMDispatchInput(
+        target_path="argus/pipeline.py",
+        prompt_template_version="deep-v1",
+        tier="high",
+        run_id="run-123",
+    )
+    messages = adapter._build_messages(req)
+    assert len(messages) == 2
+    assert messages[0]["role"] == "system"
+    assert "deep-v1" in messages[0]["content"]
+    assert messages[1]["role"] == "user"
+    assert "argus/pipeline.py" in messages[1]["content"]
+    assert "run-123" in messages[1]["content"]
+
+    rec = adapter.dispatch(req)
+    assert rec.model_checkpoint == "mock-model"
+    assert rec.input_tokens > 0
+    assert rec.credits_used != "0"
+    assert rec.credits_used == credits_to_str(0.000025)
+

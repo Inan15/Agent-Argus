@@ -4,22 +4,22 @@
 
 ## Provenance
 
-- Commit descriptor (HEAD at generation): `unresolved-HEAD`
-- Source files (tracked `minions_core/`, excluding `minions_core/apaa/`): **60**
-- Total physical LOC (build-cost proxy): **14708**
+- Commit descriptor (HEAD at generation): `084c6a724f8c7011f4059e9d282e74499da63a79`
+- Source files (tracked `minions_core/`, excluding `minions_core/apaa/`): **63**
+- Total physical LOC (build-cost proxy): **15082**
 - NFR-SC1 scale envelope: soft ≤40 files / ≤15000 LOC; hard ≤60 / ≤25000.
 - Reused planner: `partition_repository` (Story 2.4) — no fork (AR7).
 
 ## Partition map (OI2 — full-repo, MULTIPLE bounded units)
 
 - **Unit count: 3**
-- **Recorded cut edges (recorded-NOT-analyzed, the 6.4 seam): 9**
+- **Recorded cut edges (recorded-NOT-analyzed, the 6.4 seam): 37**
 
 | # | partition_id (sha256, 12ch) | files | LOC | context_pressure | ≤hard ceiling |
 |---|---|---|---|---|---|
-| 1 | `1d878fd2e258` | 17 | 717 | False | True |
-| 2 | `3eb7f5a266e0` | 3 | 1140 | True | True |
-| 3 | `a0d26c321a1b` | 40 | 12851 | True | True |
+| 1 | `1ea4f10ffd3a` | 5 | 1411 | True | True |
+| 2 | `3ea554fa085d` | 40 | 12935 | True | True |
+| 3 | `57bf6ff1f6f3` | 18 | 736 | False | True |
 
 ## AC2 — every TARGETED unit clears the 20%-deep coverage floor
 

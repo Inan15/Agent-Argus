@@ -577,7 +577,10 @@ def test_no_new_audit_request_field_or_cli_flag() -> None:
         "enabled_passes",
         "enabled_reports",
         "report_dir",
+        "ignore_paths",
+        "ignore_patterns",
     }
+
 
 
 

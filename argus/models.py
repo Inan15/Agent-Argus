@@ -117,6 +117,14 @@ class AuditRequest(BaseModel):
         default="",
         description="Optional output directory path for generated markdown reports.",
     )
+    ignore_paths: tuple[str, ...] = Field(
+        default=(),
+        description="Optional path glob patterns to ignore or mark as mock test fixtures.",
+    )
+    ignore_patterns: tuple[str, ...] = Field(
+        default=(),
+        description="Optional secret pattern strings to exclude from security findings.",
+    )
 
     def to_provenance_payload(self) -> dict[str, object]:
         """Return the request's NON-path provenance (NFR-S1 — never ``repo_path``).
@@ -137,5 +145,9 @@ class AuditRequest(BaseModel):
             "excluded_critical_paths": list(self.excluded_critical_paths),
             "enabled_passes": list(self.enabled_passes),
             "enabled_reports": list(self.enabled_reports),
+            "report_dir": self.report_dir,
+            "ignore_paths": list(self.ignore_paths),
+            "ignore_patterns": list(self.ignore_patterns),
         }
+
 

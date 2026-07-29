@@ -87,6 +87,8 @@ _LANGUAGE_BY_SUFFIX: dict[str, str] = {
     ".php": "php",
 }
 
+_PYTHON_SUFFIXES: tuple[str, ...] = (".py", ".pyi", ".pyx")
+
 # tree-sitter node types we treat as definitions across languages.
 _DEF_KIND_BY_NODE: dict[str, str] = {
     "function_definition": "function",
