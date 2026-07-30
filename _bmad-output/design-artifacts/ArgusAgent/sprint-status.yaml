@@ -1,17 +1,25 @@
 # generated: 2026-06-18
-# last_updated: 2026-06-18
-# project: APAA (AI Project Assurance Audit)
+# last_updated: 2026-07-30
+# project: ArgusAgent (formerly APAA — AI Project Assurance Audit)
 # project_key: NOKEY
 # tracking_system: file-system
-# story_location: _bmad-output/design-artifacts/APAA/stories
+# story_location: _bmad-output/design-artifacts/ArgusAgent/stories
 #
-# SCOPE NOTE: This is the APAA-LOCAL sprint tracker. APAA is a self-contained
-# headless sub-tool whose planning lives under _bmad-output/design-artifacts/APAA/
-# (placement decision 2026-06-18) — kept SEPARATE from the Minions platform tracker
-# at _bmad-output/implementation-artifacts/sprint-status.yaml (Epics 1–20). The
-# Minions sprint-status-integrity gate (scripts/check_sprint_status_integrity.py)
-# targets the Minions file only; this APAA file is intentionally outside its scope.
-# Source epics: _bmad-output/design-artifacts/APAA/epics.md (7 epics / 34 stories).
+# PATH NOTE (2026-07-30): the artifact folder was renamed APAA -> ArgusAgent, but
+# the path references inside these documents were not updated at the time. The
+# machine-read keys above now match the on-disk layout. Prose and frontmatter
+# elsewhere in this folder may still say `design-artifacts/APAA/`; read those as
+# `design-artifacts/ArgusAgent/`. Historical evidence text is left as written.
+#
+# SCOPE NOTE: This is the ArgusAgent-LOCAL sprint tracker. ArgusAgent is a
+# self-contained headless sub-tool whose planning lives under
+# _bmad-output/design-artifacts/ArgusAgent/ (placement decision 2026-06-18) — it was
+# kept SEPARATE from the Minions platform tracker at
+# _bmad-output/implementation-artifacts/sprint-status.yaml (Epics 1–20). That
+# platform path does NOT exist in this repo: ArgusAgent has since been extracted
+# from the Minions monorepo and stands alone. The Minions sprint-status-integrity
+# gate (scripts/check_sprint_status_integrity.py) targeted the Minions file only.
+# Source epics: _bmad-output/design-artifacts/ArgusAgent/epics.md (7 epics / 34 stories).
 
 # STATUS DEFINITIONS:
 # ==================

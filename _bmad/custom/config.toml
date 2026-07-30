@@ -5,3 +5,22 @@
 #
 # [agents.bmad-agent-pm]
 # description = "Prefers short, bulleted PRDs over narrative drafts."
+
+# ─────────────────────────────────────────────────────────────────
+# Artifact paths pinned to the on-disk layout (2026-07-30).
+#
+# The installer default points planning_artifacts at
+# `_bmad-output/planning-artifacts` and implementation_artifacts at
+# `_bmad-output/implementation-artifacts`. Neither directory exists in this
+# repo: ArgusAgent was extracted from the Minions monorepo, where those two
+# paths belonged to the *platform* tracker. Every ArgusAgent artifact — PRD,
+# architecture, epics, sprint-status.yaml, stories/, retros — lives in a
+# single folder instead, so both keys resolve there.
+#
+# Pinned here rather than in _bmad/config.toml because that file is
+# installer-owned and regenerated on every install.
+# ─────────────────────────────────────────────────────────────────
+
+[modules.bmm]
+planning_artifacts = "{project-root}/_bmad-output/design-artifacts/ArgusAgent"
+implementation_artifacts = "{project-root}/_bmad-output/design-artifacts/ArgusAgent"
