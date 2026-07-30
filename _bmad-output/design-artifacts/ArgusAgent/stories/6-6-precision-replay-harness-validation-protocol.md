@@ -7,7 +7,7 @@ Status: done
 > **APAA sub-project story.** APAA (AI Project Assurance Audit) is a SEPARATE headless audit sub-tool
 > placed at `minions_core/apaa/` (placement decision 2026-06-18). It reuses Minions infra BY IMPORT but
 > ships its own `APAA-FR-*` / `APAA-NFR-*` driver namespace. Planning lives under
-> `_bmad-output/design-artifacts/APAA/`; the tracker is `_bmad-output/design-artifacts/APAA/sprint-status.yaml`
+> `_bmad-output/design-artifacts/ArgusAgent/`; the tracker is `_bmad-output/design-artifacts/ArgusAgent/sprint-status.yaml`
 > (NOT the Minions platform tracker at `_bmad-output/implementation-artifacts/sprint-status.yaml`). All
 > CLAUDE.md rules apply (§3.2 ≤1200-line files, §3.7 headless-only, §3.8 12-Factor + secret masking, §3.4
 > evidence immutability). Run all gate/test commands under `PYTHONIOENCODING=utf-8` (Windows / cp1252).
@@ -27,7 +27,7 @@ Status: done
 > THREE things: (1) builds `minions_core/apaa/precision/replay_harness.py` — a PURE, zero-LLM-token function
 > that **diffs emitted findings against a labeled ground-truth set** and emits precision (+ the false-positive
 > denominator from clean repos) as a fixed-precision number (NOT a float — AR4); (2) authors the **validation
-> protocol** (a committed `_bmad-output/design-artifacts/APAA/precision-validation-protocol.md` deliverable)
+> protocol** (a committed `_bmad-output/design-artifacts/ArgusAgent/precision-validation-protocol.md` deliverable)
 > that fixes WHO validates, expert-hours/repo, the precision-adjudication method (sample size, who judges a
 > 🔴 "genuinely real"), and the per-metric pass/fail; and (3) honours the **phased-population plan** —
 > the ground-truth schema is **designed for N=5** and the ≥80%-precision gate is reported **PROVISIONAL
@@ -148,7 +148,7 @@ The harness + protocol must cover EACH, RED-first where a naive implementation w
    against a harness that only counts planted-defect TPs and ignores clean-repo FPs — that would inflate
    precision to a meaningless 100%).
 3. **The validation protocol (a committed V1 deliverable).** A committed
-   `_bmad-output/design-artifacts/APAA/precision-validation-protocol.md` that fixes: WHO validates (the
+   `_bmad-output/design-artifacts/ArgusAgent/precision-validation-protocol.md` that fixes: WHO validates (the
    role — e.g. Engineering Lead / QA Lead / an external adjudicator), expert-hours/repo budget, the
    **precision-adjudication method** (sample size, who judges whether a 🔴 is "genuinely real", how a
    borderline finding is resolved), the per-metric pass/fail thresholds (≥80% precision, the false-positive
@@ -236,7 +236,7 @@ gate-status roll-up) into sibling modules — measure first, do not split specul
   serializes under `PYTHONIOENCODING=utf-8` (the single serializer is `ensure_ascii=False`).
 - **AI-E5-4 (governance 🟢) — central defer register.** If 6.6 surfaces a detector gap (a finding the diff
   classifies FP/FN that reveals a real detector weakness), a missing-cartridge need, or a known precision
-  limitation it does NOT close, file it append-only in `_bmad-output/design-artifacts/APAA/deferred-work.md`
+  limitation it does NOT close, file it append-only in `_bmad-output/design-artifacts/ArgusAgent/deferred-work.md`
   with the six CC-3 fields (`target_story` e.g. `6-7-hitl-stop-proceed-escalation-append-only-decision-record`
   or `epic-7-...` for "grow corpus to N=5 / dogfood precision").
 - **AI-E5-7 (process 🟢) — keep the structural gates green + partial-reuse docstring precision.** The harness
@@ -278,7 +278,7 @@ gate-status roll-up) into sibling modules — measure first, do not split specul
 > ground truth → TP/FP/FN → a fixed-precision precision number (+ the clean-repo FP denominator); (2) a PURE
 > precision-result schema (per-cartridge rows + corpus totals + the precision ratio-string + `n` + floor +
 > `provisional` + gate-status); (3) the committed validation protocol
-> (`_bmad-output/design-artifacts/APAA/precision-validation-protocol.md`); (4) the honest provisional
+> (`_bmad-output/design-artifacts/ArgusAgent/precision-validation-protocol.md`); (4) the honest provisional
 > gate-status report (REUSE/extend the 6.5 `precision_gate_status()` marker — the gate stays PROVISIONAL
 > until N≥5 with the protocol applied); (5) the precision-harness test module
 > (`tests/apaa/test_precision_replay.py`); (6) any NEW defer filed with the six CC-3 fields. It does NOT
@@ -322,7 +322,7 @@ contribution from clean repos is explicit in the result.
 **AC4 — A committed validation protocol fixes who validates, the adjudication method, and per-metric pass/fail (OI1 / FR20)**
 **Given** the OI1 LOCK (N=5, phased 3→5, precision over findings, ≥80% gate provisional below N=5)
 **When** the validation protocol is authored
-**Then** a committed `_bmad-output/design-artifacts/APAA/precision-validation-protocol.md` exists and fixes:
+**Then** a committed `_bmad-output/design-artifacts/ArgusAgent/precision-validation-protocol.md` exists and fixes:
 WHO validates (the role), the expert-hours/repo budget, the **precision-adjudication method** (sample size,
 who judges a 🔴 "genuinely real", how a borderline finding is resolved), the **per-metric pass/fail**
 thresholds (≥80% precision, the false-positive ceiling, the N=5 corpus floor), and the **phased-population
@@ -429,7 +429,7 @@ docstring).
   - [ ] If the module approaches 1200 lines, split the pure diff/classify core from the result/roll-up into
         sibling modules (measure first — do not split speculatively).
 - [ ] **Task 3 — Author the validation protocol document** (AC: 4)
-  - [ ] `_bmad-output/design-artifacts/APAA/precision-validation-protocol.md`: fixes WHO validates, the
+  - [ ] `_bmad-output/design-artifacts/ArgusAgent/precision-validation-protocol.md`: fixes WHO validates, the
         expert-hours/repo budget, the precision-adjudication method (sample size, who judges a 🔴 "genuinely
         real", borderline resolution), the per-metric pass/fail (≥80% precision, FP ceiling, N=5 floor), and
         the phased-population plan (3→5, who labels new cartridges, when the gate flips). References the
@@ -458,7 +458,7 @@ docstring).
         new detector/Prosecutor edit; NO live LLM.
   - [ ] **AI-E5-4:** if 6.6 surfaces a detector gap (an FP/FN the diff reveals as a real detector weakness),
         a missing-cartridge need, or a known precision limitation it does NOT close, file it append-only in
-        `_bmad-output/design-artifacts/APAA/deferred-work.md` with the six CC-3 fields (`target_story` e.g.
+        `_bmad-output/design-artifacts/ArgusAgent/deferred-work.md` with the six CC-3 fields (`target_story` e.g.
         `6-7-hitl-stop-proceed-escalation-append-only-decision-record` or an `epic-7-...` key for "grow corpus
         to N=5 / dogfood precision").
   - [ ] **AI-E5-3 / AI-E2-1 GATE:** the mandatory artifacts (the harness + the result schema + the protocol
@@ -513,7 +513,7 @@ docstring).
   Notes. 6.6 must not manufacture cartridges merely to flip the gate, and must not overclaim a cleared gate
   from too few findings.
 - **DN-PROTOCOL.** The validation protocol is a committed `.md` deliverable
-  (`_bmad-output/design-artifacts/APAA/precision-validation-protocol.md`), not code. It fixes who validates,
+  (`_bmad-output/design-artifacts/ArgusAgent/precision-validation-protocol.md`), not code. It fixes who validates,
   expert-hours/repo, the precision-adjudication method, the per-metric pass/fail, and the phased-population
   plan — recorded BEFORE the ground-truth schema is frozen (it is the durable §3.4 source of truth for HOW
   the number is judged).
@@ -567,7 +567,7 @@ docstring).
 
 ### Context Reference
 
-- Story: `_bmad-output/design-artifacts/APAA/stories/6-6-precision-replay-harness-validation-protocol.md`
+- Story: `_bmad-output/design-artifacts/ArgusAgent/stories/6-6-precision-replay-harness-validation-protocol.md`
   (the precision replay harness + the validation protocol, Tier-B).
 - Reused substrate (by import, no fork — §3.3 / AR7): `tests/apaa/cartridges/_registry.py::CARTRIDGE_REGISTRY`
   (+ `GoldenFinding` / `CartridgeSpec` / `VALIDATION_SET_FLOOR_N` / `populated_planted_defect_count()` /
@@ -578,7 +578,7 @@ docstring).
 - Pattern generalized: `tests/apaa/test_cartridge_selfaudit.py` (per-cartridge golden-key true positive →
   corpus-wide precision roll-up).
 - Project rules: `CLAUDE.md` §3.2 (≤1200 lines), §3.4 (evidence immutability), §3.7 (headless), §3.8
-  (12-Factor + secret masking); APAA `_bmad-output/design-artifacts/APAA/` planning + own sprint tracker.
+  (12-Factor + secret masking); APAA `_bmad-output/design-artifacts/ArgusAgent/` planning + own sprint tracker.
 
 ### Agent Model Used
 
@@ -606,7 +606,7 @@ claude-opus-4-8[1m] (BMAD dev-story worker, 2026-06-30).
      `PrecisionResult` + `CartridgePrecisionRow` schema (DN-RESULT-SCHEMA), and
      `precision_gate_status_for` (REUSES/extends the 6.5 marker convention, no forked marker).
   2. `minions_core/apaa/precision/__init__.py` (39 lines) — the package surface.
-  3. `_bmad-output/design-artifacts/APAA/precision-validation-protocol.md` — the committed V1
+  3. `_bmad-output/design-artifacts/ArgusAgent/precision-validation-protocol.md` — the committed V1
      validation protocol (DN-PROTOCOL): WHO validates (Engineering Lead / QA Lead / external
      tie-break), expert-hours/repo budget, the precision-adjudication method (full-corpus
      exhaustive + borderline resolution), the per-metric pass/fail (≥80% exact-Fraction, 0
@@ -675,12 +675,12 @@ claude-opus-4-8[1m] (BMAD dev-story worker, 2026-06-30).
 - `minions_core/apaa/precision/replay_harness.py` (new — the PURE diff/classify/roll-up core).
 - `minions_core/apaa/precision/__init__.py` (new — the package surface).
 - `tests/apaa/test_precision_replay.py` (new — the `APAA-PRECISION` corpus roll-up test).
-- `_bmad-output/design-artifacts/APAA/precision-validation-protocol.md` (new — the V1 protocol).
+- `_bmad-output/design-artifacts/ArgusAgent/precision-validation-protocol.md` (new — the V1 protocol).
 - `tests/apaa/test_no_web_imports.py` (modified — additive registration + provider-free test).
-- `_bmad-output/design-artifacts/APAA/deferred-work.md` (modified — DF-6-6-A appended).
-- `_bmad-output/design-artifacts/APAA/stories/6-6-precision-replay-harness-validation-protocol.md`
+- `_bmad-output/design-artifacts/ArgusAgent/deferred-work.md` (modified — DF-6-6-A appended).
+- `_bmad-output/design-artifacts/ArgusAgent/stories/6-6-precision-replay-harness-validation-protocol.md`
   (this story file — status + Dev Agent Record + Change Log).
-- `_bmad-output/design-artifacts/APAA/sprint-status.yaml` (modified — 6-6 → review).
+- `_bmad-output/design-artifacts/ArgusAgent/sprint-status.yaml` (modified — 6-6 → review).
 
 ## Change Log
 

@@ -7,7 +7,7 @@ Status: done
 > **APAA sub-project story.** APAA (AI Project Assurance Audit) is a SEPARATE headless audit sub-tool
 > placed at `minions_core/apaa/` (placement decision 2026-06-18). It reuses Minions infra BY IMPORT but
 > ships its own `APAA-FR-*` / `APAA-NFR-*` driver namespace. Planning lives under
-> `_bmad-output/design-artifacts/APAA/`; the tracker is `_bmad-output/design-artifacts/APAA/sprint-status.yaml`
+> `_bmad-output/design-artifacts/ArgusAgent/`; the tracker is `_bmad-output/design-artifacts/ArgusAgent/sprint-status.yaml`
 > (NOT the Minions platform tracker). All CLAUDE.md rules apply (§3.2 ≤1200-line files, §3.7 headless-only,
 > §3.8 12-Factor + secret masking, §3.4 evidence immutability).
 
@@ -610,20 +610,20 @@ and must NOT rewrite the existing row. Keep it minimal — a new row is not requ
 
 ### References
 
-- [Source: _bmad-output/design-artifacts/APAA/epics.md#Story-2.4 Repository partitioning into bounded audit units + work-manifest permission boundary] (the three ACs: multiple graph-derived ≤40-file/15k-LOC units with context_pressure auto-downgrade; the work_manifest IS the read permission boundary, off-scope read impossible; NO cross-partition seam analysis — the 6.4 cross_partition Prosecutor pass is the V1 mitigation, full seam auditor + non-"root" partition_id is V2)
-- [Source: _bmad-output/design-artifacts/APAA/E-PRD/prd.md#FR3] ("APAA can partition the repository into bounded audit units within a declared budget")
-- [Source: _bmad-output/design-artifacts/APAA/E-PRD/prd.md#NFR-S4] ("An auditor agent reads ONLY the files in its work-manifest (permission boundary); off-scope reads impossible")
-- [Source: _bmad-output/design-artifacts/APAA/E-PRD/prd.md#NFR-SC1] ("V1 audit units ≤ 40 files / 15k LOC (hard ceiling ≤ 60 / 25k); larger repos partition. Full 10k→500k LOC scaling is V2")
-- [Source: _bmad-output/design-artifacts/APAA/epics.md#Open delivery inputs OI2] (Minions-dogfood scope LOCKED full-repo multi-partition; V1 limitation = multi-UNIT auditing, NOT the V2 seam auditor; the cross_partition Prosecutor pass (Story 6.4) re-reads cut edges as the V1 mitigation; full seam analysis is V2)
-- [Source: _bmad-output/design-artifacts/APAA/architecture.md#B. Repository Intake & Indexing] (Graph-derived partitioning, import/call graph not directories; ≤40 files/15k LOC units; context_pressure auto-downgrade)
-- [Source: _bmad-output/design-artifacts/APAA/architecture.md#F. Persistence & State] (filesystem-as-contract .apaa/{state,assignments,findings,decisions}/; assignments/ = work_manifests = auditor permission boundaries NFR-S4)
-- [Source: _bmad-output/design-artifacts/APAA/architecture.md#Project Structure & Boundaries] (package tree: index/partitioner.py # FR3/FR4 — graph-derived partitions; .apaa/assignments/ = work_manifests = auditor permission boundaries NFR-S4; filesystem boundary: all writes via containment helper)
-- [Source: _bmad-output/design-artifacts/APAA/architecture.md#Pure/Impure Separation (master rule)] (index = impure shell; result models pure; the planner is pure over the recorded index + LOC inputs)
-- [Source: _bmad-output/design-artifacts/APAA/architecture.md#Determinism Patterns (NFR-P1/D1)] (one serializer; no float/clock/uuid/random/iteration-order; content-addressed filenames AR11)
-- [Source: _bmad-output/design-artifacts/APAA/architecture.md#Error / Degradation Patterns] (failure → typed error/recorded condition, never an uncaught raise; no bare except: pass / print())
-- [Source: _bmad-output/design-artifacts/APAA/stories/1-4-tree-sitter-ast-index-repo-intake-python-stack-detection.md] (DONE — RepoIntake + AstIndex/AstIndexEntry/CodeEdge/Definition the partition graph folds over; partition_id="root" reserved; partitioner deferred HERE; DF-1-4-A unresolved-edge limitation)
-- [Source: _bmad-output/design-artifacts/APAA/stories/1-3-apaa-store-writer-reader-filesystem-containment.md] (DONE — ApaaStorePaths assignments/ dir + ApaaStoreWriter.write_assignment to REUSE for manifest persistence; round-trip golden; is_relative_to containment rigor)
-- [Source: _bmad-output/design-artifacts/APAA/stories/2-3-critical-subsystem-identification-operator-designation.md] (DONE — critical subsystem is a content-derived FILE SET, NOT a graph partition; partitioning proper deferred to THIS story; partition_id stays "root" there)
+- [Source: _bmad-output/design-artifacts/ArgusAgent/epics.md#Story-2.4 Repository partitioning into bounded audit units + work-manifest permission boundary] (the three ACs: multiple graph-derived ≤40-file/15k-LOC units with context_pressure auto-downgrade; the work_manifest IS the read permission boundary, off-scope read impossible; NO cross-partition seam analysis — the 6.4 cross_partition Prosecutor pass is the V1 mitigation, full seam auditor + non-"root" partition_id is V2)
+- [Source: _bmad-output/design-artifacts/ArgusAgent/E-PRD/prd.md#FR3] ("APAA can partition the repository into bounded audit units within a declared budget")
+- [Source: _bmad-output/design-artifacts/ArgusAgent/E-PRD/prd.md#NFR-S4] ("An auditor agent reads ONLY the files in its work-manifest (permission boundary); off-scope reads impossible")
+- [Source: _bmad-output/design-artifacts/ArgusAgent/E-PRD/prd.md#NFR-SC1] ("V1 audit units ≤ 40 files / 15k LOC (hard ceiling ≤ 60 / 25k); larger repos partition. Full 10k→500k LOC scaling is V2")
+- [Source: _bmad-output/design-artifacts/ArgusAgent/epics.md#Open delivery inputs OI2] (Minions-dogfood scope LOCKED full-repo multi-partition; V1 limitation = multi-UNIT auditing, NOT the V2 seam auditor; the cross_partition Prosecutor pass (Story 6.4) re-reads cut edges as the V1 mitigation; full seam analysis is V2)
+- [Source: _bmad-output/design-artifacts/ArgusAgent/architecture.md#B. Repository Intake & Indexing] (Graph-derived partitioning, import/call graph not directories; ≤40 files/15k LOC units; context_pressure auto-downgrade)
+- [Source: _bmad-output/design-artifacts/ArgusAgent/architecture.md#F. Persistence & State] (filesystem-as-contract .apaa/{state,assignments,findings,decisions}/; assignments/ = work_manifests = auditor permission boundaries NFR-S4)
+- [Source: _bmad-output/design-artifacts/ArgusAgent/architecture.md#Project Structure & Boundaries] (package tree: index/partitioner.py # FR3/FR4 — graph-derived partitions; .apaa/assignments/ = work_manifests = auditor permission boundaries NFR-S4; filesystem boundary: all writes via containment helper)
+- [Source: _bmad-output/design-artifacts/ArgusAgent/architecture.md#Pure/Impure Separation (master rule)] (index = impure shell; result models pure; the planner is pure over the recorded index + LOC inputs)
+- [Source: _bmad-output/design-artifacts/ArgusAgent/architecture.md#Determinism Patterns (NFR-P1/D1)] (one serializer; no float/clock/uuid/random/iteration-order; content-addressed filenames AR11)
+- [Source: _bmad-output/design-artifacts/ArgusAgent/architecture.md#Error / Degradation Patterns] (failure → typed error/recorded condition, never an uncaught raise; no bare except: pass / print())
+- [Source: _bmad-output/design-artifacts/ArgusAgent/stories/1-4-tree-sitter-ast-index-repo-intake-python-stack-detection.md] (DONE — RepoIntake + AstIndex/AstIndexEntry/CodeEdge/Definition the partition graph folds over; partition_id="root" reserved; partitioner deferred HERE; DF-1-4-A unresolved-edge limitation)
+- [Source: _bmad-output/design-artifacts/ArgusAgent/stories/1-3-apaa-store-writer-reader-filesystem-containment.md] (DONE — ApaaStorePaths assignments/ dir + ApaaStoreWriter.write_assignment to REUSE for manifest persistence; round-trip golden; is_relative_to containment rigor)
+- [Source: _bmad-output/design-artifacts/ArgusAgent/stories/2-3-critical-subsystem-identification-operator-designation.md] (DONE — critical subsystem is a content-derived FILE SET, NOT a graph partition; partitioning proper deferred to THIS story; partition_id stays "root" there)
 - [Source: minions_core/apaa/index/ast_index.py] (build_ast_index/AstIndex/AstIndexEntry/CodeEdge/Definition — the partition graph source to reuse)
 - [Source: minions_core/apaa/store/paths.py + store/writer.py] (ApaaStorePaths assignments/ + ApaaStoreWriter.write_assignment — the manifest-persistence shell to reuse)
 - [Source: minions_core/apaa/pipeline.py] (run_audit_detailed + _read_source — the impure orchestrator + per-file source read to reuse for the LOC map)

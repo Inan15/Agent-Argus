@@ -7,7 +7,7 @@ Status: done
 > **APAA sub-project story.** APAA (AI Project Assurance Audit) is a SEPARATE headless audit sub-tool
 > placed at `minions_core/apaa/` (placement decision 2026-06-18). It reuses Minions infra BY IMPORT but
 > ships its own `APAA-FR-*` / `APAA-NFR-*` driver namespace. Planning lives under
-> `_bmad-output/design-artifacts/APAA/`; the tracker is `_bmad-output/design-artifacts/APAA/sprint-status.yaml`
+> `_bmad-output/design-artifacts/ArgusAgent/`; the tracker is `_bmad-output/design-artifacts/ArgusAgent/sprint-status.yaml`
 > (NOT the Minions platform tracker at `_bmad-output/implementation-artifacts/sprint-status.yaml`). All
 > CLAUDE.md rules apply (§3.2 ≤1200-line files, §3.7 headless-only, §3.8 12-Factor + secret masking, §3.4
 > evidence immutability). Run all gate/test commands under `PYTHONIOENCODING=utf-8`.
@@ -221,7 +221,7 @@ templates are `*.py.txt` (NOT collected by pytest — the `_cartridge.py` preced
   `PYTHONIOENCODING=utf-8` (the single serializer is `ensure_ascii=False`).
 - **AI-E5-4 (governance 🟢) — central defer register.** If 6.5 surfaces a detector gap, a missing-cartridge
   need, or a known overfitting risk it does NOT close, file it append-only in
-  `_bmad-output/design-artifacts/APAA/deferred-work.md` with the six CC-3 fields (`target_story` e.g.
+  `_bmad-output/design-artifacts/ArgusAgent/deferred-work.md` with the six CC-3 fields (`target_story` e.g.
   `6-6-precision-replay-harness-validation-protocol` for "grow corpus to N=5" or an Epic-6/V2 key).
 - **AI-E5-7 (process 🟢) — keep the structural gates green + partial-reuse docstring precision.** The harness
   keeps the no-web-imports gate, the single-serializer AST gate, and the file-size gate green (it adds NO
@@ -440,7 +440,7 @@ precedent).
         cartridge templates + a registry helper). Confirm the no-web-imports + single-serializer + file-size
         gates green. NO `cli.py`/HTTP/CI-job change; NO new detector/Prosecutor edit; NO live LLM.
   - [x] **AI-E5-4:** if 6.5 surfaces a detector gap, an overfitting risk, or a "grow corpus to N=5" item it
-        does NOT close, file it append-only in `_bmad-output/design-artifacts/APAA/deferred-work.md` with the
+        does NOT close, file it append-only in `_bmad-output/design-artifacts/ArgusAgent/deferred-work.md` with the
         six CC-3 fields (`target_story` e.g. `6-6-precision-replay-harness-validation-protocol`).
   - [x] **AI-E5-3 / AI-E2-1 GATE:** the mandatory artifacts (the registry + the harness + the holdout
         cartridge + the trap + the no-crash row + the gate-status marker + the new tests) EXIST + pass BEFORE
@@ -509,10 +509,10 @@ precedent).
 
 ### Context Reference
 
-- Story: `_bmad-output/design-artifacts/APAA/stories/6-5-defect-cartridge-self-audit-harness-holdout-clean-controls.md` (FR20 defect-cartridge self-audit harness, Tier-B).
+- Story: `_bmad-output/design-artifacts/ArgusAgent/stories/6-5-defect-cartridge-self-audit-harness-holdout-clean-controls.md` (FR20 defect-cartridge self-audit harness, Tier-B).
 - Reused substrate (by import, no fork — §3.3 / AR7): `tests/apaa/cartridges/_cartridge.py::stage_cartridge` (the 1.7 fresh-single-commit cartridge-pinning helper), `minions_core/apaa/pipeline.py::run_audit_detailed` (the deterministic zero-token V1 pipeline), `minions_core/apaa/store/reader.py::ApaaStoreReader` (the tamper-guard reader), `minions_core/apaa/ledger/recording.py::Recording` (`rule_id`/`locators`/`advisory`/`depth_supported` — the golden-key match fields).
 - Pattern generalized: `tests/apaa/test_pipeline_signature_demo.py` (stage → audit → assert verdict/exit/ordered-findings + two-run byte-identical `content_hash` + clean-control floor).
-- Project rules: `CLAUDE.md` §3.2 (≤1200 lines), §3.4 (evidence immutability), §3.7 (headless), §3.8 (12-Factor + secret masking); APAA `_bmad-output/design-artifacts/APAA/` planning + own sprint tracker.
+- Project rules: `CLAUDE.md` §3.2 (≤1200 lines), §3.4 (evidence immutability), §3.7 (headless), §3.8 (12-Factor + secret masking); APAA `_bmad-output/design-artifacts/ArgusAgent/` planning + own sprint tracker.
 
 ### Agent Model Used
 
@@ -559,8 +559,8 @@ Defer decision (AI-E5-4): NO new defer filed. 6.5 surfaced no detector gap and n
 - `tests/apaa/test_cartridge_selfaudit.py` — the parametrized self-audit harness (15 test functions, 33 parametrized cases; area `APAA-CARTRIDGE`, `TC-APAA-CARTRIDGE-001-01..15`). [new]
 - `tests/apaa/cartridges/holdout_vacuous/src/inventory.py.txt` — the holdout SUT (clean `audited_deep` module). [new]
 - `tests/apaa/cartridges/holdout_vacuous/tests/test_inventory.py.txt` — the holdout planted vacuous test (`kind=holdout`). [new]
-- `_bmad-output/design-artifacts/APAA/stories/6-5-defect-cartridge-self-audit-harness-holdout-clean-controls.md` — Tasks checked off, Dev Agent Record completed, Status → `review`, Change Log appended.
-- `_bmad-output/design-artifacts/APAA/sprint-status.yaml` — `6-5-...: review`, `last_updated` date-only bump.
+- `_bmad-output/design-artifacts/ArgusAgent/stories/6-5-defect-cartridge-self-audit-harness-holdout-clean-controls.md` — Tasks checked off, Dev Agent Record completed, Status → `review`, Change Log appended.
+- `_bmad-output/design-artifacts/ArgusAgent/sprint-status.yaml` — `6-5-...: review`, `last_updated` date-only bump.
 
 ## Change Log
 

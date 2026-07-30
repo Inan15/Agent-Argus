@@ -7,7 +7,7 @@ Status: done
 > **APAA sub-project story.** APAA (AI Project Assurance Audit) is a SEPARATE headless audit sub-tool
 > placed at `minions_core/apaa/` (placement decision 2026-06-18). It reuses Minions infra BY IMPORT but
 > ships its own `APAA-FR-*` / `APAA-NFR-*` driver namespace. Planning lives under
-> `_bmad-output/design-artifacts/APAA/`; the tracker is `_bmad-output/design-artifacts/APAA/sprint-status.yaml`
+> `_bmad-output/design-artifacts/ArgusAgent/`; the tracker is `_bmad-output/design-artifacts/ArgusAgent/sprint-status.yaml`
 > (NOT the Minions platform tracker at `_bmad-output/implementation-artifacts/sprint-status.yaml`). All
 > CLAUDE.md rules apply (§3.2 ≤1200-line files, §3.7 headless-only, §3.8 12-Factor + secret masking, §3.4
 > evidence immutability).
@@ -117,7 +117,7 @@ package the prior retro's action items as the next epic's backlog).
   the single serializer is `ensure_ascii=False`). Run the suite under `PYTHONIOENCODING=utf-8` (project
   memory — the cp1252 emoji crash). At least one canary fixture carries a non-ASCII path/value.
 - **AI-E4-4 (governance 🟢) — central defer register.** If this story files a NEW defer, file it
-  append-only in `_bmad-output/design-artifacts/APAA/deferred-work.md` (the single canonical APAA defer
+  append-only in `_bmad-output/design-artifacts/ArgusAgent/deferred-work.md` (the single canonical APAA defer
   source), not only in the story file, with the six CC-3 fields.
 
 ## Acceptance Criteria
@@ -299,7 +299,7 @@ in the module docstring).
   - [x] Confirm NO working-tree diff to the frozen Epic-1..4 producer/spine surfaces (the key COMPOSES them
         read-only). Confirm NO `.apaa/cache/` byte written, NO `cli.py`/HTTP/CI-job change.
   - [x] **AI-E4-4 / DN-DEFER:** if a NEW defer is filed, file it append-only in
-        `_bmad-output/design-artifacts/APAA/deferred-work.md` with the six CC-3 fields. Do NOT pull 5.2 store /
+        `_bmad-output/design-artifacts/ArgusAgent/deferred-work.md` with the six CC-3 fields. Do NOT pull 5.2 store /
         5.3 invalidation / 6.1 live-capture into scope.
   - [x] **AI-E4-3 / AI-E2-1 GATE:** the mandatory artifacts (`cache/key.py` + the detector-descriptor set +
         `tests/apaa/test_cache_key.py` with the perturbation matrix + the documented RED-then-green) EXIST + pass
@@ -309,7 +309,7 @@ in the module docstring).
 
 <!-- defer-schema-session: 2026-06-28 -->
 
-- [x] [Review][Defer] prompt-template version closure input has no key slot (forward-coupling, Low) [minions_core/apaa/cache/key.py:172] — architecture §77 explicitly enumerates `prompt-template version` among the recording-producing-closure key inputs; `RecordingProducingClosure` folds every other listed input but not this one. Out of V1 scope (no live LLM in Tier-A), BUT — unlike `model_checkpoint`, which was given a placeholder slot to pre-empt exactly this — the prompt-template version has no slot. When 6.1 wires the live LLM, a prompt-template change would NOT move the key (silent cache staleness). The `CACHE_KEY_SCHEMA_VERSION` bump lever + `extra="forbid"` model allow a clean 6.1 addition. Filed as DF-5-1-A (see `_bmad-output/design-artifacts/APAA/deferred-work.md`). Interim doc-only mitigation for THIS round: add a `key.py` docstring forward-note that prompt-template version is an Epic-6 LLM-path closure input deferred to 6.1 (so the deferral is recorded next to the slot it will occupy). target_story: 6-1-llm-dispatch-port-minions-orchestrator-adapter.
+- [x] [Review][Defer] prompt-template version closure input has no key slot (forward-coupling, Low) [minions_core/apaa/cache/key.py:172] — architecture §77 explicitly enumerates `prompt-template version` among the recording-producing-closure key inputs; `RecordingProducingClosure` folds every other listed input but not this one. Out of V1 scope (no live LLM in Tier-A), BUT — unlike `model_checkpoint`, which was given a placeholder slot to pre-empt exactly this — the prompt-template version has no slot. When 6.1 wires the live LLM, a prompt-template change would NOT move the key (silent cache staleness). The `CACHE_KEY_SCHEMA_VERSION` bump lever + `extra="forbid"` model allow a clean 6.1 addition. Filed as DF-5-1-A (see `_bmad-output/design-artifacts/ArgusAgent/deferred-work.md`). Interim doc-only mitigation for THIS round: add a `key.py` docstring forward-note that prompt-template version is an Epic-6 LLM-path closure input deferred to 6.1 (so the deferral is recorded next to the slot it will occupy). target_story: 6-1-llm-dispatch-port-minions-orchestrator-adapter.
   - **RESOLVED 2026-06-28 (dev-story fix iter-1) — DF-5-1-A CLOSED.** Applied the reviewer's
     full suggested fix (not the interim doc-only mitigation): added a `prompt_template_version`
     field to `RecordingProducingClosure` mirroring the `model_checkpoint` DN-PLACEHOLDER slot
@@ -504,14 +504,14 @@ The one substantive finding is closure-completeness relative to the architecture
 
 ### References
 
-- Epic: `_bmad-output/design-artifacts/APAA/epics.md` — Epic 5 / Story 5.1 (cache-key derivation, full
+- Epic: `_bmad-output/design-artifacts/ArgusAgent/epics.md` — Epic 5 / Story 5.1 (cache-key derivation, full
   recording-producing closure, + CI canary; FR27; NFR-D1; AR5).
-- PRD: `_bmad-output/design-artifacts/APAA/E-PRD/prd.md` — FR27 (reproduce the same verdict for the same
+- PRD: `_bmad-output/design-artifacts/ArgusAgent/E-PRD/prd.md` — FR27 (reproduce the same verdict for the same
   repository and APAA version), NFR-D1 (same repo @ commit @ APAA version → identical verdict + ledger via
   local content-addressed memoization; key = content-hash + model checkpoint + detector-set hash; NOT an
   assumption the LLM repeats itself), NFR-D2 (deterministic + zero-LLM-token), NFR-D3 (content hashes cover
   the canonical payload only), NFR-P1 (byte-identical across hosts/environments), NFR-M1/M2.
-- Architecture: `_bmad-output/design-artifacts/APAA/architecture.md` — §76-82 (cache key = full
+- Architecture: `_bmad-output/design-artifacts/ArgusAgent/architecture.md` — §76-82 (cache key = full
   recording-producing closure; detector-set content-hash NOT a human version string; checkpoint from API
   response; mid-run drift → `checkpoint_drift` → abort/re-audit; CI canary), §91-96 (CC #1 the KEY is the
   keystone; CC #2 memoization caches errors → reproducibility ≠ correctness, detector-set-hash invalidation
@@ -521,7 +521,7 @@ The one substantive finding is closure-completeness relative to the architecture
   (`cache/key.py — R3 — single cache-key derivation (PURE) + CI canary`), §475 (`test_cache_key.py`), AR1
   (pinned tool versions: tree-sitter / radon), AR4 (single serializer / no float / clock-free), AR5 (one
   cache-key function), AR6 (invalidation), AR8 (pure/impure), AR10 (typed degradation).
-- Epic-4 retro: `_bmad-output/design-artifacts/APAA/epic-4-retro-2026-06-28.md` — §6 Next-Epic Preview
+- Epic-4 retro: `_bmad-output/design-artifacts/ArgusAgent/epic-4-retro-2026-06-28.md` — §6 Next-Epic Preview
   (5.1 folds the closure; the model-checkpoint input is "captured from the API response" but the dispatch
   port is Epic-6 6.1 → 5.1 must define a stable, testable V1 placeholder; flag as a 5.1 readiness note),
   §9 Significant-Discovery Alert (the AR5 model-checkpoint forward-coupling — define a testable V1
@@ -537,7 +537,7 @@ The one substantive finding is closure-completeness relative to the architecture
 - Test precedent: `tests/apaa/test_canonical_determinism.py` (the golden serializer + envelope
   canonicalization pattern), `tests/apaa/test_no_web_imports.py` (`_MODULES_UNDER_GUARD` — extend),
   `tests/apaa/test_canonical_single_serializer.py` (the single-serializer AST gate).
-- Defer register: `_bmad-output/design-artifacts/APAA/deferred-work.md` — file any NEW defer append-only
+- Defer register: `_bmad-output/design-artifacts/ArgusAgent/deferred-work.md` — file any NEW defer append-only
   here with the six CC-3 fields (AI-E4-4).
 
 ## Dev Agent Record
@@ -582,7 +582,7 @@ claude-opus-4-8 (dev-story, implement) — 2026-06-28.
 - EDIT `tests/apaa/test_no_web_imports.py` — extended `_MODULES_UNDER_GUARD` with `minions_core.apaa.cache.key` (extend, not fork).
 - EDIT (fix iter-1) `minions_core/apaa/cache/key.py` — added `V1_PROMPT_TEMPLATE_VERSION` + `prompt_template_version` closure slot (DF-5-1-A), folded into `_closure_payload`, validator leg, `CACHE_KEY_SCHEMA_VERSION` `1 → 2`, docstring forward-note.
 - EDIT (fix iter-1) `tests/apaa/test_cache_key.py` — added `prompt_template_version` perturbation leg + TC-APAA-CACHE-001-21/22 (placeholder default + drift seam); regenerated golden key to `2628b9a6…550ca87`.
-- EDIT (fix iter-1) `_bmad-output/design-artifacts/APAA/deferred-work.md` — DF-5-1-A append-only CLOSED note.
+- EDIT (fix iter-1) `_bmad-output/design-artifacts/ArgusAgent/deferred-work.md` — DF-5-1-A append-only CLOSED note.
 
 ### Change Log
 

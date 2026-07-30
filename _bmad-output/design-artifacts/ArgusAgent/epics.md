@@ -5,12 +5,12 @@ stepsCompleted:
   - step-03-create-stories
   - step-04-final-validation
 inputDocuments:
-  - _bmad-output/design-artifacts/APAA/E-PRD/prd.md
-  - _bmad-output/design-artifacts/APAA/architecture.md
+  - _bmad-output/design-artifacts/ArgusAgent/E-PRD/prd.md
+  - _bmad-output/design-artifacts/ArgusAgent/architecture.md
   - _bmad-output/planning-artifacts/decisions/2026-06-18-apaa-placement-under-minions-core.md
-  - _bmad-output/design-artifacts/APAA/product-brief-apaa.md
-  - _bmad-output/design-artifacts/APAA/research-technical-2026-06-17.md
-  - _bmad-output/design-artifacts/APAA/implementation-readiness-report-2026-06-18.md
+  - _bmad-output/design-artifacts/ArgusAgent/product-brief-apaa.md
+  - _bmad-output/design-artifacts/ArgusAgent/research-technical-2026-06-17.md
+  - _bmad-output/design-artifacts/ArgusAgent/implementation-readiness-report-2026-06-18.md
 project_name: 'APAA (AI Project Assurance Audit)'
 author: 'XAgent007'
 date: '2026-06-18'
@@ -26,7 +26,7 @@ driver_namespace: 'APAA-FR-* / APAA-NFR-* (1:1 onto PRD FR1–33 / NFR clusters)
 > but ships its own `APAA-FR-*` / `APAA-NFR-*` driver namespace, defined in the architecture document.
 
 Date: 2026-06-18 · Primary sources: `E-PRD/prd.md` (33 FRs / 21 NFRs) + `architecture.md` (READY FOR IMPLEMENTATION)
-Per-story spec packs (created later by `/bmad-create-story`): `_bmad-output/design-artifacts/APAA/stories/`
+Per-story spec packs (created later by `/bmad-create-story`): `_bmad-output/design-artifacts/ArgusAgent/stories/`
 
 ## Overview
 
@@ -1040,9 +1040,9 @@ So that the strategic question is answered and the path to the ≥80%-precision 
 
 1. **Operator review** of this epic structure (7 epics) and the 3 open delivery-input defaults (OI1–OI3).
 2. **`/bmad-sprint-planning`** to seed APAA story keys into a sprint-status tracker (APAA is self-contained
-   under `design-artifacts/APAA/`; decide whether it shares `sprint-status.yaml` or gets its own).
+   under `design-artifacts/ArgusAgent/`; decide whether it shares `sprint-status.yaml` or gets its own).
 3. **`/bmad-create-story`** per story (starting Story 1.1) to produce the full context-filled spec packs in
-   `_bmad-output/design-artifacts/APAA/stories/`.
+   `_bmad-output/design-artifacts/ArgusAgent/stories/`.
 4. **CLAUDE.md §4a follow-up** (per the placement decision Consequences): once stories land, add APAA as a
    Component → Driver Map row and note the `apaa/` sub-package — tied to the first implementation story, not
    pre-emptive.

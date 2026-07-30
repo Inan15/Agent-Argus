@@ -7,7 +7,7 @@ Status: done
 > **APAA sub-project story.** APAA (AI Project Assurance Audit) is a SEPARATE headless audit sub-tool
 > placed at `minions_core/apaa/` (placement decision 2026-06-18). It reuses Minions infra BY IMPORT but
 > ships its own `APAA-FR-*` / `APAA-NFR-*` driver namespace. Planning lives under
-> `_bmad-output/design-artifacts/APAA/`; the tracker is `_bmad-output/design-artifacts/APAA/sprint-status.yaml`
+> `_bmad-output/design-artifacts/ArgusAgent/`; the tracker is `_bmad-output/design-artifacts/ArgusAgent/sprint-status.yaml`
 > (NOT the Minions platform tracker). All CLAUDE.md rules apply (§3.2 ≤1200-line files, §3.7 headless-only,
 > §3.8 12-Factor + secret masking, §3.4 evidence immutability).
 
@@ -405,17 +405,17 @@ existing row. Keep it minimal — a new row is not required.
 
 ### References
 
-- [Source: _bmad-output/design-artifacts/APAA/epics.md#Story-1.3 `.apaa/` store writer & reader with filesystem containment]
-- [Source: _bmad-output/design-artifacts/APAA/architecture.md#F. Persistence & State] (NO database; filesystem-as-contract; containment reuse; thin-wrap if root injection unsupported)
-- [Source: _bmad-output/design-artifacts/APAA/architecture.md#Security / Containment Patterns] (all FS writes via the containment helper — `is_relative_to`, never `str.startswith`; breach raises before any write)
-- [Source: _bmad-output/design-artifacts/APAA/architecture.md#Pure/Impure Separation (master rule)] (`store/*` writer impure; `reader` PURE deserialize/validate)
-- [Source: _bmad-output/design-artifacts/APAA/architecture.md#Determinism Patterns (NFR-P1/D1)] (one serializer; content-addressed filenames; no arrival order/uuid/clock)
-- [Source: _bmad-output/design-artifacts/APAA/architecture.md#Cross-Cutting Concerns #3 single serializer / #5 producer-side redaction / #7 import-isolation gate]
-- [Source: _bmad-output/design-artifacts/APAA/architecture.md#Runtime artifact tree (.apaa/)] (fixed tree: state/ assignments/ findings/ decisions/ cache/)
-- [Source: _bmad-output/design-artifacts/APAA/architecture.md#Architectural Boundaries] (filesystem boundary; import boundary; downstream of HTTP/A2A)
-- [Source: _bmad-output/design-artifacts/APAA/E-PRD/prd.md#FR25 content-hashed envelope / FR31 resume from .apaa state / NFR-S5 containment-checked writes / NFR-P1 byte-identical state / NFR-A1 hash-chained envelope]
-- [Source: _bmad-output/design-artifacts/APAA/stories/1-1-canonical-serializer-content-hashed-envelope.md] (DONE — serializer + envelope spine to reuse; golden-constant + `_MODULES_UNDER_GUARD` seed; scope-fence "impure shell is 1.3")
-- [Source: _bmad-output/design-artifacts/APAA/stories/1-2-fixed-enum-coverage-ledger-frozen-recording-schema.md] (DONE — ledger/recording models the writer/reader round-trip; `extra="forbid"` corruption guard)
+- [Source: _bmad-output/design-artifacts/ArgusAgent/epics.md#Story-1.3 `.apaa/` store writer & reader with filesystem containment]
+- [Source: _bmad-output/design-artifacts/ArgusAgent/architecture.md#F. Persistence & State] (NO database; filesystem-as-contract; containment reuse; thin-wrap if root injection unsupported)
+- [Source: _bmad-output/design-artifacts/ArgusAgent/architecture.md#Security / Containment Patterns] (all FS writes via the containment helper — `is_relative_to`, never `str.startswith`; breach raises before any write)
+- [Source: _bmad-output/design-artifacts/ArgusAgent/architecture.md#Pure/Impure Separation (master rule)] (`store/*` writer impure; `reader` PURE deserialize/validate)
+- [Source: _bmad-output/design-artifacts/ArgusAgent/architecture.md#Determinism Patterns (NFR-P1/D1)] (one serializer; content-addressed filenames; no arrival order/uuid/clock)
+- [Source: _bmad-output/design-artifacts/ArgusAgent/architecture.md#Cross-Cutting Concerns #3 single serializer / #5 producer-side redaction / #7 import-isolation gate]
+- [Source: _bmad-output/design-artifacts/ArgusAgent/architecture.md#Runtime artifact tree (.apaa/)] (fixed tree: state/ assignments/ findings/ decisions/ cache/)
+- [Source: _bmad-output/design-artifacts/ArgusAgent/architecture.md#Architectural Boundaries] (filesystem boundary; import boundary; downstream of HTTP/A2A)
+- [Source: _bmad-output/design-artifacts/ArgusAgent/E-PRD/prd.md#FR25 content-hashed envelope / FR31 resume from .apaa state / NFR-S5 containment-checked writes / NFR-P1 byte-identical state / NFR-A1 hash-chained envelope]
+- [Source: _bmad-output/design-artifacts/ArgusAgent/stories/1-1-canonical-serializer-content-hashed-envelope.md] (DONE — serializer + envelope spine to reuse; golden-constant + `_MODULES_UNDER_GUARD` seed; scope-fence "impure shell is 1.3")
+- [Source: _bmad-output/design-artifacts/ArgusAgent/stories/1-2-fixed-enum-coverage-ledger-frozen-recording-schema.md] (DONE — ledger/recording models the writer/reader round-trip; `extra="forbid"` corruption guard)
 - [Source: minions_core/apaa/store/canonical.py] (the single serializer — `dumps`/`dumps_bytes`/`loads` + `CanonicalSerializationError`)
 - [Source: minions_core/apaa/store/envelope.py] (`Envelope`, `EnvelopeWriter.build`, `compute_content_hash`, `GENESIS_PREV_HASH`)
 - [Source: minions_core/apaa/ledger/coverage_ledger.py + ledger/recording.py] (the payloads to persist/round-trip)

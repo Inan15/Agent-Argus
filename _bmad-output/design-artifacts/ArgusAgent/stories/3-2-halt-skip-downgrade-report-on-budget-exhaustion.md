@@ -7,7 +7,7 @@ Status: done
 > **APAA sub-project story.** APAA (AI Project Assurance Audit) is a SEPARATE headless audit sub-tool
 > placed at `minions_core/apaa/` (placement decision 2026-06-18). It reuses Minions infra BY IMPORT but
 > ships its own `APAA-FR-*` / `APAA-NFR-*` driver namespace. Planning lives under
-> `_bmad-output/design-artifacts/APAA/`; the tracker is `_bmad-output/design-artifacts/APAA/sprint-status.yaml`
+> `_bmad-output/design-artifacts/ArgusAgent/`; the tracker is `_bmad-output/design-artifacts/ArgusAgent/sprint-status.yaml`
 > (NOT the Minions platform tracker). All CLAUDE.md rules apply (§3.2 ≤1200-line files, §3.7 headless-only,
 > §3.8 12-Factor + secret masking, §3.4 evidence immutability).
 
@@ -192,7 +192,7 @@ import-isolation gate. The persistence WRITE is the impure shell (in the pipelin
   file path in the skipped-remainder round-trips intact in the report; (d) the halt point + the skipped set are
   order-independent + byte-stable.
 - **AI-E2-3 (governance 🟢) — central defer register.** If this story files a NEW defer, file it append-only in
-  `_bmad-output/design-artifacts/APAA/deferred-work.md` (the single canonical APAA defer source), not only in
+  `_bmad-output/design-artifacts/ArgusAgent/deferred-work.md` (the single canonical APAA defer source), not only in
   the story file. Carry-watch DF-1-7-A (interim `_persist` OSError edge → Epic 3): if the halt-report
   persistence touches the same `_persist` path, record whether DF-1-7-A's OSError-edge hardening is in scope or
   stays deferred — do NOT silently expand scope.
@@ -619,32 +619,32 @@ is REUSED BY IMPORT (transitively, via the 3-1 core) and MUST NOT be edited.
   the halt projects over a deterministic zero-token work-unit proxy, not a billed total. This is the
   cut-order-sanctioned V1 limitation (the mechanism is forward-compatible). If a NEW defer beyond this surfaces
   during dev (e.g. the per-unit proxy proves too coarse to halt at a meaningful boundary for the dogfood),
-  record it with the CC-3 six-field schema in `_bmad-output/design-artifacts/APAA/deferred-work.md`; do NOT
+  record it with the CC-3 six-field schema in `_bmad-output/design-artifacts/ArgusAgent/deferred-work.md`; do NOT
   build it here.
 - **AI-E2-3 (defer-register consolidation)** — the central `deferred-work.md` is the single canonical APAA defer
   source; if this story files a new defer, file it there (append-only), not only in the story file.
 
 ## References
 
-- Epic: `_bmad-output/design-artifacts/APAA/epics.md` §"Epic 3" → Story 3.2 (halt → skip → downgrade → report on
+- Epic: `_bmad-output/design-artifacts/ArgusAgent/epics.md` §"Epic 3" → Story 3.2 (halt → skip → downgrade → report on
   budget exhaustion — the two ACs: deterministic halt + mark-remainder-`skipped` + downgrade + report honestly,
   no silent overrun; the pure gate still produces a degraded verdict over the partial ledger, never a crash);
   §"Open delivery inputs — LOCKED 2026-06-18" → OI3 (budget-ceiling `$X` deferred to Story 7.1; mechanism
   unaffected); the FR Coverage Map (FR22 → Epic 3; FR16 floor → Epic 1 gate + Story 3.3 floor-under-exhaustion).
-- PRD: `_bmad-output/design-artifacts/APAA/E-PRD/prd.md` → FR22 (halt on budget exhaustion, mark remainder
+- PRD: `_bmad-output/design-artifacts/ArgusAgent/E-PRD/prd.md` → FR22 (halt on budget exhaustion, mark remainder
   `skipped`, downgrade, report honestly — never fabricating / silently overrunning), NFR-C2 (never exceed the
   ceiling; halt deterministically, no silent overrun), NFR-R1 (a tool/parse/exhaustion condition degrades to a
   recorded downgrade — never an uncaught crash or a fabricated result), FR16 (the 20% floor — Story 3.3), FR8
   (`inferred`/`skipped` never satisfy a gate), NFR-D2 (zero-token deterministic), NFR-P1 (byte-identical),
   NFR-S1/S5 (no leak / containment), NFR-M1/M2 (file-size / frozen additive).
-- Architecture: `_bmad-output/design-artifacts/APAA/architecture.md` §"Core Architectural Decisions" → Decision
+- Architecture: `_bmad-output/design-artifacts/ArgusAgent/architecture.md` §"Core Architectural Decisions" → Decision
   E (Cost Governance: reuse `cost/budget_guardrails` BY IMPORT; **halt→skip→downgrade→report**); §"Implementation
   Patterns" → Error/Degradation Patterns ("Failure → typed finding, never an uncaught raise; the run still
   produces a verdict (degraded → `INSUFFICIENT_COVERAGE`)"), Determinism Patterns (no float / single serializer /
   no clock-uuid-random), Pure/Impure Separation, Contract/Format Patterns ("the coverage-ledger enum is closed
   … never invent a new depth state"); §"Project Structure" → `cost/budget_governor.py` (FR21/FR22 — wraps
   `cost/budget_guardrails`; halt→skip→downgrade); AR3/AR4/AR7/AR8/AR10/AR11.
-- Done predecessor (Story 3.1): `_bmad-output/design-artifacts/APAA/stories/3-1-budget-ceiling-configuration-cost-accounting.md`
+- Done predecessor (Story 3.1): `_bmad-output/design-artifacts/ArgusAgent/stories/3-1-budget-ceiling-configuration-cost-accounting.md`
   (the `BudgetConfig`/`account_spend`/`CostLedger`/`ceiling_reached`/`_coerce_breach` cost core — `ceiling_reached`
   was exposed EXPLICITLY "for Story 3.2 to query, exposed not acted on"; the V1-cost-is-a-proxy framing; the
   Fraction-not-float / single-serializer / frozen-contract precedent; DF-3-1-A `ceiling_credits` lacks `ge=0`
@@ -655,21 +655,21 @@ is REUSED BY IMPORT (transitively, via the 3-1 core) and MUST NOT be edited.
   (`evaluate_verdict` — UNCHANGED), `minions_core/apaa/index/partitioner.py` (`PartitionPlan` / sorted units),
   `minions_core/apaa/pipeline.py` (`run_audit_detailed` / `_detect_per_file` / `_compute_loc_map` / `_persist` /
   `PipelineError`), `minions_core/apaa/store/{canonical,envelope,writer,paths,reader}.py`.
-- Retros (carry-forward): `_bmad-output/design-artifacts/APAA/epic-1-retro-2026-06-21.md` (AI-E1-1 adversarial
+- Retros (carry-forward): `_bmad-output/design-artifacts/ArgusAgent/epic-1-retro-2026-06-21.md` (AI-E1-1 adversarial
   fixtures — honest-degradation must never fabricate a pass; AI-E1-4 gates extended-not-forked);
-  `_bmad-output/design-artifacts/APAA/epic-2-retro-2026-06-24.md` (AI-E2-1 pre-`review` test-existence guard /
+  `_bmad-output/design-artifacts/ArgusAgent/epic-2-retro-2026-06-24.md` (AI-E2-1 pre-`review` test-existence guard /
   premature status flip; AI-E2-3 defer-register consolidation; AI-E2-5 L1-E11 loop + the three structural gates
   + **byte-stability + order-independence fixtures on the new halted/partial-run determinism surface** — named
   explicitly for this Epic-3 work; §6 Epic-3 readiness).
-- Deferred-work: `_bmad-output/design-artifacts/APAA/deferred-work.md` (the central APAA defer register;
+- Deferred-work: `_bmad-output/design-artifacts/ArgusAgent/deferred-work.md` (the central APAA defer register;
   DF-1-7-A interim `_persist` OSError edge → Epic 3; DF-3-1-A `ceiling_credits` `ge=0` defensive nit).
 
 ## Dev Agent Record
 
 ### Context Reference
 
-- Story file: `_bmad-output/design-artifacts/APAA/stories/3-2-halt-skip-downgrade-report-on-budget-exhaustion.md`
-- Epic: `_bmad-output/design-artifacts/APAA/epics.md` §"Epic 3" → Story 3.2; the floor verdict semantics are Story 3.3, resume is 3.4, host parity is 3.5, numeric `$X` is 7.1.
+- Story file: `_bmad-output/design-artifacts/ArgusAgent/stories/3-2-halt-skip-downgrade-report-on-budget-exhaustion.md`
+- Epic: `_bmad-output/design-artifacts/ArgusAgent/epics.md` §"Epic 3" → Story 3.2; the floor verdict semantics are Story 3.3, resume is 3.4, host parity is 3.5, numeric `$X` is 7.1.
 - Done predecessor (the cost core REUSED): Story 3.1 — `cost/budget_governor.py` (`account_spend` / `_coerce_breach` `>=`-hard-ceiling / `CostLedger.ceiling_reached` exposed FOR this story).
 - Reuse targets (verbatim / BY IMPORT — unedited): `ledger/coverage_ledger.py` (`CoverageDepth.SKIPPED` / `grade_entry` / `CoverageLedger.build`), `verdict/verdict_gate.py` (`evaluate_verdict` — UNCHANGED), `index/partitioner.py`, `store/{canonical,envelope,writer,paths,reader}.py`, `pipeline.py` (`run_audit_detailed` / `_detect_per_file` / `_persist` / `PipelineError`).
 
@@ -736,7 +736,7 @@ claude-opus-4-8 (BMAD dev-story, mode=implement) — 2026-06-24.
 - `tests/apaa/test_halt_report_roundtrip.py` (NEW — TC-APAA-COST-001-90..94)
 - `tests/apaa/test_pipeline_signature_demo.py` (UPDATED — TC-APAA-PIPELINE-001-17..19)
 - `tests/apaa/test_no_web_imports.py` (UPDATED — `_MODULES_UNDER_GUARD` extended with `cost.exhaustion`)
-- `_bmad-output/design-artifacts/APAA/sprint-status.yaml` (UPDATED — 3-2 → review)
+- `_bmad-output/design-artifacts/ArgusAgent/sprint-status.yaml` (UPDATED — 3-2 → review)
 
 ## Change Log
 

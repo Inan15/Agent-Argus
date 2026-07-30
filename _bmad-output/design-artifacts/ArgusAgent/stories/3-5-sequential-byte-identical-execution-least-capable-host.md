@@ -7,7 +7,7 @@ Status: done
 > **APAA sub-project story.** APAA (AI Project Assurance Audit) is a SEPARATE headless audit sub-tool
 > placed at `minions_core/apaa/` (placement decision 2026-06-18). It reuses Minions infra BY IMPORT but
 > ships its own `APAA-FR-*` / `APAA-NFR-*` driver namespace. Planning lives under
-> `_bmad-output/design-artifacts/APAA/`; the tracker is `_bmad-output/design-artifacts/APAA/sprint-status.yaml`
+> `_bmad-output/design-artifacts/ArgusAgent/`; the tracker is `_bmad-output/design-artifacts/ArgusAgent/sprint-status.yaml`
 > (NOT the Minions platform tracker). All CLAUDE.md rules apply (§3.2 ≤1200-line files, §3.7 headless-only,
 > §3.8 12-Factor + secret masking, §3.4 evidence immutability).
 
@@ -282,7 +282,7 @@ implemented by the spine — this story PROVES them portable and LOCKS them agai
   extend, NOT fork); the no-parallelism assertion is the NEW structural gate this story adds, in the SAME
   enforcement style.
 - **AI-E2-3 (governance 🟢) — central defer register.** If this story files a NEW defer, file it
-  append-only in `_bmad-output/design-artifacts/APAA/deferred-work.md` (the single canonical APAA defer
+  append-only in `_bmad-output/design-artifacts/ArgusAgent/deferred-work.md` (the single canonical APAA defer
   source), not only in the story file. **Carry-watch DF-3-4-A** (the resume `--resume` CLI flag is deferred
   to Story 7.1 — out of scope here; this story adds NO CLI surface). **Carry-watch DF-1-3-A / DF-1-3-B /
   DF-2-3-B** (all targeted to Epic 4 — out of scope; do NOT silently expand scope to close them). If the
@@ -580,23 +580,23 @@ FastAPI surface / UI (§3.7).
 
 ### References
 
-- [Source: _bmad-output/design-artifacts/APAA/epics.md#Story 3.5: Sequential byte-identical execution on the least-capable host]
-- [Source: _bmad-output/design-artifacts/APAA/epics.md#Epic 3: Honest Degradation & Cost Governance] (FRs FR32; NFRs P1, P2)
-- [Source: _bmad-output/design-artifacts/APAA/E-PRD/prd.md#FR32] (run to completion on a sequential least-capable host, byte-identical to a parallel run)
-- [Source: _bmad-output/design-artifacts/APAA/E-PRD/prd.md#NFR-P1] (least-capable host, byte-identical on-disk state to a parallel host; parallel is a pure speedup)
-- [Source: _bmad-output/design-artifacts/APAA/E-PRD/prd.md#NFR-P2] (stack-agnostic by construction; no host-/stack-specific logic in the ledger/verdict core)
-- [Source: _bmad-output/design-artifacts/APAA/architecture.md#Decision A] ("Execution model: sequential-canonical; parallel = pure byte-identical speedup")
-- [Source: _bmad-output/design-artifacts/APAA/architecture.md#Determinism Patterns (NFR-P1/D1 — non-negotiable)] (one serializer; no float; the byte-diff landmines)
-- [Source: _bmad-output/design-artifacts/APAA/architecture.md#Pure/Impure Separation (master rule)] (AR8 — the impure shell is the only host-touching surface)
+- [Source: _bmad-output/design-artifacts/ArgusAgent/epics.md#Story 3.5: Sequential byte-identical execution on the least-capable host]
+- [Source: _bmad-output/design-artifacts/ArgusAgent/epics.md#Epic 3: Honest Degradation & Cost Governance] (FRs FR32; NFRs P1, P2)
+- [Source: _bmad-output/design-artifacts/ArgusAgent/E-PRD/prd.md#FR32] (run to completion on a sequential least-capable host, byte-identical to a parallel run)
+- [Source: _bmad-output/design-artifacts/ArgusAgent/E-PRD/prd.md#NFR-P1] (least-capable host, byte-identical on-disk state to a parallel host; parallel is a pure speedup)
+- [Source: _bmad-output/design-artifacts/ArgusAgent/E-PRD/prd.md#NFR-P2] (stack-agnostic by construction; no host-/stack-specific logic in the ledger/verdict core)
+- [Source: _bmad-output/design-artifacts/ArgusAgent/architecture.md#Decision A] ("Execution model: sequential-canonical; parallel = pure byte-identical speedup")
+- [Source: _bmad-output/design-artifacts/ArgusAgent/architecture.md#Determinism Patterns (NFR-P1/D1 — non-negotiable)] (one serializer; no float; the byte-diff landmines)
+- [Source: _bmad-output/design-artifacts/ArgusAgent/architecture.md#Pure/Impure Separation (master rule)] (AR8 — the impure shell is the only host-touching surface)
 - [Source: minions_core/apaa/pipeline.py] (sequential-canonical; "defines NO parallel of any of them")
 - [Source: minions_core/apaa/store/canonical.py] (single serializer; float-rejection; Fraction/Decimal encoding)
 - [Source: minions_core/apaa/intake/repo_loader.py] (git ls-files -z + explicit UTF-8 decode — the AI-E1-1 boundary)
 - [Source: tests/apaa/test_pipeline_signature_demo.py] (byte-identity test idioms: read_bytes compare, content_hash equality)
 - [Source: tests/apaa/test_no_web_imports.py] (the import-scan + sys.modules-absence enforcement style the no-parallelism lock mirrors)
-- [Source: _bmad-output/design-artifacts/APAA/epic-1-retro-2026-06-21.md] (AI-E1-1 — the impure-shell encoding boundary FAIL class)
-- [Source: _bmad-output/design-artifacts/APAA/epic-2-retro-2026-06-24.md] (AI-E2-1 review-flip gate; AI-E1-1 boundary durability)
-- [Source: _bmad-output/design-artifacts/APAA/stories/3-4-resumability-from-on-disk-apaa-state.md] (the prior story; resume entrypoints reused for the cross-locale resumed leg)
-- [Source: _bmad-output/design-artifacts/APAA/deferred-work.md] (DF-3-4-A `--resume` CLI deferred to 7.1; DF-1-3-A/B + DF-2-3-B → Epic 4 — all out of scope here)
+- [Source: _bmad-output/design-artifacts/ArgusAgent/epic-1-retro-2026-06-21.md] (AI-E1-1 — the impure-shell encoding boundary FAIL class)
+- [Source: _bmad-output/design-artifacts/ArgusAgent/epic-2-retro-2026-06-24.md] (AI-E2-1 review-flip gate; AI-E1-1 boundary durability)
+- [Source: _bmad-output/design-artifacts/ArgusAgent/stories/3-4-resumability-from-on-disk-apaa-state.md] (the prior story; resume entrypoints reused for the cross-locale resumed leg)
+- [Source: _bmad-output/design-artifacts/ArgusAgent/deferred-work.md] (DF-3-4-A `--resume` CLI deferred to 7.1; DF-1-3-A/B + DF-2-3-B → Epic 4 — all out of scope here)
 
 ## Dev Agent Record
 
@@ -666,9 +666,9 @@ claude-opus-4-8 (dev-story, implement mode, 2026-06-27)
   suite that runs an audit leg in a fresh interpreter under a varied env and copies the `.apaa/` tree out)
 - `tests/apaa/cartridges/nonascii_unicode/src/café_calc.py.txt` (NEW — non-ASCII-named deep source-under-test)
 - `tests/apaa/cartridges/nonascii_unicode/тесты/test_café_calc.py.txt` (NEW — Cyrillic-dir-named vacuous test)
-- `_bmad-output/design-artifacts/APAA/stories/3-5-sequential-byte-identical-execution-least-capable-host.md`
+- `_bmad-output/design-artifacts/ArgusAgent/stories/3-5-sequential-byte-identical-execution-least-capable-host.md`
   (story file — Tasks/Subtasks, Dev Agent Record, File List, Change Log, Status)
-- `_bmad-output/design-artifacts/APAA/sprint-status.yaml` (development_status[3-5-...] → review; last_updated)
+- `_bmad-output/design-artifacts/ArgusAgent/sprint-status.yaml` (development_status[3-5-...] → review; last_updated)
 
 ### Change Log
 

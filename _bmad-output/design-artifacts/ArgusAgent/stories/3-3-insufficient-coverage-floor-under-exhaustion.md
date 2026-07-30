@@ -7,7 +7,7 @@ Status: done
 > **APAA sub-project story.** APAA (AI Project Assurance Audit) is a SEPARATE headless audit sub-tool
 > placed at `minions_core/apaa/` (placement decision 2026-06-18). It reuses Minions infra BY IMPORT but
 > ships its own `APAA-FR-*` / `APAA-NFR-*` driver namespace. Planning lives under
-> `_bmad-output/design-artifacts/APAA/`; the tracker is `_bmad-output/design-artifacts/APAA/sprint-status.yaml`
+> `_bmad-output/design-artifacts/ArgusAgent/`; the tracker is `_bmad-output/design-artifacts/ArgusAgent/sprint-status.yaml`
 > (NOT the Minions platform tracker). All CLAUDE.md rules apply (§3.2 ≤1200-line files, §3.7 headless-only,
 > §3.8 12-Factor + secret masking, §3.4 evidence immutability).
 
@@ -207,7 +207,7 @@ gate. The persistence WRITE (if chosen) is the impure pipeline shell.
   precedent); (c) a non-ASCII (café/Cyrillic) file path in the skipped/assessed set round-trips intact in
   the report; (d) the assessed deep-% + the message are byte-stable + order-independent.
 - **AI-E2-3 (governance 🟢) — central defer register.** If this story files a NEW defer, file it
-  append-only in `_bmad-output/design-artifacts/APAA/deferred-work.md` (the single canonical APAA defer
+  append-only in `_bmad-output/design-artifacts/ArgusAgent/deferred-work.md` (the single canonical APAA defer
   source), not only in the story file. Carry-watch DF-1-7-A (interim `_persist` OSError edge → Epic 3): if
   the floor-report persistence touches the same `_persist`/`write_payload` path, record whether
   DF-1-7-A's OSError-edge hardening is in scope or stays deferred — do NOT silently expand scope.
@@ -649,7 +649,7 @@ is REUSED BY IMPORT (transitively) and MUST NOT be edited.
 - **The V1-cost-is-a-proxy limitation** — V1 has no real LLM credit metering (the dispatch port is Epic 6),
   so the halt that drives the floor projects over a deterministic zero-token work-unit proxy, not a billed
   total. Cut-order-sanctioned. If a NEW defer surfaces, record it with the CC-3 six-field schema in
-  `_bmad-output/design-artifacts/APAA/deferred-work.md`; do NOT build it here.
+  `_bmad-output/design-artifacts/ArgusAgent/deferred-work.md`; do NOT build it here.
 - **AI-E2-3 (defer-register consolidation)** — the central `deferred-work.md` is the single canonical APAA
   defer source; if this story files a new defer, file it there (append-only), not only in the story file.
 
@@ -712,12 +712,12 @@ filed; DF-1-7-A stays deferred (no `_persist`/`write_payload` touch). Promote to
 
 ## References
 
-- Epic: `_bmad-output/design-artifacts/APAA/epics.md` §"Epic 3" → Story 3.3 (`INSUFFICIENT_COVERAGE` floor
+- Epic: `_bmad-output/design-artifacts/ArgusAgent/epics.md` §"Epic 3" → Story 3.3 (`INSUFFICIENT_COVERAGE` floor
   under exhaustion — the two ACs: a halted run below the 20% deep floor renders `INSUFFICIENT_COVERAGE`
   with the assessed depth named, exit 3, never a default `NOT_READY`; `INSUFFICIENT_COVERAGE` routes to
   human review (exit 3), distinct from `BLOCKED` (exit 2)); the FR Coverage Map (FR16 floor → Epic 1 gate
   + Story 3.3 floor-under-exhaustion).
-- PRD: `_bmad-output/design-artifacts/APAA/E-PRD/prd.md` → FR16 (≥60% deep + 0 blocking → RELEASE_READY;
+- PRD: `_bmad-output/design-artifacts/ArgusAgent/E-PRD/prd.md` → FR16 (≥60% deep + 0 blocking → RELEASE_READY;
   below 20% → `INSUFFICIENT_COVERAGE`; never a default block); the J2 climax line ("It **stops**, marks
   the remainder `skipped`, and reports `INSUFFICIENT_COVERAGE — assessed 18% deep; no repo-wide verdict
   rendered (floor: 20%)`"); J3 ("`INSUFFICIENT_COVERAGE` routing to human review"); the Verdict vocabulary
@@ -726,15 +726,15 @@ filed; DF-1-7-A stays deferred (no `_persist`/`write_payload` touch). Promote to
   wire contract; FR8 (`skipped`/`inferred` never satisfy a gate); NFR-D2 (zero-token deterministic);
   NFR-P1 (byte-identical); NFR-S1/S5 (no leak / containment); NFR-M1/M2 (file-size / frozen additive). The
   FR17/NFR-A3 negative-assurance wrapper is Story 4.1 — NOT this story.
-- Architecture: `_bmad-output/design-artifacts/APAA/architecture.md` §"Core Architectural Decisions" →
+- Architecture: `_bmad-output/design-artifacts/ArgusAgent/architecture.md` §"Core Architectural Decisions" →
   Decision A/C (the exit-code wire contract `0/2/3/1`; `INSUFFICIENT_COVERAGE` = not-assessed floor);
   §"Implementation Patterns" → Error/Degradation Patterns ("the run still produces a verdict (degraded →
   `INSUFFICIENT_COVERAGE`)"), Determinism Patterns (no float / single serializer / no clock-uuid-random),
   Pure/Impure Separation, Contract/Format Patterns (the verdict vocabulary is closed); AR3/AR4/AR8/AR10/AR11.
-- Story 1.6 (done): `_bmad-output/design-artifacts/APAA/stories/1-6-pure-function-verdict-gate-finding-ordering-exit-code-mapping.md`
+- Story 1.6 (done): `_bmad-output/design-artifacts/ArgusAgent/stories/1-6-pure-function-verdict-gate-finding-ordering-exit-code-mapping.md`
   (the floor LOGIC is delivered there; AC8 names THIS story as the reuse seam — "Epic-3 Story 3.3 reuses
   THIS gate VERBATIM over a budget-halted partial ledger").
-- Story 3.2 (done): `_bmad-output/design-artifacts/APAA/stories/3-2-halt-skip-downgrade-report-on-budget-exhaustion.md`
+- Story 3.2 (done): `_bmad-output/design-artifacts/ArgusAgent/stories/3-2-halt-skip-downgrade-report-on-budget-exhaustion.md`
   (the halt → skip → downgrade → report mechanism + the `HaltReport`; fences the floor verdict SEMANTICS
   to THIS story — "3.2 = the mechanism + the record; 3.3 = the floor verdict's exhaustion semantics").
 - Code: `minions_core/apaa/verdict/verdict_gate.py` (`evaluate_verdict` / `AuditVerdict.deep_ratio` /
@@ -786,5 +786,5 @@ claude-opus-4-8 (BMAD dev-story, mode=implement), 2026-06-25.
 - `minions_core/apaa/pipeline.py` (UPDATE — additive: `AuditResult.floor_report` field + `build_floor_report` wiring in `run_audit_detailed`)
 - `tests/apaa/test_insufficient_coverage_floor.py` (NEW)
 - `tests/apaa/test_pipeline_signature_demo.py` (UPDATE — 3 new e2e tests + `Fraction` import)
-- `_bmad-output/design-artifacts/APAA/stories/3-3-insufficient-coverage-floor-under-exhaustion.md` (status + Dev Agent Record)
-- `_bmad-output/design-artifacts/APAA/sprint-status.yaml` (status → review)
+- `_bmad-output/design-artifacts/ArgusAgent/stories/3-3-insufficient-coverage-floor-under-exhaustion.md` (status + Dev Agent Record)
+- `_bmad-output/design-artifacts/ArgusAgent/sprint-status.yaml` (status → review)

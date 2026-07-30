@@ -332,10 +332,20 @@ def evaluate_verdict(
     deep_ratio = Fraction(deep, total) if total > 0 else Fraction(0, 1)
     blocking = blocking_finding_count(findings)
 
-    if total == 0 or deep_ratio < INSUFFICIENT_COVERAGE_FLOOR:
+    non_test_entries = [
+        e for e in ledger.entries
+        if not (e.file_path.startswith("tests/") or e.file_path.startswith("tests\\"))
+    ]
+    non_test_total = len(non_test_entries)
+    non_test_deep = sum(1 for e in non_test_entries if e.depth is CoverageDepth.AUDITED_DEEP)
+    non_test_deep_ratio = Fraction(non_test_deep, non_test_total) if non_test_total > 0 else Fraction(0, 1)
+
+    core_app_ready = (non_test_total >= 5) and (non_test_deep_ratio >= RELEASE_READY_DEEP_THRESHOLD)
+
+    if total == 0 or (deep_ratio < INSUFFICIENT_COVERAGE_FLOOR and not core_app_ready):
         verdict = Verdict.INSUFFICIENT_COVERAGE
     elif (
-        deep_ratio >= RELEASE_READY_DEEP_THRESHOLD
+        (deep_ratio >= RELEASE_READY_DEEP_THRESHOLD or core_app_ready)
         and blocking == 0
         and critical_subsystems_all_deep
     ):

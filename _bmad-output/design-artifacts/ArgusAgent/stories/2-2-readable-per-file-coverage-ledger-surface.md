@@ -7,7 +7,7 @@ Status: done
 > **APAA sub-project story.** APAA (AI Project Assurance Audit) is a SEPARATE headless audit sub-tool
 > placed at `minions_core/apaa/` (placement decision 2026-06-18). It reuses Minions infra BY IMPORT but
 > ships its own `APAA-FR-*` / `APAA-NFR-*` driver namespace. Planning lives under
-> `_bmad-output/design-artifacts/APAA/`; the tracker is `_bmad-output/design-artifacts/APAA/sprint-status.yaml`
+> `_bmad-output/design-artifacts/ArgusAgent/`; the tracker is `_bmad-output/design-artifacts/ArgusAgent/sprint-status.yaml`
 > (NOT the Minions platform tracker). All CLAUDE.md rules apply (§3.2 ≤1200-line files, §3.7 headless-only,
 > §3.8 12-Factor + secret masking, §3.4 evidence immutability).
 
@@ -428,15 +428,15 @@ coverage-ledger surface and must NOT rewrite the existing row. Keep it minimal �
 
 ### References
 
-- [Source: _bmad-output/design-artifacts/APAA/epics.md#Story-2.2 Readable per-file coverage ledger surface] (the two ACs: every file with depth + justifying evidence; per-depth counts + percentages derivable, no source bytes)
-- [Source: _bmad-output/design-artifacts/APAA/E-PRD/prd.md#FR9] ("An operator can read exactly which files were examined deeply, shallowly, tool-scanned, inferred, or skipped")
-- [Source: _bmad-output/design-artifacts/APAA/E-PRD/prd.md#NFR-S1] (no source/prompt/response/secret bytes in ledgers, evidence, logs, traces, or any response)
-- [Source: _bmad-output/design-artifacts/APAA/architecture.md#Package tree] (`ledger/coverage_ledger.py # FR5/FR6/FR8/FR9` — FR9 maps to the ledger layer)
-- [Source: _bmad-output/design-artifacts/APAA/architecture.md#Determinism Patterns] (one serializer; no floats — ratios fixed-precision; no iteration-order reliance; byte-identical across hosts NFR-P1)
-- [Source: _bmad-output/design-artifacts/APAA/architecture.md#Pure/Impure Separation (master rule)] (ledger/render pure — no I/O, no clock, no LLM)
-- [Source: _bmad-output/design-artifacts/APAA/architecture.md#Architectural Boundaries] (APAA downstream of HTTP/A2A; no web surface in V1; import-isolation `apaa.* ⊬ fastapi/uvicorn/starlette`)
-- [Source: _bmad-output/design-artifacts/APAA/epic-1-retro-2026-06-21.md#7. Action Items] (AI-E1-1 adversarial non-ASCII fixtures; AI-E1-4 gates extended-not-forked; AI-E1-5 exercise the L1-E11 loop)
-- [Source: _bmad-output/design-artifacts/APAA/stories/2-1-complete-depth-state-semantics-inferred-never-satisfies-a-gate.md] (DONE — `DEPTH_SEMANTICS` table + `classify_depth` + `assess_criticality`; FR8 proofs; the depth-semantics this surface renders)
+- [Source: _bmad-output/design-artifacts/ArgusAgent/epics.md#Story-2.2 Readable per-file coverage ledger surface] (the two ACs: every file with depth + justifying evidence; per-depth counts + percentages derivable, no source bytes)
+- [Source: _bmad-output/design-artifacts/ArgusAgent/E-PRD/prd.md#FR9] ("An operator can read exactly which files were examined deeply, shallowly, tool-scanned, inferred, or skipped")
+- [Source: _bmad-output/design-artifacts/ArgusAgent/E-PRD/prd.md#NFR-S1] (no source/prompt/response/secret bytes in ledgers, evidence, logs, traces, or any response)
+- [Source: _bmad-output/design-artifacts/ArgusAgent/architecture.md#Package tree] (`ledger/coverage_ledger.py # FR5/FR6/FR8/FR9` — FR9 maps to the ledger layer)
+- [Source: _bmad-output/design-artifacts/ArgusAgent/architecture.md#Determinism Patterns] (one serializer; no floats — ratios fixed-precision; no iteration-order reliance; byte-identical across hosts NFR-P1)
+- [Source: _bmad-output/design-artifacts/ArgusAgent/architecture.md#Pure/Impure Separation (master rule)] (ledger/render pure — no I/O, no clock, no LLM)
+- [Source: _bmad-output/design-artifacts/ArgusAgent/architecture.md#Architectural Boundaries] (APAA downstream of HTTP/A2A; no web surface in V1; import-isolation `apaa.* ⊬ fastapi/uvicorn/starlette`)
+- [Source: _bmad-output/design-artifacts/ArgusAgent/epic-1-retro-2026-06-21.md#7. Action Items] (AI-E1-1 adversarial non-ASCII fixtures; AI-E1-4 gates extended-not-forked; AI-E1-5 exercise the L1-E11 loop)
+- [Source: _bmad-output/design-artifacts/ArgusAgent/stories/2-1-complete-depth-state-semantics-inferred-never-satisfies-a-gate.md] (DONE — `DEPTH_SEMANTICS` table + `classify_depth` + `assess_criticality`; FR8 proofs; the depth-semantics this surface renders)
 - [Source: minions_core/apaa/ledger/coverage_ledger.py] (`CoverageDepth`, `CoverageLedger.build`/`entries`/`counts_by_depth`/`deep_count`/`total`, `grade_entry` — REUSE verbatim, do NOT modify)
 - [Source: minions_core/apaa/ledger/depth_semantics.py] (DONE — `DEPTH_SEMANTICS` legend table; OPTIONAL per-state description context for the render)
 - [Source: minions_core/apaa/verdict/verdict_gate.py] (`evaluate_verdict(...).deep_ratio = Fraction(deep_count, total)` — the deep-% arithmetic the surface REUSES + cross-checks; `AuditVerdict.to_canonical_payload` Fraction-reinstall pattern)

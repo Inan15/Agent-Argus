@@ -7,7 +7,7 @@ Status: done
 > **APAA sub-project story.** APAA (AI Project Assurance Audit) is a SEPARATE headless audit sub-tool
 > placed at `minions_core/apaa/` (placement decision 2026-06-18). It reuses Minions infra BY IMPORT but
 > ships its own `APAA-FR-*` / `APAA-NFR-*` driver namespace. Planning lives under
-> `_bmad-output/design-artifacts/APAA/`; the tracker is `_bmad-output/design-artifacts/APAA/sprint-status.yaml`
+> `_bmad-output/design-artifacts/ArgusAgent/`; the tracker is `_bmad-output/design-artifacts/ArgusAgent/sprint-status.yaml`
 > (NOT the Minions platform tracker). All CLAUDE.md rules apply (§3.2 ≤1200-line files, §3.7 headless-only,
 > §3.8 12-Factor + secret masking, §3.4 evidence immutability).
 
@@ -514,17 +514,17 @@ the existing row. Keep it minimal — a new row is not required.
 
 ### References
 
-- [Source: _bmad-output/design-artifacts/APAA/epics.md#Story-2.3 Critical-subsystem identification & operator designation] (the two ACs: identify candidates by content + operator add/override via the invocation contract; a designated critical subsystem below `audited_deep` withholds `RELEASE_READY` — completes the FR16 critical-subsystem clause)
-- [Source: _bmad-output/design-artifacts/APAA/E-PRD/prd.md#FR4] ("APAA can identify critical subsystems (and an operator can designate them) so coverage gates can require them to be examined deeply")
-- [Source: _bmad-output/design-artifacts/APAA/E-PRD/prd.md#FR16] ("emit a verdict only when coverage gates are met (≥60% deep + all critical subsystems deep + 0 blocking findings)")
-- [Source: _bmad-output/design-artifacts/APAA/E-PRD/prd.md#Hostile / low-quality-repo robustness] ("Coverage gaming (criticality detected by content, not filename)")
-- [Source: _bmad-output/design-artifacts/APAA/architecture.md#Package tree] (`index/partitioner.py # FR3/FR4` — partitioning is Story 2.4; criticality identification reuses the 2.1 ledger-layer `assess_criticality`)
-- [Source: _bmad-output/design-artifacts/APAA/architecture.md#Determinism Patterns] (one serializer; no floats; no iteration-order reliance; byte-identical across hosts NFR-P1)
-- [Source: _bmad-output/design-artifacts/APAA/architecture.md#Pure/Impure Separation (master rule)] (identification/predicate pure — no I/O, no clock, no LLM; the pipeline/CLI is the impure shell)
-- [Source: _bmad-output/design-artifacts/APAA/architecture.md#Architectural Boundaries] (APAA downstream of HTTP/A2A; no web surface in V1; import-isolation `apaa.* ⊬ fastapi/uvicorn/starlette`)
-- [Source: _bmad-output/design-artifacts/APAA/epic-1-retro-2026-06-21.md#7. Action Items] (AI-E1-1 adversarial non-ASCII fixtures; AI-E1-4 gates extended-not-forked; AI-E1-5 exercise the L1-E11 loop)
-- [Source: _bmad-output/design-artifacts/APAA/stories/2-1-complete-depth-state-semantics-inferred-never-satisfies-a-gate.md] (DONE — `assess_criticality` + `Criticality` + `CRITICALITY_SIGNAL_TOKENS`; the Low substring-over-match finding whose correction lever is THIS story's operator override; `critical_subsystems_all_deep` seam stays defaulted-True until 2.3)
-- [Source: _bmad-output/design-artifacts/APAA/stories/1-6-pure-function-verdict-gate-finding-ordering-exit-code-mapping.md] (DONE — `evaluate_verdict(..., critical_subsystems_all_deep: bool = True)` + `AuditVerdict.critical_subsystems_all_deep`; the additive Story-2.3 seam this story SUPPLIES)
+- [Source: _bmad-output/design-artifacts/ArgusAgent/epics.md#Story-2.3 Critical-subsystem identification & operator designation] (the two ACs: identify candidates by content + operator add/override via the invocation contract; a designated critical subsystem below `audited_deep` withholds `RELEASE_READY` — completes the FR16 critical-subsystem clause)
+- [Source: _bmad-output/design-artifacts/ArgusAgent/E-PRD/prd.md#FR4] ("APAA can identify critical subsystems (and an operator can designate them) so coverage gates can require them to be examined deeply")
+- [Source: _bmad-output/design-artifacts/ArgusAgent/E-PRD/prd.md#FR16] ("emit a verdict only when coverage gates are met (≥60% deep + all critical subsystems deep + 0 blocking findings)")
+- [Source: _bmad-output/design-artifacts/ArgusAgent/E-PRD/prd.md#Hostile / low-quality-repo robustness] ("Coverage gaming (criticality detected by content, not filename)")
+- [Source: _bmad-output/design-artifacts/ArgusAgent/architecture.md#Package tree] (`index/partitioner.py # FR3/FR4` — partitioning is Story 2.4; criticality identification reuses the 2.1 ledger-layer `assess_criticality`)
+- [Source: _bmad-output/design-artifacts/ArgusAgent/architecture.md#Determinism Patterns] (one serializer; no floats; no iteration-order reliance; byte-identical across hosts NFR-P1)
+- [Source: _bmad-output/design-artifacts/ArgusAgent/architecture.md#Pure/Impure Separation (master rule)] (identification/predicate pure — no I/O, no clock, no LLM; the pipeline/CLI is the impure shell)
+- [Source: _bmad-output/design-artifacts/ArgusAgent/architecture.md#Architectural Boundaries] (APAA downstream of HTTP/A2A; no web surface in V1; import-isolation `apaa.* ⊬ fastapi/uvicorn/starlette`)
+- [Source: _bmad-output/design-artifacts/ArgusAgent/epic-1-retro-2026-06-21.md#7. Action Items] (AI-E1-1 adversarial non-ASCII fixtures; AI-E1-4 gates extended-not-forked; AI-E1-5 exercise the L1-E11 loop)
+- [Source: _bmad-output/design-artifacts/ArgusAgent/stories/2-1-complete-depth-state-semantics-inferred-never-satisfies-a-gate.md] (DONE — `assess_criticality` + `Criticality` + `CRITICALITY_SIGNAL_TOKENS`; the Low substring-over-match finding whose correction lever is THIS story's operator override; `critical_subsystems_all_deep` seam stays defaulted-True until 2.3)
+- [Source: _bmad-output/design-artifacts/ArgusAgent/stories/1-6-pure-function-verdict-gate-finding-ordering-exit-code-mapping.md] (DONE — `evaluate_verdict(..., critical_subsystems_all_deep: bool = True)` + `AuditVerdict.critical_subsystems_all_deep`; the additive Story-2.3 seam this story SUPPLIES)
 - [Source: minions_core/apaa/ledger/depth_semantics.py] (`assess_criticality(*, file_path, source, ast_entry=None) -> Criticality`, `Criticality{CRITICAL, NORMAL}`, `CRITICALITY_SIGNAL_TOKENS`, `DepthSemanticsError` — REUSE verbatim, do NOT modify)
 - [Source: minions_core/apaa/verdict/verdict_gate.py] (`evaluate_verdict(ledger, findings, *, critical_subsystems_all_deep=True)`, `AuditVerdict.critical_subsystems_all_deep` — SUPPLY the boolean, do NOT modify the gate)
 - [Source: minions_core/apaa/pipeline.py] (`run_audit_detailed` — the single `evaluate_verdict(ledger, tuple(findings))` call site to rewire; `_read_source` provides the in-memory source for identification)

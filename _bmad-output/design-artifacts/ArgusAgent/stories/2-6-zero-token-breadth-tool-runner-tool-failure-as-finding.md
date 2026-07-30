@@ -7,7 +7,7 @@ Status: done
 > **APAA sub-project story.** APAA (AI Project Assurance Audit) is a SEPARATE headless audit sub-tool
 > placed at `minions_core/apaa/` (placement decision 2026-06-18). It reuses Minions infra BY IMPORT but
 > ships its own `APAA-FR-*` / `APAA-NFR-*` driver namespace. Planning lives under
-> `_bmad-output/design-artifacts/APAA/`; the tracker is `_bmad-output/design-artifacts/APAA/sprint-status.yaml`
+> `_bmad-output/design-artifacts/ArgusAgent/`; the tracker is `_bmad-output/design-artifacts/ArgusAgent/sprint-status.yaml`
 > (NOT the Minions platform tracker). All CLAUDE.md rules apply (§3.2 ≤1200-line files, §3.7 headless-only,
 > §3.8 12-Factor + secret masking, §3.4 evidence immutability).
 
@@ -659,19 +659,19 @@ must NOT rewrite the existing row. Keep it minimal — a new row is not required
 
 ### References
 
-- [Source: _bmad-output/design-artifacts/APAA/epics.md#Story-2.6 Zero-token breadth tool runner + tool-failure-as-finding] (the three ACs: zero-token breadth + `tool_scanned_only`; tool-failure → finding; unestablishable-traceability → finding)
-- [Source: _bmad-output/design-artifacts/APAA/E-PRD/prd.md#FR14 tool-failure / unestablishable-traceability → finding, not crash]
-- [Source: _bmad-output/design-artifacts/APAA/E-PRD/prd.md#FR5 fixed-enum coverage ledger (tool_scanned_only)]
-- [Source: _bmad-output/design-artifacts/APAA/E-PRD/prd.md#NFR-C3 deterministic zero-token tools perform breadth so LLM spend is reserved for depth]
-- [Source: _bmad-output/design-artifacts/APAA/E-PRD/prd.md#NFR-R1 a tool/parse failure degrades to a recorded finding or downgrade — never an uncaught crash or fabricated result]
-- [Source: _bmad-output/design-artifacts/APAA/architecture.md#D. Defect Detectors] (`tool_runner.py` — zero-token breadth; failure→finding)
-- [Source: _bmad-output/design-artifacts/APAA/architecture.md#Error / Degradation Patterns] (failure → typed finding, never an uncaught raise; typed exceptions at the impure shell; no bare `except: pass` / `print()`)
-- [Source: _bmad-output/design-artifacts/APAA/architecture.md#Pure/Impure Separation (master rule)] (impure shell at the edges only — tool/subprocess runner is impure; classifier pure)
-- [Source: _bmad-output/design-artifacts/APAA/architecture.md#Determinism Patterns] (one serializer; no floats — metrics fixed-precision; no iteration-order reliance)
-- [Source: _bmad-output/design-artifacts/APAA/architecture.md#AR1 new external dependencies] (`radon==4.1.0` zero-token breadth metrics, already installed/sanctioned)
-- [Source: _bmad-output/design-artifacts/APAA/epic-1-retro-2026-06-21.md#7. Action Items] (AI-E1-1: default impure-shell subprocess/parser stories to ship an adversarial non-ASCII + locale + failure-injection fixture — APPLY FIRST IN 2.6; AI-E1-4 gates extended-not-forked; AI-E1-5 exercise the L1-E11 loop)
-- [Source: _bmad-output/design-artifacts/APAA/stories/2-1-complete-depth-state-semantics-inferred-never-satisfies-a-gate.md] (DONE — `tool_scanned_only` documented + classified via `classify_depth(EvidenceKind.TOOL_BREADTH_ONLY)`; FR8 denominator-only; `assess_criticality`)
-- [Source: _bmad-output/design-artifacts/APAA/stories/2-5-hardcoded-secret-detector-producer-side-redaction.md] (DONE — the immediate detector precedent: separate frozen no-leaky-field evidence model, sanitized reason, folded into `_detect_per_file`, joined to the no-web gate, producer-side redaction)
+- [Source: _bmad-output/design-artifacts/ArgusAgent/epics.md#Story-2.6 Zero-token breadth tool runner + tool-failure-as-finding] (the three ACs: zero-token breadth + `tool_scanned_only`; tool-failure → finding; unestablishable-traceability → finding)
+- [Source: _bmad-output/design-artifacts/ArgusAgent/E-PRD/prd.md#FR14 tool-failure / unestablishable-traceability → finding, not crash]
+- [Source: _bmad-output/design-artifacts/ArgusAgent/E-PRD/prd.md#FR5 fixed-enum coverage ledger (tool_scanned_only)]
+- [Source: _bmad-output/design-artifacts/ArgusAgent/E-PRD/prd.md#NFR-C3 deterministic zero-token tools perform breadth so LLM spend is reserved for depth]
+- [Source: _bmad-output/design-artifacts/ArgusAgent/E-PRD/prd.md#NFR-R1 a tool/parse failure degrades to a recorded finding or downgrade — never an uncaught crash or fabricated result]
+- [Source: _bmad-output/design-artifacts/ArgusAgent/architecture.md#D. Defect Detectors] (`tool_runner.py` — zero-token breadth; failure→finding)
+- [Source: _bmad-output/design-artifacts/ArgusAgent/architecture.md#Error / Degradation Patterns] (failure → typed finding, never an uncaught raise; typed exceptions at the impure shell; no bare `except: pass` / `print()`)
+- [Source: _bmad-output/design-artifacts/ArgusAgent/architecture.md#Pure/Impure Separation (master rule)] (impure shell at the edges only — tool/subprocess runner is impure; classifier pure)
+- [Source: _bmad-output/design-artifacts/ArgusAgent/architecture.md#Determinism Patterns] (one serializer; no floats — metrics fixed-precision; no iteration-order reliance)
+- [Source: _bmad-output/design-artifacts/ArgusAgent/architecture.md#AR1 new external dependencies] (`radon==4.1.0` zero-token breadth metrics, already installed/sanctioned)
+- [Source: _bmad-output/design-artifacts/ArgusAgent/epic-1-retro-2026-06-21.md#7. Action Items] (AI-E1-1: default impure-shell subprocess/parser stories to ship an adversarial non-ASCII + locale + failure-injection fixture — APPLY FIRST IN 2.6; AI-E1-4 gates extended-not-forked; AI-E1-5 exercise the L1-E11 loop)
+- [Source: _bmad-output/design-artifacts/ArgusAgent/stories/2-1-complete-depth-state-semantics-inferred-never-satisfies-a-gate.md] (DONE — `tool_scanned_only` documented + classified via `classify_depth(EvidenceKind.TOOL_BREADTH_ONLY)`; FR8 denominator-only; `assess_criticality`)
+- [Source: _bmad-output/design-artifacts/ArgusAgent/stories/2-5-hardcoded-secret-detector-producer-side-redaction.md] (DONE — the immediate detector precedent: separate frozen no-leaky-field evidence model, sanitized reason, folded into `_detect_per_file`, joined to the no-web gate, producer-side redaction)
 - [Source: minions_core/apaa/detectors/base.py] (`Detector` protocol, `DetectorResult`/`DegradedCondition`/`FindingDraft`, `build_recording` — REUSE verbatim)
 - [Source: minions_core/apaa/ledger/depth_semantics.py] (`classify_depth`/`EvidenceKind.TOOL_BREADTH_ONLY`/`DEPTH_SEMANTICS` — REUSE the single classifier, do NOT mint the enum ad hoc)
 - [Source: minions_core/apaa/ledger/coverage_ledger.py] (`CoverageDepth.TOOL_SCANNED_ONLY`, `grade_entry`, `CoverageLedger` — REUSE, do NOT modify)

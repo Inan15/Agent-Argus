@@ -7,7 +7,7 @@ Status: done
 > **APAA sub-project story.** APAA (AI Project Assurance Audit) is a SEPARATE headless audit sub-tool
 > placed at `minions_core/apaa/` (placement decision 2026-06-18). It reuses Minions infra BY IMPORT but
 > ships its own `APAA-FR-*` / `APAA-NFR-*` driver namespace. Planning lives under
-> `_bmad-output/design-artifacts/APAA/`; the tracker is `_bmad-output/design-artifacts/APAA/sprint-status.yaml`
+> `_bmad-output/design-artifacts/ArgusAgent/`; the tracker is `_bmad-output/design-artifacts/ArgusAgent/sprint-status.yaml`
 > (NOT the Minions platform tracker). All CLAUDE.md rules apply (§3.2 ≤1200-line files, §3.7 headless-only,
 > §3.8 12-Factor + secret masking, §3.4 evidence immutability).
 
@@ -535,18 +535,18 @@ minimal — a new row is not required.
 
 ### References
 
-- [Source: _bmad-output/design-artifacts/APAA/epics.md#Story-1.6 Pure-function verdict gate, finding ordering & exit-code mapping]
-- [Source: _bmad-output/design-artifacts/APAA/architecture.md#A. Execution & Invocation] (exit-code wire contract `0`=RELEASE_READY / `2`=BLOCKED / `3`=INSUFFICIENT_COVERAGE / `1`=crash; pure `AuditRequest → AuditVerdict`)
-- [Source: _bmad-output/design-artifacts/APAA/architecture.md#C. Coverage Ledger, Recording Schema & Verdict (determinism core)] (pure-function verdict gate, 0 LLM tokens; Prosecutor = distinct pure-consumer pass)
-- [Source: _bmad-output/design-artifacts/APAA/architecture.md#Contract / Format Patterns] (verdict vocabulary canonical: RELEASE_READY / NOT_READY_FOR_RELEASE (BLOCKED shorthand) / INSUFFICIENT_COVERAGE; exit codes 0/2/3/1)
-- [Source: _bmad-output/design-artifacts/APAA/architecture.md#Cross-Cutting Concerns #6 advisory-by-contract] (no verdict-moving 🔴 without AST corroboration AND Prosecutor sign-off; false-accusation moat)
-- [Source: _bmad-output/design-artifacts/APAA/architecture.md#Pure/Impure Separation (master rule)] (verdict gate imports only ledger models; never reads a file or calls dispatch())
-- [Source: _bmad-output/design-artifacts/APAA/architecture.md#Determinism Patterns (NFR-P1/D1)] (one serializer; no floats — ratios fixed-precision; no iteration-order reliance)
-- [Source: _bmad-output/design-artifacts/APAA/E-PRD/prd.md#FR15 pure-function verdict / FR16 gates+floor (≥60% deep + 0 blocking; <20% → INSUFFICIENT_COVERAGE; never a default block) / FR18 exit code + machine-readable artifact / FR33 verdict-impact finding ordering / FR8 inferred-never-satisfies]
-- [Source: _bmad-output/design-artifacts/APAA/E-PRD/prd.md#Verdict vocabulary (canonical)] (RELEASE_READY → NOT_READY_FOR_RELEASE; BLOCKED = demo shorthand; INSUFFICIENT_COVERAGE = not-assessed floor)
-- [Source: _bmad-output/design-artifacts/APAA/stories/1-2-fixed-enum-coverage-ledger-frozen-recording-schema.md] (DONE — `CoverageLedger`/`CoverageDepth`/`deep_count`/`total`/`counts_by_depth`/`grade_entry`; `Recording` = the finding row the gate folds; closed-enum membership-pin precedent; golden round-trip + `extra="forbid"`)
-- [Source: _bmad-output/design-artifacts/APAA/stories/1-5-heuristic-vacuous-test-detector-tier-a-vacuous-path-ast-subset.md] (DONE — the LOCKED eligibility surface the gate reads: heuristic-only → advisory + depth_supported=None + rule_id=vacuous_test_heuristic; AST-corroborated → advisory + depth_supported=AUDITED_SHALLOW + rule_id=vacuous_test_ast; `DetectorResult`/`build_recording`)
-- [Source: _bmad-output/design-artifacts/APAA/stories/1-1-canonical-serializer-content-hashed-envelope.md] (DONE — serializer + envelope spine for the golden round-trip; `_MODULES_UNDER_GUARD` seed + single-serializer AST gate; Decimal/Fraction encoding)
+- [Source: _bmad-output/design-artifacts/ArgusAgent/epics.md#Story-1.6 Pure-function verdict gate, finding ordering & exit-code mapping]
+- [Source: _bmad-output/design-artifacts/ArgusAgent/architecture.md#A. Execution & Invocation] (exit-code wire contract `0`=RELEASE_READY / `2`=BLOCKED / `3`=INSUFFICIENT_COVERAGE / `1`=crash; pure `AuditRequest → AuditVerdict`)
+- [Source: _bmad-output/design-artifacts/ArgusAgent/architecture.md#C. Coverage Ledger, Recording Schema & Verdict (determinism core)] (pure-function verdict gate, 0 LLM tokens; Prosecutor = distinct pure-consumer pass)
+- [Source: _bmad-output/design-artifacts/ArgusAgent/architecture.md#Contract / Format Patterns] (verdict vocabulary canonical: RELEASE_READY / NOT_READY_FOR_RELEASE (BLOCKED shorthand) / INSUFFICIENT_COVERAGE; exit codes 0/2/3/1)
+- [Source: _bmad-output/design-artifacts/ArgusAgent/architecture.md#Cross-Cutting Concerns #6 advisory-by-contract] (no verdict-moving 🔴 without AST corroboration AND Prosecutor sign-off; false-accusation moat)
+- [Source: _bmad-output/design-artifacts/ArgusAgent/architecture.md#Pure/Impure Separation (master rule)] (verdict gate imports only ledger models; never reads a file or calls dispatch())
+- [Source: _bmad-output/design-artifacts/ArgusAgent/architecture.md#Determinism Patterns (NFR-P1/D1)] (one serializer; no floats — ratios fixed-precision; no iteration-order reliance)
+- [Source: _bmad-output/design-artifacts/ArgusAgent/E-PRD/prd.md#FR15 pure-function verdict / FR16 gates+floor (≥60% deep + 0 blocking; <20% → INSUFFICIENT_COVERAGE; never a default block) / FR18 exit code + machine-readable artifact / FR33 verdict-impact finding ordering / FR8 inferred-never-satisfies]
+- [Source: _bmad-output/design-artifacts/ArgusAgent/E-PRD/prd.md#Verdict vocabulary (canonical)] (RELEASE_READY → NOT_READY_FOR_RELEASE; BLOCKED = demo shorthand; INSUFFICIENT_COVERAGE = not-assessed floor)
+- [Source: _bmad-output/design-artifacts/ArgusAgent/stories/1-2-fixed-enum-coverage-ledger-frozen-recording-schema.md] (DONE — `CoverageLedger`/`CoverageDepth`/`deep_count`/`total`/`counts_by_depth`/`grade_entry`; `Recording` = the finding row the gate folds; closed-enum membership-pin precedent; golden round-trip + `extra="forbid"`)
+- [Source: _bmad-output/design-artifacts/ArgusAgent/stories/1-5-heuristic-vacuous-test-detector-tier-a-vacuous-path-ast-subset.md] (DONE — the LOCKED eligibility surface the gate reads: heuristic-only → advisory + depth_supported=None + rule_id=vacuous_test_heuristic; AST-corroborated → advisory + depth_supported=AUDITED_SHALLOW + rule_id=vacuous_test_ast; `DetectorResult`/`build_recording`)
+- [Source: _bmad-output/design-artifacts/ArgusAgent/stories/1-1-canonical-serializer-content-hashed-envelope.md] (DONE — serializer + envelope spine for the golden round-trip; `_MODULES_UNDER_GUARD` seed + single-serializer AST gate; Decimal/Fraction encoding)
 - [Source: minions_core/apaa/ledger/coverage_ledger.py] (`CoverageLedger.deep_count()`/`total()`/`counts_by_depth()` + `CoverageDepth` — the ledger the gate folds)
 - [Source: minions_core/apaa/ledger/recording.py] (`Recording` with `advisory`/`depth_supported`/`rule_id`/`recording_id` — the finding row the gate orders/classifies)
 - [Source: minions_core/apaa/detectors/base.py] (`DetectorResult`/`build_recording` — the finding source shape + the recording-id/eligibility precedent)
@@ -636,7 +636,7 @@ cache (Epic-5), no LLM (Epic-6), no `.apaa/` write.
 - `tests/apaa/test_verdict_gate.py` (NEW — 40 tests, area APAA-VERDICT)
 - `tests/apaa/test_no_web_imports.py` (UPDATE — appended
   `minions_core.apaa.verdict.verdict_gate` to `_MODULES_UNDER_GUARD`)
-- `_bmad-output/design-artifacts/APAA/sprint-status.yaml` (status → review)
+- `_bmad-output/design-artifacts/ArgusAgent/sprint-status.yaml` (status → review)
 
 ## Senior Developer Review (AI)
 

@@ -6,9 +6,9 @@ created: "2026-06-17"
 purpose: "Token-efficient context for downstream PRD creation — captures detail beyond the 1-2 page executive brief."
 inputs:
   - _bmad-output/brainstorming/brainstorming-session-2026-06-16-201450.md
-  - _bmad-output/design-artifacts/APAA/research-market-2026-06-17.md
-  - _bmad-output/design-artifacts/APAA/research-domain-2026-06-17.md
-  - _bmad-output/design-artifacts/APAA/research-technical-2026-06-17.md
+  - _bmad-output/design-artifacts/ArgusAgent/research-market-2026-06-17.md
+  - _bmad-output/design-artifacts/ArgusAgent/research-domain-2026-06-17.md
+  - _bmad-output/design-artifacts/ArgusAgent/research-technical-2026-06-17.md
 ---
 
 # APAA — Detail Pack (for PRD creation)

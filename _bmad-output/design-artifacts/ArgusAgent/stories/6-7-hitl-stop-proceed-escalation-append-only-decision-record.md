@@ -7,7 +7,7 @@ Status: done
 > **APAA sub-project story.** APAA (AI Project Assurance Audit) is a SEPARATE headless audit sub-tool
 > placed at `minions_core/apaa/` (placement decision 2026-06-18). It reuses Minions infra BY IMPORT but
 > ships its own `APAA-FR-*` / `APAA-NFR-*` driver namespace. Planning lives under
-> `_bmad-output/design-artifacts/APAA/`; the tracker is `_bmad-output/design-artifacts/APAA/sprint-status.yaml`
+> `_bmad-output/design-artifacts/ArgusAgent/`; the tracker is `_bmad-output/design-artifacts/ArgusAgent/sprint-status.yaml`
 > (NOT the Minions platform tracker at `_bmad-output/implementation-artifacts/sprint-status.yaml`). All
 > CLAUDE.md rules apply (§3.2 ≤1200-line files, §3.7 headless-only, §3.8 12-Factor + secret masking, §3.4
 > evidence immutability). Run all gate/test commands under `PYTHONIOENCODING=utf-8` (Windows / cp1252).
@@ -217,7 +217,7 @@ schema types; the record writer vs. the chain-read verifier) — measure first, 
 - **AI-E5-4 (governance 🟢) — central defer register.** If 6.7 surfaces a follow-up (e.g. the live pipeline
   wiring, the CLI decision flag, an LLM-driven escalation seam, a notification transport, or a known
   limitation it does NOT close), file it append-only in
-  `_bmad-output/design-artifacts/APAA/deferred-work.md` with the six CC-3 fields (`target_story` e.g.
+  `_bmad-output/design-artifacts/ArgusAgent/deferred-work.md` with the six CC-3 fields (`target_story` e.g.
   `epic-7-minions-dogfood-proof-run` for the live-run wiring, or an `epic-7-...` / future-epic key).
 - **AI-E5-7 (process 🟢) — keep the structural gates green + partial-reuse docstring precision.** Both
   modules keep the no-web-imports gate, the single-serializer AST gate, and the file-size gate green (pure,
@@ -435,7 +435,7 @@ record + the schema types + the new tests) EXIST + pass + any new defer is filed
         `cli.py`/HTTP/CI-job change; NO new detector/Prosecutor edit; NO live LLM.
   - [x] **AI-E5-4:** file any follow-up (live pipeline wiring, the CLI `--decision` flag, an LLM-driven
         escalation seam, a notification transport, or a known limitation) append-only in
-        `_bmad-output/design-artifacts/APAA/deferred-work.md` with the six CC-3 fields (`target_story` e.g.
+        `_bmad-output/design-artifacts/ArgusAgent/deferred-work.md` with the six CC-3 fields (`target_story` e.g.
         `epic-7-minions-dogfood-proof-run` or a future-epic key).
   - [x] **AI-E5-3 / AI-E2-1 GATE:** the mandatory artifacts (the gate + the record + the schema types + the
         new tests) EXIST + pass BEFORE the `review` flip; the Dev Agent Record is filled completely (no blank
@@ -578,7 +578,7 @@ the item is checked off, no unresolved findings remain, `review → done`._
 
 ### Context Reference
 
-- Epic: `_bmad-output/design-artifacts/APAA/epics.md` — Epic 6 / Story 6.7 (FR23 + FR24).
+- Epic: `_bmad-output/design-artifacts/ArgusAgent/epics.md` — Epic 6 / Story 6.7 (FR23 + FR24).
 - Predecessors (done): Stories 6.1–6.6 (Epic 6 spine); Epics 1–5 (the determinism/persistence/verdict spine).
 - Reuse anchors: `store/writer.py`, `store/envelope.py`, `store/canonical.py`, `store/paths.py`,
   `store/reader.py`, `verdict/prosecutor.py`, `ledger/recording.py`.
@@ -623,8 +623,8 @@ Extended (tests — not forked):
 - `tests/security/test_apaa_secret_containment.py` (+HITL decision-record sweep TC-APAA-SECURITY-001-21/-22)
 
 Governance evidence:
-- `_bmad-output/design-artifacts/APAA/deferred-work.md` (DF-6-7-A appended, six CC-3 fields)
-- `_bmad-output/design-artifacts/APAA/sprint-status.yaml` (6-7 → review)
+- `_bmad-output/design-artifacts/ArgusAgent/deferred-work.md` (DF-6-7-A appended, six CC-3 fields)
+- `_bmad-output/design-artifacts/ArgusAgent/sprint-status.yaml` (6-7 → review)
 - this story file (Dev Agent Record + Change Log + Status)
 
 ## Change Log

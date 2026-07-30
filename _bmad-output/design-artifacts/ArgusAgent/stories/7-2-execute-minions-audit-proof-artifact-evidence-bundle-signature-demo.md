@@ -7,7 +7,7 @@ Status: done
 > **APAA sub-project story.** APAA (AI Project Assurance Audit) is a SEPARATE headless audit sub-tool
 > placed at `minions_core/apaa/` (placement decision 2026-06-18). It reuses Minions infra BY IMPORT but
 > ships its own `APAA-FR-*` / `APAA-NFR-*` driver namespace. Planning lives under
-> `_bmad-output/design-artifacts/APAA/`; the tracker is `_bmad-output/design-artifacts/APAA/sprint-status.yaml`
+> `_bmad-output/design-artifacts/ArgusAgent/`; the tracker is `_bmad-output/design-artifacts/ArgusAgent/sprint-status.yaml`
 > (NOT the Minions platform tracker at `_bmad-output/implementation-artifacts/sprint-status.yaml`). All
 > CLAUDE.md rules apply (§3.2 ≤1200-line files, §3.7 headless-only, §3.8 12-Factor + secret masking, §3.4
 > evidence immutability). Run all gate/test commands under `PYTHONIOENCODING=utf-8` (Windows / cp1252).
@@ -147,7 +147,7 @@ needs already ships:
 **The net-new deliverable of THIS story.** The dogfood is EXECUTED + assembled + made honestly inspectable:
 
 1. a committed, reproducible **dogfood-execution generator + proof artifact** (a `.md` deliverable under
-   `_bmad-output/design-artifacts/APAA/`, e.g. `minions-dogfood-proof.md`) that runs APAA end-to-end over the
+   `_bmad-output/design-artifacts/ArgusAgent/`, e.g. `minions-dogfood-proof.md`) that runs APAA end-to-end over the
    real Minions repo @ the pinned commit under `budget = 843` (the 7.1 `$X`), REUSING `run_audit_detailed`
    (no fork), and records the proof: the verdict per unit (or over the whole repo), the coverage-ledger deep-%
    (exact `Fraction`), the finding counts by `rule_id` (advisory vs blocking / verdict-eligible), the
@@ -295,7 +295,7 @@ re-derived), the 7.1 partition map (4 bounded units) + the `$X` = 843-credit cei
 (per-file depth states + the exact-`Fraction` deep-%), the **findings** (the verdict-ordered `ordered_findings`),
 and the **negative-assurance verdict** (the 4.1 `NegativeAssuranceVerdict` — verdict + scope statement +
 disclaimer), and it records these into a committed **proof artifact** (e.g.
-`_bmad-output/design-artifacts/APAA/minions-dogfood-proof.md`); the run completes **within the `$X` = 843
+`_bmad-output/design-artifacts/ArgusAgent/minions-dogfood-proof.md`); the run completes **within the `$X` = 843
 ceiling** (the cost accounting under `BudgetConfig(ceiling_credits=843)` does NOT breach — `ceiling_reached is
 False`), **and** the proof records the 3.2 halt demonstration (a ceiling below the V1 total demonstrably
 breaches → the halt→skip→downgrade→report path fires — REUSING the 3.2 mechanism, not re-implementing it).
@@ -503,7 +503,7 @@ the generator/test docstring) — plus any signature-demo e2e additions under `A
         detector/Prosecutor/partitioner/budget-core/bundle-core edit; NO live LLM; `protocol_cleared` NOT
         flipped.
   - [x] **AI-E5-4 / AI-E6-6:** file the DF-6-6-A progress note append-only in
-        `_bmad-output/design-artifacts/APAA/deferred-work.md` (six CC-3 fields; dogfood EXECUTED + real
+        `_bmad-output/design-artifacts/ArgusAgent/deferred-work.md` (six CC-3 fields; dogfood EXECUTED + real
         findings adjudication-ready; human-adjudication half still open, `target_story:
         epic-7-minions-dogfood-precision`) AND a NEW defer for the human-adjudication step (six CC-3 fields).
         Note DF-6-7-A (HITL wiring) stays open — do NOT close it. File any newly-surfaced frozen-surface gap the
@@ -639,16 +639,16 @@ the generator/test docstring) — plus any signature-demo e2e additions under `A
   `_MODULES_UNDER_GUARD` in `tests/apaa/test_no_web_imports.py`.
 - New test: `tests/apaa/test_dogfood_proof.py` (area `APAA-DOGFOOD`, `TC-APAA-DOGFOOD-001-NN` from **18**); +
   any signature-demo e2e under `APAA-PIPELINE`.
-- New committed artifact: `_bmad-output/design-artifacts/APAA/minions-dogfood-proof.md` (the proof artifact +
+- New committed artifact: `_bmad-output/design-artifacts/ArgusAgent/minions-dogfood-proof.md` (the proof artifact +
   the adjudication-ready findings layout + the `grade: demo-heuristic-only` flag + the provisional-gate report).
 - DF-6-6-A progress note + the human-adjudication defer: append-only in
-  `_bmad-output/design-artifacts/APAA/deferred-work.md`.
+  `_bmad-output/design-artifacts/ArgusAgent/deferred-work.md`.
 - All files ≤1200 lines; run everything under `PYTHONIOENCODING=utf-8`.
 
 ### References
-- Epic source: `_bmad-output/design-artifacts/APAA/epics.md` §Epic 7 / Story 7.2 (lines 996–1018) + the "Open
+- Epic source: `_bmad-output/design-artifacts/ArgusAgent/epics.md` §Epic 7 / Story 7.2 (lines 996–1018) + the "Open
   delivery inputs — LOCKED 2026-06-18" block (OI1/OI2/OI3).
-- The plan this story executes: `_bmad-output/design-artifacts/APAA/stories/7-1-minions-full-repo-partition-budget-sizing-plan.md`
+- The plan this story executes: `_bmad-output/design-artifacts/ArgusAgent/stories/7-1-minions-full-repo-partition-budget-sizing-plan.md`
   + `minions-dogfood-partition-plan.md` + `minions-dogfood-budget-plan.md`.
 - Reuse seams: `pipeline.py::run_audit_detailed` (1.7/3.x/6.x); `evidence/bundle.py::build_evidence_bundle`/
   `persist_evidence_bundle` (4.3); `store/integrity.py::lint_referential_integrity` (4.2);
@@ -664,7 +664,7 @@ the generator/test docstring) — plus any signature-demo e2e additions under `A
 ## Dev Agent Record
 
 ### Context Reference
-- Epic source: `_bmad-output/design-artifacts/APAA/epics.md` §Epic 7 / Story 7.2.
+- Epic source: `_bmad-output/design-artifacts/ArgusAgent/epics.md` §Epic 7 / Story 7.2.
 - Reuse seams: `pipeline.py` (1.7/3.x/6.x), `evidence/bundle.py` (4.3), `store/integrity.py` (4.2),
   `store/{canonical,envelope,writer,reader}.py` (1.1/1.3), `precision/replay_harness.py` + `_registry.py`
   (6.6/6.5), `dogfood/partition_plan.py` (7.1), `tests/apaa/cartridges/_cartridge.py` (6.5).
@@ -772,13 +772,13 @@ claude-opus-4-8[1m] (Claude Opus 4.8, 1M context) — BMAD dev-story worker, imp
   import-isolation coverage (IMPURE-shell entry — FastAPI/LLM-free).
 - `tests/security/test_apaa_secret_containment.py` — MODIFIED: appended TC-APAA-SECURITY-001-23 (the dogfood bundle
   over the REAL Minions repo is source-free, with a non-vacuity guard).
-- `_bmad-output/design-artifacts/APAA/minions-dogfood-proof.md` — NEW: the committed, reproducible proof artifact
+- `_bmad-output/design-artifacts/ArgusAgent/minions-dogfood-proof.md` — NEW: the committed, reproducible proof artifact
   (verdict + within-ceiling + SIGNED bundle + signature demo + demo-grade flag + adjudication-ready findings +
   provisional-gate report).
-- `_bmad-output/design-artifacts/APAA/deferred-work.md` — MODIFIED (append-only): DF-6-6-A-P2 progress note + the
+- `_bmad-output/design-artifacts/ArgusAgent/deferred-work.md` — MODIFIED (append-only): DF-6-6-A-P2 progress note + the
   NEW DF-7-2-A human-adjudication defer (six CC-3 fields).
-- `_bmad-output/design-artifacts/APAA/sprint-status.yaml` — MODIFIED: `7-2-...` in-progress → review.
-- `_bmad-output/design-artifacts/APAA/stories/7-2-...md` — MODIFIED: tasks checked, Dev Agent Record, File List,
+- `_bmad-output/design-artifacts/ArgusAgent/sprint-status.yaml` — MODIFIED: `7-2-...` in-progress → review.
+- `_bmad-output/design-artifacts/ArgusAgent/stories/7-2-...md` — MODIFIED: tasks checked, Dev Agent Record, File List,
   Change Log, Status.
 
 ## Senior Developer Review (AI)

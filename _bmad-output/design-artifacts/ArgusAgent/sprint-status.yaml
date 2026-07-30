@@ -8,7 +8,7 @@
 # PATH NOTE (2026-07-30): the artifact folder was renamed APAA -> ArgusAgent, but
 # the path references inside these documents were not updated at the time. The
 # machine-read keys above now match the on-disk layout. Prose and frontmatter
-# elsewhere in this folder may still say `design-artifacts/APAA/`; read those as
+# elsewhere in this folder may still say `design-artifacts/ArgusAgent/`; read those as
 # `design-artifacts/ArgusAgent/`. Historical evidence text is left as written.
 #
 # SCOPE NOTE: This is the ArgusAgent-LOCAL sprint tracker. ArgusAgent is a
@@ -55,7 +55,7 @@ last_updated: 2026-07-04
 project: APAA (AI Project Assurance Audit)
 project_key: NOKEY
 tracking_system: file-system
-story_location: _bmad-output/design-artifacts/APAA/stories
+story_location: _bmad-output/design-artifacts/ArgusAgent/stories
 
 development_status:
   # ── Epic 1: Signature-Demo Vertical Slice (Tier-A spine) ──

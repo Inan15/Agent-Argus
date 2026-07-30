@@ -7,7 +7,7 @@ Status: done
 > **APAA sub-project story.** APAA (AI Project Assurance Audit) is a SEPARATE headless audit sub-tool
 > placed at `minions_core/apaa/` (placement decision 2026-06-18). It reuses Minions infra BY IMPORT but
 > ships its own `APAA-FR-*` / `APAA-NFR-*` driver namespace. Planning lives under
-> `_bmad-output/design-artifacts/APAA/`; the tracker is `_bmad-output/design-artifacts/APAA/sprint-status.yaml`
+> `_bmad-output/design-artifacts/ArgusAgent/`; the tracker is `_bmad-output/design-artifacts/ArgusAgent/sprint-status.yaml`
 > (NOT the Minions platform tracker). All CLAUDE.md rules apply (§3.2 ≤1200-line files, §3.7 headless-only,
 > §3.8 12-Factor + secret masking, §3.4 evidence immutability).
 
@@ -139,7 +139,7 @@ package the prior retro's action items as the next epic's backlog).
   statement; (c) the resume-byte-identity assertion (if added) must put a non-deep entry in the assessed
   prefix (the exact 3.4 mask). Document the RED-then-green demonstration in Completion Notes.
 - **AI-E3-3 (governance 🟢) — central defer register.** If this story files a NEW defer, file it append-only
-  in `_bmad-output/design-artifacts/APAA/deferred-work.md` (the single canonical APAA defer source), not only
+  in `_bmad-output/design-artifacts/ArgusAgent/deferred-work.md` (the single canonical APAA defer source), not only
   in the story file. **DF-2-3-B is CLOSED by this story** — append a closure note to its central-register
   entry (append-only; do NOT rewrite the original entry per §3.4 evidence immutability). The Epic-3 retro
   re-carried that DF-3-1-A / DF-2-3-A / DF-1-4-A / DF-1-7-A/B remain un-backfilled — out of THIS story's
@@ -411,7 +411,7 @@ The mandatory test files MUST exist + pass BEFORE the story flips to `status: re
   - [x] `PYTHONIOENCODING=utf-8 python -m pytest tests/apaa/ tests/test_import_paths.py` → all pass.
   - [x] `mypy` clean on the new + edited modules (`python run_mypy_per_file.py` or scoped).
   - [x] **AI-E3-3 / AI-E3-5:** append a CLOSURE note to the DF-2-3-B entry in
-        `_bmad-output/design-artifacts/APAA/deferred-work.md` (append-only — do NOT rewrite the original entry;
+        `_bmad-output/design-artifacts/ArgusAgent/deferred-work.md` (append-only — do NOT rewrite the original entry;
         §3.4 evidence immutability). If a NEW defer is filed, file it append-only there too.
   - [x] **AI-E3-2 / AI-E2-1 GATE:** all mandatory test files exist + pass BEFORE the `review` flip; Dev Agent
         Record filled completely (no blank placeholders); document the AI-E3-1 RED-then-green keystone-fixture
@@ -533,12 +533,12 @@ The mandatory test files MUST exist + pass BEFORE the story flips to `status: re
 
 ### References
 
-- [Source: _bmad-output/design-artifacts/APAA/epics.md#Story 4.1: Negative-assurance verdict semantics] — the
+- [Source: _bmad-output/design-artifacts/ArgusAgent/epics.md#Story 4.1: Negative-assurance verdict semantics] — the
   story ACs (scope_statement / materiality_bar / disclaimer / point-in-time stamp; no over-claim).
-- [Source: _bmad-output/design-artifacts/APAA/E-PRD/prd.md] — FR17 (negative-assurance verdict), NFR-A3
+- [Source: _bmad-output/design-artifacts/ArgusAgent/E-PRD/prd.md] — FR17 (negative-assurance verdict), NFR-A3
   (every verdict carries scope/materiality/disclaimer/point-in-time), FR4 (critical subsystems), FR28/NFR-S1
   (no source/secret bytes — producer discipline; the CI suite is 4.4).
-- [Source: _bmad-output/design-artifacts/APAA/architecture.md:429] — `verdict/negative_assurance.py` =
+- [Source: _bmad-output/design-artifacts/ArgusAgent/architecture.md:429] — `verdict/negative_assurance.py` =
   FR17/NFR-A3 home; [:226-228] invocation/exit-code contract; [:251] single canonical serializer; [:528]
   A1–3 → `negative_assurance`.
 - [Source: minions_core/apaa/verdict/verdict_gate.py] — the `AuditVerdict` + the LOCKED `Verdict` vocabulary
@@ -549,12 +549,12 @@ The mandatory test files MUST exist + pass BEFORE the story flips to `status: re
   (paths/origins/designated_but_unmatched — REUSE; persist for DF-2-3-B).
 - [Source: minions_core/apaa/pipeline.py:658-692] — `_assemble_and_persist` (the SHARED fresh+resume fold —
   the single wiring seam); [:234-262] `AuditResult` (the additive-field precedent via `floor_report`).
-- [Source: _bmad-output/design-artifacts/APAA/stories/3-3-insufficient-coverage-floor-under-exhaustion.md] —
+- [Source: _bmad-output/design-artifacts/ArgusAgent/stories/3-3-insufficient-coverage-floor-under-exhaustion.md] —
   the explicit fence of the negative-assurance WRAPPER to this story.
-- [Source: _bmad-output/design-artifacts/APAA/epic-3-retro-2026-06-27.md#7] — AI-E3-1 (keystone-fixture
+- [Source: _bmad-output/design-artifacts/ArgusAgent/epic-3-retro-2026-06-27.md#7] — AI-E3-1 (keystone-fixture
   adequacy), AI-E3-3 (defer-register consolidation), AI-E3-5 (DF-2-3-B closure here + the 4.2 data-layer
   guard note), AI-E3-6 (L1-E11 loop + gates + cross-env suite).
-- [Source: _bmad-output/design-artifacts/APAA/deferred-work.md] — DF-2-3-B (target_story =
+- [Source: _bmad-output/design-artifacts/ArgusAgent/deferred-work.md] — DF-2-3-B (target_story =
   `epic-4-negative-assurance-verdict-semantics`; CLOSED by this story — append-only closure note).
 - [Source: CLAUDE.md] — §3.2 ≤1200-line files, §3.4 evidence immutability, §3.7 headless-only, §3.8 12-Factor
   + secret masking, §9.1 L1-E11 operating model, §9.2 rule-of-three guard promotion.
@@ -677,6 +677,6 @@ claude-opus-4-8 (BMAD dev-story, mode=implement)
 - `tests/apaa/test_negative_assurance_roundtrip.py` (NEW — TC-APAA-VERDICT-001-18..21)
 - `tests/apaa/test_pipeline_signature_demo.py` (UPDATE — TC-APAA-PIPELINE-001-31..36 e2e)
 - `tests/apaa/test_no_web_imports.py` (UPDATE — appended verdict/negative_assurance to _MODULES_UNDER_GUARD)
-- `_bmad-output/design-artifacts/APAA/deferred-work.md` (UPDATE — append-only DF-2-3-B closure note)
-- `_bmad-output/design-artifacts/APAA/sprint-status.yaml` (UPDATE — status → review, last_updated)
-- `_bmad-output/design-artifacts/APAA/stories/4-1-negative-assurance-verdict-semantics.md` (UPDATE — Status, tasks, Dev Agent Record)
+- `_bmad-output/design-artifacts/ArgusAgent/deferred-work.md` (UPDATE — append-only DF-2-3-B closure note)
+- `_bmad-output/design-artifacts/ArgusAgent/sprint-status.yaml` (UPDATE — status → review, last_updated)
+- `_bmad-output/design-artifacts/ArgusAgent/stories/4-1-negative-assurance-verdict-semantics.md` (UPDATE — Status, tasks, Dev Agent Record)

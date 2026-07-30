@@ -7,7 +7,7 @@ Status: done
 > **APAA sub-project story.** APAA (AI Project Assurance Audit) is a SEPARATE headless audit sub-tool
 > placed at `minions_core/apaa/` (placement decision 2026-06-18). It reuses Minions infra BY IMPORT but
 > ships its own `APAA-FR-*` / `APAA-NFR-*` driver namespace. Planning lives under
-> `_bmad-output/design-artifacts/APAA/`; the tracker is `_bmad-output/design-artifacts/APAA/sprint-status.yaml`
+> `_bmad-output/design-artifacts/ArgusAgent/`; the tracker is `_bmad-output/design-artifacts/ArgusAgent/sprint-status.yaml`
 > (NOT the Minions platform tracker). All CLAUDE.md rules apply (§3.2 ≤1200-line files, §3.7 headless-only,
 > §3.8 12-Factor + secret masking, §3.4 evidence immutability).
 >
@@ -181,7 +181,7 @@ prior retro's action items as the next epic's backlog).
   depths + ≥1 finding + the scope statement + the integrity report) so a silently-dropped section is caught,
   and goes RED if a section is omitted. Document the RED-then-green demonstration in Completion Notes.
 - **AI-E3-3 (governance 🟢) — central defer register.** If this story files a NEW defer, file it append-only in
-  `_bmad-output/design-artifacts/APAA/deferred-work.md` (the single canonical APAA defer source), not only in
+  `_bmad-output/design-artifacts/ArgusAgent/deferred-work.md` (the single canonical APAA defer source), not only in
   the story file. No existing defer names THIS story as its `target_story` (DF-1-3-A targets 4.4; DF-1-3-B was
   left-open with a non-4.3 home; DF-2-3-B is CLOSED; DF-3-4-A targets 7.1), so there is no carry-forward
   closure obligation here — do NOT expand scope to chase another defer.
@@ -470,7 +470,7 @@ BEFORE the story flips to `status: review` (AI-E3-2 / AI-E2-1).
   - [x] `PYTHONIOENCODING=utf-8 python -m pytest tests/apaa/ tests/test_import_paths.py` → all pass.
   - [x] `mypy` clean on the new + edited modules (`python run_mypy_per_file.py` or scoped).
   - [x] **AI-E3-3:** if a NEW defer is filed, file it append-only in
-        `_bmad-output/design-artifacts/APAA/deferred-work.md` (no existing defer targets THIS story; no closure
+        `_bmad-output/design-artifacts/ArgusAgent/deferred-work.md` (no existing defer targets THIS story; no closure
         obligation here).
   - [x] **AI-E3-2 / AI-E2-1 GATE:** all mandatory test files exist + pass BEFORE the `review` flip; Dev Agent
         Record filled completely (no blank placeholders); document the AI-E3-1 RED-then-green keystone-fixture
@@ -593,11 +593,11 @@ BEFORE the story flips to `status: review` (AI-E3-2 / AI-E2-1).
 
 ### References
 
-- Epic: `_bmad-output/design-artifacts/APAA/epics.md` — Epic 4 / Story 4.3 (FR29; NFRs S1/S3/A2/A3).
-- PRD: `_bmad-output/design-artifacts/APAA/E-PRD/prd.md` — FR29 (evidence-bundle export, no source retention),
+- Epic: `_bmad-output/design-artifacts/ArgusAgent/epics.md` — Epic 4 / Story 4.3 (FR29; NFRs S1/S3/A2/A3).
+- PRD: `_bmad-output/design-artifacts/ArgusAgent/E-PRD/prd.md` — FR29 (evidence-bundle export, no source retention),
   FR28 (producer redaction), NFR-S1 (no source/secret bytes in evidence), NFR-S3 (no source retained on the
   operated-service path), NFR-D2/D3/P1/A1/M1/M2.
-- Architecture: `_bmad-output/design-artifacts/APAA/architecture.md` — `evidence/bundle.py` (the FR29 home,
+- Architecture: `_bmad-output/design-artifacts/ArgusAgent/architecture.md` — `evidence/bundle.py` (the FR29 home,
   package tree §Project Structure), the Security/Containment patterns (producer-side redaction; all writes via
   containment), the Reuse/Import patterns (leaf modules only; no `api.*`), AR4/AR8/AR10/AR11.
 - Prior stories: 4.1 (`stories/4-1-negative-assurance-verdict-semantics.md` — the wrapper the bundle exports),

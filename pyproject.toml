@@ -12,17 +12,23 @@ authors = [
 ]
 license = { file = "LICENSE" }
 requires-python = ">=3.10"
-[tool.flit.module]
-name = "argus"
-
 dependencies = [
     "pydantic>=2.0",
     "jsonschema>=4.0",
     "radon>=4.1.0",
     "httpx>=0.24.0",
-    "tree-sitter>=0.25.0",
-    "tree-sitter-python>=0.25.0",
+    # Upper bound is load-bearing, not hygiene: architecture AR1 sanctions
+    # tree-sitter 0.25.x and folds the grammar version into the Epic-5 determinism
+    # cache key. On 0.26.0 the cartridge self-audit flips
+    # NOT_READY_FOR_RELEASE -> RELEASE_READY (AST corroboration stops firing), i.e.
+    # a false-negative verdict from an assurance tool. Do not widen without
+    # re-running tests/test_cartridge_selfaudit.py.
+    "tree-sitter>=0.25.0,<0.26",
+    "tree-sitter-python>=0.25.0,<0.26",
 ]
+
+[tool.flit.module]
+name = "argus"
 
 [project.optional-dependencies]
 dev = [

@@ -7,7 +7,7 @@ Status: done
 > **APAA sub-project story.** APAA (AI Project Assurance Audit) is a SEPARATE headless audit sub-tool
 > placed at `minions_core/apaa/` (placement decision 2026-06-18). It reuses Minions infra BY IMPORT but
 > ships its own `APAA-FR-*` / `APAA-NFR-*` driver namespace. Planning lives under
-> `_bmad-output/design-artifacts/APAA/`; the tracker is `_bmad-output/design-artifacts/APAA/sprint-status.yaml`
+> `_bmad-output/design-artifacts/ArgusAgent/`; the tracker is `_bmad-output/design-artifacts/ArgusAgent/sprint-status.yaml`
 > (NOT the Minions platform tracker at `_bmad-output/implementation-artifacts/sprint-status.yaml`). All
 > CLAUDE.md rules apply (§3.2 ≤1200-line files, §3.7 headless-only, §3.8 12-Factor + secret masking, §3.4
 > evidence immutability).
@@ -413,7 +413,7 @@ existing `APAA-PIPELINE` area.
         (`coverage_ledger.py`/`grade_entry`/`ast_index.py`/`cache/key.py`/`verdict/*` byte-identical). Confirm
         the no-LLM + web-stack + single-serializer + file-size gates green (extend `_MODULES_UNDER_GUARD` only
         if a new module was added). NO `cli.py`/HTTP/CI-job change.
-  - [x] **AI-E5-4 / AI-E5-5 / DN-DEFER:** back-fill DF-1-7-B into `_bmad-output/design-artifacts/APAA/
+  - [x] **AI-E5-4 / AI-E5-5 / DN-DEFER:** back-fill DF-1-7-B into `_bmad-output/design-artifacts/ArgusAgent/
         deferred-work.md` (the central register — it currently lives only in the 1-7 story line; keep the
         story-file copy as evidence) AND append the closure note (CLOSED 2026-… by story 6.2; the RED-then-
         green proof, the migration confirmation). If a NEW defer is filed, the six CC-3 fields.
@@ -501,18 +501,18 @@ existing `APAA-PIPELINE` area.
 
 ### References
 
-- [Source: _bmad-output/design-artifacts/APAA/epics.md#Story-6.2] — the FR7 grounding AC (multi-construct AST; unverifiable claim downgrades) + the NFR-P2 stack-agnostic proxy AC.
-- [Source: _bmad-output/design-artifacts/APAA/architecture.md] — §141-151 the FR7 split (R1, first-principles: a credible deep grade needs an AST fact; the vacuous-path subset is Tier-A, general multi-construct AST-grounding is Tier-B); §84/§238 the stack-agnostic `claim→validated?` interface (Python impl #1, `claim_emitted` proxy elsewhere); CC #6 advisory-by-contract (no over-downgrade / no cry-wolf); §442 `deep_audit.py` "AST-grounded `audited_deep` claims."
+- [Source: _bmad-output/design-artifacts/ArgusAgent/epics.md#Story-6.2] — the FR7 grounding AC (multi-construct AST; unverifiable claim downgrades) + the NFR-P2 stack-agnostic proxy AC.
+- [Source: _bmad-output/design-artifacts/ArgusAgent/architecture.md] — §141-151 the FR7 split (R1, first-principles: a credible deep grade needs an AST fact; the vacuous-path subset is Tier-A, general multi-construct AST-grounding is Tier-B); §84/§238 the stack-agnostic `claim→validated?` interface (Python impl #1, `claim_emitted` proxy elsewhere); CC #6 advisory-by-contract (no over-downgrade / no cry-wolf); §442 `deep_audit.py` "AST-grounded `audited_deep` claims."
 - [Source: minions_core/apaa/pipeline.py] — `_grade_non_test_python` (the DF-1-7-B over-grading site, recorded `pipeline.py:149`) + the module docstring §40-52 (the interim FR6-presence contract to rewrite).
 - [Source: minions_core/apaa/index/ast_index.py] — `Definition` / `CodeEdge` / `AstIndexEntry` (`ast_eligible`/`parse_failed`/`definitions`/`edges`) — the pre-built substrate the validator REUSES (no re-parse).
 - [Source: minions_core/apaa/ledger/coverage_ledger.py] — `grade_entry` (the silence→shallow keystone to compose, DN-GROUNDED; do NOT edit) + `CoverageDepth` + `deep_count`.
 - [Source: minions_core/apaa/detectors/vacuous_test.py] — the 1.5 vacuous-path AST subset (test→SUT reachability + assertion-target provenance over `definitions`/`edges`; the honest "what it can/cannot prove" register to mirror).
 - [Source: minions_core/apaa/audit/deep_audit.py] — 6.1's thin `DeepAuditSeam` + `build_closure_from_recording` (the seam this story's validator joins; stays provider-free).
 - [Source: minions_core/apaa/verdict/verdict_gate.py] — the deep-% gate thresholds (the migration-impact surface for AC4).
-- [Source: _bmad-output/design-artifacts/APAA/stories/1-7-cli-invocation-contract-pipeline-signature-demo-vacuous-test-cartridge.md] — the interim deep-grading decision (LOCKED) + DF-1-7-B's filing + the signature-demo cartridge (AC4).
-- [Source: _bmad-output/design-artifacts/APAA/stories/6-1-llm-dispatch-port-minions-orchestrator-adapter.md] — the 6.1 handoff (deep-audit seam built; AST-grounding logic explicitly fenced to 6.2 / DF-1-7-B).
-- [Source: _bmad-output/design-artifacts/APAA/epic-5-retro-2026-06-29.md] — §6/§7/§9 AI-E5-5 (close DF-1-7-B in 6.2 as a HARD deliverable, RED against the over-grading shape) + AI-E5-1 (complete-the-declared-set over the AST construct set) + AI-E5-4 (central defer back-fill) + AI-E5-7 (structural gates / partial-reuse precision).
-- [Source: _bmad-output/design-artifacts/APAA/deferred-work.md] — the central APAA defer register (back-fill DF-1-7-B here + append the closure note — AI-E5-4 / AI-E5-5).
+- [Source: _bmad-output/design-artifacts/ArgusAgent/stories/1-7-cli-invocation-contract-pipeline-signature-demo-vacuous-test-cartridge.md] — the interim deep-grading decision (LOCKED) + DF-1-7-B's filing + the signature-demo cartridge (AC4).
+- [Source: _bmad-output/design-artifacts/ArgusAgent/stories/6-1-llm-dispatch-port-minions-orchestrator-adapter.md] — the 6.1 handoff (deep-audit seam built; AST-grounding logic explicitly fenced to 6.2 / DF-1-7-B).
+- [Source: _bmad-output/design-artifacts/ArgusAgent/epic-5-retro-2026-06-29.md] — §6/§7/§9 AI-E5-5 (close DF-1-7-B in 6.2 as a HARD deliverable, RED against the over-grading shape) + AI-E5-1 (complete-the-declared-set over the AST construct set) + AI-E5-4 (central defer back-fill) + AI-E5-7 (structural gates / partial-reuse precision).
+- [Source: _bmad-output/design-artifacts/ArgusAgent/deferred-work.md] — the central APAA defer register (back-fill DF-1-7-B here + append the closure note — AI-E5-4 / AI-E5-5).
 
 ## Dev Agent Record
 
@@ -539,7 +539,7 @@ claude-opus-4-8 (BMAD dev-story, mode=implement).
 - **Migration HONEST (AC4) — net-zero cartridge verdict change, deliberate.** Walked the migration set: the cartridge SUTs (`vacuous_basic/src/calculator.py`, `clean_control/src/{adder,multiplier}.py`, `evidence_sentinel`/`hardcoded_secret`/`secret_canary` `config.py` + `auth/guard.py` + `café/модуль_секрет.py`, `nonascii_unicode/src/café_calc.py`, `tool_breadth/...`) ALL carry ≥1 real `def`/`class` → ALL stay GROUNDED → `audited_deep`. So NO cartridge verdict / golden / cache-key changed (the signature-demo moat is PRESERVED — `calculator.py` stays deep → deep-% 1/2 → NOT_READY_FOR_RELEASE/exit 2; confirmed empirically by the new TC-APAA-PIPELINE-001-40, not assumed). The ledger unit tests (`test_coverage_ledger.py` / `test_coverage_report.py` / `test_critical_subsystems.py`) call `grade_entry` directly with synthetic paths — they do NOT route through `_grade_non_test_python`, so they are unaffected. Conclusion: NO fixture/golden re-grade was needed; the honest re-grade confirms zero affected expectations. (The migration would change verdicts only for a clean-parse zero-def module, which no cartridge contains — exercised synthetically by the new TC-APAA-PIPELINE-001-41.)
 - **DF-1-7-B closure RED-then-green (AC2/AC5).** TC-APAA-AUDIT-001-50 demonstrates the closure: the interim `claim_present=True`-always shape grades a zero-def module `audited_deep` (RED — the over-grading) → the validator finds it ungrounded → `audited_shallow` (GREEN). Complete-the-declared-set + no-crash matrix + non-ASCII covered (TC-APAA-AUDIT-001-46..58); the pipeline-level migration is observable (TC-APAA-PIPELINE-001-41).
 - **Gates (AC6/AC7).** Web-stack + no-LLM import gates EXTENDED-not-forked: `grounding` added to `_MODULES_UNDER_GUARD` + a provider-free assertion (TC-APAA-AUDIT-001-47); `test_pipeline_is_zero_token` now uses a pipeline-scoped forbidden set (providers + the LLM-dispatch audit modules ports/deep_audit/minions_llm_adapter) that ALLOWS the pure grounding validator — the strict `_LLM_FORBIDDEN_PREFIXES` is preserved for any caller. Frozen Epic-1..5 contracts show NO working-tree diff (verified via `git diff` on coverage_ledger/ast_index/cache-key/store/verdict/models). `grounding.py` 90 lines, `pipeline.py` 1190 lines (≤1200, NFR-M1). NO `cli.py`/HTTP/CI-job/second-parser/`.apaa/`-write change. The grounding fact is a `bool`, no float (AR4).
-- **AI-E5-4 central-register back-fill.** DF-1-7-B back-filled into `_bmad-output/design-artifacts/APAA/deferred-work.md` (it previously lived only in the 1-7 story line) AND the closure note appended (append-only; the story-file copy retained as evidence). No NEW defer filed by 6.2.
+- **AI-E5-4 central-register back-fill.** DF-1-7-B back-filled into `_bmad-output/design-artifacts/ArgusAgent/deferred-work.md` (it previously lived only in the 1-7 story line) AND the closure note appended (append-only; the story-file copy retained as evidence). No NEW defer filed by 6.2.
 
 ### File List
 
@@ -548,8 +548,8 @@ claude-opus-4-8 (BMAD dev-story, mode=implement).
 - `tests/apaa/test_deep_audit_grounding.py` (NEW — TC-APAA-AUDIT-001-46..58: declared set + no-crash + non-ASCII + DF-1-7-B RED-then-green)
 - `tests/apaa/test_pipeline_signature_demo.py` (MODIFIED — TC-APAA-PIPELINE-001-40 moat-preserved + -41 verdict-migration observable)
 - `tests/apaa/test_no_web_imports.py` (MODIFIED — `_MODULES_UNDER_GUARD` + pipeline-scoped no-LLM carve-out + TC-APAA-AUDIT-001-47)
-- `_bmad-output/design-artifacts/APAA/deferred-work.md` (APPENDED — DF-1-7-B back-fill + closure note, AI-E5-4)
-- `_bmad-output/design-artifacts/APAA/sprint-status.yaml` (status flip)
+- `_bmad-output/design-artifacts/ArgusAgent/deferred-work.md` (APPENDED — DF-1-7-B back-fill + closure note, AI-E5-4)
+- `_bmad-output/design-artifacts/ArgusAgent/sprint-status.yaml` (status flip)
 
 ## Senior Developer Review (AI)
 

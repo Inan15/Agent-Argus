@@ -5,12 +5,12 @@ status: 'complete'
 completedAt: '2026-06-18'
 readiness: 'READY FOR IMPLEMENTATION'
 inputDocuments:
-  - _bmad-output/design-artifacts/APAA/E-PRD/prd.md
-  - _bmad-output/design-artifacts/APAA/product-brief-apaa.md
-  - _bmad-output/design-artifacts/APAA/product-brief-apaa-distillate.md
-  - _bmad-output/design-artifacts/APAA/research-domain-2026-06-17.md
-  - _bmad-output/design-artifacts/APAA/research-market-2026-06-17.md
-  - _bmad-output/design-artifacts/APAA/research-technical-2026-06-17.md
+  - _bmad-output/design-artifacts/ArgusAgent/E-PRD/prd.md
+  - _bmad-output/design-artifacts/ArgusAgent/product-brief-apaa.md
+  - _bmad-output/design-artifacts/ArgusAgent/product-brief-apaa-distillate.md
+  - _bmad-output/design-artifacts/ArgusAgent/research-domain-2026-06-17.md
+  - _bmad-output/design-artifacts/ArgusAgent/research-market-2026-06-17.md
+  - _bmad-output/design-artifacts/ArgusAgent/research-technical-2026-06-17.md
   - _bmad-output/planning-artifacts/decisions/2026-06-18-apaa-placement-under-minions-core.md
   - _bmad-output/project-context.md
 workflowType: 'architecture'

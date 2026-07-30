@@ -7,7 +7,7 @@ Status: done
 > **APAA sub-project story.** APAA (AI Project Assurance Audit) is a SEPARATE headless audit sub-tool
 > placed at `minions_core/apaa/` (placement decision 2026-06-18). It reuses Minions infra BY IMPORT but
 > ships its own `APAA-FR-*` / `APAA-NFR-*` driver namespace. Planning lives under
-> `_bmad-output/design-artifacts/APAA/`; the tracker is `_bmad-output/design-artifacts/APAA/sprint-status.yaml`
+> `_bmad-output/design-artifacts/ArgusAgent/`; the tracker is `_bmad-output/design-artifacts/ArgusAgent/sprint-status.yaml`
 > (NOT the Minions platform tracker). All CLAUDE.md rules apply (§3.2 ≤1200-line files, §3.7 headless-only,
 > §3.8 12-Factor + secret masking, §3.4 evidence immutability).
 
@@ -398,16 +398,16 @@ minimal — a new row is not required.
 
 ### References
 
-- [Source: _bmad-output/design-artifacts/APAA/epics.md#Story-2.1 Complete depth-state semantics + `inferred`-never-satisfies-a-gate] (the three ACs: five-state grading; inferred-never-satisfies; criticality by content)
-- [Source: _bmad-output/design-artifacts/APAA/E-PRD/prd.md#FR5 fixed-enum coverage ledger / FR8 inferred-never-satisfies / FR4 critical-subsystem identification]
-- [Source: _bmad-output/design-artifacts/APAA/E-PRD/prd.md#Hostile / low-quality-repo robustness] ("Coverage gaming (criticality detected by content, not filename) and evidence poisoning (inferred narrative can never satisfy a verdict gate)")
-- [Source: _bmad-output/design-artifacts/APAA/E-PRD/prd.md#risk-mitigation] ("Hostile repo → content-based criticality + inferred-never-satisfies-a-gate")
-- [Source: _bmad-output/design-artifacts/APAA/architecture.md#Contract / Format Patterns] (coverage-ledger enum is closed: audited_deep · audited_shallow · tool_scanned_only · inferred · skipped; additive-only)
-- [Source: _bmad-output/design-artifacts/APAA/architecture.md#Pure/Impure Separation (master rule)] (ledger modules pure — no I/O, no clock, no LLM)
-- [Source: _bmad-output/design-artifacts/APAA/architecture.md#Determinism Patterns] (one serializer; no floats — ratios fixed-precision; no iteration-order reliance)
-- [Source: _bmad-output/design-artifacts/APAA/epic-1-retro-2026-06-21.md#7. Action Items] (AI-E1-1 adversarial non-ASCII fixtures; AI-E1-4 gates extended-not-forked; AI-E1-5 exercise the L1-E11 loop)
-- [Source: _bmad-output/design-artifacts/APAA/stories/1-2-fixed-enum-coverage-ledger-frozen-recording-schema.md] (DONE — `CoverageDepth` five-member closed enum + `CoverageLedger`/`grade_entry`; closed-enum membership pin; frozen `extra="forbid"`; no-float)
-- [Source: _bmad-output/design-artifacts/APAA/stories/1-6-pure-function-verdict-gate-finding-ordering-exit-code-mapping.md] (DONE — `evaluate_verdict`; FR8 honored by the deep-% numerator = audited_deep only; the `critical_subsystems_all_deep` Story-2.3 seam)
+- [Source: _bmad-output/design-artifacts/ArgusAgent/epics.md#Story-2.1 Complete depth-state semantics + `inferred`-never-satisfies-a-gate] (the three ACs: five-state grading; inferred-never-satisfies; criticality by content)
+- [Source: _bmad-output/design-artifacts/ArgusAgent/E-PRD/prd.md#FR5 fixed-enum coverage ledger / FR8 inferred-never-satisfies / FR4 critical-subsystem identification]
+- [Source: _bmad-output/design-artifacts/ArgusAgent/E-PRD/prd.md#Hostile / low-quality-repo robustness] ("Coverage gaming (criticality detected by content, not filename) and evidence poisoning (inferred narrative can never satisfy a verdict gate)")
+- [Source: _bmad-output/design-artifacts/ArgusAgent/E-PRD/prd.md#risk-mitigation] ("Hostile repo → content-based criticality + inferred-never-satisfies-a-gate")
+- [Source: _bmad-output/design-artifacts/ArgusAgent/architecture.md#Contract / Format Patterns] (coverage-ledger enum is closed: audited_deep · audited_shallow · tool_scanned_only · inferred · skipped; additive-only)
+- [Source: _bmad-output/design-artifacts/ArgusAgent/architecture.md#Pure/Impure Separation (master rule)] (ledger modules pure — no I/O, no clock, no LLM)
+- [Source: _bmad-output/design-artifacts/ArgusAgent/architecture.md#Determinism Patterns] (one serializer; no floats — ratios fixed-precision; no iteration-order reliance)
+- [Source: _bmad-output/design-artifacts/ArgusAgent/epic-1-retro-2026-06-21.md#7. Action Items] (AI-E1-1 adversarial non-ASCII fixtures; AI-E1-4 gates extended-not-forked; AI-E1-5 exercise the L1-E11 loop)
+- [Source: _bmad-output/design-artifacts/ArgusAgent/stories/1-2-fixed-enum-coverage-ledger-frozen-recording-schema.md] (DONE — `CoverageDepth` five-member closed enum + `CoverageLedger`/`grade_entry`; closed-enum membership pin; frozen `extra="forbid"`; no-float)
+- [Source: _bmad-output/design-artifacts/ArgusAgent/stories/1-6-pure-function-verdict-gate-finding-ordering-exit-code-mapping.md] (DONE — `evaluate_verdict`; FR8 honored by the deep-% numerator = audited_deep only; the `critical_subsystems_all_deep` Story-2.3 seam)
 - [Source: minions_core/apaa/ledger/coverage_ledger.py] (`CoverageDepth`, `CoverageLedger.build`/`counts_by_depth`/`deep_count`/`total`, `grade_entry` — REUSE verbatim, do NOT modify)
 - [Source: minions_core/apaa/verdict/verdict_gate.py] (`evaluate_verdict`, deep-% numerator = `deep_count()`; `critical_subsystems_all_deep` seam — ASSERT FR8, do NOT modify)
 - [Source: minions_core/apaa/pipeline.py] (`_detect_per_file`/`_grade_non_test_python` — current coarse grading; NOT rewired here)
@@ -538,5 +538,5 @@ AST-index import is typing-only (`TYPE_CHECKING`) so the no-web/zero-token isola
 - `minions_core/apaa/ledger/depth_semantics.py` (NEW)
 - `tests/apaa/test_depth_semantics.py` (NEW)
 - `tests/apaa/test_no_web_imports.py` (UPDATE — extended `_MODULES_UNDER_GUARD`)
-- `_bmad-output/design-artifacts/APAA/stories/2-1-complete-depth-state-semantics-inferred-never-satisfies-a-gate.md` (story file — status, tasks, Dev Agent Record, Change Log)
-- `_bmad-output/design-artifacts/APAA/sprint-status.yaml` (status → review)
+- `_bmad-output/design-artifacts/ArgusAgent/stories/2-1-complete-depth-state-semantics-inferred-never-satisfies-a-gate.md` (story file — status, tasks, Dev Agent Record, Change Log)
+- `_bmad-output/design-artifacts/ArgusAgent/sprint-status.yaml` (status → review)

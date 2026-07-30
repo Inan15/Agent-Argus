@@ -7,7 +7,7 @@ Status: done
 > **APAA sub-project story.** APAA (AI Project Assurance Audit) is a SEPARATE headless audit sub-tool
 > placed at `minions_core/apaa/` (placement decision 2026-06-18). It reuses Minions infra BY IMPORT but
 > ships its own `APAA-FR-*` / `APAA-NFR-*` driver namespace. Planning lives under
-> `_bmad-output/design-artifacts/APAA/`; the tracker is `_bmad-output/design-artifacts/APAA/sprint-status.yaml`
+> `_bmad-output/design-artifacts/ArgusAgent/`; the tracker is `_bmad-output/design-artifacts/ArgusAgent/sprint-status.yaml`
 > (NOT the Minions platform tracker). All CLAUDE.md rules apply (§3.2 ≤1200-line files, §3.7 headless-only,
 > §3.8 12-Factor + secret masking, §3.4 evidence immutability).
 
@@ -459,18 +459,18 @@ required.
 
 ### References
 
-- [Source: _bmad-output/design-artifacts/APAA/epics.md#Story-1.4 tree-sitter AST index, repo intake & Python stack detection]
-- [Source: _bmad-output/design-artifacts/APAA/architecture.md#B. Repository Intake & Indexing] (AST/code-graph index FIRST via tree-sitter 0.25.x; graph-derived partitioning deferred; stack detection via cloc/radon/tree-sitter; deep=Python, claim_emitted proxy elsewhere)
-- [Source: _bmad-output/design-artifacts/APAA/architecture.md#Additional Requirements AR1] (sanctioned external deps + versions; grammar version → determinism cache key)
-- [Source: _bmad-output/design-artifacts/APAA/architecture.md#Pure/Impure Separation (master rule)] (intake/index = impure shell; result models pure)
-- [Source: _bmad-output/design-artifacts/APAA/architecture.md#Determinism Patterns (NFR-P1/D1)] (one serializer; no float/clock/uuid/random/iteration-order)
-- [Source: _bmad-output/design-artifacts/APAA/architecture.md#Error / Degradation Patterns] (failure → typed finding/recorded condition, never an uncaught raise; no bare except: pass / print())
-- [Source: _bmad-output/design-artifacts/APAA/architecture.md#Architectural Boundaries] (import boundary; downstream of HTTP/A2A; LLM boundary not crossed here)
-- [Source: _bmad-output/design-artifacts/APAA/architecture.md#Project Structure & Boundaries] (package tree: intake/, index/; partitioner.py is Story 2.4)
-- [Source: _bmad-output/design-artifacts/APAA/E-PRD/prd.md#FR1 repo @ pinned commit / FR2 stack auto-detection / FR7 Python AST grounding (substrate) / NFR-P2 stack-agnostic by construction / NFR-R1 honest degradation]
-- [Source: _bmad-output/design-artifacts/APAA/stories/1-1-canonical-serializer-content-hashed-envelope.md] (DONE — serializer + envelope spine + `_MODULES_UNDER_GUARD` seed + single-serializer AST gate)
-- [Source: _bmad-output/design-artifacts/APAA/stories/1-2-fixed-enum-coverage-ledger-frozen-recording-schema.md] (DONE — ledger/recording; `Locator.ast_span` reserved; `partition_id="root"`; frozen extra="forbid")
-- [Source: _bmad-output/design-artifacts/APAA/stories/1-3-apaa-store-writer-reader-filesystem-containment.md] (DONE — `ApaaStorePaths` + writer/reader to REUSE for any `.apaa/` persistence; round-trip golden pattern)
+- [Source: _bmad-output/design-artifacts/ArgusAgent/epics.md#Story-1.4 tree-sitter AST index, repo intake & Python stack detection]
+- [Source: _bmad-output/design-artifacts/ArgusAgent/architecture.md#B. Repository Intake & Indexing] (AST/code-graph index FIRST via tree-sitter 0.25.x; graph-derived partitioning deferred; stack detection via cloc/radon/tree-sitter; deep=Python, claim_emitted proxy elsewhere)
+- [Source: _bmad-output/design-artifacts/ArgusAgent/architecture.md#Additional Requirements AR1] (sanctioned external deps + versions; grammar version → determinism cache key)
+- [Source: _bmad-output/design-artifacts/ArgusAgent/architecture.md#Pure/Impure Separation (master rule)] (intake/index = impure shell; result models pure)
+- [Source: _bmad-output/design-artifacts/ArgusAgent/architecture.md#Determinism Patterns (NFR-P1/D1)] (one serializer; no float/clock/uuid/random/iteration-order)
+- [Source: _bmad-output/design-artifacts/ArgusAgent/architecture.md#Error / Degradation Patterns] (failure → typed finding/recorded condition, never an uncaught raise; no bare except: pass / print())
+- [Source: _bmad-output/design-artifacts/ArgusAgent/architecture.md#Architectural Boundaries] (import boundary; downstream of HTTP/A2A; LLM boundary not crossed here)
+- [Source: _bmad-output/design-artifacts/ArgusAgent/architecture.md#Project Structure & Boundaries] (package tree: intake/, index/; partitioner.py is Story 2.4)
+- [Source: _bmad-output/design-artifacts/ArgusAgent/E-PRD/prd.md#FR1 repo @ pinned commit / FR2 stack auto-detection / FR7 Python AST grounding (substrate) / NFR-P2 stack-agnostic by construction / NFR-R1 honest degradation]
+- [Source: _bmad-output/design-artifacts/ArgusAgent/stories/1-1-canonical-serializer-content-hashed-envelope.md] (DONE — serializer + envelope spine + `_MODULES_UNDER_GUARD` seed + single-serializer AST gate)
+- [Source: _bmad-output/design-artifacts/ArgusAgent/stories/1-2-fixed-enum-coverage-ledger-frozen-recording-schema.md] (DONE — ledger/recording; `Locator.ast_span` reserved; `partition_id="root"`; frozen extra="forbid")
+- [Source: _bmad-output/design-artifacts/ArgusAgent/stories/1-3-apaa-store-writer-reader-filesystem-containment.md] (DONE — `ApaaStorePaths` + writer/reader to REUSE for any `.apaa/` persistence; round-trip golden pattern)
 - [Source: minions_core/apaa/store/canonical.py + store/envelope.py] (single serializer + envelope to reuse)
 - [Source: minions_core/apaa/store/paths.py + store/writer.py + store/reader.py] (the impure `.apaa/` shell to reuse for persistence)
 - [Source: minions_core/apaa/ledger/recording.py] (`Locator.ast_span` reserved for the AST spans this story produces)
@@ -579,8 +579,8 @@ NEW tests:
 
 UPDATED:
 - `tests/apaa/test_no_web_imports.py` (extended `_MODULES_UNDER_GUARD`)
-- `_bmad-output/design-artifacts/APAA/sprint-status.yaml` (status → review; `last_updated` 2026-06-21)
-- `_bmad-output/design-artifacts/APAA/stories/1-4-...md` (this file — Status, Dev Agent Record, Change Log)
+- `_bmad-output/design-artifacts/ArgusAgent/sprint-status.yaml` (status → review; `last_updated` 2026-06-21)
+- `_bmad-output/design-artifacts/ArgusAgent/stories/1-4-...md` (this file — Status, Dev Agent Record, Change Log)
 
 ## Senior Developer Review (AI)
 

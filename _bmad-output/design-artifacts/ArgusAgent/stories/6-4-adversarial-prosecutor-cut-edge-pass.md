@@ -7,7 +7,7 @@ Status: done
 > **APAA sub-project story.** APAA (AI Project Assurance Audit) is a SEPARATE headless audit sub-tool
 > placed at `minions_core/apaa/` (placement decision 2026-06-18). It reuses Minions infra BY IMPORT but
 > ships its own `APAA-FR-*` / `APAA-NFR-*` driver namespace. Planning lives under
-> `_bmad-output/design-artifacts/APAA/`; the tracker is `_bmad-output/design-artifacts/APAA/sprint-status.yaml`
+> `_bmad-output/design-artifacts/ArgusAgent/`; the tracker is `_bmad-output/design-artifacts/ArgusAgent/sprint-status.yaml`
 > (NOT the Minions platform tracker at `_bmad-output/implementation-artifacts/sprint-status.yaml`). All
 > CLAUDE.md rules apply (§3.2 ≤1200-line files, §3.7 headless-only, §3.8 12-Factor + secret masking, §3.4
 > evidence immutability).
@@ -230,7 +230,7 @@ speculatively.
   single serializer is `ensure_ascii=False`). ≥1 fixture carries a non-ASCII value.
 - **AI-E5-4 (governance 🟢) — central defer register.** If 6.4 files a NEW defer (e.g. "full resolved
   cross-partition seam auditor for V2" — distinct from the V1 mitigation), file it append-only in
-  `_bmad-output/design-artifacts/APAA/deferred-work.md` with the six CC-3 fields. (No prior defer targets
+  `_bmad-output/design-artifacts/ArgusAgent/deferred-work.md` with the six CC-3 fields. (No prior defer targets
   6.4 specifically; the cross-cutting #4 cut-edge mitigation is an epic-AC deliverable, not a defer
   consumption — but the V2 seam auditor it explicitly does NOT build SHOULD be filed as a new defer if not
   already covered by DF-6-3-A's resolved-call-graph scope.)
@@ -494,7 +494,7 @@ index in the module docstring); the pipeline-wiring assertions may use the exist
         no-LLM + single-serializer + file-size gates green. NO `cli.py`/HTTP/CI-job change; NO live LLM.
   - [x] **AI-E5-4:** if 6.4 files a NEW defer (the V2 full resolved cross-partition SEAM auditor — distinct
         from the V1 mitigation this story ships, and potentially distinct from DF-6-3-A's resolved-call-graph
-        scope), file it append-only in `_bmad-output/design-artifacts/APAA/deferred-work.md` with the six
+        scope), file it append-only in `_bmad-output/design-artifacts/ArgusAgent/deferred-work.md` with the six
         CC-3 fields (`target_story` e.g. `epic-6-resolved-seam-auditor` or a V2 epic key).
   - [x] **AI-E5-3 / AI-E2-1 GATE:** the mandatory artifacts (the Prosecutor + the `cross_partition` pass +
         the wiring + the new tests incl. the RED-first promotion/never-upgrade guards + the pipeline-level
@@ -609,15 +609,15 @@ index in the module docstring); the pipeline-wiring assertions may use the exist
 
 ### References
 
-- [Source: _bmad-output/design-artifacts/APAA/epics.md#Story-6.4] — the FR19 adversarial Prosecutor AC (pure recording-consumer; challenge the verdict; downgrade an unearned verdict; the `cross_partition` cut-edge pass; a 🔴 stands only with AST corroboration AND Prosecutor sign-off) + #Story-2.4 / #cross-cutting-4 (the cut-edge set; the V1 mitigation; full seam auditor V2 — OI2).
-- [Source: _bmad-output/design-artifacts/APAA/architecture.md] — FR19 (Epic 6, Tier B); the determinism quarantine (Decision E — the verdict gate + ledger mechanics are deterministic + zero-token; NFR-D1/D2); CC #4 (the V1 cross-partition seam mitigation); CC #6 (advisory-by-contract; the Prosecutor owns promotion).
+- [Source: _bmad-output/design-artifacts/ArgusAgent/epics.md#Story-6.4] — the FR19 adversarial Prosecutor AC (pure recording-consumer; challenge the verdict; downgrade an unearned verdict; the `cross_partition` cut-edge pass; a 🔴 stands only with AST corroboration AND Prosecutor sign-off) + #Story-2.4 / #cross-cutting-4 (the cut-edge set; the V1 mitigation; full seam auditor V2 — OI2).
+- [Source: _bmad-output/design-artifacts/ArgusAgent/architecture.md] — FR19 (Epic 6, Tier B); the determinism quarantine (Decision E — the verdict gate + ledger mechanics are deterministic + zero-token; NFR-D1/D2); CC #4 (the V1 cross-partition seam mitigation); CC #6 (advisory-by-contract; the Prosecutor owns promotion).
 - [Source: minions_core/apaa/verdict/verdict_gate.py] — `evaluate_verdict` / `is_verdict_blocking` (= `depth_supported is not None`) / `order_findings` / the floor-wins precedence + the "Epic-6 Prosecutor refines the eligible finding set UPSTREAM without changing this gate's contract" docstring — the fold the Prosecutor REUSES (no second verdict math) + the predicate it does NOT edit.
 - [Source: minions_core/apaa/index/partitioner.py] — `CutEdge` (`caller_file`/`callee_file`/`callee`, UNRESOLVED-name DF-1-4-A) / `PartitionPlan.cut_edges` / `seam_analysis="v2-deferred"` + the "Story 6.4 `cross_partition` Prosecutor cut-edge pass is the V1 MITIGATION; the full seam auditor is reserved V2" docstring — the recorded-NOT-analyzed cut-edge substrate the `cross_partition` pass consumes.
 - [Source: minions_core/apaa/ledger/recording.py] — the frozen `Recording` (`depth_supported`, `advisory`, `locators`, `finding_id`) the Prosecutor promotes (emits a NEW promoted row, never mutates).
 - [Source: minions_core/apaa/detectors/base.py] — `build_recording` (FR13 locator-or-reject, content-derived id) + `FindingDraft` + `DetectorResult` + `DegradedCondition` — the builder the `cross_partition` finding composes (no fork) + the AR10 no-crash register.
 - [Source: minions_core/apaa/audit/ports.py + audit/deep_audit.py] — `LLMDispatchPort` + `FakeDispatch` + `DeepAuditSeam` — the V2 forward seam IF a future Prosecutor dispatches an LLM (behind the port, zero-token in tests); NOT the V1 default (DN-V1-DETERMINISTIC).
 - [Source: minions_core/apaa/pipeline.py] — `_assemble_and_persist` (the `evaluate_verdict` ≈657 + `_build_partition_plan` ≈661 call sites — the DN-WIRE prosecution site), `run_audit_detailed` + `resume_audit_detailed` (the wiring sites); the file is at 1071/1200 → mind the budget (DN-PIPELINE-SIZE).
-- [Source: _bmad-output/design-artifacts/APAA/stories/6-3-orphan-dead-code-detector.md] — the Epic-6 precedent (REUSE the substrate, compose `build_recording`, pure additive finding-only pass, no-orphan/no-prosecution byte-identity, complete-the-declared-set, no-crash, non-ASCII, scope-fence vs 6.5/6.6/6.7, the advisory-by-contract moat deferring promotion to 6.4) this story mirrors + completes.
+- [Source: _bmad-output/design-artifacts/ArgusAgent/stories/6-3-orphan-dead-code-detector.md] — the Epic-6 precedent (REUSE the substrate, compose `build_recording`, pure additive finding-only pass, no-orphan/no-prosecution byte-identity, complete-the-declared-set, no-crash, non-ASCII, scope-fence vs 6.5/6.6/6.7, the advisory-by-contract moat deferring promotion to 6.4) this story mirrors + completes.
 - [Source: minions_core/apaa/audit/grounding.py] — the 6.2 DN-V1-DETERMINISTIC precedent (the V1 fact is the deterministic structural AST fact; the LLM-fed grounding is a documented forward seam, NOT the V1 default) the Prosecutor's DN-V1-DETERMINISTIC mirrors.
 
 ## Dev Agent Record
@@ -716,8 +716,8 @@ claude-opus-4-8 (BMAD dev-story, mode=implement).
   assertions (`TC-APAA-PIPELINE-001-60/61`).
 - `tests/apaa/test_no_web_imports.py` — MODIFIED. Added `apaa.verdict.prosecutor` to `_MODULES_UNDER_GUARD`
   + `test_prosecutor_is_provider_free` (TC-APAA-PROSECUTOR-001-20).
-- `_bmad-output/design-artifacts/APAA/deferred-work.md` — APPENDED. DF-6-4-A (the V2 resolved-seam auditor).
-- `_bmad-output/design-artifacts/APAA/sprint-status.yaml` — MODIFIED. `6-4-...: review`; `last_updated` bump.
+- `_bmad-output/design-artifacts/ArgusAgent/deferred-work.md` — APPENDED. DF-6-4-A (the V2 resolved-seam auditor).
+- `_bmad-output/design-artifacts/ArgusAgent/sprint-status.yaml` — MODIFIED. `6-4-...: review`; `last_updated` bump.
 
 ## Senior Developer Review (AI)
 

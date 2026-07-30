@@ -7,7 +7,7 @@ Status: done
 > **APAA sub-project story.** APAA (AI Project Assurance Audit) is a SEPARATE headless audit sub-tool
 > placed at `minions_core/apaa/` (placement decision 2026-06-18). It reuses Minions infra BY IMPORT but
 > ships its own `APAA-FR-*` / `APAA-NFR-*` driver namespace. Planning lives under
-> `_bmad-output/design-artifacts/APAA/`; the tracker is `_bmad-output/design-artifacts/APAA/sprint-status.yaml`
+> `_bmad-output/design-artifacts/ArgusAgent/`; the tracker is `_bmad-output/design-artifacts/ArgusAgent/sprint-status.yaml`
 > (NOT the Minions platform tracker at `_bmad-output/implementation-artifacts/sprint-status.yaml`). All
 > CLAUDE.md rules apply (§3.2 ≤1200-line files, §3.7 headless-only, §3.8 12-Factor + secret masking, §3.4
 > evidence immutability).
@@ -150,7 +150,7 @@ WIRING, not about housing the detector.**
 
 **Carry-forward action items (CLAUDE.md §9.1 / L1-E11 — each 6.x story cites its AI-E5-* item).**
 - **DF-1-4-A (other 🟢) — THE consumed defer.** This story is DF-1-4-A's `target_story`. The unresolved-name
-  edge set is consumed CONSERVATIVELY. Back-fill DF-1-4-A into `_bmad-output/design-artifacts/APAA/
+  edge set is consumed CONSERVATIVELY. Back-fill DF-1-4-A into `_bmad-output/design-artifacts/ArgusAgent/
   deferred-work.md` (it currently lives ONLY in the 1-4 story file's `[Review][Defer]` line) AND append the
   consumption note (CONSUMED 2026-… by story 6.3; the conservative rule; what the unresolved substrate can
   and cannot prove) — per AI-E5-4's "keep story-file copies as evidence; back-fill + close in the central
@@ -350,7 +350,7 @@ area.
         the `_persist_*` family, and the module docstring/cost section. LOCK the split seam (DN-PIPELINE-SPLIT)
         + the whole-index orphan pass site (DN-WHOLE-INDEX — after `_detect_per_file`, over assessed entries on
         a halt). Record the chosen seam + rationale.
-  - [x] Re-read the 1-4 story file's DF-1-4-A `[Review][Defer]` line + `_bmad-output/design-artifacts/APAA/
+  - [x] Re-read the 1-4 story file's DF-1-4-A `[Review][Defer]` line + `_bmad-output/design-artifacts/ArgusAgent/
         deferred-work.md` header. LOCK: 6.3 is DF-1-4-A's `target_story`; back-fill + consume it (Task 5).
   - [x] Enumerate + LOCK the EXCLUSION set (dunders, `__all__`/export hooks, `test_*`/`setUp`/`tearDown`
         entrypoints, a small locked framework/registry/decorator hook list). Record the set + its conservative
@@ -396,7 +396,7 @@ area.
         AC4 wiring (`coverage_ledger.py`/`recording.py`/`detectors/base.py`/`ast_index.py`/`verdict/*`/`cache/*`
         byte-identical). Confirm the no-web-imports + single-serializer + file-size gates green. NO
         `cli.py`/HTTP/CI-job change.
-  - [x] **DF-1-4-A / AI-E5-4 / AI-E5-7:** back-fill DF-1-4-A into `_bmad-output/design-artifacts/APAA/
+  - [x] **DF-1-4-A / AI-E5-4 / AI-E5-7:** back-fill DF-1-4-A into `_bmad-output/design-artifacts/ArgusAgent/
         deferred-work.md` (the central register — it currently lives only in the 1-4 story line; keep the
         story-file copy as evidence) AND append the consumption note (CONSUMED 2026-… by story 6.3; the
         conservative rule; the unresolved-name limitation). If a NEW defer is filed (e.g. resolved call graph
@@ -484,15 +484,15 @@ area.
 
 ### References
 
-- [Source: _bmad-output/design-artifacts/APAA/epics.md#Story-6.3] — the FR12 orphan/dead-code AC (flag functions/classes with no caller and no referencing requirement; each with a verifiable locator).
-- [Source: _bmad-output/design-artifacts/APAA/architecture.md] — FR12 orphan/dead-code (Epic 6, Tier B); the 1.4 edge set as the structural substrate; CC #6 advisory-by-contract (no cry-wolf).
+- [Source: _bmad-output/design-artifacts/ArgusAgent/epics.md#Story-6.3] — the FR12 orphan/dead-code AC (flag functions/classes with no caller and no referencing requirement; each with a verifiable locator).
+- [Source: _bmad-output/design-artifacts/ArgusAgent/architecture.md] — FR12 orphan/dead-code (Epic 6, Tier B); the 1.4 edge set as the structural substrate; CC #6 advisory-by-contract (no cry-wolf).
 - [Source: minions_core/apaa/index/ast_index.py] — `Definition` / `CodeEdge` (UNRESOLVED-name, DF-1-4-A) / `AstIndexEntry` / `AstIndex.entries` — the pre-built substrate the detector REUSES (no re-parse).
 - [Source: minions_core/apaa/detectors/base.py] — the `Detector` `Protocol` + `FindingDraft` + `build_recording` (FR13 locator-or-reject, content-derived id) + `DetectorResult` / `DegradedCondition` — the standard detector base the orphan detector composes (no fork).
 - [Source: minions_core/apaa/detectors/secret_scan.py] — the standard detector idiom (advisory framing, frozen evidence model, named degradation, "what it can/cannot prove" register, additive-findings/no-double-count) to mirror.
 - [Source: minions_core/apaa/detectors/vacuous_test.py] — the 1.5 advisory-by-contract moat the orphan finding mirrors (a heuristic finding that informs but does not, alone, block).
 - [Source: minions_core/apaa/pipeline.py] — `_detect_per_file` (the per-file loop; orphan is cross-file → wired AFTER it), `run_audit_detailed` + the resume path (the wiring sites), `_assemble_and_persist` + `_persist_*` (the split candidates); the file is at 1190/1200 → split FIRST (NFR-M1).
-- [Source: _bmad-output/design-artifacts/APAA/stories/1-4-tree-sitter-ast-index-repo-intake-python-stack-detection.md] — the DF-1-4-A `[Review][Defer]` line (the defer this story consumes) + its CC-3 fields.
-- [Source: _bmad-output/design-artifacts/APAA/stories/6-2-full-python-ast-grounding-of-audited-deep-claims.md] — the Epic-6 precedent (REUSE 1.4, compose the keystone, pure detector, complete-the-declared-set, no-crash, non-ASCII, scope-fence vs 6.4/6.5/6.6/6.7) this story mirrors.
+- [Source: _bmad-output/design-artifacts/ArgusAgent/stories/1-4-tree-sitter-ast-index-repo-intake-python-stack-detection.md] — the DF-1-4-A `[Review][Defer]` line (the defer this story consumes) + its CC-3 fields.
+- [Source: _bmad-output/design-artifacts/ArgusAgent/stories/6-2-full-python-ast-grounding-of-audited-deep-claims.md] — the Epic-6 precedent (REUSE 1.4, compose the keystone, pure detector, complete-the-declared-set, no-crash, non-ASCII, scope-fence vs 6.4/6.5/6.6/6.7) this story mirrors.
 
 ## Dev Agent Record
 
@@ -578,7 +578,7 @@ MODIFIED tests:
 - `tests/apaa/test_no_web_imports.py` — guard extended to `detectors.orphan_code` + `pipeline_persist`.
 
 MODIFIED governance:
-- `_bmad-output/design-artifacts/APAA/deferred-work.md` — DF-1-4-A back-filled + consumed; DF-6-3-A filed.
+- `_bmad-output/design-artifacts/ArgusAgent/deferred-work.md` — DF-1-4-A back-filled + consumed; DF-6-3-A filed.
 
 ## Senior Developer Review (AI)
 

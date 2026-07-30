@@ -7,7 +7,7 @@ Status: done
 > **APAA sub-project story.** APAA (AI Project Assurance Audit) is a SEPARATE headless audit sub-tool
 > placed at `minions_core/apaa/` (placement decision 2026-06-18). It reuses Minions infra BY IMPORT but
 > ships its own `APAA-FR-*` / `APAA-NFR-*` driver namespace. Planning lives under
-> `_bmad-output/design-artifacts/APAA/`; the tracker is `_bmad-output/design-artifacts/APAA/sprint-status.yaml`
+> `_bmad-output/design-artifacts/ArgusAgent/`; the tracker is `_bmad-output/design-artifacts/ArgusAgent/sprint-status.yaml`
 > (NOT the Minions platform tracker at `_bmad-output/implementation-artifacts/sprint-status.yaml`). All
 > CLAUDE.md rules apply (§3.2 ≤1200-line files, §3.7 headless-only, §3.8 12-Factor + secret masking, §3.4
 > evidence immutability).
@@ -163,7 +163,7 @@ model: package the prior retro's action items as the next epic's backlog).
   `PYTHONIOENCODING=utf-8` (project memory — the cp1252 emoji crash). At least one fixture carries a
   non-ASCII value.
 - **AI-E5-4 (governance 🟢) — central defer register.** If this story files a NEW defer, file it append-only
-  in `_bmad-output/design-artifacts/APAA/deferred-work.md` (the single canonical APAA defer source), not
+  in `_bmad-output/design-artifacts/ArgusAgent/deferred-work.md` (the single canonical APAA defer source), not
   only in the story file, with the six CC-3 fields. (DF-5-1-A, which targeted THIS story, was already closed
   in 5.1 — confirm it stays closed; 6.1 does not reopen it.)
 - **NFR-S1 secret-containment (standing CI-blocking moat).** The adapter reaches the LLM — prompt/response
@@ -399,7 +399,7 @@ in the module docstring).
         `cli.py`/HTTP/CI-job change. Confirm the V1 no-LLM cache-key golden is UNCHANGED (no schema bump for
         the placeholder path).
   - [x] **AI-E5-4 / DN-DEFER:** if a NEW defer is filed, file it append-only in
-        `_bmad-output/design-artifacts/APAA/deferred-work.md` with the six CC-3 fields. Confirm DF-5-1-A stays
+        `_bmad-output/design-artifacts/ArgusAgent/deferred-work.md` with the six CC-3 fields. Confirm DF-5-1-A stays
         CLOSED (this story does not reopen it). Do NOT pull 6.2 AST-grounding / 6.3 orphan / 6.4 Prosecutor /
         6.5 cartridge / 6.6 precision / 6.7 HITL into scope.
   - [x] **AI-E5-3 / AI-E2-1 GATE:** the mandatory artifacts (`audit/ports.py` + `minions_llm_adapter.py` +
@@ -503,8 +503,8 @@ in the module docstring).
 
 ### References
 
-- Epic: `_bmad-output/design-artifacts/APAA/epics.md` §Epic 6 / Story 6.1 (lines 828-855).
-- Architecture: `_bmad-output/design-artifacts/APAA/architecture.md` Decision E (§265-281, LLM dispatch via
+- Epic: `_bmad-output/design-artifacts/ArgusAgent/epics.md` §Epic 6 / Story 6.1 (lines 828-855).
+- Architecture: `_bmad-output/design-artifacts/ArgusAgent/architecture.md` Decision E (§265-281, LLM dispatch via
   port), §322-325 (the port is the only pure/non-det seam), §382-386 (depend-on-the-port reuse pattern),
   §439-442 (`audit/` package), §487-499 (architectural boundaries — LLM boundary), AR5/AR7/AR8/AR9/AR10.
 - PRD drivers: FR7 (deep-claim AST validation — 6.2), FR12 (orphan — 6.3), FR19 (Prosecutor — 6.4) all RIDE
@@ -516,17 +516,17 @@ in the module docstring).
   `minions_core/providers/base.py` (`LLMRequest`/`LLMResponse`/`RuntimeDispatchRequest`/`RuntimeDispatchResult`/`WorkerTier`/`provider_max_tokens`).
 - Gate: `tests/apaa/test_no_web_imports.py` (`_FORBIDDEN`, `_MODULES_UNDER_GUARD`, `_LLM_FORBIDDEN_PREFIXES`,
   `_assert_no_llm_import`, `test_pipeline_is_zero_token`).
-- Retro carry-forward: `_bmad-output/design-artifacts/APAA/epic-5-retro-2026-06-29.md` §6-7 (AI-E5-1
+- Retro carry-forward: `_bmad-output/design-artifacts/ArgusAgent/epic-5-retro-2026-06-29.md` §6-7 (AI-E5-1
   complete-the-declared-set; AI-E5-3 committed test-existence guard; AI-E5-5 DF-1-7-B → 6.2; AI-E5-7 gates +
   partial-reuse docstrings); standing AI-E1-1 (non-ASCII/locale).
-- Defer register: `_bmad-output/design-artifacts/APAA/deferred-work.md` (DF-5-1-A — CLOSED in 5.1, targeted
+- Defer register: `_bmad-output/design-artifacts/ArgusAgent/deferred-work.md` (DF-5-1-A — CLOSED in 5.1, targeted
   this story; confirm it stays closed).
 
 ## Dev Agent Record
 
 ### Context Reference
 
-- Story file (this) + `_bmad-output/design-artifacts/APAA/sprint-status.yaml` (APAA-local tracker).
+- Story file (this) + `_bmad-output/design-artifacts/ArgusAgent/sprint-status.yaml` (APAA-local tracker).
 - Reused Minions surfaces (BY IMPORT, no fork): `minions_core/providers/orchestrator.py::LLMProviderOrchestrator.execute_llm`, `minions_core/providers/base.py` (`LLMRequest`, `RuntimeDispatchRequest`, `RuntimeDispatchResult`, `provider_max_tokens`), `minions_core/orchestration/worker_agent_pool.py` (`WorkerAgentResult`, `LlmOutputMetadata`, `WorkerTier`, `WorkerAgentConfig`).
 - 5.1 closure reused read-only: `minions_core/apaa/cache/key.py` (`RecordingProducingClosure`, `derive_cache_key`, `V1_MODEL_CHECKPOINT`, `V1_PROMPT_TEMPLATE_VERSION`, `CACHE_KEY_SCHEMA_VERSION="2"`).
 - Gate extended (not forked): `tests/apaa/test_no_web_imports.py`.
@@ -561,8 +561,8 @@ in the module docstring).
 - `tests/apaa/test_llm_dispatch_port.py` (new — port/DTOs/FakeDispatch/substitution)
 - `tests/apaa/test_minions_llm_adapter.py` (new — adapter mapping + checkpoint capture + no-crash matrix)
 - `tests/apaa/test_no_web_imports.py` (modified — extended `_MODULES_UNDER_GUARD` + 2 new gate tests)
-- `_bmad-output/design-artifacts/APAA/stories/6-1-llm-dispatch-port-minions-orchestrator-adapter.md` (status → review, Dev Agent Record, Change Log)
-- `_bmad-output/design-artifacts/APAA/sprint-status.yaml` (story → review; epic-6 → in-progress; last_updated)
+- `_bmad-output/design-artifacts/ArgusAgent/stories/6-1-llm-dispatch-port-minions-orchestrator-adapter.md` (status → review, Dev Agent Record, Change Log)
+- `_bmad-output/design-artifacts/ArgusAgent/sprint-status.yaml` (story → review; epic-6 → in-progress; last_updated)
 
 ## Senior Developer Review (AI)
 

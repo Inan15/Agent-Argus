@@ -7,7 +7,7 @@ Status: done
 > **APAA sub-project story.** APAA (AI Project Assurance Audit) is a SEPARATE headless audit sub-tool
 > placed at `minions_core/apaa/` (placement decision 2026-06-18). It reuses Minions infra BY IMPORT but
 > ships its own `APAA-FR-*` / `APAA-NFR-*` driver namespace. Planning lives under
-> `_bmad-output/design-artifacts/APAA/`; the tracker is `_bmad-output/design-artifacts/APAA/sprint-status.yaml`
+> `_bmad-output/design-artifacts/ArgusAgent/`; the tracker is `_bmad-output/design-artifacts/ArgusAgent/sprint-status.yaml`
 > (NOT the Minions platform tracker at `_bmad-output/implementation-artifacts/sprint-status.yaml`). All
 > CLAUDE.md rules apply (§3.2 ≤1200-line files, §3.7 headless-only, §3.8 12-Factor + secret masking, §3.4
 > evidence immutability).
@@ -128,7 +128,7 @@ L1-E11 operating model: package the prior retro's action items as the next epic'
   `PYTHONIOENCODING=utf-8` (project memory — the cp1252 emoji crash). At least one cache fixture carries a
   non-ASCII path/value and proves HIT==MISS byte-identity.
 - **AI-E4-4 (governance 🟢) — central defer register.** If this story files a NEW defer, file it append-only
-  in `_bmad-output/design-artifacts/APAA/deferred-work.md` (the single canonical APAA defer source), not
+  in `_bmad-output/design-artifacts/ArgusAgent/deferred-work.md` (the single canonical APAA defer source), not
   only in the story file, with the six CC-3 fields.
 
 ## Acceptance Criteria
@@ -354,7 +354,7 @@ the area Story 5.1 opened; confirm/lock the next free index in the module docstr
         default-equivalent — every existing pipeline test passes byte-identically). Confirm NO `cli.py`/HTTP/
         CI-job change, NO shared/network cache.
   - [ ] **AI-E4-4 / DN-DEFER:** if a NEW defer is filed, file it append-only in
-        `_bmad-output/design-artifacts/APAA/deferred-work.md` with the six CC-3 fields. Do NOT pull 5.3
+        `_bmad-output/design-artifacts/ArgusAgent/deferred-work.md` with the six CC-3 fields. Do NOT pull 5.3
         invalidation / key-busting or 6.1 live-capture into scope.
   - [ ] **AI-E4-3 / AI-E2-1 GATE:** the mandatory artifacts (`cache/memo_store.py` + `tests/apaa/test_memo_store.py`
         with the HIT==MISS / tamper→MISS / cache-never-changes-verdict proofs + the extended 4.4 suite) EXIST +
@@ -455,16 +455,16 @@ the area Story 5.1 opened; confirm/lock the next free index in the module docstr
 
 ### References
 
-- Epic: `_bmad-output/design-artifacts/APAA/epics.md` — Epic 5 / Story 5.2 (content-addressed memoization
+- Epic: `_bmad-output/design-artifacts/ArgusAgent/epics.md` — Epic 5 / Story 5.2 (content-addressed memoization
   store; FR27; NFR-D1; the V1-reproducibility-floor / local-only / not-the-sole-guarantee note).
-- PRD: `_bmad-output/design-artifacts/APAA/E-PRD/prd.md` — FR27 (reproduce the same verdict for the same
+- PRD: `_bmad-output/design-artifacts/ArgusAgent/E-PRD/prd.md` — FR27 (reproduce the same verdict for the same
   repository and APAA version), NFR-D1 (same repo @ commit @ APAA version → identical verdict + ledger via
   LOCAL content-addressed memoization; key = content-hash + model checkpoint + detector-set hash; NOT an
   assumption the LLM repeats itself), NFR-D2 (deterministic + zero-LLM-token — a HIT spends zero tokens),
   NFR-D3 (content hashes cover the canonical payload only — volatile `run_id`/`created_at` excluded),
   NFR-P1 (byte-identical), NFR-S1/S2 (no source/secret bytes — the cache joins the swept union), NFR-S5
   (containment), NFR-M1/M2.
-- Architecture: `_bmad-output/design-artifacts/APAA/architecture.md` — §87 (self-contained, LOCAL
+- Architecture: `_bmad-output/design-artifacts/ArgusAgent/architecture.md` — §87 (self-contained, LOCAL
   memoization; local cost ceiling), §91-96 (CC #1 the KEY is the keystone; CC #2 memoization caches errors →
   reproducibility ≠ correctness — detector-set-hash invalidation + rejected-finding key-busting are 5.3, but
   the read-side integrity→MISS is 5.2's first line of that defense), §247-250 (content-addressed memoization;
@@ -475,19 +475,19 @@ the area Story 5.1 opened; confirm/lock the next free index in the module docstr
   `memo_store` is the IMPURE side), AR4 (single serializer / no float), AR5 (one cache-key function), AR6
   (invalidation — the 5.2/5.3 split), AR7 (reuse-by-import / leaf modules), AR8 (pure/impure), AR10 (typed
   degradation), AR11 (content-addressed filenames).
-- Story 5.1: `_bmad-output/design-artifacts/APAA/stories/5-1-cache-key-derivation-recording-producing-closure-ci-canary.md`
+- Story 5.1: `_bmad-output/design-artifacts/ArgusAgent/stories/5-1-cache-key-derivation-recording-producing-closure-ci-canary.md`
   — the pure `cache/key.py` the store CONSUMES (`derive_cache_key`, `RecordingProducingClosure`,
   `FROZEN_DETECTOR_SET`, `V1_MODEL_CHECKPOINT`, `CACHE_KEY_SCHEMA_VERSION`); the 5.1 forward-flags ("the cache
   STORE's FS shell must degrade a corrupt/non-file/permission-denied/unknown-schema entry to a MISS, never
   raise"; "extend the 4.4 union to the `cache/` tree at 5.2"); the DN-PLACEHOLDER model-checkpoint (5.2 uses
   it as-is, no live capture).
-- Story 1.3: `_bmad-output/design-artifacts/APAA/stories/1-3-apaa-store-writer-reader-filesystem-containment.md`
+- Story 1.3: `_bmad-output/design-artifacts/ArgusAgent/stories/1-3-apaa-store-writer-reader-filesystem-containment.md`
   — the `ApaaStorePaths` containment, `ApaaStoreWriter`, and `ApaaStoreReader.read_envelope(verify_hash=True)`
   → `StoreIntegrityError` tamper guard the memo store reuses (the store RAISES; the memo store SWALLOWS into a
   MISS — the deliberate contrast).
 - Story 4.4: the secret-containment property suite the memo store extends (the `.apaa/cache/` tree joins the
   swept union).
-- Epic-4 retro: `_bmad-output/design-artifacts/APAA/epic-4-retro-2026-06-28.md` — action items AI-E4-1
+- Epic-4 retro: `_bmad-output/design-artifacts/ArgusAgent/epic-4-retro-2026-06-28.md` — action items AI-E4-1
   (no-crash input-shape checklist — landing on the cache FS shell here), AI-E4-4 (defer back-fill), AI-E4-7
   (keep structural gates green / extend the 4.4 union to the `cache/` tree at 5.2).
 - Source: `minions_core/apaa/store/{canonical,envelope,paths,writer,reader}.py` (the spine + containment +
@@ -499,7 +499,7 @@ the area Story 5.1 opened; confirm/lock the next free index in the module docstr
   HIT==MISS / tamper→MISS proofs), `tests/apaa/test_no_web_imports.py` (import-isolation — extend),
   `tests/apaa/test_canonical_single_serializer.py` (the single-serializer AST gate),
   `tests/security/test_apaa_secret_containment.py` (the 4.4 suite — extend to sweep `.apaa/cache/`).
-- Defer register: `_bmad-output/design-artifacts/APAA/deferred-work.md` — file any NEW defer append-only here
+- Defer register: `_bmad-output/design-artifacts/ArgusAgent/deferred-work.md` — file any NEW defer append-only here
   with the six CC-3 fields (AI-E4-4).
 
 ## Dev Agent Record
@@ -545,8 +545,8 @@ claude-opus-4-8 (BMAD dev-story, implement) — 2026-06-28.
 - `tests/apaa/test_memo_store.py` (NEW — the keystone proofs, TC-APAA-CACHE-001-23..45).
 - `tests/security/test_apaa_secret_containment.py` (EDIT — `.apaa/cache/` added to the swept union, TC-APAA-SECURITY-001-17/18).
 - `tests/apaa/test_no_web_imports.py` (EDIT — `apaa.cache.memo_store` added to `_MODULES_UNDER_GUARD`).
-- `_bmad-output/design-artifacts/APAA/sprint-status.yaml` (status flip).
-- `_bmad-output/design-artifacts/APAA/stories/5-2-content-addressed-memoization-store.md` (this file).
+- `_bmad-output/design-artifacts/ArgusAgent/sprint-status.yaml` (status flip).
+- `_bmad-output/design-artifacts/ArgusAgent/stories/5-2-content-addressed-memoization-store.md` (this file).
 
 ## Senior Developer Review (AI)
 

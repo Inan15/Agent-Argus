@@ -101,7 +101,7 @@ honestly is a signal the cartridge is ambiguous and SHOULD be reworked or deferr
      deterministic, so the re-run is byte-reproducible.
   3. If disagreement persists, the **external adjudicator** (§2) breaks the tie. The decision and
      rationale are recorded append-only in this protocol's change log AND in
-     `_bmad-output/design-artifacts/APAA/deferred-work.md` if it surfaces a detector gap.
+     `_bmad-output/design-artifacts/ArgusAgent/deferred-work.md` if it surfaces a detector gap.
 - **Determinism precondition.** Adjudication is only valid over a **byte-reproducible** harness run
   (NFR-P1): the harness MUST produce identical per-cartridge rows + precision ratio across two runs
   over the same corpus before any pass/fail is recorded.

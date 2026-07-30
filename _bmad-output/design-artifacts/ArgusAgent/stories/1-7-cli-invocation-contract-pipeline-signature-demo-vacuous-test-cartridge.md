@@ -7,7 +7,7 @@ Status: done
 > **APAA sub-project story.** APAA (AI Project Assurance Audit) is a SEPARATE headless audit sub-tool
 > placed at `minions_core/apaa/` (placement decision 2026-06-18). It reuses Minions infra BY IMPORT but
 > ships its own `APAA-FR-*` / `APAA-NFR-*` driver namespace. Planning lives under
-> `_bmad-output/design-artifacts/APAA/`; the tracker is `_bmad-output/design-artifacts/APAA/sprint-status.yaml`
+> `_bmad-output/design-artifacts/ArgusAgent/`; the tracker is `_bmad-output/design-artifacts/ArgusAgent/sprint-status.yaml`
 > (NOT the Minions platform tracker). All CLAUDE.md rules apply (§3.2 ≤1200-line files, §3.7 headless-only,
 > §3.8 12-Factor + secret masking, §3.4 evidence immutability).
 
@@ -556,21 +556,21 @@ rewrite the existing row. A new §4a row is not required. (The placement-decisio
 
 ### References
 
-- [Source: _bmad-output/design-artifacts/APAA/epics.md#Story-1.7 CLI invocation contract & pipeline → signature demo on the vacuous-test cartridge]
-- [Source: _bmad-output/design-artifacts/APAA/architecture.md#A. Execution & Invocation] (CLI = stdlib argparse thin wiring; invocation contract `repo + commit + budget + materiality_bar → verdict artifact + exit code`; exit-code wire contract `0/2/3/1`; sequential-canonical, parallel = pure speedup)
-- [Source: _bmad-output/design-artifacts/APAA/architecture.md#Decision Impact Analysis] (implementation sequence — the terminal `🔴 on the vacuous-test cartridge (signature demo)` step)
-- [Source: _bmad-output/design-artifacts/APAA/architecture.md#Project Structure & Boundaries] (package tree: `cli.py` / `pipeline.py` / `models.py` at package root; `.apaa/{state,findings,...}` runtime tree)
-- [Source: _bmad-output/design-artifacts/APAA/architecture.md#Pure/Impure Separation (master rule)] (`cli` is impure; pipeline orchestrates the pure cores)
-- [Source: _bmad-output/design-artifacts/APAA/architecture.md#Error / Degradation Patterns] (failure → typed finding, never an uncaught raise out of the pipeline — AR10/NFR-R1)
-- [Source: _bmad-output/design-artifacts/APAA/architecture.md#I. Packaging & Deployment] (`apaa` console script wired by the CLI story; `minions[apaa]` extra)
-- [Source: _bmad-output/design-artifacts/APAA/E-PRD/prd.md#FR30 headless invocation contract / FR18 deterministic exit code + machine-readable artifact / FR1 repo @ pinned commit / FR10 vacuous-test finding / FR13 locator-required / FR15-16-33 verdict + ordering + floor / FR25 envelope]
-- [Source: _bmad-output/design-artifacts/APAA/E-PRD/prd.md#Success-Criteria] (`GitHub green · Sonar green · APAA 🔴 tests appear vacuous` — the signature demo as a success criterion)
-- [Source: _bmad-output/design-artifacts/APAA/stories/1-6-pure-function-verdict-gate-finding-ordering-exit-code-mapping.md] (DONE — `evaluate_verdict(ledger, findings) -> AuditVerdict`; `Verdict` enum + `BLOCKED` alias; `AuditVerdict.exit_code` / `.to_canonical_payload()`; `exit_code_for_verdict`; the verdict the pipeline folds + reads)
-- [Source: _bmad-output/design-artifacts/APAA/stories/1-5-heuristic-vacuous-test-detector-tier-a-vacuous-path-ast-subset.md] (DONE — `VacuousTestDetector.run(*, file_path, source, ast_entry, ...) -> DetectorResult`; the advisory-by-contract eligibility surface the cartridge must satisfy for a legitimate 🔴)
-- [Source: _bmad-output/design-artifacts/APAA/stories/1-4-tree-sitter-ast-index-repo-intake-python-stack-detection.md] (DONE — `load_repo_at_commit` / `RepoIntake` / `RepoIntakeError`; `detect_stack`; `build_ast_index(..., partition_id="root")` / `AstIndex` / `AstIndexEntry`)
-- [Source: _bmad-output/design-artifacts/APAA/stories/1-3-apaa-store-writer-reader-filesystem-containment.md] (DONE — `ApaaStoreWriter` / `ApaaStorePaths` / containment + `WorkspaceContainmentError` — the persist shell)
-- [Source: _bmad-output/design-artifacts/APAA/stories/1-2-fixed-enum-coverage-ledger-frozen-recording-schema.md] (DONE — `CoverageLedger.build` / `grade_entry` / `Recording` — the ledger + finding row the pipeline assembles)
-- [Source: _bmad-output/design-artifacts/APAA/stories/1-1-canonical-serializer-content-hashed-envelope.md] (DONE — `canonical.dumps_bytes` / `EnvelopeWriter.build` / `compute_content_hash` — the serializer + envelope the pipeline persists through; `_MODULES_UNDER_GUARD` + the single-serializer AST gate)
+- [Source: _bmad-output/design-artifacts/ArgusAgent/epics.md#Story-1.7 CLI invocation contract & pipeline → signature demo on the vacuous-test cartridge]
+- [Source: _bmad-output/design-artifacts/ArgusAgent/architecture.md#A. Execution & Invocation] (CLI = stdlib argparse thin wiring; invocation contract `repo + commit + budget + materiality_bar → verdict artifact + exit code`; exit-code wire contract `0/2/3/1`; sequential-canonical, parallel = pure speedup)
+- [Source: _bmad-output/design-artifacts/ArgusAgent/architecture.md#Decision Impact Analysis] (implementation sequence — the terminal `🔴 on the vacuous-test cartridge (signature demo)` step)
+- [Source: _bmad-output/design-artifacts/ArgusAgent/architecture.md#Project Structure & Boundaries] (package tree: `cli.py` / `pipeline.py` / `models.py` at package root; `.apaa/{state,findings,...}` runtime tree)
+- [Source: _bmad-output/design-artifacts/ArgusAgent/architecture.md#Pure/Impure Separation (master rule)] (`cli` is impure; pipeline orchestrates the pure cores)
+- [Source: _bmad-output/design-artifacts/ArgusAgent/architecture.md#Error / Degradation Patterns] (failure → typed finding, never an uncaught raise out of the pipeline — AR10/NFR-R1)
+- [Source: _bmad-output/design-artifacts/ArgusAgent/architecture.md#I. Packaging & Deployment] (`apaa` console script wired by the CLI story; `minions[apaa]` extra)
+- [Source: _bmad-output/design-artifacts/ArgusAgent/E-PRD/prd.md#FR30 headless invocation contract / FR18 deterministic exit code + machine-readable artifact / FR1 repo @ pinned commit / FR10 vacuous-test finding / FR13 locator-required / FR15-16-33 verdict + ordering + floor / FR25 envelope]
+- [Source: _bmad-output/design-artifacts/ArgusAgent/E-PRD/prd.md#Success-Criteria] (`GitHub green · Sonar green · APAA 🔴 tests appear vacuous` — the signature demo as a success criterion)
+- [Source: _bmad-output/design-artifacts/ArgusAgent/stories/1-6-pure-function-verdict-gate-finding-ordering-exit-code-mapping.md] (DONE — `evaluate_verdict(ledger, findings) -> AuditVerdict`; `Verdict` enum + `BLOCKED` alias; `AuditVerdict.exit_code` / `.to_canonical_payload()`; `exit_code_for_verdict`; the verdict the pipeline folds + reads)
+- [Source: _bmad-output/design-artifacts/ArgusAgent/stories/1-5-heuristic-vacuous-test-detector-tier-a-vacuous-path-ast-subset.md] (DONE — `VacuousTestDetector.run(*, file_path, source, ast_entry, ...) -> DetectorResult`; the advisory-by-contract eligibility surface the cartridge must satisfy for a legitimate 🔴)
+- [Source: _bmad-output/design-artifacts/ArgusAgent/stories/1-4-tree-sitter-ast-index-repo-intake-python-stack-detection.md] (DONE — `load_repo_at_commit` / `RepoIntake` / `RepoIntakeError`; `detect_stack`; `build_ast_index(..., partition_id="root")` / `AstIndex` / `AstIndexEntry`)
+- [Source: _bmad-output/design-artifacts/ArgusAgent/stories/1-3-apaa-store-writer-reader-filesystem-containment.md] (DONE — `ApaaStoreWriter` / `ApaaStorePaths` / containment + `WorkspaceContainmentError` — the persist shell)
+- [Source: _bmad-output/design-artifacts/ArgusAgent/stories/1-2-fixed-enum-coverage-ledger-frozen-recording-schema.md] (DONE — `CoverageLedger.build` / `grade_entry` / `Recording` — the ledger + finding row the pipeline assembles)
+- [Source: _bmad-output/design-artifacts/ArgusAgent/stories/1-1-canonical-serializer-content-hashed-envelope.md] (DONE — `canonical.dumps_bytes` / `EnvelopeWriter.build` / `compute_content_hash` — the serializer + envelope the pipeline persists through; `_MODULES_UNDER_GUARD` + the single-serializer AST gate)
 - [Source: minions_core/apaa/verdict/verdict_gate.py] (`evaluate_verdict` / `AuditVerdict` / `Verdict` / `exit_code_for_verdict` — folded + read by the pipeline/CLI)
 - [Source: minions_core/apaa/detectors/vacuous_test.py] (`VacuousTestDetector.run` / `is_test_file` — the per-file detector the pipeline runs)
 - [Source: minions_core/apaa/intake/repo_loader.py + intake/stack_detect.py + index/ast_index.py] (the intake → stack → index stages the pipeline calls)

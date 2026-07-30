@@ -7,7 +7,7 @@ Status: done
 > **APAA sub-project story.** APAA (AI Project Assurance Audit) is a SEPARATE headless audit sub-tool
 > placed at `minions_core/apaa/` (placement decision 2026-06-18). It reuses Minions infra BY IMPORT but
 > ships its own `APAA-FR-*` / `APAA-NFR-*` driver namespace. Planning lives under
-> `_bmad-output/design-artifacts/APAA/`; the tracker is `_bmad-output/design-artifacts/APAA/sprint-status.yaml`
+> `_bmad-output/design-artifacts/ArgusAgent/`; the tracker is `_bmad-output/design-artifacts/ArgusAgent/sprint-status.yaml`
 > (NOT the Minions platform tracker). All CLAUDE.md rules apply (§3.2 ≤1200-line files, §3.7 headless-only,
 > §3.8 12-Factor + secret masking, §3.4 evidence immutability).
 
@@ -473,19 +473,19 @@ and must NOT rewrite the existing row. Keep it minimal — a new row is not requ
 
 ### References
 
-- [Source: _bmad-output/design-artifacts/APAA/epics.md#Story-1.5 Heuristic vacuous-test detector + Tier-A vacuous-path AST subset]
-- [Source: _bmad-output/design-artifacts/APAA/architecture.md#D. Defect Detectors] (vacuous-test heuristic advisory `audited_shallow` + Tier-A vacuous-path AST subset; every finding carries finding_id + envelope slice + rule/cartridge id + AST span)
-- [Source: _bmad-output/design-artifacts/APAA/architecture.md#Resolved & Flagged Decisions — FR7 SPLIT] (two AST facts: test→SUT reachability + assertion-target provenance, test files only, carved into Tier-A; general AST grounding Tier-B)
-- [Source: _bmad-output/design-artifacts/APAA/architecture.md#Cross-Cutting Concerns #6 advisory-by-contract] (no verdict-moving 🔴 without AST corroboration AND Prosecutor sign-off; false-accusation moat)
-- [Source: _bmad-output/design-artifacts/APAA/architecture.md#Pure/Impure Separation (master rule)] (detector *scorers* are PURE; impure shell at the edges)
-- [Source: _bmad-output/design-artifacts/APAA/architecture.md#Determinism Patterns / Contract Format Patterns] (one serializer; no floats — ratios fixed-precision; finding shape; locator-or-reject)
-- [Source: _bmad-output/design-artifacts/APAA/architecture.md#Error / Degradation Patterns] (parse failure → recorded condition, never an uncaught raise; no bare except: pass / print())
-- [Source: _bmad-output/design-artifacts/APAA/architecture.md#Project Structure & Boundaries] (package tree: detectors/base.py, detectors/vacuous_test.py; secret_scan/tool_runner/orphan_code deferred)
-- [Source: _bmad-output/design-artifacts/APAA/E-PRD/prd.md#FR10 vacuous-test detection (advisory, evidence counts) / FR7 Python AST grounding (subset) / FR13 locator-or-reject / NFR-D2 zero-token / NFR-R1 honest degradation]
-- [Source: _bmad-output/design-artifacts/APAA/stories/1-1-canonical-serializer-content-hashed-envelope.md] (DONE — serializer + envelope spine + `_MODULES_UNDER_GUARD` seed + single-serializer AST gate + Decimal/Fraction encoding)
-- [Source: _bmad-output/design-artifacts/APAA/stories/1-2-fixed-enum-coverage-ledger-frozen-recording-schema.md] (DONE — `Recording`/`Locator`/`RecordingValidationError` = the finding row; `grade_entry`; `Locator.ast_span` reserved; frozen extra="forbid")
-- [Source: _bmad-output/design-artifacts/APAA/stories/1-3-apaa-store-writer-reader-filesystem-containment.md] (DONE — `ApaaStorePaths` + writer/reader to REUSE for any `.apaa/findings/` persistence)
-- [Source: _bmad-output/design-artifacts/APAA/stories/1-4-tree-sitter-ast-index-repo-intake-python-stack-detection.md] (DONE — `build_ast_index`/`AstIndexEntry`/`Definition.ast_span`/`CodeEdge` = the AST substrate; DF-1-4-A: edges are unresolved-name only — the conservative-corroboration constraint)
+- [Source: _bmad-output/design-artifacts/ArgusAgent/epics.md#Story-1.5 Heuristic vacuous-test detector + Tier-A vacuous-path AST subset]
+- [Source: _bmad-output/design-artifacts/ArgusAgent/architecture.md#D. Defect Detectors] (vacuous-test heuristic advisory `audited_shallow` + Tier-A vacuous-path AST subset; every finding carries finding_id + envelope slice + rule/cartridge id + AST span)
+- [Source: _bmad-output/design-artifacts/ArgusAgent/architecture.md#Resolved & Flagged Decisions — FR7 SPLIT] (two AST facts: test→SUT reachability + assertion-target provenance, test files only, carved into Tier-A; general AST grounding Tier-B)
+- [Source: _bmad-output/design-artifacts/ArgusAgent/architecture.md#Cross-Cutting Concerns #6 advisory-by-contract] (no verdict-moving 🔴 without AST corroboration AND Prosecutor sign-off; false-accusation moat)
+- [Source: _bmad-output/design-artifacts/ArgusAgent/architecture.md#Pure/Impure Separation (master rule)] (detector *scorers* are PURE; impure shell at the edges)
+- [Source: _bmad-output/design-artifacts/ArgusAgent/architecture.md#Determinism Patterns / Contract Format Patterns] (one serializer; no floats — ratios fixed-precision; finding shape; locator-or-reject)
+- [Source: _bmad-output/design-artifacts/ArgusAgent/architecture.md#Error / Degradation Patterns] (parse failure → recorded condition, never an uncaught raise; no bare except: pass / print())
+- [Source: _bmad-output/design-artifacts/ArgusAgent/architecture.md#Project Structure & Boundaries] (package tree: detectors/base.py, detectors/vacuous_test.py; secret_scan/tool_runner/orphan_code deferred)
+- [Source: _bmad-output/design-artifacts/ArgusAgent/E-PRD/prd.md#FR10 vacuous-test detection (advisory, evidence counts) / FR7 Python AST grounding (subset) / FR13 locator-or-reject / NFR-D2 zero-token / NFR-R1 honest degradation]
+- [Source: _bmad-output/design-artifacts/ArgusAgent/stories/1-1-canonical-serializer-content-hashed-envelope.md] (DONE — serializer + envelope spine + `_MODULES_UNDER_GUARD` seed + single-serializer AST gate + Decimal/Fraction encoding)
+- [Source: _bmad-output/design-artifacts/ArgusAgent/stories/1-2-fixed-enum-coverage-ledger-frozen-recording-schema.md] (DONE — `Recording`/`Locator`/`RecordingValidationError` = the finding row; `grade_entry`; `Locator.ast_span` reserved; frozen extra="forbid")
+- [Source: _bmad-output/design-artifacts/ArgusAgent/stories/1-3-apaa-store-writer-reader-filesystem-containment.md] (DONE — `ApaaStorePaths` + writer/reader to REUSE for any `.apaa/findings/` persistence)
+- [Source: _bmad-output/design-artifacts/ArgusAgent/stories/1-4-tree-sitter-ast-index-repo-intake-python-stack-detection.md] (DONE — `build_ast_index`/`AstIndexEntry`/`Definition.ast_span`/`CodeEdge` = the AST substrate; DF-1-4-A: edges are unresolved-name only — the conservative-corroboration constraint)
 - [Source: minions_core/apaa/ledger/recording.py] (`Recording`/`Locator`/`RecordingValidationError` — the finding model to reuse verbatim)
 - [Source: minions_core/apaa/ledger/coverage_ledger.py] (`grade_entry` — the `audited_shallow` grader to reuse)
 - [Source: minions_core/apaa/index/ast_index.py] (`build_ast_index`, `AstIndexEntry`, `Definition`, `CodeEdge` — the AST facts the subset folds over)

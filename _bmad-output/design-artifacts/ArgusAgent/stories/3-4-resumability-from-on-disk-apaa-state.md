@@ -7,7 +7,7 @@ Status: done
 > **APAA sub-project story.** APAA (AI Project Assurance Audit) is a SEPARATE headless audit sub-tool
 > placed at `minions_core/apaa/` (placement decision 2026-06-18). It reuses Minions infra BY IMPORT but
 > ships its own `APAA-FR-*` / `APAA-NFR-*` driver namespace. Planning lives under
-> `_bmad-output/design-artifacts/APAA/`; the tracker is `_bmad-output/design-artifacts/APAA/sprint-status.yaml`
+> `_bmad-output/design-artifacts/ArgusAgent/`; the tracker is `_bmad-output/design-artifacts/ArgusAgent/sprint-status.yaml`
 > (NOT the Minions platform tracker). All CLAUDE.md rules apply (§3.2 ≤1200-line files, §3.7 headless-only,
 > §3.8 12-Factor + secret masking, §3.4 evidence immutability).
 
@@ -288,7 +288,7 @@ pipeline). The 1-3 reader is REUSED, not re-implemented.
   `json.dumps`); apply byte-stability + order-independence fixtures to the resume-plan surface; the full
   host-vs-host 3.5 fixture is the next story.
 - **AI-E2-3 (governance 🟢) — central defer register.** If this story files a NEW defer, file it
-  append-only in `_bmad-output/design-artifacts/APAA/deferred-work.md` (the single canonical APAA defer
+  append-only in `_bmad-output/design-artifacts/ArgusAgent/deferred-work.md` (the single canonical APAA defer
   source), not only in the story file. **Carry-watch DF-1-3-A** (the reader does not assert the
   content-addressed FILENAME stem == the internal `content_hash` — a misfiled/renamed artifact is silently
   accepted; target_story = Epic-4 secret-containment): if the resume LOADS state by a content-addressed
@@ -729,20 +729,20 @@ deterministic (no arrival-order reliance — AR11) and the READ MUST go through 
 
 ### References
 
-- [Source: _bmad-output/design-artifacts/APAA/epics.md#Story 3.4: Resumability from on-disk `.apaa/` state] — the two epic ACs (resume reusing prior coverage; final state identical to an uninterrupted run).
-- [Source: _bmad-output/design-artifacts/APAA/epics.md#Epic 3: Honest Degradation & Cost Governance] — FR21/FR22/FR31/FR32/FR16-floor; NFRs C1/C2/R2/P1/P2.
-- [Source: _bmad-output/design-artifacts/APAA/E-PRD/prd.md] FR31 (resume from `.apaa/` state); NFR-R2 (fully resumable, no loss of prior coverage); NFR-D2/D3/P1; NFR-S1/S5; NFR-A1; NFR-M1/M2.
-- [Source: _bmad-output/design-artifacts/APAA/architecture.md#F. Persistence & State] — filesystem-as-contract `.apaa/{state,...}`, resumable + portable (FR31); the `.apaa/` runtime tree (`state/` = run state + coverage-ledger snapshots, resumable).
-- [Source: _bmad-output/design-artifacts/APAA/architecture.md#FR-cluster→location] — Invocation & Resumability (FR30–32) | `cli.py`, `pipeline.py`, `store/reader.py`; NFR R1–2 (`store/reader` resume).
-- [Source: _bmad-output/design-artifacts/APAA/architecture.md] AR4 (single canonical serializer; no float/clock/uuid/random), AR7 (reuse-by-import leaf modules), AR8 (pure/impure separation), AR10 (failure→typed, never uncaught raise), AR11 (`.apaa/` content-addressed filenames).
+- [Source: _bmad-output/design-artifacts/ArgusAgent/epics.md#Story 3.4: Resumability from on-disk `.apaa/` state] — the two epic ACs (resume reusing prior coverage; final state identical to an uninterrupted run).
+- [Source: _bmad-output/design-artifacts/ArgusAgent/epics.md#Epic 3: Honest Degradation & Cost Governance] — FR21/FR22/FR31/FR32/FR16-floor; NFRs C1/C2/R2/P1/P2.
+- [Source: _bmad-output/design-artifacts/ArgusAgent/E-PRD/prd.md] FR31 (resume from `.apaa/` state); NFR-R2 (fully resumable, no loss of prior coverage); NFR-D2/D3/P1; NFR-S1/S5; NFR-A1; NFR-M1/M2.
+- [Source: _bmad-output/design-artifacts/ArgusAgent/architecture.md#F. Persistence & State] — filesystem-as-contract `.apaa/{state,...}`, resumable + portable (FR31); the `.apaa/` runtime tree (`state/` = run state + coverage-ledger snapshots, resumable).
+- [Source: _bmad-output/design-artifacts/ArgusAgent/architecture.md#FR-cluster→location] — Invocation & Resumability (FR30–32) | `cli.py`, `pipeline.py`, `store/reader.py`; NFR R1–2 (`store/reader` resume).
+- [Source: _bmad-output/design-artifacts/ArgusAgent/architecture.md] AR4 (single canonical serializer; no float/clock/uuid/random), AR7 (reuse-by-import leaf modules), AR8 (pure/impure separation), AR10 (failure→typed, never uncaught raise), AR11 (`.apaa/` content-addressed filenames).
 - [Source: minions_core/apaa/store/reader.py] — `ApaaStoreReader`, `read_ledger`/`read_envelope(verify_hash=True)`, `StoreIntegrityError` (the REUSED tamper guard; module docstring already names FR-31 resumability).
 - [Source: minions_core/apaa/cost/exhaustion.py] — `HaltReport`, `project_halt_point`/`HaltProjection`, `build_halt_report`, `build_floor_report`, `ExhaustionError` (REUSE).
 - [Source: minions_core/apaa/pipeline.py] — `run_audit_detailed`, `_persist`/`_persist_halt_report`/`_persist_cost_ledger`, `_detect_per_file`, `AuditResult`, `PipelineError`, `_RUN_STATE_SCHEMA_VERSION`, the producer tokens (the resume seam to extend).
 - [Source: minions_core/apaa/verdict/verdict_gate.py] — `evaluate_verdict` (UNCHANGED, re-folded over the merged ledger).
 - [Source: minions_core/apaa/ledger/coverage_ledger.py] — `CoverageLedger.build` (re-sorts), `CoverageDepth`, `grade_entry` (REUSE).
-- [Source: _bmad-output/design-artifacts/APAA/stories/3-2-halt-skip-downgrade-report-on-budget-exhaustion.md] — the persisted resume seam (the halt report + partial ledger + cost snapshot in `state/`).
-- [Source: _bmad-output/design-artifacts/APAA/stories/3-3-insufficient-coverage-floor-under-exhaustion.md] — the floor report (additive, derivable) the resumed verdict carries unchanged.
-- [Source: _bmad-output/design-artifacts/APAA/deferred-work.md] — DF-1-3-A (filename↔hash assertion, carry-watch), DF-1-3-B (containment mirror), DF-1-7-A (interim `_persist` OSError edge, carry-watch).
+- [Source: _bmad-output/design-artifacts/ArgusAgent/stories/3-2-halt-skip-downgrade-report-on-budget-exhaustion.md] — the persisted resume seam (the halt report + partial ledger + cost snapshot in `state/`).
+- [Source: _bmad-output/design-artifacts/ArgusAgent/stories/3-3-insufficient-coverage-floor-under-exhaustion.md] — the floor report (additive, derivable) the resumed verdict carries unchanged.
+- [Source: _bmad-output/design-artifacts/ArgusAgent/deferred-work.md] — DF-1-3-A (filename↔hash assertion, carry-watch), DF-1-3-B (containment mirror), DF-1-7-A (interim `_persist` OSError edge, carry-watch).
 - [Source: CLAUDE.md] §3.2 (≤1200-line files), §3.7 (headless-only), §3.8 (12-Factor + secret masking), §3.4 (evidence immutability), §9.1/§9.2 (L1-E11 retro-as-backlog + rule-of-three guard promotion).
 
 ## Dev Agent Record
@@ -838,7 +838,7 @@ claude-opus-4-8 (dev-story, implement) — 2026-06-25.
   unchanged, so DF-1-7-A stays DEFERRED (no scope expand). DF-1-3-B (containment mirror) out of scope.
 - **New defer filed.** DF-3-4-A (🟢 process) — the `--resume` CLI flag is library-only in V1 (the resume
   entrypoint is exercised by tests; the operator-facing CLI wiring is deferred). Filed append-only in
-  `_bmad-output/design-artifacts/APAA/deferred-work.md`. Resume requires the `.apaa/` store to live OUTSIDE
+  `_bmad-output/design-artifacts/ArgusAgent/deferred-work.md`. Resume requires the `.apaa/` store to live OUTSIDE
   the audited working tree (an injected reader/writer) since the resume re-loads the repo at the pin and the
   loader refuses a drifted tree — the V1 resume seam (documented; the in-tree `.gitignore`d-`.apaa/`
   ergonomics ride along with the deferred CLI flag).
@@ -856,8 +856,8 @@ claude-opus-4-8 (dev-story, implement) — 2026-06-25.
   new `...-30` assessed-prefix-non-deep keystone fixture + `_halt_report_bytes`/`_stage_with_assessed_prefix_non_deep_file`
   helpers; halt-report-byte comparison added to `...-24` and `...-30`).
 - `tests/apaa/test_no_web_imports.py` (EXTENDED — appended `minions_core.apaa.cost.resume` to `_MODULES_UNDER_GUARD`).
-- `_bmad-output/design-artifacts/APAA/deferred-work.md` (APPENDED — DF-3-4-A).
-- `_bmad-output/design-artifacts/APAA/sprint-status.yaml` (3-4 → `review`; `last_updated` 2026-06-26).
+- `_bmad-output/design-artifacts/ArgusAgent/deferred-work.md` (APPENDED — DF-3-4-A).
+- `_bmad-output/design-artifacts/ArgusAgent/sprint-status.yaml` (3-4 → `review`; `last_updated` 2026-06-26).
 
 ## Change Log
 

@@ -7,7 +7,7 @@ Status: done
 > **APAA sub-project story.** APAA (AI Project Assurance Audit) is a SEPARATE headless audit sub-tool
 > placed at `minions_core/apaa/` (placement decision 2026-06-18). It reuses Minions infra BY IMPORT but
 > ships its own `APAA-FR-*` / `APAA-NFR-*` driver namespace. Planning lives under
-> `_bmad-output/design-artifacts/APAA/`; the tracker is `_bmad-output/design-artifacts/APAA/sprint-status.yaml`
+> `_bmad-output/design-artifacts/ArgusAgent/`; the tracker is `_bmad-output/design-artifacts/ArgusAgent/sprint-status.yaml`
 > (NOT the Minions platform tracker). All CLAUDE.md rules apply (§3.2 ≤1200-line files, §3.7 headless-only,
 > §3.8 12-Factor + secret masking, §3.4 evidence immutability).
 
@@ -531,7 +531,7 @@ import-isolation gate file).
 ## Dev Agent Record
 
 ### Context Reference
-- Story file: `_bmad-output/design-artifacts/APAA/stories/2-5-hardcoded-secret-detector-producer-side-redaction.md`
+- Story file: `_bmad-output/design-artifacts/ArgusAgent/stories/2-5-hardcoded-secret-detector-producer-side-redaction.md`
 - Implemented by the BMAD dev-story worker on 2026-06-21 (mode=implement).
 
 ### Decisions locked (recorded per Dev Notes)

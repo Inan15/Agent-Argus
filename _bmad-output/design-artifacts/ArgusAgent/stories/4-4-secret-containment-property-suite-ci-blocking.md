@@ -7,7 +7,7 @@ Status: done
 > **APAA sub-project story.** APAA (AI Project Assurance Audit) is a SEPARATE headless audit sub-tool
 > placed at `minions_core/apaa/` (placement decision 2026-06-18). It reuses Minions infra BY IMPORT but
 > ships its own `APAA-FR-*` / `APAA-NFR-*` driver namespace. Planning lives under
-> `_bmad-output/design-artifacts/APAA/`; the tracker is `_bmad-output/design-artifacts/APAA/sprint-status.yaml`
+> `_bmad-output/design-artifacts/ArgusAgent/`; the tracker is `_bmad-output/design-artifacts/ArgusAgent/sprint-status.yaml`
 > (NOT the Minions platform tracker). All CLAUDE.md rules apply (§3.2 ≤1200-line files, §3.7 headless-only,
 > §3.8 12-Factor + secret masking, §3.4 evidence immutability).
 >
@@ -181,7 +181,7 @@ package the prior retro's action items as the next epic's backlog).
   proving containment holds for non-ASCII secrets + paths (explicit UTF-8 search; no octal-escape / encoding-
   drop survival). Run under `PYTHONIOENCODING=utf-8` (project memory — the cp1252 emoji crash).
 - **AI-E3-3 (governance 🟢) — central defer register.** If this story files a NEW defer, file it append-only in
-  `_bmad-output/design-artifacts/APAA/deferred-work.md` (the single canonical APAA defer source), not only in
+  `_bmad-output/design-artifacts/ArgusAgent/deferred-work.md` (the single canonical APAA defer source), not only in
   the story file. **DF-1-3-A names THIS story** (`target_story:
   epic-4-secret-containment-property-suite-ci-blocking`) but its INTEGRITY GAP is ALREADY CLOSED (2026-06-27 by
   story 4.2 — the `filename_content_hash_mismatch` `IntegrityFinding`). DF-1-3-A's residual note says THIS story
@@ -386,7 +386,7 @@ docstring, distinct from the existing `APAA-SECRET` 2.5 area).
         pass (incl. the new suite + its RED demonstration). `mypy` clean on any new/edited modules.
   - [x] **AI-E3-3 / DN-DEFER:** do NOT pull DF-1-3-A's optional lint-CI-enforcement into scope (the gap is
         closed). If a NEW defer is filed, file it append-only in
-        `_bmad-output/design-artifacts/APAA/deferred-work.md`.
+        `_bmad-output/design-artifacts/ArgusAgent/deferred-work.md`.
   - [x] **AI-E3-2 / AI-E2-1 GATE:** the mandatory artifacts (`tests/security/test_apaa_secret_containment.py`,
         the randomized fixtures / cartridge, the committed planted-leak RED-demonstration) EXIST + pass + the
         RED demonstration is documented BEFORE the `review` flip; the Dev Agent Record is filled completely (no
@@ -486,13 +486,13 @@ docstring, distinct from the existing `APAA-SECRET` 2.5 area).
 
 ### References
 
-- Epic: `_bmad-output/design-artifacts/APAA/epics.md` — Epic 4 / Story 4.4 (FR28 enforcement; NFR-S1; AR9).
-- PRD: `_bmad-output/design-artifacts/APAA/E-PRD/prd.md` — FR28 (producer redaction — no source/secret bytes in
+- Epic: `_bmad-output/design-artifacts/ArgusAgent/epics.md` — Epic 4 / Story 4.4 (FR28 enforcement; NFR-S1; AR9).
+- PRD: `_bmad-output/design-artifacts/ArgusAgent/E-PRD/prd.md` — FR28 (producer redaction — no source/secret bytes in
   ledgers/evidence/logs/traces), NFR-S1 (no source/prompt/response/API-key bytes in ledgers/evidence/logs/OTLP
   spans/traces/responses — CI-blocking security suite, mirrors Minions §3.8 / `tests/security/`), NFR-S2
   (detected secrets redacted; stored form carries `contained_secret` without the value), NFR-S3/FR29 (evidence
   bundle / operated-service no source retention), NFR-P1/D2/M1.
-- Architecture: `_bmad-output/design-artifacts/APAA/architecture.md` — AR9 (committed/durable CI gates: the
+- Architecture: `_bmad-output/design-artifacts/ArgusAgent/architecture.md` — AR9 (committed/durable CI gates: the
   secret-containment property suite [randomized canaries] under `tests/apaa/` + `tests/security/`, wired to the
   Minions CI model), the Security/Containment patterns (producer-side redaction; all writes via containment),
   AR4/AR8/AR10.
@@ -511,7 +511,7 @@ docstring, distinct from the existing `APAA-SECRET` 2.5 area).
   security-suite precedent, CLAUDE.md §3.8 / story 10-10).
 - CI: `.github/workflows/minions_core-ci.yml` — the `test` job (`pytest -q`) + the merge-blocking `security`
   job (`pytest tests/security/ -v --strict-markers`, story 10-10 AC7) + the bulk-migration-guard Layer 1.
-- Defer register: `_bmad-output/design-artifacts/APAA/deferred-work.md` — DF-1-3-A (`target_story` = THIS
+- Defer register: `_bmad-output/design-artifacts/ArgusAgent/deferred-work.md` — DF-1-3-A (`target_story` = THIS
   story; INTEGRITY GAP already CLOSED by 4.2; optional lint-CI-enforcement fenced OUT by DN-DEFER).
 
 ## Dev Agent Record
@@ -601,8 +601,8 @@ claude-opus-4-8 (dev-story, implement) — 2026-06-28.
 - **NEW** `tests/apaa/cartridges/secret_canary/src/auth/guard.py.txt` — critical-subsystem (auth) file with a planted secret.
 - **NEW** `tests/apaa/cartridges/secret_canary/tests/test_config.py.txt` — vacuous test file with a planted secret.
 - **NEW** `tests/apaa/cartridges/secret_canary/src/café/модуль_секрет.py.txt` — non-ASCII-path file with a non-ASCII secret value (AI-E1-1).
-- **UPDATED** `_bmad-output/design-artifacts/APAA/stories/4-4-secret-containment-property-suite-ci-blocking.md` (this file — status, tasks, Dev Agent Record, Change Log).
-- **UPDATED** `_bmad-output/design-artifacts/APAA/sprint-status.yaml` (status → review, `last_updated` 2026-06-28).
+- **UPDATED** `_bmad-output/design-artifacts/ArgusAgent/stories/4-4-secret-containment-property-suite-ci-blocking.md` (this file — status, tasks, Dev Agent Record, Change Log).
+- **UPDATED** `_bmad-output/design-artifacts/ArgusAgent/sprint-status.yaml` (status → review, `last_updated` 2026-06-28).
 - **NO producer diff** — `detectors/secret_scan.py`, `detectors/tool_runner.py`, `evidence/bundle.py`, `pipeline.py`, `store/*`, `verdict/*`, `ledger/*` UNCHANGED (verify-and-lock).
 
 ## Senior Developer Review (AI)

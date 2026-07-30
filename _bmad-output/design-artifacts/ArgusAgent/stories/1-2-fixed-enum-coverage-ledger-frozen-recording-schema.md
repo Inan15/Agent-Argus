@@ -7,7 +7,7 @@ Status: done
 > **APAA sub-project story.** APAA (AI Project Assurance Audit) is a SEPARATE headless audit sub-tool
 > placed at `minions_core/apaa/` (placement decision 2026-06-18). It reuses Minions infra BY IMPORT but
 > ships its own `APAA-FR-*` / `APAA-NFR-*` driver namespace. Planning lives under
-> `_bmad-output/design-artifacts/APAA/`; the tracker is `_bmad-output/design-artifacts/APAA/sprint-status.yaml`
+> `_bmad-output/design-artifacts/ArgusAgent/`; the tracker is `_bmad-output/design-artifacts/ArgusAgent/sprint-status.yaml`
 > (NOT the Minions platform tracker). All CLAUDE.md rules apply (§3.2 ≤1200-line files, §3.7 headless-only,
 > §3.8 12-Factor + secret masking, §3.4 evidence immutability).
 
@@ -348,15 +348,15 @@ of the determinism core) and must not rewrite the existing row. Keep it minimal 
 
 ### References
 
-- [Source: _bmad-output/design-artifacts/APAA/epics.md#Story-1.2 Fixed-enum coverage ledger & frozen recording schema]
-- [Source: _bmad-output/design-artifacts/APAA/architecture.md#C. Coverage Ledger, Recording Schema & Verdict (determinism core)]
-- [Source: _bmad-output/design-artifacts/APAA/architecture.md#Contract / Format Patterns] (closed coverage enum; finding/recording required fields; locator-or-reject)
-- [Source: _bmad-output/design-artifacts/APAA/architecture.md#Pure/Impure Separation (master rule)]
-- [Source: _bmad-output/design-artifacts/APAA/architecture.md#Determinism Patterns (NFR-P1/D1 — non-negotiable)] (one serializer; no floats; no iteration-order reliance)
-- [Source: _bmad-output/design-artifacts/APAA/architecture.md#Cross-Cutting Concerns #1 recording-producing-closure cache key / #5 producer-side redaction / #6 advisory-by-contract]
-- [Source: _bmad-output/design-artifacts/APAA/architecture.md#D. Defect Detectors] (every finding carries finding_id + envelope slice + rule/cartridge id + AST span)
-- [Source: _bmad-output/design-artifacts/APAA/E-PRD/prd.md#FR5 fixed-enum coverage ledger / FR6 claim-required audited_deep / FR8 inferred-never-satisfies / FR9 readable surface / FR13 locator-or-reject]
-- [Source: _bmad-output/design-artifacts/APAA/stories/1-1-canonical-serializer-content-hashed-envelope.md] (DONE — store spine to reuse; `extra="forbid"` + golden-constant precedent; `_MODULES_UNDER_GUARD` seed)
+- [Source: _bmad-output/design-artifacts/ArgusAgent/epics.md#Story-1.2 Fixed-enum coverage ledger & frozen recording schema]
+- [Source: _bmad-output/design-artifacts/ArgusAgent/architecture.md#C. Coverage Ledger, Recording Schema & Verdict (determinism core)]
+- [Source: _bmad-output/design-artifacts/ArgusAgent/architecture.md#Contract / Format Patterns] (closed coverage enum; finding/recording required fields; locator-or-reject)
+- [Source: _bmad-output/design-artifacts/ArgusAgent/architecture.md#Pure/Impure Separation (master rule)]
+- [Source: _bmad-output/design-artifacts/ArgusAgent/architecture.md#Determinism Patterns (NFR-P1/D1 — non-negotiable)] (one serializer; no floats; no iteration-order reliance)
+- [Source: _bmad-output/design-artifacts/ArgusAgent/architecture.md#Cross-Cutting Concerns #1 recording-producing-closure cache key / #5 producer-side redaction / #6 advisory-by-contract]
+- [Source: _bmad-output/design-artifacts/ArgusAgent/architecture.md#D. Defect Detectors] (every finding carries finding_id + envelope slice + rule/cartridge id + AST span)
+- [Source: _bmad-output/design-artifacts/ArgusAgent/E-PRD/prd.md#FR5 fixed-enum coverage ledger / FR6 claim-required audited_deep / FR8 inferred-never-satisfies / FR9 readable surface / FR13 locator-or-reject]
+- [Source: _bmad-output/design-artifacts/ArgusAgent/stories/1-1-canonical-serializer-content-hashed-envelope.md] (DONE — store spine to reuse; `extra="forbid"` + golden-constant precedent; `_MODULES_UNDER_GUARD` seed)
 - [Source: minions_core/apaa/store/canonical.py] (the single serializer + `CanonicalSerializationError`)
 - [Source: minions_core/apaa/store/envelope.py] (`Envelope`, `EnvelopeWriter`, `compute_content_hash`, `GENESIS_PREV_HASH`)
 - [Source: minions_core/apaa/__init__.py] (`__version__ = "0.1.0"` — single apaa_version source)

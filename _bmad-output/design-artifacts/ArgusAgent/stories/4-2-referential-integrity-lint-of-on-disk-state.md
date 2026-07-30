@@ -7,7 +7,7 @@ Status: done
 > **APAA sub-project story.** APAA (AI Project Assurance Audit) is a SEPARATE headless audit sub-tool
 > placed at `minions_core/apaa/` (placement decision 2026-06-18). It reuses Minions infra BY IMPORT but
 > ships its own `APAA-FR-*` / `APAA-NFR-*` driver namespace. Planning lives under
-> `_bmad-output/design-artifacts/APAA/`; the tracker is `_bmad-output/design-artifacts/APAA/sprint-status.yaml`
+> `_bmad-output/design-artifacts/ArgusAgent/`; the tracker is `_bmad-output/design-artifacts/ArgusAgent/sprint-status.yaml`
 > (NOT the Minions platform tracker). All CLAUDE.md rules apply (§3.2 ≤1200-line files, §3.7 headless-only,
 > §3.8 12-Factor + secret masking, §3.4 evidence immutability).
 
@@ -190,7 +190,7 @@ below is an Epic-4-backlog action item this story discharges (per the L1-E11 ope
   and assert the lint RETURNS a report with the finding, never raises. Document the RED-then-green
   demonstration in Completion Notes.
 - **AI-E3-3 (governance 🟢) — central defer register.** If this story files a NEW defer, file it append-only in
-  `_bmad-output/design-artifacts/APAA/deferred-work.md` (the single canonical APAA defer source), not only in
+  `_bmad-output/design-artifacts/ArgusAgent/deferred-work.md` (the single canonical APAA defer source), not only in
   the story file. **DF-1-3-A** (reader does not assert content-addressed filename == internal `content_hash`;
   `target_story: epic-4-secret-containment-property-suite-ci-blocking`) and **DF-1-3-B** (containment
   `_is_contained` mirrored not imported; `target_story: epic-4-referential-integrity-lint-of-on-disk-state` =
@@ -555,9 +555,9 @@ exist + pass BEFORE the story flips to `status: review` (AI-E3-2 / AI-E2-1).
 
 ### References
 
-- **Epic + ACs:** `_bmad-output/design-artifacts/APAA/epics.md#Story-4.2` (referential-integrity lint; FR26 /
+- **Epic + ACs:** `_bmad-output/design-artifacts/ArgusAgent/epics.md#Story-4.2` (referential-integrity lint; FR26 /
   NFR-A2; `[Tier B]`); the Epic-4 framing (`epics.md:691-695`, "on-disk state is integrity-linted").
-- **PRD drivers:** `_bmad-output/design-artifacts/APAA/E-PRD/prd.md` — FR26 (verify referential integrity of
+- **PRD drivers:** `_bmad-output/design-artifacts/ArgusAgent/E-PRD/prd.md` — FR26 (verify referential integrity of
   on-disk state — no dangling references; `epics.md:94/242`), NFR-A2 (referential integrity verifiable —
   `epics.md:133`), NFR-A1 (prev-hash-chained envelope), FR25/NFR-D3 (content-hashed payload-only envelope),
   NFR-S1/S5 (no leak / containment), NFR-R1/FR14 (failure → finding not crash), NFR-P1/D2 (determinism).
@@ -571,10 +571,10 @@ exist + pass BEFORE the story flips to `status: review` (AI-E3-2 / AI-E2-1).
   + `:413-787` (`_persist*` / `_assemble_and_persist` — the reference graph source of truth),
   `minions_core/apaa/ledger/recording.py` (`recording_id`/`locators`),
   `minions_core/apaa/ledger/critical_subsystems.py`, `minions_core/apaa/index/partitioner.py`.
-- **Prior story (learnings):** `_bmad-output/design-artifacts/APAA/stories/4-1-negative-assurance-verdict-semantics.md`
+- **Prior story (learnings):** `_bmad-output/design-artifacts/ArgusAgent/stories/4-1-negative-assurance-verdict-semantics.md`
   (the 4.1 wrapper + the persisted `CriticalSubsystemSet`; the AI-E3-1 keystone-fixture-adequacy discipline
   applied at 4.1 — apply the SAME RED-then-green rigor here).
-- **Defer register:** `_bmad-output/design-artifacts/APAA/deferred-work.md` — DF-1-3-A (filename↔`content_hash`,
+- **Defer register:** `_bmad-output/design-artifacts/ArgusAgent/deferred-work.md` — DF-1-3-A (filename↔`content_hash`,
   closed by this lint's finding), DF-1-3-B (containment parity, `target_story` = this story), DF-2-3-B
   (CLOSED by 4.1).
 - **Project guidance:** `CLAUDE.md` §3.2 (≤1200 lines), §3.4 (evidence immutability / append-only), §3.7
@@ -688,9 +688,9 @@ claude-opus-4-8 (BMAD dev-story, mode=fix — iteration 1, review-finding resolu
 - `tests/apaa/test_store_integrity_lint.py` (NEW + EDITED in fix iter 1 — `APAA-STORE`
   `TC-APAA-STORE-001-82..108`, 27 tests; +1 = the planted-directory `OSError` keystone TC-...-108).
 - `tests/apaa/test_no_web_imports.py` (EDITED — appended `store.integrity` to `_MODULES_UNDER_GUARD`).
-- `_bmad-output/design-artifacts/APAA/deferred-work.md` (EDITED — append-only DF-1-3-A closure + DF-1-3-B note).
-- `_bmad-output/design-artifacts/APAA/sprint-status.yaml` (EDITED — status flip + last_updated).
-- `_bmad-output/design-artifacts/APAA/stories/4-2-referential-integrity-lint-of-on-disk-state.md` (EDITED — this file).
+- `_bmad-output/design-artifacts/ArgusAgent/deferred-work.md` (EDITED — append-only DF-1-3-A closure + DF-1-3-B note).
+- `_bmad-output/design-artifacts/ArgusAgent/sprint-status.yaml` (EDITED — status flip + last_updated).
+- `_bmad-output/design-artifacts/ArgusAgent/stories/4-2-referential-integrity-lint-of-on-disk-state.md` (EDITED — this file).
 
 ## Senior Developer Review (AI)
 

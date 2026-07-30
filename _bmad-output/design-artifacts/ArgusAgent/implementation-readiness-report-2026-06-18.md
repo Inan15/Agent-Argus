@@ -6,13 +6,13 @@ status: complete
 overall_readiness: NOT_READY
 stepsCompleted: [step-01-document-discovery, step-02-prd-analysis, step-03-epic-coverage-validation, step-04-ux-alignment, step-05-epic-quality-review, step-06-final-assessment]
 documentsAssessed:
-  prd: _bmad-output/design-artifacts/APAA/E-PRD/prd.md
-  product_brief: _bmad-output/design-artifacts/APAA/product-brief-apaa.md
-  product_brief_distillate: _bmad-output/design-artifacts/APAA/product-brief-apaa-distillate.md
+  prd: _bmad-output/design-artifacts/ArgusAgent/E-PRD/prd.md
+  product_brief: _bmad-output/design-artifacts/ArgusAgent/product-brief-apaa.md
+  product_brief_distillate: _bmad-output/design-artifacts/ArgusAgent/product-brief-apaa-distillate.md
   research:
-    - _bmad-output/design-artifacts/APAA/research-domain-2026-06-17.md
-    - _bmad-output/design-artifacts/APAA/research-market-2026-06-17.md
-    - _bmad-output/design-artifacts/APAA/research-technical-2026-06-17.md
+    - _bmad-output/design-artifacts/ArgusAgent/research-domain-2026-06-17.md
+    - _bmad-output/design-artifacts/ArgusAgent/research-market-2026-06-17.md
+    - _bmad-output/design-artifacts/ArgusAgent/research-technical-2026-06-17.md
   architecture: MISSING
   epics: MISSING
   stories: MISSING
@@ -28,7 +28,7 @@ documentsAssessed:
 
 ## Step 1 — Document Discovery (Inventory)
 
-**Assessment target:** `_bmad-output/design-artifacts/APAA/` (operator-selected; this is OUTSIDE the
+**Assessment target:** `_bmad-output/design-artifacts/ArgusAgent/` (operator-selected; this is OUTSIDE the
 configured `planning_artifacts` path, which points at the already-implemented Minions platform).
 
 ### Documents Found
@@ -181,7 +181,7 @@ enough to drive architecture and epic decomposition. The readiness *risk* for AP
 
 Step 3 validates that every PRD FR is captured in an **epics & stories** document. The Step-1 discovery
 established that **APAA has no epics document, no stories, and no FR-coverage map** of any kind under
-`_bmad-output/design-artifacts/APAA/`. There is therefore **nothing to extract coverage from** — the
+`_bmad-output/design-artifacts/ArgusAgent/`. There is therefore **nothing to extract coverage from** — the
 comparison is not "which FRs are missing from the epics" but "**all FRs are missing because no epic
 decomposition has been authored**."
 
@@ -389,7 +389,7 @@ statement of lifecycle stage, **not** a criticism of the work done.
 
 ### Recommended Next Steps (in order)
 
-1. **Run `/bmad-create-architecture` for APAA** — produce `_bmad-output/design-artifacts/APAA/architecture.md`.
+1. **Run `/bmad-create-architecture` for APAA** — produce `_bmad-output/design-artifacts/ArgusAgent/architecture.md`.
    Freeze the envelope/content-hash canonicalization, schema set, exit-code wire contract, `.apaa/`
    layout, and the Minions-infra reuse seams (ADR #18 ledger, permission tiers, budget guardrails,
    `adapter_portability`, workspace-containment). Resolve the `severity.rubric` config-constant-vs-schema
@@ -420,6 +420,6 @@ decomposed*.
 
 **Assessor:** XAgent007 (Implementation Readiness workflow — Product Manager role)
 **Date:** 2026-06-18
-**Target assessed:** `_bmad-output/design-artifacts/APAA/`
+**Target assessed:** `_bmad-output/design-artifacts/ArgusAgent/`
 **Documents reviewed:** PRD (`E-PRD/prd.md`, full), product brief (+ distillate), 3 research reports;
 Architecture / Epics / Stories confirmed absent.

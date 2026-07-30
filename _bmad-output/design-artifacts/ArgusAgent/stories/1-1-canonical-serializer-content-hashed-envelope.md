@@ -7,7 +7,7 @@ Status: done
 > **APAA sub-project story.** APAA (AI Project Assurance Audit) is a SEPARATE headless audit sub-tool
 > placed at `minions_core/apaa/` (placement decision 2026-06-18). It reuses Minions infra BY IMPORT but
 > ships its own `APAA-FR-*` / `APAA-NFR-*` driver namespace. Planning lives under
-> `_bmad-output/design-artifacts/APAA/`; the tracker is `_bmad-output/design-artifacts/APAA/sprint-status.yaml`
+> `_bmad-output/design-artifacts/ArgusAgent/`; the tracker is `_bmad-output/design-artifacts/ArgusAgent/sprint-status.yaml`
 > (NOT the Minions platform tracker). All CLAUDE.md rules apply (§3.2 ≤1200-line files, §3.7 headless-only,
 > §3.8 12-Factor + secret masking, §3.4 evidence immutability).
 
@@ -226,13 +226,13 @@ Keep it additive — do not rewrite existing §4a rows.
 
 ### References
 
-- [Source: _bmad-output/design-artifacts/APAA/epics.md#Story-1.1 Canonical serializer & content-hashed envelope]
-- [Source: _bmad-output/design-artifacts/APAA/architecture.md#C. Coverage Ledger, Recording Schema & Verdict (determinism core)]
-- [Source: _bmad-output/design-artifacts/APAA/architecture.md#Determinism Patterns (NFR-P1/D1 — non-negotiable)]
-- [Source: _bmad-output/design-artifacts/APAA/architecture.md#Contract / Format Patterns] (envelope: content-hash over payload-only, prev_hash chaining, one EnvelopeWriter)
-- [Source: _bmad-output/design-artifacts/APAA/architecture.md#Cross-Cutting Concerns #3 Envelope canonicalization / single serializer]
-- [Source: _bmad-output/design-artifacts/APAA/architecture.md#AR4 Single canonical serializer / AR8 Pure-impure separation / AR9 committed CI gates / AR10 typed failure]
-- [Source: _bmad-output/design-artifacts/APAA/E-PRD/prd.md#FR25 content-hashed schema-versioned envelope / NFR-A1 / NFR-D3 / NFR-P1]
+- [Source: _bmad-output/design-artifacts/ArgusAgent/epics.md#Story-1.1 Canonical serializer & content-hashed envelope]
+- [Source: _bmad-output/design-artifacts/ArgusAgent/architecture.md#C. Coverage Ledger, Recording Schema & Verdict (determinism core)]
+- [Source: _bmad-output/design-artifacts/ArgusAgent/architecture.md#Determinism Patterns (NFR-P1/D1 — non-negotiable)]
+- [Source: _bmad-output/design-artifacts/ArgusAgent/architecture.md#Contract / Format Patterns] (envelope: content-hash over payload-only, prev_hash chaining, one EnvelopeWriter)
+- [Source: _bmad-output/design-artifacts/ArgusAgent/architecture.md#Cross-Cutting Concerns #3 Envelope canonicalization / single serializer]
+- [Source: _bmad-output/design-artifacts/ArgusAgent/architecture.md#AR4 Single canonical serializer / AR8 Pure-impure separation / AR9 committed CI gates / AR10 typed failure]
+- [Source: _bmad-output/design-artifacts/ArgusAgent/E-PRD/prd.md#FR25 content-hashed schema-versioned envelope / NFR-A1 / NFR-D3 / NFR-P1]
 - [Source: minions_core/lifecycle/workspace_artifact_writer.py] (containment pattern — reused in Story 1.3, not here)
 - [Source: minions_core/governance/ledger.py] (hash-chain precedent)
 - [Source: CLAUDE.md §3.2 file-size / §3.7 headless-only / §3.8 12-Factor]
@@ -279,7 +279,7 @@ claude-opus-4-8[1m] (BMAD dev-story worker)
 - `tests/apaa/test_canonical_single_serializer.py` (NEW — AR4 no-second-serializer AST gate)
 - `tests/apaa/test_no_web_imports.py` (NEW — AR9 import-isolation gate, seeded)
 - `CLAUDE.md` (MODIFIED — additive §4a APAA Component→Driver row)
-- `_bmad-output/design-artifacts/APAA/sprint-status.yaml` (MODIFIED — status → review; last_updated 2026-06-21)
+- `_bmad-output/design-artifacts/ArgusAgent/sprint-status.yaml` (MODIFIED — status → review; last_updated 2026-06-21)
 
 ## Change Log
 

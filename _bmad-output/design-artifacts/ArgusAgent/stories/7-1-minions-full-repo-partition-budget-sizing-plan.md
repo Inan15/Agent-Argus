@@ -7,7 +7,7 @@ Status: done
 > **APAA sub-project story.** APAA (AI Project Assurance Audit) is a SEPARATE headless audit sub-tool
 > placed at `minions_core/apaa/` (placement decision 2026-06-18). It reuses Minions infra BY IMPORT but
 > ships its own `APAA-FR-*` / `APAA-NFR-*` driver namespace. Planning lives under
-> `_bmad-output/design-artifacts/APAA/`; the tracker is `_bmad-output/design-artifacts/APAA/sprint-status.yaml`
+> `_bmad-output/design-artifacts/ArgusAgent/`; the tracker is `_bmad-output/design-artifacts/ArgusAgent/sprint-status.yaml`
 > (NOT the Minions platform tracker at `_bmad-output/implementation-artifacts/sprint-status.yaml`). All
 > CLAUDE.md rules apply (§3.2 ≤1200-line files, §3.7 headless-only, §3.8 12-Factor + secret masking, §3.4
 > evidence immutability). Run all gate/test commands under `PYTHONIOENCODING=utf-8` (Windows / cp1252).
@@ -127,7 +127,7 @@ ships:
 
 **The net-new deliverable of THIS story.** Three recorded artifacts + the corpus growth:
 1. a committed **Minions full-repo partition plan** (a `.md` deliverable under
-   `_bmad-output/design-artifacts/APAA/`, e.g. `minions-dogfood-partition-plan.md`) that records the
+   `_bmad-output/design-artifacts/ArgusAgent/`, e.g. `minions-dogfood-partition-plan.md`) that records the
    partition map produced by REUSING `partition_repository` over the real Minions repo @ a pinned commit:
    the unit count, each unit's file count + LOC + `partition_id`, the cut edges, the `context_pressure`
    downgrades, and the **honest V1 no-cross-partition-seam-analysis limitation** (the 6.4 `cross_partition`
@@ -253,7 +253,7 @@ detector emits, and do NOT count multiple variants of one class as distinct.
 **Given** the real Minions repo (~70 modules) @ a pinned commit, the 1.4 `build_ast_index` + a per-file LOC
 map, and the 2.4 `partition_repository` planner + `PartitionPlan` contract
 **When** the full-repo partition map is produced
-**Then** a committed artifact (e.g. `_bmad-output/design-artifacts/APAA/minions-dogfood-partition-plan.md`)
+**Then** a committed artifact (e.g. `_bmad-output/design-artifacts/ArgusAgent/minions-dogfood-partition-plan.md`)
 records the **full-repo** map — ALL modules across MULTIPLE bounded units (OI2: full-repo multi-partition,
 NOT a single unit), each unit ≤40 files/15k LOC (soft) and never over the ≤60/25k hard ceiling (NFR-SC1),
 with each unit's `partition_id` + file count + LOC + the cut edges + any `context_pressure` downgrades — and
@@ -378,7 +378,7 @@ story flips to `status: review` (AI-E5-3 test-existence discipline). **Test area
   - [x] A committed generator/test that runs intake @ a pinned Minions commit → `build_ast_index` → a
         per-file LOC map (via `_read_source`) → `partition_repository` → the `PartitionPlan`, and records the
         map (unit count, per-unit `partition_id`/files/LOC, cut edges, `context_pressure` downgrades) into
-        `_bmad-output/design-artifacts/APAA/minions-dogfood-partition-plan.md`. Deterministic/byte-stable for
+        `_bmad-output/design-artifacts/ArgusAgent/minions-dogfood-partition-plan.md`. Deterministic/byte-stable for
         the same repo@commit (NFR-D1/P1). Record per-unit clears-the-20%-floor scoping (AC2) + any un-targeted
         unit (honest). Include the AC4 honest V1-no-cross-partition-seam-analysis limitation statement.
   - [x] No-crash over the real repo (AI-E4-2): parse failures / non-ASCII paths / an over-hard-limit module →
@@ -417,7 +417,7 @@ story flips to `status: review` (AI-E5-3 test-existence discipline). **Test area
         green. NO `cli.py`/HTTP/CI-job change; NO detector/Prosecutor/partitioner/budget-core edit; NO live
         LLM; `protocol_cleared` NOT flipped.
   - [x] **AI-E5-4 / AI-E6-6:** file the DF-6-6-A progress note append-only in
-        `_bmad-output/design-artifacts/APAA/deferred-work.md` with the six CC-3 fields (advanced autonomous
+        `_bmad-output/design-artifacts/ArgusAgent/deferred-work.md` with the six CC-3 fields (advanced autonomous
         half; current distinct-class count; human-adjudication half still open, `target_story:
         epic-7-minions-dogfood-precision`). File any newly-surfaced partitioner/budget/detector gap the same
         way.
@@ -530,15 +530,15 @@ story flips to `status: review` (AI-E5-3 test-existence discipline). **Test area
 ### Project structure notes
 - New test: `tests/apaa/test_dogfood_plan.py` (area `APAA-DOGFOOD`, `TC-APAA-DOGFOOD-001-NN` from 01).
 - New cartridges: template dirs under `tests/apaa/cartridges/` + ≥2 appended `CARTRIDGE_REGISTRY` rows.
-- New plan artifacts: `_bmad-output/design-artifacts/APAA/minions-dogfood-partition-plan.md` +
+- New plan artifacts: `_bmad-output/design-artifacts/ArgusAgent/minions-dogfood-partition-plan.md` +
   `minions-dogfood-budget-plan.md` (or a merged plan doc).
-- DF-6-6-A progress note: append-only in `_bmad-output/design-artifacts/APAA/deferred-work.md`.
+- DF-6-6-A progress note: append-only in `_bmad-output/design-artifacts/ArgusAgent/deferred-work.md`.
 - All files ≤1200 lines; run everything under `PYTHONIOENCODING=utf-8`.
 
 ## Dev Agent Record
 
 ### Context Reference
-- Epic source: `_bmad-output/design-artifacts/APAA/epics.md` §Epic 7 / Story 7.1 + the "Open delivery inputs —
+- Epic source: `_bmad-output/design-artifacts/ArgusAgent/epics.md` §Epic 7 / Story 7.1 + the "Open delivery inputs —
   LOCKED 2026-06-18" block (OI1/OI2/OI3).
 - Reuse seams: `index/partitioner.py` (2.4), `cost/budget_governor.py` + `cost/exhaustion.py` (3.1/3.2),
   `tests/apaa/cartridges/_registry.py` + `_cartridge.py` (6.5), `precision/replay_harness.py` (6.6).
@@ -680,13 +680,13 @@ NEW (test):
 - `tests/apaa/test_dogfood_plan.py` (area APAA-DOGFOOD, TC-APAA-DOGFOOD-001-01..17)
 
 NEW (committed plan artifacts):
-- `_bmad-output/design-artifacts/APAA/minions-dogfood-partition-plan.md`
-- `_bmad-output/design-artifacts/APAA/minions-dogfood-budget-plan.md`
+- `_bmad-output/design-artifacts/ArgusAgent/minions-dogfood-partition-plan.md`
+- `_bmad-output/design-artifacts/ArgusAgent/minions-dogfood-budget-plan.md`
 
 MODIFIED (governance evidence — append-only):
-- `_bmad-output/design-artifacts/APAA/deferred-work.md` (DF-6-6-A-P1 progress note)
-- `_bmad-output/design-artifacts/APAA/sprint-status.yaml` (7-1 → review)
-- `_bmad-output/design-artifacts/APAA/stories/7-1-minions-full-repo-partition-budget-sizing-plan.md` (this file)
+- `_bmad-output/design-artifacts/ArgusAgent/deferred-work.md` (DF-6-6-A-P1 progress note)
+- `_bmad-output/design-artifacts/ArgusAgent/sprint-status.yaml` (7-1 → review)
+- `_bmad-output/design-artifacts/ArgusAgent/stories/7-1-minions-full-repo-partition-budget-sizing-plan.md` (this file)
 
 ## Change Log
 

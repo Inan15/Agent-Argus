@@ -66,11 +66,11 @@ classification:
     domain: 'D3 synthetic chosen over D1 (scientific) on phase placement of compliance'
     scope: 'S1 (V1 + roadmap appendix) chosen over S3 (V1+V2); additive-only schema evolution covers contract-spanning'
 inputDocuments:
-  - _bmad-output/design-artifacts/APAA/product-brief-apaa.md
-  - _bmad-output/design-artifacts/APAA/product-brief-apaa-distillate.md
-  - _bmad-output/design-artifacts/APAA/research-market-2026-06-17.md
-  - _bmad-output/design-artifacts/APAA/research-domain-2026-06-17.md
-  - _bmad-output/design-artifacts/APAA/research-technical-2026-06-17.md
+  - _bmad-output/design-artifacts/ArgusAgent/product-brief-apaa.md
+  - _bmad-output/design-artifacts/ArgusAgent/product-brief-apaa-distillate.md
+  - _bmad-output/design-artifacts/ArgusAgent/research-market-2026-06-17.md
+  - _bmad-output/design-artifacts/ArgusAgent/research-domain-2026-06-17.md
+  - _bmad-output/design-artifacts/ArgusAgent/research-technical-2026-06-17.md
   - _bmad-output/brainstorming/brainstorming-session-2026-06-16-201450.md
   - _bmad-output/project-context.md
   - CLAUDE.md
