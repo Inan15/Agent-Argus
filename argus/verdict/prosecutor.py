@@ -185,7 +185,18 @@ def _has_ast_corroboration(finding: Recording) -> bool:
     The deterministic structural fact (the 6.2 AST-grounded locator). The promotion
     floor: a heuristic-only advisory finding (no ``ast_span`` on any locator) is NEVER
     corroborated, so it can never be promoted (the false-accusation moat). PURE.
+
+    ``cross_partition`` is EXCLUDED by rule, not by inspecting its token. That pass
+    records a seam it did NOT analyze (see :func:`_cross_partition_findings`) and
+    borrows the reserved ``ast_span`` field — documented as an "AST-node span
+    reference" — to carry a self-describing seam descriptor under NFR-S1. Reading a
+    descriptor as if it were AST grounding would let EVERY cut edge clear the
+    corroboration floor and become promotable on sign-off, which is exactly the
+    false accusation the moat exists to prevent. A pass that analyzed nothing cannot
+    corroborate itself.
     """
+    if finding.rule_id == RULE_CROSS_PARTITION:
+        return False
     return any(
         locator.ast_span is not None and locator.ast_span != ""
         for locator in finding.locators
@@ -230,22 +241,54 @@ def _coerce_cut_edge(cut_edge: object) -> CutEdge | None:
     return cut_edge
 
 
+_MAX_NAMED_CALLEES_PER_SEAM = 3
+
+
 def _cross_partition_findings(
     cut_edges: tuple[CutEdge, ...] | list[CutEdge],
+    file_to_partition: dict[str, str] | None = None,
 ) -> tuple[list[Recording], list[DegradedCondition]]:
-    """The CC #4 cut-edge pass — raise an advisory ``cross_partition`` finding per cut.
+    """The CC #4 cut-edge pass — one advisory ``cross_partition`` finding per SEAM.
 
-    For each well-formed cut edge a seam-spanning defect could hide in, mint an
-    ``advisory=True`` ``cross_partition`` ``Recording`` via the EXISTING
-    ``build_recording`` (the locator is the caller file; the callee file + callee
-    name are carried in the ``ast_span`` token so the finding is self-describing
-    WITHOUT a source excerpt — NFR-S1). A malformed cut edge is recorded as a
-    degraded condition and skipped (AR10). Findings are SORTED deterministically
-    (caller / callee_file / callee). NO cut edges → NO findings. PURE.
+    The unit of risk here is the SEAM BETWEEN TWO AUDIT UNITS, not the individual
+    call. Each unit is audited independently, so a defect spanning the boundary can
+    be missed — that is the whole claim this pass makes, and it is a property of the
+    boundary, which every crossing call shares.
+
+    Emitting one finding per cut edge instead restates the call graph. Measured on a
+    132-file repository: 495 cut edges spanning exactly 5 distinct partition-pair
+    seams, i.e. 495 findings carrying 5 facts. Worse, partition boundaries are an
+    audit-SCHEDULING artifact — the planner packs files into ≤40-file units — so
+    which specific edges get flagged is decided by packing, not by the code. Per-edge
+    output is therefore noise that changes when nothing about the repository has.
+
+    Aggregating by ``(caller_unit, callee_unit)`` keeps the claim and drops the
+    restatement. Nothing is lost: the per-edge detail is ALREADY recorded in
+    ``PartitionPlan.cut_edges`` (its own docstring calls it the "recorded-NOT-analyzed
+    cut-edge set"), so the plan remains the place to look up an individual crossing.
+
+    ``file_to_partition`` maps a file to its audit unit. When it is ``None`` (or a
+    file is absent from it) each FILE is treated as its own unit — the conservative
+    reading, since without unit information every cross-file call is a potential
+    seam. That keeps the degenerate single-edge case identical to the pre-aggregation
+    behaviour.
+
+    The ``ast_span`` token carries the callee unit plus the crossing symbols
+    (capped at :data:`_MAX_NAMED_CALLEES_PER_SEAM`, with an explicit overflow count)
+    — file/symbol identifiers only, never source bytes (NFR-S1), and bounded so a
+    167-edge seam cannot produce an unbounded string. A malformed cut edge is
+    recorded as a degraded condition and skipped (AR10). Findings are SORTED
+    deterministically. NO cut edges → NO findings. PURE.
     """
-    findings: list[Recording] = []
+    mapping = file_to_partition or {}
     degraded: list[DegradedCondition] = []
-    seen: set[tuple[str, str, str]] = set()
+
+    def unit_of(path: str) -> str:
+        return mapping.get(path, path)
+
+    # seam key -> (representative caller files, distinct callee symbols, edge count)
+    seams: dict[tuple[str, str], tuple[set[str], set[str], int]] = {}
+    seen_edges: set[tuple[str, str, str]] = set()
     for raw in cut_edges:
         edge = _coerce_cut_edge(raw)
         if edge is None:
@@ -253,22 +296,42 @@ def _cross_partition_findings(
                 DegradedCondition(file_path="<unknown>", reason="cross_partition_malformed_cut_edge")
             )
             continue
-        key = (edge.caller_file, edge.callee_file, edge.callee)
-        if key in seen:
+        edge_key = (edge.caller_file, edge.callee_file, edge.callee)
+        if edge_key in seen_edges:
             continue
-        seen.add(key)
-        # The ast_span token carries the structured seam description (callee_file +
-        # callee name) — file/symbol identifiers only, never source bytes (NFR-S1).
-        seam_token = f"cross_partition:{edge.callee_file}::{edge.callee}"
+        seen_edges.add(edge_key)
+
+        caller_unit, callee_unit = unit_of(edge.caller_file), unit_of(edge.callee_file)
+        if caller_unit == callee_unit:
+            # Same audit unit ⇒ no seam ⇒ nothing this pass can claim. Reachable when
+            # a mapping puts both endpoints in one partition.
+            continue
+        callers, callees, count = seams.get((caller_unit, callee_unit), (set(), set(), 0))
+        callers.add(edge.caller_file)
+        callees.add(edge.callee)
+        seams[(caller_unit, callee_unit)] = (callers, callees, count + 1)
+
+    findings: list[Recording] = []
+    for (_caller_unit, callee_unit), (callers, callees, count) in seams.items():
+        named = sorted(callees)[:_MAX_NAMED_CALLEES_PER_SEAM]
+        token = f"cross_partition:{callee_unit}::{','.join(named)}"
+        overflow = len(callees) - len(named)
+        if overflow > 0:
+            token += f"+{overflow}_more"
+        if count > 1:
+            token += f" edges={count}"
         draft = FindingDraft(
-            file_path=edge.caller_file,
+            # The lexicographically-first crossing caller is the locator — a stable,
+            # real file the seam actually crosses (FR13 locator-or-reject).
+            file_path=min(callers),
             start_line=1,
             end_line=1,
-            ast_span=seam_token,
+            ast_span=token,
             rule_id=RULE_CROSS_PARTITION,
             advisory=True,
         )
         findings.append(build_recording(draft, depth_supported=None, claim_present=False))
+
     findings.sort(
         key=lambda f: (f.locators[0].file_path, f.locators[0].ast_span or "", f.recording_id)
     )
@@ -282,6 +345,8 @@ def prosecute(
     findings: tuple[Recording, ...] | list[Recording] = (),
     cut_edges: tuple[CutEdge, ...] | list[CutEdge] = (),
     sign_offs: frozenset[str] | set[str] | tuple[str, ...] = (),
+    scope_paths: frozenset[str] | tuple[str, ...] | None = None,
+    file_to_partition: dict[str, str] | None = None,
 ) -> ProsecutionResult:
     """Run one PURE adversarial Prosecutor pass → a :class:`ProsecutionResult` (FR19).
 
@@ -324,7 +389,7 @@ def prosecute(
     degraded: list[DegradedCondition] = []
 
     # ── CC #4 — the cross_partition cut-edge pass (advisory findings) ──
-    cross_findings, cross_degraded = _cross_partition_findings(cut_edges)
+    cross_findings, cross_degraded = _cross_partition_findings(cut_edges, file_to_partition)
     degraded.extend(cross_degraded)
 
     # The full finding universe the promotion rule + the re-fold see: the inbound
@@ -357,10 +422,19 @@ def prosecute(
             refined.append(finding)
 
     # ── §3.3 — re-fold the refined set through the UNCHANGED 1.6 gate (NO second math) ──
+    # ``scope_paths`` must be the SAME population the candidate verdict was folded
+    # over. Re-folding unscoped against a scoped candidate would silently widen the
+    # denominator mid-pass and could only ever manufacture a MORE blocking verdict
+    # (FR19 keeps it, being more conservative) — a false positive earned by an
+    # inconsistent fold rather than by evidence.
     refolded = evaluate_verdict(
         ledger,
         tuple(refined),
         critical_subsystems_all_deep=verdict.critical_subsystems_all_deep,
+        # Carried forward verbatim: the re-fold refines FINDINGS, not coverage, so
+        # dropping the evidence here would silently blank the report's explanation.
+        critical_subsystems_not_deep=verdict.critical_subsystems_not_deep,
+        scope_paths=scope_paths,
     )
 
     # ── FR19 — only ever MORE conservative: pick the higher conservatism rank ──

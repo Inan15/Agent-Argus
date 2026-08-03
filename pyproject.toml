@@ -39,6 +39,21 @@ dev = [
 llm = [
     "litellm>=1.0.0",
 ]
+# Deep auditing beyond Python needs the matching tree-sitter grammar installed.
+# Without one, a repository in that language still enumerates and grades, but no file
+# can reach `audited_deep` — the report says so explicitly and names the package.
+# Pinned to the same 0.25.x line as the core grammar for the AR1 reason documented above.
+languages = [
+    "tree-sitter-javascript>=0.25.0,<0.26",
+    "tree-sitter-typescript>=0.23.0,<0.26",
+    "tree-sitter-go>=0.23.0,<0.26",
+    "tree-sitter-rust>=0.23.0,<0.26",
+    "tree-sitter-java>=0.23.0,<0.26",
+    "tree-sitter-c>=0.23.0,<0.26",
+    "tree-sitter-cpp>=0.23.0,<0.26",
+    "tree-sitter-ruby>=0.23.0,<0.26",
+    "tree-sitter-php>=0.23.0,<0.26",
+]
 
 [project.scripts]
 argus = "argus.cli:main"

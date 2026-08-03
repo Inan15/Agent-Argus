@@ -60,11 +60,20 @@ def test_cli_bad_repo_returns_exit_1_no_traceback(tmp_path: Path, capsys) -> Non
     assert "Traceback" not in captured.out
 
 
-def test_cli_commit_is_required(tmp_path: Path) -> None:
-    """TC-ArgusAgent-CLI-001-04 — AC3: --commit is REQUIRED (no silent HEAD default)."""
-    with pytest.raises(SystemExit) as exc:
-        cli.main(["audit", str(tmp_path)])
-    assert exc.value.code != 0  # argparse exits 2 on a missing required arg
+def test_cli_commit_defaults_to_head(tmp_path: Path) -> None:
+    """TC-ArgusAgent-CLI-001-04 — --commit defaults to HEAD; a first run needs NO flags.
+
+    Supersedes the original "commit is REQUIRED" contract. Requiring it made three
+    preconditions (a git repo, a clean tree, and an explicit pin) stand between a new
+    user and their first audit — and refusing to run produces no audit at all, which
+    protects nobody. The pin is still honoured when present; ``--strict`` restores the
+    refuse-on-drift contract for a release gate.
+    """
+    parser = cli.build_parser()
+    args = parser.parse_args(["audit", str(tmp_path)])
+
+    assert args.commit == "HEAD"
+    assert args.strict is False
 
 
 def test_cli_budget_rejects_float(tmp_path: Path) -> None:

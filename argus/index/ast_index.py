@@ -56,6 +56,8 @@ from pathlib import Path
 
 from pydantic import BaseModel, ConfigDict, Field
 
+from argus.shared.source_languages import LANGUAGE_BY_SUFFIX, PYTHON_SUFFIXES
+
 __all__ = [
     "Definition",
     "CodeEdge",
@@ -64,30 +66,11 @@ __all__ = [
     "build_ast_index",
 ]
 
-_LANGUAGE_BY_SUFFIX: dict[str, str] = {
-    ".py": "python",
-    ".pyi": "python",
-    ".pyx": "python",
-    ".js": "javascript",
-    ".jsx": "javascript",
-    ".mjs": "javascript",
-    ".cjs": "javascript",
-    ".ts": "typescript",
-    ".tsx": "typescript",
-    ".go": "go",
-    ".rs": "rust",
-    ".java": "java",
-    ".c": "c",
-    ".h": "c",
-    ".cpp": "cpp",
-    ".hpp": "cpp",
-    ".cc": "cpp",
-    ".cxx": "cpp",
-    ".rb": "ruby",
-    ".php": "php",
-}
+# Imported, not redeclared — this map and intake's enumerable set MUST agree, and
+# they previously did not (see argus.shared.source_languages for what that cost).
+_LANGUAGE_BY_SUFFIX: dict[str, str] = LANGUAGE_BY_SUFFIX
 
-_PYTHON_SUFFIXES: tuple[str, ...] = (".py", ".pyi", ".pyx")
+_PYTHON_SUFFIXES: tuple[str, ...] = tuple(sorted(PYTHON_SUFFIXES))
 
 # tree-sitter node types we treat as definitions across languages.
 _DEF_KIND_BY_NODE: dict[str, str] = {
@@ -348,11 +331,16 @@ def build_ast_index(
         parser = parsers[lang]
 
         if parser is None:
+            # Name the ACTUAL cause. This previously reported ``non_python`` for every
+            # non-Python language, which says "unsupported" when the truth is
+            # "supported, but the grammar package is not installed" — two states with
+            # completely different remedies (nothing vs. one pip install). The report
+            # surfaces this token to tell an operator which grammar to add.
             entries.append(
                 AstIndexEntry(
                     file_path=rel_path,
                     ast_eligible=False,
-                    parse_failure_reason="non_python" if lang != "python" else "grammar_missing_python",
+                    parse_failure_reason=f"grammar_missing_{lang}",
                 )
             )
             continue

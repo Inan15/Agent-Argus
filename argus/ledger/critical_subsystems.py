@@ -98,6 +98,7 @@ __all__ = [
     "CriticalSubsystemSet",
     "identify_critical_subsystems",
     "critical_subsystems_all_deep",
+    "critical_subsystems_not_deep",
 ]
 
 # Single localized source for this contract's schema version (additive-only).
@@ -289,17 +290,43 @@ def critical_subsystems_all_deep(
     non-``CoverageLedger`` ``ledger`` argument or a non-``str`` critical path — never
     a silent coerce.
     """
+    return not critical_subsystems_not_deep(critical_paths, ledger)
+
+
+def critical_subsystems_not_deep(
+    critical_paths: Iterable[str],
+    ledger: CoverageLedger,
+) -> tuple[str, ...]:
+    """Return the SORTED critical paths that are not ``audited_deep`` (PURE, FR16).
+
+    The evidence behind :func:`critical_subsystems_all_deep`, which is defined as
+    "this is empty". Kept as the single implementation so the boolean and the
+    explanation can never disagree.
+
+    Exists because a bare ``False`` is not actionable. An operator told only that
+    "at least one critical subsystem is not audited deep" cannot act; told WHICH
+    files, and at what depth each landed, they can. The returned paths are recorded
+    on the verdict and rendered in the report.
+
+    A designated-critical path ABSENT from the ledger is included (the conservative
+    unmatched-path policy — an unexamined critical file is not a satisfied one).
+
+    PURE (AR8): a fold over the in-memory ledger; no I/O, no clock, no LLM, no
+    set-iteration-order reliance (the result is sorted). Raises
+    :class:`CriticalSubsystemError` (AR10) on a non-``CoverageLedger`` ``ledger``
+    argument or a non-``str`` critical path — never a silent coerce.
+    """
     if not isinstance(ledger, CoverageLedger):
         raise CriticalSubsystemError(
-            f"critical_subsystems_all_deep requires a CoverageLedger, got {type(ledger)!r}"
+            f"critical_subsystems_not_deep requires a CoverageLedger, got {type(ledger)!r}"
         )
     critical = _coerce_path_tuple(critical_paths, label="critical_paths")
     if not critical:
-        return True
+        return ()
 
     deep_paths = {
         entry.file_path
         for entry in ledger.entries
         if entry.depth is CoverageDepth.AUDITED_DEEP
     }
-    return all(path in deep_paths for path in critical)
+    return tuple(sorted(path for path in critical if path not in deep_paths))

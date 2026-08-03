@@ -52,7 +52,7 @@ non-test Python file was graded ``audited_deep`` via ``grade_entry(
 proposed_depth=AUDITED_DEEP, claim_present=True)`` — deep merely because it
 parsed, not because its claim was verified.
 
-FR7 (Story 6.2, the V1 deep numerator): ``_grade_non_test_python`` consults the
+FR7 (Story 6.2, the V1 deep numerator): ``_grade_non_test_source`` consults the
 pure ``audit.grounding.is_deep_claim_grounded`` over the PRE-BUILT 1.4 AST entry
 (no re-parse — AR7/§3.3) and passes ``claim_present=(claim_emitted AND
 claim_grounded)`` into the UNCHANGED 1.2 ``grade_entry`` (DN-GROUNDED —
@@ -164,7 +164,12 @@ from argus.index.partitioner import (
     compute_loc_by_file,
     partition_repository,
 )
-from argus.intake.repo_loader import RepoIntakeError, load_repo_at_commit
+from argus.intake.repo_loader import RepoIntake, RepoIntakeError, load_repo_at_commit
+from argus.intake.source_state import (
+    SourceState,
+    SourceStateError,
+    resolve_source_state,
+)
 from argus.intake.stack_detect import detect_stack
 from argus.ledger.coverage_ledger import (
     CoverageDepth,
@@ -175,7 +180,7 @@ from argus.ledger.coverage_ledger import (
 from argus.ledger.coverage_report import CoverageReport, build_coverage_report
 from argus.ledger.critical_subsystems import (
     CriticalCandidate,
-    critical_subsystems_all_deep,
+    critical_subsystems_not_deep,
     identify_critical_subsystems,
 )
 from argus.ledger.depth_semantics import assess_criticality
@@ -349,8 +354,16 @@ def _read_source(repo_root: Path, rel_path: str) -> str:
     return (repo_root / rel_path).read_text(encoding="utf-8", errors="replace")
 
 
-def _grade_non_test_python(entry: AstIndexEntry) -> CoverageLedgerEntry:
-    """Grade a non-test Python file ``audited_deep`` ONLY when AST-grounded (FR7).
+def _grade_non_test_source(entry: AstIndexEntry) -> CoverageLedgerEntry:
+    """Grade a non-test source file ``audited_deep`` ONLY when AST-grounded (FR7).
+
+    Language-agnostic by construction: it consults only ``ast_eligible`` /
+    ``parse_failed`` and the ``Definition`` count, never the file suffix. It was
+    named ``..._python`` and reached only by Python files, but nothing in its logic
+    was Python-specific — so a file in any language with an installed grammar now
+    meets the SAME structural bar. A language with no grammar parses to
+    ``ast_eligible=False`` and is recorded ``skipped`` (examined-but-ungradable, in
+    the denominator, never a false deep claim) exactly as before.
 
     Story 6.2 (CLOSES DF-1-7-B). A Python file the 1.4 index could not parse
     cleanly (``parse_failed`` / not ``ast_eligible``) is recorded ``skipped``
@@ -400,17 +413,24 @@ def _detect_per_file(
 
     for entry in index_entries:
         rel = entry.file_path
-        if not _is_python(rel):
-            entries.append(
-                grade_entry(
-                    file_path=rel,
-                    proposed_depth=CoverageDepth.SKIPPED,
-                    claim_present=False,
-                )
-            )
-            continue
+        # Per-PASS language gating, replacing a blanket `if not _is_python: SKIPPED`.
+        # That gate discarded every non-Python file before ANY detector ran, which made
+        # the multi-language AST index, the multi-language test-file conventions, and
+        # the multi-language stack detection unreachable — a file was enumerated only
+        # to be dropped. Each pass is now gated on what IT actually requires:
+        #   * grading      — needs only a parsed AST entry ⇒ every language
+        #   * secret scan  — regex + entropy over text     ⇒ every language
+        #   * criticality  — content tokens                ⇒ every language
+        #   * vacuous test — counts bare `assert` (a Python idiom) ⇒ Python only
+        #   * breadth      — radon                          ⇒ Python only
+        # The two Python-only passes stay gated deliberately: running the vacuous
+        # detector over a JS `expect().toBe()` suite would emit false vacuous
+        # accusations, and a wrong 🔴 is the lethal failure this codebase is built to
+        # avoid.
+        is_python = _is_python(rel)
         source = _read_source(repo_root, rel)
-        breadth_targets.append((rel, source))
+        if is_python:
+            breadth_targets.append((rel, source))
         candidates.append(
             CriticalCandidate(
                 file_path=rel,
@@ -430,14 +450,17 @@ def _detect_per_file(
             findings.extend(secret_result.findings)
 
         if is_test_file(rel):
-            if "vacuous" in enabled_passes:
+            if is_python and "vacuous" in enabled_passes:
                 result = detector.run(file_path=rel, source=source, ast_entry=entry)
                 entries.extend(result.entries)
                 findings.extend(result.findings)
             else:
+                # A non-Python test file is graded shallow WITHOUT being run through
+                # the Python-idiom vacuous detector — recorded honestly as examined,
+                # never accused on evidence the detector cannot actually read.
                 entries.append(grade_entry(file_path=rel, proposed_depth=CoverageDepth.AUDITED_SHALLOW, claim_present=False))
             continue
-        entries.append(_grade_non_test_python(entry))
+        entries.append(_grade_non_test_source(entry))
 
     already_graded_paths = tuple(e.file_path for e in entries)
     breadth_result = breadth_detector.run(
@@ -588,6 +611,31 @@ def _build_partition_plan(index: AstIndex, loc_by_file: dict[str, int]) -> Parti
     return partition_repository(index, loc_by_file=loc_by_file)
 
 
+def _assessment_scope_paths(
+    request: AuditRequest, ledger: CoverageLedger
+) -> frozenset[str] | None:
+    """Resolve ``request.coverage_scope`` to the assessed path set for the gate.
+
+    Returns ``None`` for the default ``"repository"`` scope — the gate then assesses
+    the whole ledger and the fold is byte-identical to a pre-scope run. For
+    ``"application"``, returns the ledger's non-test paths, holding out files the
+    multi-language :func:`is_test_file` recognizes.
+
+    Classification lives HERE, in the impure shell that already owns
+    ``is_test_file``, precisely so the PURE verdict gate never has to import a
+    detector (AR8 import isolation). The gate receives membership as data.
+
+    An UNRECOGNIZED scope value falls back to the whole-repository assessment rather
+    than raising or silently narrowing — a typo must never be the reason a repository
+    gets an easier gate (AR10: degrade honestly, and degrade toward the stricter
+    claim). The value is recorded on the request either way, so the fallback is
+    visible in the run provenance.
+    """
+    if request.coverage_scope != "application":
+        return None
+    return frozenset(e.file_path for e in ledger.entries if not is_test_file(e.file_path))
+
+
 def _assemble_and_persist(
     *,
     request: AuditRequest,
@@ -599,6 +647,7 @@ def _assemble_and_persist(
     candidates: list[CriticalCandidate],
     halt_report: HaltReport,
     store_writer: ApaaStoreWriter | None,
+    source_state: SourceState | None = None,
 ) -> AuditResult:
     """Shared post-detection assembly + persistence (the fold both paths share).
 
@@ -619,9 +668,19 @@ def _assemble_and_persist(
         operator_designated=request.critical_paths,
         operator_excluded=request.excluded_critical_paths,
     )
-    all_deep = critical_subsystems_all_deep(critical.paths, ledger)
+    # The offending paths ARE the boolean's evidence (all_deep ⇔ not_deep is empty),
+    # so both come from one call and cannot disagree.
+    not_deep = critical_subsystems_not_deep(critical.paths, ledger)
+    all_deep = not not_deep
+    # Resolved ONCE and reused by the Prosecutor's re-fold below, so both folds
+    # assess the identical population.
+    scope_paths = _assessment_scope_paths(request, ledger)
     verdict = evaluate_verdict(
-        ledger, tuple(findings), critical_subsystems_all_deep=all_deep
+        ledger,
+        tuple(findings),
+        critical_subsystems_all_deep=all_deep,
+        critical_subsystems_not_deep=not_deep,
+        scope_paths=scope_paths,
     )
     loc_by_file = _compute_loc_map(repo_root, source_files)
     partition_plan = _build_partition_plan(index, loc_by_file)
@@ -643,6 +702,14 @@ def _assemble_and_persist(
             ledger=ledger,
             findings=tuple(findings),
             cut_edges=partition_plan.cut_edges,
+            scope_paths=scope_paths,
+            # Audit-unit membership, so the cut-edge pass reports one finding per
+            # SEAM rather than one per crossing call (which restates the call graph).
+            file_to_partition={
+                path: partition.partition_id
+                for partition in partition_plan.partitions
+                for path in partition.work_manifest.files
+            },
         )
         verdict = prosecution.verdict
 
@@ -666,7 +733,15 @@ def _assemble_and_persist(
     if request.report_dir:
         target_dir = Path(request.report_dir)
         finding_dicts = [f.model_dump() for f in findings]
-        generate_reports(request, verdict, ledger, finding_dicts, target_dir)
+        generate_reports(
+            request,
+            verdict,
+            ledger,
+            finding_dicts,
+            target_dir,
+            source_state=source_state,
+            ast_index=index,
+        )
 
 
     return AuditResult(
@@ -698,8 +773,17 @@ def run_audit_detailed(
         PipelineError: any other unexpected stage failure (wrapped, typed) — exit ``1``.
     """
     try:
-        intake = load_repo_at_commit(request.repo_path, request.commit)
-    except RepoIntakeError:
+        # Resolve whichever source state is present rather than demanding a clean
+        # commit up front (AR10). ``strict=True`` restores the original refuse-on-drift
+        # contract for a release gate; the default audits what is actually there and
+        # RECORDS which state it was.
+        source_state = resolve_source_state(
+            request.repo_path, commit=request.commit, strict=request.strict
+        )
+        intake = RepoIntake(
+            commit_sha=source_state.identity, source_files=source_state.source_files
+        )
+    except (RepoIntakeError, SourceStateError):
         raise  # already typed (AR10) — the CLI maps it to exit 1
     except Exception as exc:  # noqa: BLE001 — wrap as a TYPED fatal (never a bare raise)
         raise PipelineError(f"intake stage failed: {type(exc).__name__}") from exc
@@ -750,6 +834,7 @@ def run_audit_detailed(
         candidates=candidates,
         halt_report=halt_report,
         store_writer=store_writer,
+        source_state=source_state,
     )
 
 

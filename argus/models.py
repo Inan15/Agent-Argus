@@ -113,6 +113,26 @@ class AuditRequest(BaseModel):
         default=("final-verdict", "coverage-ledger"),
         description="Enabled end-user report types to generate.",
     )
+    strict: bool = Field(
+        default=False,
+        description=(
+            "Release-gate mode: require a git repository, a clean working tree, and "
+            "HEAD == commit, refusing otherwise. Default False so a first run works on "
+            "any directory (no git, or mid-edit) — the resolved source state is always "
+            "RECORDED, so relaxing the precondition never misrepresents what was audited."
+        ),
+    )
+    coverage_scope: str = Field(
+        default="repository",
+        description=(
+            "Population the deep-coverage gate assesses. 'repository' (default) = every "
+            "ledger entry, the V1 fold. 'application' = application files only, holding "
+            "out test files, which are graded audited_shallow by construction and "
+            "otherwise manufacture a false NOT_READY_FOR_RELEASE in a test-heavy repo. "
+            "A narrowing is DISCLOSED on the verdict (verdict_gate.CoverageScope) and "
+            "never lowers the coverage floor — it is re-applied within the scope."
+        ),
+    )
     report_dir: str = Field(
         default="",
         description="Optional output directory path for generated markdown reports.",

@@ -87,16 +87,33 @@ def test_grammar_version_recorded(tmp_path: Path) -> None:
     assert index.partition_id == "root"
 
 
-def test_non_python_routes_to_proxy(tmp_path: Path) -> None:
-    """TC-ArgusAgent-INDEX-001-73 — a non-Python file is ast_eligible=False (claim_emitted proxy, NFR-P2)."""
+def test_ungrammared_language_routes_to_proxy(tmp_path: Path) -> None:
+    """TC-ArgusAgent-INDEX-001-73 — a file with no installed grammar is ast_eligible=False.
+
+    The degradation reason now NAMES the missing grammar rather than saying
+    ``non_python``. Those are two different states with two different remedies —
+    "unsupported language" (nothing to do) versus "supported, grammar not installed"
+    (one pip install) — and reporting the former for the latter left an operator with
+    a zero-coverage verdict and no way to act on it.
+    """
+    pytest.importorskip("tree_sitter")
     (tmp_path / "main.go").write_text("package main\n", encoding="utf-8")
     index = build_ast_index(tmp_path, ("main.go",))
     entry = _entry_for(index, "main.go")
-    assert entry.ast_eligible is False
+
     assert entry.parse_failed is False
-    assert entry.parse_failure_reason == "non_python"
-    assert entry.definitions == ()
-    assert entry.edges == ()
+    # The old blanket token must never reappear — it conflated "unsupported language"
+    # with "grammar not installed", which have different remedies.
+    assert entry.parse_failure_reason != "non_python"
+
+    # Whether the grammar happens to be installed in THIS environment is not the
+    # contract; both outcomes must be honest, so assert the one that applies.
+    if entry.ast_eligible:
+        assert entry.parse_failure_reason is None
+    else:
+        assert entry.parse_failure_reason == "grammar_missing_go"
+        assert entry.definitions == ()
+        assert entry.edges == ()
 
 
 def test_unparseable_python_degrades(tmp_path: Path) -> None:

@@ -81,8 +81,21 @@ def build_parser() -> argparse.ArgumentParser:
     audit.add_argument("repo", help="Path to the repository to audit.")
     audit.add_argument(
         "--commit",
-        required=True,
-        help="Pinned commit (ref/short-SHA/tag) — REQUIRED (the FR1 determinism pin).",
+        default="HEAD",
+        help=(
+            "Commit to pin (ref/short-SHA/tag). Defaults to HEAD. Only meaningful with "
+            "a clean git tree; a dirty tree or a directory without git is audited as-is "
+            "and labelled accordingly in the report."
+        ),
+    )
+    audit.add_argument(
+        "--strict",
+        action="store_true",
+        help=(
+            "Release-gate mode: require a git repository, a clean working tree, and "
+            "HEAD == --commit, refusing otherwise. Use this in CI, where commit-pinned "
+            "evidence is the contract. Off by default so a first run works anywhere."
+        ),
     )
     audit.add_argument(
         "--budget",
@@ -159,17 +172,48 @@ def build_parser() -> argparse.ArgumentParser:
         default=[],
         help="Secret string pattern to exclude from findings (can specify multiple).",
     )
+    audit.add_argument(
+        "--coverage-scope",
+        dest="coverage_scope",
+        choices=("repository", "application"),
+        default="repository",
+        help=(
+            "Population the deep-coverage gate assesses. 'repository' (default) counts "
+            "every file. 'application' holds out test files, which are graded shallow by "
+            "construction and otherwise drag a well-tested repo below the gate. The "
+            "narrowing is disclosed in the verdict and report, and never lowers the "
+            "coverage floor (it is re-applied within the scope)."
+        ),
+    )
     return parser
 
 
-def _summary_line(verdict_token: str, deep_ratio: object, blocking: int) -> str:
+def _summary_line(
+    verdict_token: str,
+    deep_ratio: object,
+    blocking: int,
+    scope: object = None,
+) -> str:
     """A secret-safe machine-readable summary (NFR-S1 — no source/secret/abs-path).
 
     Emits ``verdict=<TOKEN> deep_ratio=<num/den> blocking_findings=<n>`` — the
     verdict token + the exact ``Fraction`` deep-ratio (``num/den``, never a float)
     + the verdict-eligible blocking count. No file content, no absolute host path.
+
+    When the assessment was NARROWED, the ratio the gate actually decided on is
+    appended as ``assessed_deep_ratio``/``scope`` alongside the unchanged
+    whole-repository ``deep_ratio``. Printing only the whole-repository ratio next to
+    a scoped verdict reads as a contradiction (a RELEASE_READY beside a 39% ratio);
+    printing only the scoped one would hide the repository-wide truth. Both, always.
     """
-    return f"verdict={verdict_token} deep_ratio={deep_ratio} blocking_findings={blocking}"
+    line = f"verdict={verdict_token} deep_ratio={deep_ratio} blocking_findings={blocking}"
+    if scope is not None:
+        line += (
+            f" assessed_deep_ratio={scope.assessed_deep_ratio}"  # type: ignore[attr-defined]
+            f" scope={scope.scope_id}"  # type: ignore[attr-defined]
+            f" held_out={scope.excluded_count}"  # type: ignore[attr-defined]
+        )
+    return line
 
 
 def main(argv: list[str] | None = None) -> int:
@@ -210,6 +254,8 @@ def main(argv: list[str] | None = None) -> int:
         report_dir=args.report_dir or "",
         ignore_paths=tuple(args.ignore_paths or ()),
         ignore_patterns=tuple(args.ignore_patterns or ()),
+        coverage_scope=args.coverage_scope,
+        strict=args.strict,
     )
 
 
@@ -227,6 +273,7 @@ def main(argv: list[str] | None = None) -> int:
             verdict.verdict.value,
             verdict.deep_ratio,
             verdict.blocking_finding_count,
+            verdict.coverage_scope,
         )
     )
     return verdict.exit_code

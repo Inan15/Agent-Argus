@@ -564,6 +564,13 @@ def test_no_new_audit_request_field_or_cli_flag() -> None:
     The AuditRequest model fields are exactly the pre-3.5 set (no portability/parallel
     field), and the CLI exposes no new flag (the ``--resume`` flag stays deferred —
     DF-3-4-A / Story 7.1). A guard against accidental scope creep.
+
+    The set below is a DELIBERATE INVENTORY, not a freeze: a field lands here only
+    with an explicit reason. ``coverage_scope`` selects the population the deep-%
+    gate assesses ('repository' default = the V1 fold, byte-identical; 'application'
+    holds out shallow-by-construction test files and DISCLOSES the narrowing on the
+    verdict). It cannot weaken a gate — the coverage floor is re-applied within the
+    scope — so it does not reopen the portability/parallel surface this guard closed.
     """
     fields = set(AuditRequest.model_fields)
     assert fields == {
@@ -579,6 +586,10 @@ def test_no_new_audit_request_field_or_cli_flag() -> None:
         "report_dir",
         "ignore_paths",
         "ignore_patterns",
+        "coverage_scope",
+        # Release-gate mode. Default False so a first run works on any directory;
+        # True restores the original refuse-on-drift intake contract for CI.
+        "strict",
     }
 
 

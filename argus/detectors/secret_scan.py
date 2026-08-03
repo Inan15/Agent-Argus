@@ -57,9 +57,44 @@ pattern families (each documented by its ``pattern_id``):
 - ``generic_assigned_secret`` — an assignment whose key matches
   ``api[_-]?key`` / ``secret`` / ``token`` / ``password`` / ``passwd`` / ``pwd``
   to a quoted string literal of sufficient length.
-- ``high_entropy_string`` — an assigned quoted string literal whose length ≥
-  :data:`MIN_ENTROPY_TOKEN_LENGTH` AND whose Shannon entropy (bits/char) ≥
-  :data:`ENTROPY_BITS_PER_CHAR_FLOOR` (entropy stored as an exact ``Fraction``).
+- ``high_entropy_string`` — a quoted string literal whose length ≥
+  :data:`MIN_ENTROPY_TOKEN_LENGTH`, whose Shannon entropy (bits/char) ≥
+  :data:`ENTROPY_BITS_PER_CHAR_FLOOR` (entropy stored as an exact ``Fraction``),
+  AND which passes the two STRUCTURAL discriminators below.
+
+Why entropy alone is not a usable rule for this family
+------------------------------------------------------
+Per-char Shannon entropy does NOT separate credentials from prose at these
+lengths, so a threshold cannot be tuned to fix it. Measured on real values:
+
+  ordinary docstrings / identifiers   3.49 – 4.14 bits/char
+  real secrets (incl. an AWS key)     3.68 – 5.17 bits/char
+
+The ranges OVERLAP — an ordinary docstring (4.14) scores HIGHER than a genuine
+``AKIA`` access key (3.68). Any floor high enough to reject prose also rejects
+real keys. Left on entropy alone this family fired on 1108 literals across 53
+files of ArgusAgent's own secret-free source (docstrings, ``__all__`` entries,
+help text), i.e. ~99% false positives — the alarm-fatigue failure FR33 exists to
+prevent, and enough noise to make the whole report unreadable.
+
+Two STRUCTURAL discriminators separate the classes where entropy cannot, because
+they key on the SHAPE of a generated credential rather than its randomness:
+
+- :func:`_has_no_whitespace` — a credential is a single token. Prose is not.
+- :func:`_has_letter_digit_mix` — a generated credential mixes letters AND
+  digits. ``render_final_verdict_report`` does not; ``AKIAIOSFODNN7EXAMPLE`` does.
+
+Together these cut the same corpus 1108 → 12 (98.9%) while retaining 100% recall
+over every known secret shape (AWS id + secret key, Slack ``xoxb``, GitHub
+``ghp_``, Stripe ``sk_live_``, hex API keys, and the planted cartridge sentinels).
+
+The residual recall cost is bounded and deliberate: an all-alphabetic credential
+assigned to a non-obvious name is no longer caught by THIS family. It is still
+caught by ``generic_assigned_secret`` whenever the target name looks like a
+secret (``api_key`` / ``secret`` / ``token`` / ``password`` / …), and by the
+dedicated ``aws_*`` / ``private_key_pem`` families regardless of naming. This
+family is a supplementary net, and a supplementary net that fires on everything
+catches nothing — an operator who cannot read the report is not protected by it.
 
 File-scope rule (LOCKED): secrets live in production code, so the detector is NOT
 gated to test files (contrast the vacuous detector). It scans every text source
@@ -221,7 +256,47 @@ _GENERIC_ASSIGN_RE = re.compile(
     r"(?i)(?:api[_-]?key|secret|token|password|passwd|pwd)\s*[:=]\s*"
     r"['\"](?P<secret>[^'\"\n]+)['\"]"
 )
-_ASSIGNED_LITERAL_RE = re.compile(r"['\"](?P<secret>[^'\"\n]+)['\"]")
+# NOTE: this matches ANY quoted literal — docstrings, ``__all__`` entries, help
+# text, log messages — NOT only assigned ones. It was previously named
+# ``_ASSIGNED_LITERAL_RE``, and that name is precisely why an unbounded match was
+# mistaken for a narrow one. The narrowing now lives in the explicit structural
+# predicates applied at the call site, where it is visible.
+_ANY_LITERAL_RE = re.compile(r"['\"](?P<secret>[^'\"\n]+)['\"]")
+
+
+def _has_no_whitespace(value: str) -> bool:
+    """Whether *value* is a single unbroken token (PURE).
+
+    A generated credential is one token. Prose is not. This alone rejects every
+    docstring and help string, which entropy cannot (a 52-char docstring measures
+    4.14 bits/char — above a real AWS key's 3.68).
+    """
+    return not any(char.isspace() for char in value)
+
+
+def _has_letter_digit_mix(value: str) -> bool:
+    """Whether *value* mixes letters AND digits — the shape of a generated key (PURE).
+
+    ``render_final_verdict_report`` (letters only) is rejected;
+    ``AKIAIOSFODNN7EXAMPLE`` and ``sk_live_4eC39HqLyjWDarjtT1zdp7dc`` are kept.
+    Unicode-aware via ``str.isalpha``/``str.isdigit`` so a non-ASCII identifier is
+    classified, not silently dropped (the AI-E1-1 precedent).
+    """
+    return any(c.isalpha() for c in value) and any(c.isdigit() for c in value)
+
+
+def _is_entropy_candidate(value: str) -> bool:
+    """The full ``high_entropy_string`` predicate (PURE, deterministic).
+
+    Length ∧ entropy ∧ single-token ∧ letter-digit mix. See the module docstring
+    for why the two structural clauses are load-bearing rather than cosmetic.
+    """
+    return (
+        len(value) >= MIN_ENTROPY_TOKEN_LENGTH
+        and _shannon_bits_per_char(value) >= ENTROPY_BITS_PER_CHAR_FLOOR
+        and _has_no_whitespace(value)
+        and _has_letter_digit_mix(value)
+    )
 
 
 def _line_span(source: str, match_start: int, match_end: int) -> tuple[int, int]:
@@ -410,11 +485,9 @@ class SecretScanDetector:
                     )
                 )
 
-        for m in _ASSIGNED_LITERAL_RE.finditer(source):
+        for m in _ANY_LITERAL_RE.finditer(source):
             value = m.group("secret")
-            if len(value) < MIN_ENTROPY_TOKEN_LENGTH:
-                continue
-            if _shannon_bits_per_char(value) < ENTROPY_BITS_PER_CHAR_FLOOR:
+            if not _is_entropy_candidate(value):
                 continue
             start_line, end_line = _line_span(source, m.start("secret"), m.end("secret"))
             matches.append(

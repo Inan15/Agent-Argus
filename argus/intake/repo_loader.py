@@ -40,6 +40,8 @@ from pathlib import Path
 
 from pydantic import BaseModel, ConfigDict, Field
 
+from argus.shared.source_languages import AUDITABLE_SUFFIXES
+
 __all__ = [
     "RepoIntakeError",
     "RepoIntake",
@@ -48,9 +50,10 @@ __all__ = [
 
 # Source-file extensions enumerated into the intake (V1 cares about Python; the
 # full set is kept small and additive — stack detection consumes the same tree).
-_SOURCE_SUFFIXES: frozenset[str] = frozenset(
-    {".py", ".pyi", ".pyx"}
-)
+# The auditable set is defined ONCE in argus.shared.source_languages. It used to be
+# a Python-only literal here, and because enumeration gates every later stage, that
+# narrow copy silently made the multi-language support downstream unreachable.
+_SOURCE_SUFFIXES: frozenset[str] = AUDITABLE_SUFFIXES
 
 _GIT_TIMEOUT_SECONDS = 30
 

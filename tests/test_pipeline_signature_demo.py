@@ -185,13 +185,26 @@ def test_bad_repo_path_raises_typed_error(tmp_path: Path) -> None:
         run_audit(request)
 
 
-def test_drifted_tree_raises_typed_error(tmp_path: Path) -> None:
-    """TC-ArgusAgent-PIPELINE-001-06 — AC6: an uncommitted-drift tree → typed RepoIntakeError."""
+def test_drifted_tree_is_audited_by_default_and_refused_under_strict(tmp_path: Path) -> None:
+    """TC-ArgusAgent-PIPELINE-001-06 — drift is a WORKTREE audit by default, refused under --strict.
+
+    Supersedes the original "drift always raises" contract. A developer mid-edit is
+    the common case, and refusing them an audit helps nobody; the release gate that
+    genuinely needs commit-pinned evidence opts in with ``strict=True``. The relaxation
+    is safe because the resolved state is RECORDED — a worktree audit is labelled as
+    not third-party reproducible rather than presented as a pinned commit.
+    """
     repo, _sha = stage_cartridge("vacuous_basic", tmp_path / "repo")
     # Introduce drift: an untracked file makes ``git status --porcelain`` non-empty.
     (repo / "drift.py").write_text("x = 1\n", encoding="utf-8")
+
+    # Default: it runs.
+    verdict = run_audit(_request(repo))
+    assert verdict.exit_code in (0, 2, 3)
+
+    # Release-gate mode: it still refuses, with a typed error.
     with pytest.raises(RepoIntakeError):
-        run_audit(_request(repo))
+        run_audit(_request(repo).model_copy(update={"strict": True}))
 
 
 def test_unresolvable_commit_raises_typed_error(tmp_path: Path) -> None:

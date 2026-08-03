@@ -97,6 +97,22 @@ Contract decisions LOCKED here (frozen for every downstream consumer)
   :func:`evaluate_verdict`, which defaults to satisfied in V1. Story 2.3 supplies
   the real value from the (then-built) critical-subsystem designation; this story
   builds only the gate that honors it.
+- **Assessment-scope seam — DISCLOSED narrowing, never a floor bypass** — the
+  deep-% denominator defaults to the whole ledger. The optional ``scope_paths``
+  parameter narrows the ASSESSED POPULATION (the caller supplies membership as data;
+  the gate never classifies files, preserving AR8 import isolation). It exists for
+  the test-heavy repository, where entries graded ``audited_shallow`` BY CONSTRUCTION
+  (test files — the subject of the vacuous pass, never a deep-grounding target)
+  swamp the denominator and manufacture a ``NOT_READY_FOR_RELEASE`` carrying ZERO
+  blocking findings. LOCKED invariants: the floor and the RELEASE_READY threshold are
+  BOTH re-applied WITHIN the narrowed population (a narrowing may change what is
+  claimed, NEVER the bar for claiming it — an under-audited application is still
+  ``INSUFFICIENT_COVERAGE``); ``findings`` are NOT filtered, so a blocking finding in
+  a held-out file still blocks; and a :class:`CoverageScope` disclosure is attached to
+  the result, so a scoped ``RELEASE_READY`` can never be read without its scope.
+  ``deep_ratio``/``deep_count``/``total_count`` keep their whole-ledger meaning. An
+  unscoped call is byte-identical to the pre-seam fold (``coverage_scope`` is omitted
+  from the canonical payload entirely, not serialized as ``null``).
 
 This module is PURE (AR8): no I/O, no clock, no LLM, no ``uuid4``/``random``, no
 set/dict iteration-order reliance. It imports ONLY the 1.2 ledger/finding models
@@ -119,6 +135,7 @@ __all__ = [
     "INSUFFICIENT_COVERAGE_FLOOR",
     "Verdict",
     "BLOCKED",
+    "CoverageScope",
     "AuditVerdict",
     "is_verdict_blocking",
     "blocking_finding_count",
@@ -181,6 +198,65 @@ _DEPTH_ORDER_RANK: dict[CoverageDepth, int] = {
 }
 
 
+class CoverageScope(BaseModel):
+    """Frozen DISCLOSURE record of a narrowed assessment scope (FR16 / negative assurance).
+
+    The gate's deep-% is, by default, taken over the WHOLE ledger. A repository whose
+    test files outnumber its application files drags that ratio down even when every
+    application file was audited deep — the ledger grades a test file
+    ``audited_shallow`` by construction (it is the SUBJECT of the vacuous-test pass,
+    not a target of deep grounding). Folding those shallow-by-design entries into the
+    denominator produces a FALSE NEGATIVE: ``NOT_READY_FOR_RELEASE`` with zero
+    blocking findings, purely because the repo is well-tested.
+
+    Narrowing the assessed population is the honest fix — but ONLY when the narrowing
+    is DISCLOSED. That is what this model is: the machine-readable record of what was
+    actually assessed and what was held out, carried on the verdict itself so no
+    consumer can read a scoped ``RELEASE_READY`` without also reading its scope.
+
+    The narrowing NEVER weakens the floor. :data:`INSUFFICIENT_COVERAGE_FLOOR` is
+    re-applied WITHIN the narrowed population (see :func:`evaluate_verdict`), so an
+    application whose own files are under-audited still returns
+    ``INSUFFICIENT_COVERAGE``. A scope narrows WHAT is claimed; it can never lower the
+    bar for claiming it.
+
+    PURE + frozen ``extra="forbid"`` (the 1.1/1.2/1.6 precedent). ``assessed_deep_ratio``
+    is an exact ``Fraction`` (NEVER ``float``, AR4).
+    """
+
+    model_config = ConfigDict(frozen=True, extra="forbid", arbitrary_types_allowed=True)
+
+    scope_id: str = Field(
+        ..., description="Closed identifier of the narrowing that was applied (e.g. 'application')."
+    )
+    excluded_reason: str = Field(
+        ..., description="Why the held-out entries were held out (e.g. 'test_files')."
+    )
+    assessed_deep_count: int = Field(
+        ..., ge=0, description="audited_deep entries WITHIN the assessed scope (the gate numerator)."
+    )
+    assessed_total_count: int = Field(
+        ..., ge=0, description="Total entries WITHIN the assessed scope (the gate denominator)."
+    )
+    assessed_deep_ratio: Fraction = Field(
+        ..., description="assessed_deep / assessed_total as an exact Fraction (NEVER float, AR4)."
+    )
+    excluded_count: int = Field(
+        ..., ge=0, description="Entries held out of the assessment (disclosed, never silently dropped)."
+    )
+
+    def to_canonical_payload(self) -> dict[str, object]:
+        """Canonical-serializable payload with the live ``Fraction`` re-installed (AR4).
+
+        Mirrors :meth:`AuditVerdict.to_canonical_payload` — Pydantic coerces a
+        ``Fraction`` via ``str`` (``Fraction(1, 1) → "1"``), which diverges from the
+        LOCKED canonical ``"num/den"`` encoding.
+        """
+        payload = self.model_dump()
+        payload["assessed_deep_ratio"] = self.assessed_deep_ratio
+        return payload
+
+
 class AuditVerdict(BaseModel):
     """Frozen pure verdict result the Story-1.7 pipeline consumes (FR15/FR18/M2).
 
@@ -217,6 +293,20 @@ class AuditVerdict(BaseModel):
         default=True,
         description="FR16 critical-subsystem clause input (Story 2.3 seam; True in V1).",
     )
+    coverage_scope: CoverageScope | None = Field(
+        default=None,
+        description=(
+            "Disclosed assessment-scope narrowing, or None for a whole-repository "
+            "assessment (the default). Present ⇔ the gate keyed on a narrowed population."
+        ),
+    )
+    critical_subsystems_not_deep: tuple[str, ...] = Field(
+        default=(),
+        description=(
+            "Sorted critical paths that are not audited_deep — the EVIDENCE behind a "
+            "False critical_subsystems_all_deep. Empty when the clause is satisfied."
+        ),
+    )
     exit_code: int = Field(..., description="Mapped process exit code (AR3 wire contract).")
 
     def to_canonical_payload(self) -> dict[str, object]:
@@ -230,9 +320,25 @@ class AuditVerdict(BaseModel):
         NFR-P1) — keeping ONE serializer and one ratio form across hosts. Every
         other leaf (enum values, ints, the ``Recording`` finding rows) already
         ``model_dump()``s to canonical-safe JSON primitives.
+
+        ``coverage_scope`` is OMITTED from the payload entirely when no narrowing was
+        applied, rather than serialized as ``null``. This keeps an unscoped run
+        BYTE-IDENTICAL to a pre-scope run (the Story-6.3/6.4 additive precedent: only
+        an actually-engaged feature may change a byte), so the whole-repository
+        default needs no ``schema_version`` bump and every persisted V1 verdict still
+        round-trips. A scoped run carries the nested disclosure with its live
+        ``Fraction`` re-installed by the same AR4 rule.
         """
         payload = self.model_dump()
         payload["deep_ratio"] = self.deep_ratio
+        if self.coverage_scope is None:
+            payload.pop("coverage_scope", None)
+        else:
+            payload["coverage_scope"] = self.coverage_scope.to_canonical_payload()
+        # Same omit-when-unengaged rule: a satisfied critical clause adds no key, so a
+        # repo with no non-deep criticals stays byte-identical to a pre-seam run.
+        if not self.critical_subsystems_not_deep:
+            payload.pop("critical_subsystems_not_deep", None)
         return payload
 
 
@@ -303,6 +409,10 @@ def evaluate_verdict(
     findings: tuple[Recording, ...] | list[Recording] = (),
     *,
     critical_subsystems_all_deep: bool = True,
+    critical_subsystems_not_deep: tuple[str, ...] | list[str] = (),
+    scope_paths: frozenset[str] | tuple[str, ...] | None = None,
+    scope_id: str = "application",
+    scope_excluded_reason: str = "test_files",
 ) -> AuditVerdict:
     """Fold a coverage ledger + findings into an :class:`AuditVerdict` (PURE).
 
@@ -326,26 +436,82 @@ def evaluate_verdict(
 
     ``critical_subsystems_all_deep`` defaults to satisfied in V1; Story 2.3 supplies
     the real value additively (the FR16 critical-subsystem clause).
+
+    Assessment scope (``scope_paths``) — DISCLOSED narrowing, never a bypass
+    ---------------------------------------------------------------------
+    ``scope_paths=None`` (the default) assesses the WHOLE ledger and is exactly the
+    V1 fold, byte-identical in and out. Passing an explicit set of repo-relative
+    paths narrows the ASSESSED POPULATION to the ledger entries in that set; the
+    decision table above is then evaluated over the narrowed deep-% instead of the
+    whole-ledger deep-%.
+
+    This exists because a test file is graded ``audited_shallow`` BY CONSTRUCTION (it
+    is the subject of the vacuous-test pass, not a target of deep grounding). In a
+    repository with more test files than application files those shallow-by-design
+    entries dominate the denominator and manufacture a FALSE NEGATIVE — a
+    ``NOT_READY_FOR_RELEASE`` carrying zero blocking findings, earned solely by being
+    well-tested. Narrowing to the application files reports what was actually assessed.
+
+    Three invariants make the narrowing honest rather than a loophole:
+
+    1. **The floor is re-applied WITHIN the scope, never skipped.** An application
+       whose own files are below :data:`INSUFFICIENT_COVERAGE_FLOOR` still returns
+       ``INSUFFICIENT_COVERAGE``. Narrowing changes WHAT is claimed, never the bar for
+       claiming it. (The rejected alternative — treating "the core looks fine" as a
+       reason to skip the floor — lets ArgusAgent assert release-readiness over a
+       population it never adequately examined, which is the exact false assurance
+       the floor exists to prevent.)
+    2. **Every gate keeps its full force.** Blocking findings and the FR16
+       critical-subsystem clause are unchanged and unscoped: a blocking finding in a
+       held-out file still blocks, because ``findings`` are not filtered here.
+    3. **The narrowing is recorded on the verdict.** A :class:`CoverageScope` is
+       attached, so a scoped ``RELEASE_READY`` cannot be read without also reading
+       what was assessed and what was held out. ``deep_ratio`` / ``deep_count`` /
+       ``total_count`` retain their LOCKED whole-ledger meaning, so both the honest
+       repository-wide number and the assessed number are always available.
+
+    The gate stays PURE: it does not classify files. The caller (the impure pipeline
+    shell, which already owns the multi-language ``is_test_file``) decides membership
+    and passes it in as data — keeping the AR8 import isolation intact.
     """
     total = ledger.total()
     deep = ledger.deep_count()
     deep_ratio = Fraction(deep, total) if total > 0 else Fraction(0, 1)
     blocking = blocking_finding_count(findings)
 
-    non_test_entries = [
-        e for e in ledger.entries
-        if not (e.file_path.startswith("tests/") or e.file_path.startswith("tests\\"))
-    ]
-    non_test_total = len(non_test_entries)
-    non_test_deep = sum(1 for e in non_test_entries if e.depth is CoverageDepth.AUDITED_DEEP)
-    non_test_deep_ratio = Fraction(non_test_deep, non_test_total) if non_test_total > 0 else Fraction(0, 1)
+    # The assessed population: the whole ledger by default, else the disclosed subset.
+    # Derived by filtering ledger.entries (already file_path-sorted, AR4) rather than
+    # by iterating the caller's collection, so the fold never depends on the caller's
+    # iteration order.
+    coverage_scope: CoverageScope | None = None
+    if scope_paths is None:
+        assessed_total = total
+        assessed_deep = deep
+        assessed_ratio = deep_ratio
+    else:
+        in_scope = frozenset(scope_paths)
+        scoped = [entry for entry in ledger.entries if entry.file_path in in_scope]
+        assessed_total = len(scoped)
+        assessed_deep = sum(1 for e in scoped if e.depth is CoverageDepth.AUDITED_DEEP)
+        assessed_ratio = (
+            Fraction(assessed_deep, assessed_total) if assessed_total > 0 else Fraction(0, 1)
+        )
+        coverage_scope = CoverageScope(
+            scope_id=scope_id,
+            excluded_reason=scope_excluded_reason,
+            assessed_deep_count=assessed_deep,
+            assessed_total_count=assessed_total,
+            assessed_deep_ratio=assessed_ratio,
+            excluded_count=total - assessed_total,
+        )
 
-    core_app_ready = (non_test_total >= 5) and (non_test_deep_ratio >= RELEASE_READY_DEEP_THRESHOLD)
-
-    if total == 0 or (deep_ratio < INSUFFICIENT_COVERAGE_FLOOR and not core_app_ready):
+    # Decision table, floor first — evaluated over the ASSESSED population. An empty
+    # assessed population is `total == 0`-equivalent: nothing was examined, so nothing
+    # can be claimed (guards the divide-by-zero structurally, AC8).
+    if assessed_total == 0 or assessed_ratio < INSUFFICIENT_COVERAGE_FLOOR:
         verdict = Verdict.INSUFFICIENT_COVERAGE
     elif (
-        (deep_ratio >= RELEASE_READY_DEEP_THRESHOLD or core_app_ready)
+        assessed_ratio >= RELEASE_READY_DEEP_THRESHOLD
         and blocking == 0
         and critical_subsystems_all_deep
     ):
@@ -362,5 +528,11 @@ def evaluate_verdict(
         blocking_finding_count=blocking,
         ordered_findings=order_findings(findings),
         critical_subsystems_all_deep=critical_subsystems_all_deep,
+        # Recorded only when the clause is UNSATISFIED — the paths are the evidence
+        # behind the False, and carrying them on a satisfied clause would be noise.
+        critical_subsystems_not_deep=(
+            tuple(critical_subsystems_not_deep) if not critical_subsystems_all_deep else ()
+        ),
+        coverage_scope=coverage_scope,
         exit_code=exit_code_for_verdict(verdict),
     )
