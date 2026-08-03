@@ -19,6 +19,7 @@ from argus.reports.formatter import (
     render_callout,
     render_markdown_table,
 )
+from argus.reports.plain_english import render_depth_meaning, render_ship_readiness
 from argus.detectors.vacuous_test import is_test_file
 from argus.verdict.verdict_gate import (
     RELEASE_READY_DEEP_THRESHOLD,
@@ -261,6 +262,12 @@ def render_final_verdict_report(
     lines.append("")
     readability = _render_readability_warning(ledger, ast_index)
     lines.extend(readability)
+    # The human register FIRST (the brief's dual-register output). A reader who opens
+    # this report should learn whether they can ship, and why not, before meeting a
+    # single enum token or fraction. The machine-grade fields follow immediately below
+    # and are unchanged — this adds a way in, it does not replace the record.
+    lines.append("> " + render_ship_readiness(verdict)[0])
+    lines.append("")
     lines.extend(_render_source_state(request, source_state))
     lines.append(f"- **Final Verdict**: **`{verdict.verdict.value}`** (Exit Code `{verdict.exit_code}`)")
     scope = verdict.coverage_scope
@@ -284,6 +291,14 @@ def render_final_verdict_report(
         )
     lines.append(f"- **Blocking Findings**: **{verdict.blocking_finding_count}**")
     lines.append(f"- **Total Findings Emitted**: **{total_findings_count}**")
+    lines.append("")
+    # Qualify the ratio the reader just read, immediately and in the same eyeline.
+    # `audited_deep` is defined by the PRD as an AST-validated claim citing specific
+    # symbols; with no LLM-backed deep pass enabled it attests something narrower and
+    # honest. Printing the bare grade lets the label promise more than the pass
+    # delivered — the precise over-claim this tool exists to catch in other people's
+    # repositories, so it is not one it may make about itself.
+    lines.append(render_callout("NOTE", render_depth_meaning(request.enabled_passes)))
     lines.append("")
 
     if verdict.verdict.value == "RELEASE_READY":

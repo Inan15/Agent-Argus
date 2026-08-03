@@ -449,7 +449,11 @@ def _detect_per_file(
             )
             findings.extend(secret_result.findings)
 
-        if is_test_file(rel):
+        # The AST entry is passed so an ambiguously-named Python module (``*_test.py``)
+        # is classified by its CONTENT, not by its filename — a production module whose
+        # subject is testing must not be mistaken for a test suite and skipped from
+        # deep grading.
+        if is_test_file(rel, ast_entry=entry):
             if is_python and "vacuous" in enabled_passes:
                 result = detector.run(file_path=rel, source=source, ast_entry=entry)
                 entries.extend(result.entries)
@@ -612,7 +616,9 @@ def _build_partition_plan(index: AstIndex, loc_by_file: dict[str, int]) -> Parti
 
 
 def _assessment_scope_paths(
-    request: AuditRequest, ledger: CoverageLedger
+    request: AuditRequest,
+    ledger: CoverageLedger,
+    index: AstIndex | None = None,
 ) -> frozenset[str] | None:
     """Resolve ``request.coverage_scope`` to the assessed path set for the gate.
 
@@ -630,10 +636,24 @@ def _assessment_scope_paths(
     gets an easier gate (AR10: degrade honestly, and degrade toward the stricter
     claim). The value is recorded on the request either way, so the fallback is
     visible in the run provenance.
+
+    *index* is OPTIONAL so existing callers keep working, but the pipeline supplies it:
+    the AST entry lets an ambiguously-named ``*_test.py`` module be classified by
+    content, exactly as the GRADING stage classifies it. Without it the two stages
+    could disagree — a file graded as production while being held out of the assessed
+    population — and a disagreement inside one run is precisely the kind of
+    inconsistency this tool exists to surface in other people's repositories.
     """
     if request.coverage_scope != "application":
         return None
-    return frozenset(e.file_path for e in ledger.entries if not is_test_file(e.file_path))
+    entry_by_path = (
+        {e.file_path: e for e in index.entries} if index is not None else {}
+    )
+    return frozenset(
+        e.file_path
+        for e in ledger.entries
+        if not is_test_file(e.file_path, ast_entry=entry_by_path.get(e.file_path))
+    )
 
 
 def _assemble_and_persist(
@@ -674,7 +694,7 @@ def _assemble_and_persist(
     all_deep = not not_deep
     # Resolved ONCE and reused by the Prosecutor's re-fold below, so both folds
     # assess the identical population.
-    scope_paths = _assessment_scope_paths(request, ledger)
+    scope_paths = _assessment_scope_paths(request, ledger, index)
     verdict = evaluate_verdict(
         ledger,
         tuple(findings),

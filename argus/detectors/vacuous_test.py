@@ -188,25 +188,87 @@ class VacuousTestScore(BaseModel):
     )
 
 
-def is_test_file(file_path: str) -> bool:
+# Suffixes that identify a test file on the FILENAME alone, with no ambiguity: in
+# these ecosystems the convention is reserved for tests and no production module
+# adopts it.
+_UNAMBIGUOUS_TEST_SUFFIXES = (
+    "_test.go", ".test.js", ".spec.js",
+    ".test.ts", ".spec.ts", ".test.jsx", ".spec.jsx", ".test.tsx", ".spec.tsx",
+    "_test.rs", "test.java", "spec.rb", "_spec.rb", "_test.cpp", "_test.cc",
+)
+
+# Python suffixes that are GENUINELY AMBIGUOUS. ``*_test.py`` is a real pytest
+# convention (``python_files = test_*.py *_test.py``), so it cannot simply be dropped
+# — but it also matches production modules whose subject happens to be testing, e.g.
+# ``argus/detectors/vacuous_test.py``, the vacuous-TEST DETECTOR. Classifying that as
+# a test file skipped it from deep grading and dropped it to ``tool_scanned_only``.
+# These are resolved by CONTENT when an AST entry is available (see below).
+_AMBIGUOUS_PYTHON_TEST_SUFFIXES = ("_test.py", "test.py")
+
+_TEST_DIRECTORY_NAMES = ("tests", "test", "__tests__", "spec", "specs")
+
+
+def _exhibits_test_definitions(ast_entry: object) -> bool:
+    """True iff *ast_entry* defines something test-shaped (PURE, content-derived).
+
+    The disambiguator for :data:`_AMBIGUOUS_PYTHON_TEST_SUFFIXES`. Mirrors the
+    doctrine ``assess_criticality`` already applies — classify by CONTENT, never by
+    filename alone — using the pre-built 1.4 definitions (no re-parse, AR7/§3.3).
+
+    Returns ``True`` for any entry it cannot read (missing / parse-failed /
+    AST-ineligible / wrong-shaped). That direction is deliberate: the two possible
+    misclassifications are NOT symmetric. Treating a production module as a test
+    under-states coverage (visibly, in the ledger); treating a TEST as production
+    both inflates the deep count AND skips the vacuous-test detector on it — a hole
+    in the moat and a false green. When the content cannot be read, stay a test file.
+    """
+    if not isinstance(ast_entry, AstIndexEntry):
+        return True
+    if ast_entry.parse_failed or not ast_entry.ast_eligible:
+        return True
+    for definition in ast_entry.definitions:
+        name = definition.name
+        if definition.kind == "function" and name.startswith("test"):
+            return True
+        # unittest style: `class TestFoo(TestCase)` holds the test_* methods.
+        if definition.kind == "class" and name.lower().startswith("test"):
+            return True
+    return False
+
+
+def is_test_file(file_path: str, *, ast_entry: "AstIndexEntry | None" = None) -> bool:
     """True iff *file_path* is a test file under multi-language conventions.
 
-    Recognizes test paths across Python, JavaScript, TypeScript, Go, Rust, Java, C/C++, Ruby.
+    Recognizes test paths across Python, JavaScript, TypeScript, Go, Rust, Java,
+    C/C++, Ruby. Three tiers, evaluated in order:
+
+    1. **Location** — anything under a test directory is a test file.
+    2. **Unambiguous filename** — a ``test_``/``test.`` prefix, or a suffix from
+       :data:`_UNAMBIGUOUS_TEST_SUFFIXES`.
+    3. **Ambiguous Python suffix** (``*_test.py``) — resolved by CONTENT when
+       *ast_entry* is supplied, and by the filename alone when it is not.
+
+    ``ast_entry`` is OPTIONAL and keyword-only, so every existing call site keeps its
+    exact behaviour (tier 3 without an entry answers ``True``, as before). A caller
+    that HAS the pre-built AST entry — the pipeline does — passes it and gets the
+    content-derived answer, which is what stops a production module named
+    ``*_test.py`` from being mistaken for a test suite.
     """
     parts = file_path.replace("\\", "/").split("/")
-    if any(p in ("tests", "test", "__tests__", "spec", "specs") for p in parts[:-1]) or (
+    if any(p in _TEST_DIRECTORY_NAMES for p in parts[:-1]) or (
         parts and parts[0] in ("tests", "test", "spec")
     ):
         return True
     name = parts[-1].lower() if parts else file_path.lower()
     if name.startswith("test_") or name.startswith("test."):
         return True
-    test_suffixes = (
-        "_test.py", "test.py", "_test.go", ".test.js", ".spec.js",
-        ".test.ts", ".spec.ts", ".test.jsx", ".spec.jsx", ".test.tsx", ".spec.tsx",
-        "_test.rs", "test.java", "spec.rb", "_spec.rb", "_test.cpp", "_test.cc"
-    )
-    return any(name.endswith(s) for s in test_suffixes)
+    if any(name.endswith(s) for s in _UNAMBIGUOUS_TEST_SUFFIXES):
+        return True
+    if any(name.endswith(s) for s in _AMBIGUOUS_PYTHON_TEST_SUFFIXES):
+        if ast_entry is None:
+            return True
+        return _exhibits_test_definitions(ast_entry)
+    return False
 
 
 def _is_test_function(definition: Definition) -> bool:
@@ -285,7 +347,7 @@ class VacuousTestDetector:
         ``audited_shallow`` via ``grade_entry`` (REUSE), and carries the counts as
         finding evidence (FR10).
         """
-        if not is_test_file(file_path):
+        if not is_test_file(file_path, ast_entry=ast_entry):
             return DetectorResult(
                 degraded=(DegradedCondition(file_path=file_path, reason="not_a_test_file"),)
             )
