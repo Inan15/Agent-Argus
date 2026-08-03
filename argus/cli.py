@@ -58,6 +58,7 @@ import sys
 
 from argus.models import AuditRequest
 from argus.pipeline import run_audit
+from argus.reports.plain_english import render_ship_readiness
 
 __all__ = ["build_parser", "main"]
 
@@ -130,7 +131,11 @@ def build_parser() -> argparse.ArgumentParser:
         action="append",
         default=None,
         metavar="PATH",
-        help="Exclude a repo-relative path from the critical set (repeatable; exclude wins on a tie).",
+        help=(
+            "Exclude paths from the critical set (repeatable; exclude wins on a tie). "
+            "Accepts an exact path, a directory prefix that clears the whole subtree "
+            "(`tests`), or a glob (`argus/*/__init__.py`)."
+        ),
     )
     audit.add_argument(
         "--passes",
@@ -176,13 +181,16 @@ def build_parser() -> argparse.ArgumentParser:
         "--coverage-scope",
         dest="coverage_scope",
         choices=("repository", "application"),
-        default="repository",
+        default="application",
         help=(
-            "Population the deep-coverage gate assesses. 'repository' (default) counts "
-            "every file. 'application' holds out test files, which are graded shallow by "
-            "construction and otherwise drag a well-tested repo below the gate. The "
-            "narrowing is disclosed in the verdict and report, and never lowers the "
-            "coverage floor (it is re-applied within the scope)."
+            "Population the deep-coverage gate assesses. 'application' (default) holds "
+            "out test files, which are graded shallow BY CONSTRUCTION — they are the "
+            "subject of the vacuous-test pass, never a target of deep grounding — and so "
+            "can only ever dilute the ratio. 'repository' counts every file, including "
+            "those test files; use it for the strict whole-tree view. Either way the "
+            "assessed population is disclosed on the verdict and in the report, both "
+            "ratios are printed, and the coverage floor is re-applied WITHIN the scope, "
+            "so a narrowing can never lower the bar for a claim."
         ),
     )
     return parser
@@ -276,6 +284,13 @@ def main(argv: list[str] | None = None) -> int:
             verdict.coverage_scope,
         )
     )
+    # The HUMAN register (the brief's dual-register output) goes to STDERR, on purpose.
+    # stdout is the wire contract a CI step / orchestrating agent parses (FR18/AR3), and
+    # appending prose to it would break any consumer reading the summary line
+    # positionally. stderr reaches a human at a terminal and lands in CI logs, so nothing
+    # is hidden — the two registers simply stop competing for one stream.
+    for line in render_ship_readiness(verdict, enabled_passes=enabled_passes):
+        print(line, file=sys.stderr)
     return verdict.exit_code
 
 

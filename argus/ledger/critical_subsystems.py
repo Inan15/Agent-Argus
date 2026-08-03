@@ -80,6 +80,7 @@ gate.
 from __future__ import annotations
 
 import enum
+from fnmatch import fnmatchcase
 from typing import TYPE_CHECKING, Iterable
 
 from pydantic import BaseModel, ConfigDict, Field
@@ -206,6 +207,37 @@ def _coerce_path_tuple(paths: Iterable[str] | None, *, label: str) -> tuple[str,
     return members
 
 
+def _matches_exclusion(path: str, patterns: frozenset[str]) -> bool:
+    """True iff *path* is removed by any exclusion *pattern* (PURE, deterministic).
+
+    Exact match was the whole of the original rule, which made the documented escape
+    hatch unusable at real scale: clearing an over-flagged directory required one
+    ``--exclude-critical`` flag per file (62 of them on this repository). An escape
+    hatch nobody can afford to use is not an escape hatch, and an unsatisfiable gate
+    trains operators to ignore every gate.
+
+    Three forms, checked in order — all deterministic, no filesystem access (AR8):
+
+    1. **exact** — ``argus/cli.py`` (the original behaviour, unchanged).
+    2. **directory prefix** — ``tests`` or ``tests/`` removes the whole subtree.
+    3. **glob** — ``*_test.py``, ``argus/*/__init__.py`` via ``fnmatchcase``.
+
+    Matching is CASE-SENSITIVE (``fnmatchcase``, never ``fnmatch``): ``fnmatch``
+    normalizes case per the HOST platform, which would make the same designation
+    behave differently on Windows and Linux and break the byte-identical-across-hosts
+    guarantee (NFR-P1/AR4).
+    """
+    for pattern in patterns:
+        if path == pattern:
+            return True
+        prefix = pattern if pattern.endswith("/") else pattern + "/"
+        if path.startswith(prefix):
+            return True
+        if fnmatchcase(path, pattern):
+            return True
+    return False
+
+
 def identify_critical_subsystems(
     candidates: Iterable[CriticalCandidate],
     *,
@@ -222,9 +254,12 @@ def identify_critical_subsystems(
     - ``operator_designated`` FORCES a path critical (even a heuristic-NORMAL or
       heuristic-absent path) — the lever for a true critical the substring matcher
       missed.
-    - ``operator_excluded`` REMOVES a path from the final set — the documented
+    - ``operator_excluded`` REMOVES paths from the final set — the documented
       correction for a 2.1 substring over-flag. **Exclude wins on a tie** (a path in
-      both add and exclude is excluded).
+      both add and exclude is excluded). Each entry is PATTERN-matched by
+      :func:`_matches_exclusion` (exact path, directory prefix, or glob), so
+      ``--exclude-critical tests`` clears a subtree in one flag instead of one flag
+      per file.
 
     Unmatched policy (conservative): a force-critical path that matches no candidate
     is recorded in ``paths`` AND in ``designated_but_unmatched`` — it has no ledger
@@ -238,7 +273,7 @@ def identify_critical_subsystems(
     :class:`CriticalSubsystemError` on a malformed input (AR10).
     """
     designated = set(_coerce_path_tuple(operator_designated, label="operator_designated"))
-    excluded = set(_coerce_path_tuple(operator_excluded, label="operator_excluded"))
+    excluded = frozenset(_coerce_path_tuple(operator_excluded, label="operator_excluded"))
 
     candidate_paths: set[str] = set()
     heuristic: set[str] = set()
@@ -252,7 +287,13 @@ def identify_critical_subsystems(
             heuristic.add(candidate.file_path)
 
     # (heuristic ∪ operator_designated) − operator_excluded — exclude wins on a tie.
-    final = (heuristic | designated) - excluded
+    # Exclusion is now PATTERN-matched (exact / directory-prefix / glob) rather than a
+    # plain set difference; the exclude-wins-on-a-tie precedence is unchanged.
+    final = {
+        path
+        for path in (heuristic | designated)
+        if not _matches_exclusion(path, excluded)
+    }
 
     origins: dict[str, CriticalOrigin] = {}
     for path in final:
@@ -262,7 +303,11 @@ def identify_critical_subsystems(
         else:
             origins[path] = CriticalOrigin.HEURISTIC
 
-    unmatched = (designated - excluded) - candidate_paths
+    unmatched = {
+        path
+        for path in designated
+        if path not in candidate_paths and not _matches_exclusion(path, excluded)
+    }
 
     return CriticalSubsystemSet(
         paths=tuple(sorted(final)),
