@@ -11,6 +11,40 @@ inputDocuments:
   - _bmad-output/design-artifacts/ArgusAgent/product-brief-apaa.md
   - _bmad-output/design-artifacts/ArgusAgent/research-technical-2026-06-17.md
   - _bmad-output/design-artifacts/ArgusAgent/implementation-readiness-report-2026-06-18.md
+  - _bmad-output/design-artifacts/ArgusAgent/E-PRD/addendum.md
+  - _bmad-output/design-artifacts/ArgusAgent/sprint-change-proposal-2026-08-03.md
+  - _bmad-output/design-artifacts/ArgusAgent/deferred-work.md
+deltaRuns:
+  - date: 2026-08-03
+    scope: 'FR16 / FR4 verdict-contract amendment + APAA repo separation (Agent-Argus) — delta only; Epics 1–7 are NOT regenerated'
+    supersedes: _bmad-output/planning-artifacts/decisions/2026-06-18-apaa-placement-under-minions-core.md
+    signal: _bmad-output/design-artifacts/ArgusAgent/sprint-change-proposal-2026-08-03.md
+    approvedBy: Varin
+    stepsCompleted:
+      - step-01-validate-prerequisites
+      - step-02-design-epics
+      - step-03-create-stories
+      - step-04-final-validation
+    status: 'complete'
+    openDecisions:
+      - 'H0 — who files the Minions-Repo Handoff (H1-H4) against the Minions backlog. UNOWNED.'
+    resolvedDecisions:
+      - date: 2026-08-03
+        id: 'Story 8.1 — decision-row disclosure channel'
+        decision: 'Artifact = explicit field (FR16-mandated, free under the DR-4 schema bump). stdout machine summary line = UNCHANGED, pinned by a golden test. stderr human register = distinguishes row 1 from row 4 in prose.'
+        rationale: 'The row is already fully derivable from the existing summary line (verdict token + assessed ratio): INSUFFICIENT_COVERAGE with ratio <1/5 => row 1; NOT_READY => row 2; RELEASE_READY => row 3; INSUFFICIENT_COVERAGE with ratio >=1/5 => row 4. Adding a stdout field would be a SECOND wire-contract change stacked on the exit-code shift, for information already present. Matches the addendum precedent that rejected COVERAGE_GATE_UNMET because the distinction was recoverable from the disclosed ratio and assessed population.'
+        residualRisk: 'A consumer deriving the row reimplements a slice of the decision table. Mitigated: the artifact carries it authoritatively.'
+        correction: 'An earlier AC draft claimed a stdout-parsing consumer could not distinguish row 1 from row 4. It can, from the ratio the line already prints.'
+        approvedBy: Varin
+    decisions:
+      - 'IN-4 depth LOCKED: descriptor-only capability registration (out-of-process CLI); full Flow-Orchestrator wiring deferred'
+      - 'Epics 11/12 kept SPLIT: destructive de-vendoring separated from additive integration design'
+      - 'Inversion analysis (advanced-elicitation): scariest hypothesis FALSIFIED — the signature demo does NOT depend on a coverage gate; tests/test_cartridge_selfaudit.py:266-273 shows the vacuous cartridge emits a verdict-BLOCKING finding (depth_supported is not None), so row 2 fires before coverage and the demo survives the amendment (more robustly than before). Three real gaps closed: F1 the delta LOOSENS the gate twice (DR-5 + the landed coverage-scope default) with every guard pointing only at over-blocking and NOTHING guarding the PRD-fatal false-RELEASE_READY direction -> false-green counterweight AC on 8.2; F3 no story owns FILING the Minions handoff -> H0 added demanding a named owner or an explicit operator step; F5 nobody re-runs the originating command -> end-to-end symptom-gone AC on 8.5'
+      - 'Self-consistency validation (advanced-elicitation): three independent derivations (by requirement cluster, by module ownership, by user outcome) all converge on the SAME 7 stories — no story missing at cluster level. Divergences were all RENDERING surfaces the contract-derived DR list under-named: (1) DR-11 widened to include argus/reports/generator.py, a second verdict surface with its own FR16 reasoning whose critical-paths section Story 8.2 empties; (2) NEW decision AC on where the disclosed row surfaces (artifact / stdout summary line / stderr) — 8.1 requiring disclosure and 8.3 asserting stdout unchanged cannot both be silently true; (3) Story 8.5 precondition — tests/test_dogfood_plan.py has 2 VERIFIED pre-existing failures about the very artifacts it touches. Also: RS-4b scope widened, the stale minions_core path lives in GENERATED artifacts, not only prose.'
+      - 'Boundary sweep (advanced-elicitation): 10 edge cases folded into ACs. CORRECTION — Story 8.5 previously asserted the re-derived dogfood outcome would be INSUFFICIENT_COVERAGE/row 4; Story 8.2 changes the inputs (87% deep, 0 blocking findings, only the critical clause blocking) so clearing it yields RELEASE_READY/row 3. The AC now pins the METHOD, not a predetermined verdict. Also pinned: floor-wins-over-blocking survives the reorder; exactly-20% discloses row 4 not row 1; empty critical set must be disclosed (vacuous-gate guard); designation-vs-exclusion precedence; schema bump in the migration note; git rm --cached for a tracked .apaa/'
+      - 'Scope decision (operator, 2026-08-03): Minions-repo execution work (RS-2, RS-3, IN-1, IN-3, IN-4) REMOVED from this breakdown and relocated to a Minions-Repo Handoff section, to be filed as a change request against the Minions backlog. ArgusAgent specs carry only work its own CI can verify. Delta epics reduced 3 -> 2 (Epic 8, Epic 9), both Argus-repo. Integration remains planned in full.'
+      - 'Assumption audit (advanced-elicitation): A1 falsified (no argus-agent release workflow / index presence) -> NEW IN-0 blocking IN-1; A9 falsified (plain_english NOT VOUCHED branch goes unreachable) -> NEW DR-11; A5 unsupported (Minions exits 3 post-amendment) -> IN-3 advisory-vs-blocking policy decision required before wiring; A4 confirmed (no production importer of minions_core.apaa) -> RS-2 de-risked; A8 -> binding default-field AC on DR-3'
+      - 'Subtraction pass (advanced-elicitation): 5 delta epics reduced to 3 (8 -> 9 -> 10). Standalone-Argus epic dissolved (outcome already true: no declared Minions dep + guarded import) -> one prerequisite story on Epic 9; record-truth epic merged into Epic 8; RS-4b bulk prose sweep deferred'
 project_name: 'APAA (AI Project Assurance Audit)'
 author: 'XAgent007'
 date: '2026-06-18'
@@ -51,12 +85,17 @@ bundle.
 
 > **Capability contract (V1, from the PRD).** A capability not listed here will not exist in V1.
 > **[Tier B]** = validation-grade additions over the demo-grade core (FR7, FR12, FR19, FR24, FR26).
+>
+> ⚠️ **FR4 and FR16 were amended 2026-08-03** and are stated below in their **amended** form. Epics 1–7
+> were authored against the pre-amendment text and are **not** regenerated; the work closing the gap is
+> **Epic 8**. Any story written from this inventory must use the amended text and the decision table in
+> §Amendment Delta — not the Epic 1–3 story ACs, which predate it.
 
 **Repository Intake & Partitioning**
 - **FR1:** An operator can submit a repository at a pinned commit for audit through a headless invocation.
 - **FR2:** APAA can detect the repository's technology stack and available toolchain without operator configuration.
 - **FR3:** APAA can partition the repository into bounded audit units within a declared budget.
-- **FR4:** APAA can identify critical subsystems (and an operator can designate them) so coverage gates can require them to be examined deeply.
+- **FR4 (amended 2026-08-03):** APAA can identify critical subsystems (and an operator can designate them) so coverage gates can require them to be examined deeply. **A file APAA can never grade `audited_deep` is ineligible for the heuristically-derived critical set** — a gate no run can satisfy is not a gate. Eligibility excludes files that are `audited_shallow` **by construction** (test files; clean-parsed zero-definition modules). **Operator designation via `--critical-subsystem` is exempt**, including for a path matching nothing. `--exclude-critical` matches **by prefix**, not only exact path. → full text in [§Amendment Delta](#delta-requirements-inventory); source of truth `E-PRD/prd.md` FR4.
 
 **Coverage Ledger & Grounded Evidence**
 - **FR5:** APAA can record every file's audit depth in a fixed-enum coverage ledger (`audited_deep` / `audited_shallow` / `tool_scanned_only` / `inferred` / `skipped`).
@@ -74,7 +113,8 @@ bundle.
 
 **Release-Readiness Verdict**
 - **FR15:** APAA can compute a release-readiness verdict as a pure function of the coverage ledger.
-- **FR16:** APAA can emit a verdict only when coverage gates are met (≥60% deep + all critical subsystems deep + 0 blocking findings), and emit `INSUFFICIENT_COVERAGE` below the 20% floor — never a default block.
+- **FR16 (amended 2026-08-03):** APAA can emit `RELEASE_READY` only when coverage gates are met (≥60% deep + all critical subsystems deep + 0 blocking findings), can emit a blocking verdict **only on the strength of a finding it actually made**, and reports every other outcome as `INSUFFICIENT_COVERAGE` — never a default block. Governed by a **binding 4-row decision table evaluated in order** (findings before coverage), and the verdict **must disclose which row fired** and the assessed population. → **the table is stated once**, in [§Amendment Delta → Amended Functional Requirements](#amended-functional-requirements-source-of-truth-e-prdprdmd-amended-2026-08-03); source of truth `E-PRD/prd.md` FR16. *Do not restate it here — a third copy is a third drift surface.*
+  - **Vocabulary (binding):** `INSUFFICIENT_COVERAGE` is a *not-assessed* state, **not** a blocking verdict, reached **two** ways — below the 20% floor, **or** an unmet coverage/critical gate with **zero** blocking findings. `NOT_READY_FOR_RELEASE` (demo shorthand `BLOCKED`) asserts exactly one thing: **APAA found something.** Never interchangeable.
 - **FR17:** APAA can express every verdict in negative-assurance terms with a scope statement, materiality bar, disclaimer, and point-in-time stamp.
 - **FR18:** An integrator can consume the verdict as a deterministic exit code and a machine-readable artifact.
 - **FR33:** APAA can order findings by verdict impact — surfacing verdict-blocking findings before non-blocking ones (alarm-fatigue defense).
@@ -1046,3 +1086,671 @@ So that the strategic question is answered and the path to the ≥80%-precision 
 4. **CLAUDE.md §4a follow-up** (per the placement decision Consequences): once stories land, add APAA as a
    Component → Driver Map row and note the `apaa/` sub-package — tied to the first implementation story, not
    pre-emptive.
+
+---
+
+# Amendment Delta — FR16 / FR4 Verdict Contract (2026-08-03)
+
+> **Delta scope.** Epics 1–7 above are **delivered and are NOT regenerated or restated**. This section
+> covers only the work created by the **2026-08-03 PRD amendment** to FR16 (verdict decision table) and
+> FR4 (critical-subsystem eligibility), approved by Varin at the contract gate — step 4 of the
+> [sprint change proposal](sprint-change-proposal-2026-08-03.md)'s recommended sequence. Step 5
+> (CR-1 + CR-3 + the schema bump) was **blocked on that gate and is now unblocked**; it is the work
+> decomposed here.
+>
+> 🚩 **Repo separation (operator decision, 2026-08-03).** APAA has **moved out of Minions into its own
+> repository** — `Agent-Argus` (`https://github.com/Inan15/Agent-Argus.git`), distribution `argus-agent`,
+> package `argus/`, console scripts `argus` / `argus-agent` / `repo-audit`. This **supersedes the
+> 2026-06-18 placement decision** (`planning-artifacts/decisions/2026-06-18-apaa-placement-under-minions-core.md`)
+> and every `minions_core/apaa/` path in the architecture document and in Epics 1–7 above. Two binding
+> consequences, carried as **RS-1 … RS-4** below: **(a)** the amendment is implemented in `argus/` only —
+> the `minions_core/apaa/` copy is legacy and **must not be modified or back-ported to**; **(b)** APAA
+> wiring is **removed from the Minions repo completely**.
+>
+> 🔗 **Re-integration (operator decision, 2026-08-03).** Removal is **half** of one migration, not an end
+> state: Minions must then **consume Argus as an external product** rather than vendor its source. Carried
+> as **IN-1 … IN-5** below. The shape is *de-vendor, then re-integrate* — `minions_core/apaa/` (a forked
+> copy that drifts) is replaced by a dependency on the published `argus-agent` distribution plus a CI gate
+> and a platform capability. **RS-2 and IN-1 must ship together**, or Minions has no audit capability in
+> between.
+
+## Delta Requirements Inventory
+
+### Amended Functional Requirements (source of truth: `E-PRD/prd.md`, amended 2026-08-03)
+
+- **FR16 (amended):** APAA can emit `RELEASE_READY` only when coverage gates are met (≥60% deep + all
+  critical subsystems deep + 0 blocking findings), can emit a blocking verdict **only on the strength of a
+  finding it actually made**, and reports every other outcome as `INSUFFICIENT_COVERAGE` — never a default
+  block. The binding decision table, **evaluated in order** (findings before coverage, so a coverage
+  shortfall can never be reported as a defect):
+
+  | # | Condition | Verdict | Exit |
+  |---|---|---|---|
+  | 1 | `assessed_total == 0` or `assessed_ratio < 1/5` | `INSUFFICIENT_COVERAGE` | 3 |
+  | 2 | `blocking_findings >= 1` | `NOT_READY_FOR_RELEASE` | 2 |
+  | 3 | `assessed_ratio >= 3/5` **and** all critical subsystems `audited_deep` | `RELEASE_READY` | 0 |
+  | 4 | otherwise — zero blocking findings, a coverage or critical-subsystem gate unmet | `INSUFFICIENT_COVERAGE` | 3 |
+
+  **The verdict must disclose which row fired and the assessed population it was computed over.**
+
+- **FR4 (amended):** APAA can identify critical subsystems (and an operator can designate them) so coverage
+  gates can require them to be examined deeply. **A file APAA can never grade `audited_deep` is ineligible
+  for the heuristically-derived critical set.**
+  - **Eligibility (heuristic set):** exclude files that are `audited_shallow` **by construction** — test
+    files (the *subject* of the vacuous-test pass, never a target of deep grounding) and clean-parsed
+    zero-definition modules.
+  - **Operator designation is exempt.** An explicit `--critical-subsystem` keeps its conservative
+    behaviour, including for a path that matches nothing.
+  - An operator can exclude a subtree from the critical set **by prefix**, not only by exact path.
+
+- **Canonical vocabulary (amended, binding on downstream artifacts):** `INSUFFICIENT_COVERAGE` is a
+  *not-assessed* state — "I did not examine enough to vouch" — reached **two** ways: coverage below the 20%
+  floor, **or** an unmet coverage / critical-subsystem gate with **zero** blocking findings. It is **not**
+  a blocking verdict. `NOT_READY_FOR_RELEASE` (demo shorthand `BLOCKED`) asserts exactly one thing:
+  **APAA found something.** The two are never interchangeable.
+
+### Derived Delta Requirements (DR) — measured against the shipped tree
+
+Each DR carries its **verified current state** in `argus/` at `faeefd9`. DR-7 is listed for completeness
+and requires no new implementation.
+
+| DR | Requirement | Source | Current state (verified) |
+|---|---|---|---|
+| **DR-1** | Reorder `evaluate_verdict` to the binding 4-row table — findings evaluated **before** coverage | FR16 | ❌ **Open.** `argus/verdict/verdict_gate.py:511-520` still evaluates floor → `RELEASE_READY` → `otherwise NOT_READY` (3 rows) |
+| **DR-2** | Row 4: zero blocking findings + an unmet coverage/critical gate → `INSUFFICIENT_COVERAGE`, exit `3` | FR16 | ❌ **Open.** That case currently falls through to `NOT_READY_FOR_RELEASE`, exit `2` — a verdict asserting a defect APAA did not find |
+| **DR-3** | The verdict artifact discloses **which decision row fired** and the **assessed population** it was computed over | FR16 | ❌ **Open.** `AuditVerdict` carries `deep_ratio`/`deep_count`/`total_count`/`coverage_scope`/`critical_subsystems_not_deep` but **no decision-row field**. ⚠️ **Binding AC (assumption A8):** `AuditVerdict` is `extra="forbid"` — the new field **must carry a default**, or pre-amendment persisted verdicts stop round-tripping |
+| **DR-4** | `VERDICT_SCHEMA_VERSION` `"1"` → `"2"`; verdicts persisted under `.apaa/` **before** the amendment keep their original meaning and stamp and are **not rewritten** | addendum §A1 | ❌ **Open.** `verdict_gate.py:149` is still `"1"` |
+| **DR-5** | Heuristic critical-set eligibility filter — exclude `is_test_file` entries and clean-parsed zero-definition modules | FR4 | ❌ **Open.** No eligibility predicate exists in `argus/ledger/critical_subsystems.py` |
+| **DR-6** | Operator `--critical-subsystem` designation is **exempt** from DR-5, including an unmatched path | FR4 | ❌ **Open** (the exemption must be explicit and pinned once DR-5 lands) |
+| **DR-7** | `--exclude-critical` matches by exact path, directory prefix, or glob | FR4 | ✅ **Landed** (CR-4). `critical_subsystems.py:83,223-236` uses `fnmatchcase` (never `fnmatch` — host case-folding would break byte-identity). **Verify + keep pinned; no new work** |
+| **DR-8** | Integrator migration is documented: some runs that exited `2` now exit `3`; a CI step branching only on `0` vs non-zero is unaffected | addendum §A1 | ❌ **Open.** The addendum states it; no release note is published to consumers |
+| **DR-9** | The `schema_version` bump is the **only** intentional content-hash change; every other byte of an unscoped run stays identical | NFR-D1/D3, NFR-P1 | ❌ **Open** — a property this delta must *prove*, not assume |
+| **DR-10** | Re-derive (or explicitly re-affirm) the shipped proof artifacts that recorded a pre-amendment verdict | consequence of FR16 | ❌ **Open.** The Story 7.2 dogfood recorded `NOT_READY_FOR_RELEASE` / exit `2` at deep-% `13/15` with **0 verdict-eligible findings** (`deferred-work.md` DF-6-6-A-P2) — exactly row 4, so under the amended table it becomes `INSUFFICIENT_COVERAGE` / exit `3`. `minions-dogfood-proof.md`, `_bmad-output/reports/final-verdict.md` and `_bmad-output/audit-reports/final-verdict.md` are stale against the amended contract |
+| **DR-11** | **Reconcile the report surfaces with the amended table — BOTH of them.** ⚠️ **Scope widened by the self-consistency pass:** `argus/reports/generator.py` is a *second* verdict-rendering surface with its **own** FR16 reasoning, not merely a call into `plain_english` — it renders *"the critical paths that withheld `RELEASE_READY`"* (`:104`, `:122`) and branches independently on the verdict enum, the deep-ratio threshold and `blocking_finding_count` (`:62-79`, `:304`). Story 8.2 **empties** that critical-paths section, and its *"each must reach `audited_deep`"* guidance becomes wrong once ineligible files are auto-excluded. `argus/reports/plain_english.py` branches `RELEASE_READY` → `INSUFFICIENT_COVERAGE` → `blocking_finding_count > 0` → *else* **"NOT VOUCHED"**. That final branch exists solely to render `NOT_READY_FOR_RELEASE` **with zero blocking findings** — the exact case DR-2 relocates — so it becomes **unreachable** once DR-1/DR-2 land. Either delete it or prove it still reachable, and re-point the `tests/test_plain_english.py` cases that pin the zero-finding/blocking split | consequence of FR16 (assumption A9, **falsified**) | ❌ **Open.** Uncovered by the original DR set — the landed CR-2 presentational fix was the *stopgap* for this bug, and CR-1 makes part of that stopgap dead code |
+
+### Additional Requirements (Architecture + addendum) — constraints on how the delta lands
+
+- **The verdict enum MUST NOT grow.** Adding `COVERAGE_GATE_UNMET` was explicitly considered and rejected
+  (addendum §A1 options matrix): it would widen a frozen enum every downstream consumer must learn, to
+  distinguish two cases that route identically (human review). One value carries one meaning.
+- **Exit codes are unchanged as values** — `0/2/3/1` (AR3 wire contract). No new code is introduced; what
+  changes is which runs map to `3` instead of `2`.
+- **The verdict gate stays PURE** — no I/O, no clock, no LLM; testable at **zero LLM tokens** over synthetic
+  ledgers (NFR-D2, architecture AR8 pure/impure master rule).
+- **Determinism patterns bind unchanged** — one canonical serializer; ratios as exact `Fraction`, never
+  `float`; no wall-clock/`uuid4`/`getpid()`/iteration-order in any `.apaa/` write path (AR4, NFR-P1).
+- **Additive-only schema evolution** (NFR-M2) — the `schema_version` bump is the sanctioned lever for an
+  intentional content-hash change, permitted under the rule at `verdict_gate.py:147-149`.
+- **Touched modules (addendum §A1):** `argus/verdict/verdict_gate.py` (decision table + version bump) and
+  `argus/ledger/critical_subsystems.py` (eligibility filter). `argus/cli.py` and
+  `argus/detectors/vacuous_test.py` were already touched by the landed CR-2/CR-5.
+- **Driving cross-cutting concern #6** (advisory-by-contract / the false-accusation moat) — currently
+  enforced on *findings* but not on the *verdict itself*; this delta closes that asymmetry.
+- **NFR-M1** — no source file exceeds 1200 lines; business logic stays out of entrypoints.
+### Repo-Separation Requirements (RS) — operator decision, 2026-08-03
+
+APAA is now the standalone **Agent-Argus** repo. The `minions_core/apaa/` tree is legacy. These are
+binding on this delta and on every subsequent APAA change.
+
+| RS | Requirement | Current state (verified) |
+|---|---|---|
+| **RS-1** | **All amendment work lands in `argus/` in the Agent-Argus repo.** The `minions_core/apaa/` copy in Minions is legacy: **no modification, no back-port, no dual maintenance.** DR-1 … DR-10 are satisfied in `argus/verdict/verdict_gate.py` and `argus/ledger/critical_subsystems.py` only | ✅ Constraint stated here; enforced by RS-2 making the Minions copy cease to exist |
+| **RS-2** | **Remove APAA wiring from the Minions repo completely** — the package, its tests, its CI gates, its packaging surface, and its runtime directory | ❌ **Open.** All wiring is still present (surface enumerated below). ✅ **De-risked (assumption A4, verified 2026-08-03):** **no production Minions code imports `minions_core.apaa`** — the only importer outside the package and `tests/apaa/` is `tests/security/test_apaa_secret_containment.py`, itself on the removal list. The deletion breaks no Minions runtime code |
+| **RS-3** | **Supersede, do not erase, the historical record.** The 2026-06-18 placement decision and the APAA design/implementation artifacts under `_bmad-output/` in Minions are **evidence** (§3.4 evidence immutability, the same append-only rule the deferred-work register follows). Mark them superseded with a forward pointer to Agent-Argus; do **not** delete them | ❌ **Open** |
+| **RS-4a** | **Fix the package front door.** `argus/__init__.py:37` still reads *"Lives at `minions_core/argus/`"* — the first thing any reader of the package sees | ❌ **Open** — one line, carried in Epic 8 |
+| **RS-4b** | **Bulk provenance sweep** — the remaining ~48 stale `minions_core/apaa/` references in `argus/` docstrings and comments, plus the architecture document and Epics 1–7 above. ⚠️ **Scope note (self-consistency pass):** this is **not prose only** — the committed dogfood budget artifact is auto-generated carrying the header *"AUTO-GENERATED by `minions_core/apaa/dogfood/partition_plan.py`"*, so **generated artifacts** carry the stale path too and a prose-only sweep would miss them | ⏸️ **DEFERRED out of this delta** (subtraction pass, 2026-08-03): unbounded, cosmetic, and it expands to fill available time. To be filed as a `deferred-work.md` entry with an owner when Epic 8's first story lands — the register's convention is that entries carry an `origin_story`, so it is filed there, not pre-emptively |
+
+**Minions-side removal surface (verified by scan, 2026-08-03):**
+
+- `minions_core/apaa/` — the package; and the stale `build/lib/minions_core/apaa/` build artifact
+- `tests/apaa/` — the full APAA test tree, including the cartridges
+- `tests/security/test_apaa_secret_containment.py` · `tests/governance/test_apaa_standing_red_baseline_gate.py`
+- `scripts/check_apaa_standing_red_baseline.py` · `scripts/apaa_standing_red_baseline.txt`, and any CI job invoking them
+- `pyproject.toml` — the `[project.optional-dependencies] apaa` extra (line 25), the
+  `apaa = "minions_core.apaa.cli:main"` console script (line 38), and the explanatory comments (lines 17–20, 35–36)
+- `.apaa/` — the runtime artifact directory at the Minions repo root. ⚠️ **Refined by IN-3:** `.apaa/` is
+  the artifact tree of an *audited* repo, and under integration Minions **is** an audited repo — so this is
+  **gitignored, not deleted as wiring**
+- `CLAUDE.md` §4a — the APAA Component → Driver Map row(s)
+- ⚠️ **302 files** across Minions mention `apaa` (code, config, docs, BMAD artifacts). The removal must
+  **partition** them: *wiring* (remove) vs *evidence and history* (supersede per RS-3). An
+  undifferentiated sweep would destroy the audit trail — which, on an assurance product, is the one
+  thing that must not happen.
+
+**Honest scoping note — RS-2 executes in a different repository.** The Minions decommission is real,
+enumerated work, but it lands in `d:/ProjectX/XAgents/XAgents/Minions`, not in this repo. It therefore
+cannot be verified by this repo's test suite or CI, and it is sequenced **after** the FR16/FR4 amendment
+ships in `argus/` (removing the old copy before the new one is correct would leave a window with no
+working verdict gate anywhere). Whether it becomes a story in *this* breakdown or a change request filed
+against the Minions backlog is a decision for the epic-design step.
+
+**What is already clean:** ArgusAgent has **no hard runtime dependency** on Minions. The single real
+import — `argus/audit/minions_llm_adapter.py:21` — is guarded (`try/except ImportError` →
+`MINIONS_CORE_AVAILABLE`), so the package installs and runs standalone today. RS-4 is stale prose, not
+broken coupling.
+
+### Integration Requirements (IN) — Argus consumed by Minions, 2026-08-03
+
+The other half of the migration. Minions consumes Argus **as a product**, never as vendored source.
+
+| IN | Requirement | Current state (verified) |
+|---|---|---|
+| **IN-0** | **Make `argus-agent` resolvable by Minions CI — the distribution must exist.** Publish to PyPI, to a private index, or (the honest interim) pin an explicit `git+https://github.com/Inan15/Agent-Argus.git@<tag>` VCS reference, and add the release workflow that produces it | ❌ **Open — and it BLOCKS IN-1.** ⚠️ **Assumption A1, falsified 2026-08-03:** ArgusAgent's `.github/workflows/` contains exactly one file, `audit-ci.yml` — **there is no release or publish workflow**, and `argus-agent` `0.1.0` is on no index. IN-1 as originally written depended on a distribution that does not exist |
+| **IN-1** | **Consume `argus-agent` as an external package.** Replace the `[project.optional-dependencies] apaa` extra (`pyproject.toml:25-33`) and the `apaa = "minions_core.apaa.cli:main"` console script (`:38`) with a dependency on the published `argus-agent` distribution, exposed as an **optional extra** (`minions[argus]`) | ❌ **Open.** Minions declares `dependencies = []` — a hard dependency would break that discipline, so the extra is the only correct shape. **Ships together with RS-2** |
+| **IN-2** | **Break the dependency cycle — hard prerequisite.** Once Minions depends on Argus, Argus must not depend on Minions. Retire the guarded `import minions_core.providers` at `argus/audit/minions_llm_adapter.py:21` in favour of the already-shipped `argus/audit/open_llm_adapter.py::OpenLLMAdapter`, making the edge strictly one-directional: **Minions → Argus** | ❌ **Open**, but cheap: the import is already `try/except ImportError` and the replacement adapter already exists. **Blocks IN-1** |
+| **IN-3** | **CI gate.** Minions CI invokes `argus audit .` as a headless gated step keyed to the exit-code wire contract (`0`/`2`/`3`/`1`), with `INSUFFICIENT_COVERAGE` (exit `3`) routed to **human review, never auto-proceed**. This is PRD Journeys 3 and 5 delivered against a real repo, and it retires `scripts/check_apaa_standing_red_baseline.py` + `tests/governance/test_apaa_standing_red_baseline_gate.py` | ❌ **Open.** Target surface: `.github/workflows/minions_core-ci.yml` (or `conformance-ci.yml`). **Depends on the FR16 amendment shipping first** — under the old table the gate would fire exit `2` on a repo with zero findings. 🚩 **Policy decision required BEFORE wiring (assumption A5, unsupported):** the amendment stops Minions being *falsely accused*; it does **not** make Minions pass. The 7.2 dogfood was row 4 (zero findings, critical clause unmet) → post-amendment `INSUFFICIENT_COVERAGE`, **exit `3`**, which still fails an unconfigured CI step by design. Land the gate **advisory / non-blocking first**, or blocking with explicit `--coverage-scope` / `--exclude-critical` tuning — decided up front, not discovered when CI goes red |
+| **IN-4** | **Platform capability registration** — register Argus as an audit capability so a Minions Flow Orchestrator can dispatch an audit (PRD Journey 5; the strategic question *"does Minions have an audit agent?"*). Seam: `minions_core/interop/a2a_capability_registry.py`. **Depth LOCKED 2026-08-03 (operator decision): descriptor only** — the orchestrator can *discover and dispatch* an out-of-process CLI capability; full Flow-Orchestrator workflow-step wiring and programmatic verdict consumption are **deferred**, not in this delta | ❌ **Open**, scope locked (see the constraint below) |
+| **IN-5** | **One coordinated migration.** RS-2 (remove vendored copy) + IN-1 (add external dep) land as a single change; IN-3 and IN-4 follow. Argus-side work (the FR16/FR4 amendment, IN-2) ships **before** any of it | ❌ **Open** — a sequencing constraint on epic design, not code |
+
+**🚨 Binding architectural constraint on IN-4.** The APAA architecture places APAA **downstream of the
+HTTP/A2A boundary**: *"a CLI/library, takes no A2A token, registers no FastAPI route (ADR #20 boundary
+spirit). No web surface in V1."* This is enforced today by the committed import-isolation gate
+(`argus.* ⊬ fastapi/uvicorn/starlette`). IN-4 must therefore register a **capability descriptor invoking
+Argus out-of-process** (CLI + exit code + `.apaa/` artifacts) — **not** mount Argus in-process behind a
+FastAPI route. Mounting it would break the import-isolation gate, the pure/impure boundary, and the
+headless-only classification in one move.
+
+**Why the cycle break (IN-2) is not optional.** Argus currently reaches *into* Minions for LLM dispatch
+while Minions is about to depend on Argus for auditing. Two repos importing each other cannot both be
+installed from a clean index, and it would make the audit tool a dependency of the thing it audits — an
+independence problem on an assurance product, not merely a packaging one.
+
+### Open deferred-work interaction
+
+No open entry in [deferred-work.md](deferred-work.md) sits in the amendment's code path. Two are
+**downstream consumers** of it: **DF-7-2-A** (human TP/FP precision adjudication over the real dogfood
+findings) and **DF-6-6-A** (≥80%-precision gate flip) both read the dogfood artifacts that DR-10 makes
+stale — the adjudication should run against re-derived artifacts, not pre-amendment ones. DF-2-3-B
+(persisting the computed `CriticalSubsystemSet`) is **closed** and its persisted shape is what DR-5's
+eligibility filter must keep honest.
+
+### UX Design Requirements
+
+**None.** APAA is headless by design (PRD `headless: true`, `skipSections: [ux_ui, visual_design,
+user_journeys]`); CLAUDE.md §3.7 forbids authoring one. The amendment's entire operator surface is the
+verdict artifact, the exit code, and the stderr human register shipped by the landed CR-2 work.
+
+## Delta Epic List
+
+**Two epics**, numbered to continue from the shipped Epic 7. **Sequencing: `8 → 9`.**
+**Both execute in the Argus repo.** All Minions-repo work is a handoff (see §Minions-Repo Handoff),
+per the operator scope decision of 2026-08-03.
+
+> **Subtraction pass applied 2026-08-03.** An earlier draft had five epics. Three removals were made and
+> are recorded here so the reasoning is not lost:
+> - **A standalone "Argus Stands Alone" epic was dissolved.** Its stated outcome is **already true**:
+>   `pyproject.toml` declares no Minions dependency (`pydantic`, `jsonschema`, `radon`, `httpx`,
+>   `tree-sitter`) and the single `minions_core` reference is already `try/except ImportError`-guarded, so
+>   `pip install argus-agent` from a clean index already works with no Minions present. What genuinely
+>   remained — a committed regression gate plus deleting a dead adapter branch — is **one story**, and it
+>   is Epic 9's first story because Epic 9 is the only thing it gates.
+> - **"A Record That Matches the Contract" was merged into Epic 8.** Keeping it separate would license
+>   shipping the amendment while the published dogfood proof still asserts a verdict the tool would no
+>   longer render. On an assurance product, evidence that contradicts the tool is the cardinal defect —
+>   closing Epic 8 must not be possible while it stands.
+> - **The bulk provenance-prose sweep (RS-4b) was deferred** out of the delta; only the package front
+>   door (RS-4a) is carried.
+
+### Epic 8: The Honest Verdict — no block without a finding · *Argus repo*
+
+An operator running `argus audit` on a repository where Argus found nothing wrong receives **"I did not
+examine enough to vouch"** (`INSUFFICIENT_COVERAGE`, exit `3`) instead of a verdict asserting a defect it
+never found — and the verdict discloses **which decision row fired** and over **what assessed population**.
+Critical-subsystem gates become satisfiable rather than permanently unreachable. **The amendment ships
+with its evidence:** the published proof artifacts are re-derived under the amended table, and integrators
+get a written migration note, so no Argus artifact contradicts the shipped contract.
+
+**Covers:** DR-1 … DR-11 *(DR-7 is verify-only — already landed)* + RS-4a — **FR16 + FR4 (amended)**
+**NFRs:** D1, D2, D3, P1, M2
+**Files:** `argus/verdict/verdict_gate.py`, `argus/ledger/critical_subsystems.py`,
+`argus/reports/plain_english.py` + `tests/test_plain_english.py` (DR-11), `argus/__init__.py`,
+the dogfood/report artifacts
+**Story ordering constraint:** DR-10 (the dogfood re-derivation — the one heavy, non-code item) is the
+**last** story, so if it slips it slips *visibly* rather than silently.
+**Standalone:** yes — requires no later epic.
+
+### Epic 9: Make Argus Consumable — stand alone, then ship a release · *Argus repo*
+
+Argus has no import path into the thing it audits, and exists as an **installable, versioned artifact**
+another repository can depend on. This is everything the Argus repo owes the integration; the Minions-side
+adoption is a handoff (below), not an epic here.
+
+**Covers:** IN-2 + RS-1, IN-0
+**Depends on:** Epic 8 (a correct package to release).
+**Story 9.1 — break the cycle (IN-2 / RS-1):** retire the guarded `import minions_core.providers` in
+favour of the shipped `OpenLLMAdapter`, and add a committed `argus.* ⊬ minions_core` gate mirroring the
+existing `⊬ fastapi/uvicorn/starlette` pattern. Argus already installs standalone; this **keeps** it that
+way once Minions depends on it.
+**Story 9.2 — ship a resolvable distribution (IN-0):** there is no release/publish workflow in ArgusAgent
+today (assumption A1, falsified), so nothing exists for Minions to depend on.
+
+> **Scope decision, 2026-08-03 (operator).** The Minions-repo execution work — **RS-2, RS-3, IN-1, IN-3,
+> IN-4** — is **removed from this breakdown**. It is prompted and executed in the Minions repository, and
+> ArgusAgent's specs carry only work ArgusAgent's own CI can verify. The full requirement detail and the
+> enumerated removal surface are preserved in **§Minions-Repo Handoff** below, to be filed as a change
+> request against the Minions backlog. The integration remains **planned in full** — it is relocated, not
+> dropped.
+
+### Delta Requirements Coverage Map
+
+| Requirement | Epic | Capability |
+|---|---|---|
+| DR-1 | Epic 8 | Binding 4-row decision table, findings before coverage |
+| DR-2 | Epic 8 | Row 4 — zero findings + unmet gate → `INSUFFICIENT_COVERAGE`, exit `3` |
+| DR-3 | Epic 8 | Verdict discloses the decision row + assessed population |
+| DR-4 | Epic 8 | `VERDICT_SCHEMA_VERSION` `"1"`→`"2"`; prior verdicts not rewritten |
+| DR-5 | Epic 8 | Heuristic critical-set eligibility filter |
+| DR-6 | Epic 8 | Operator `--critical-subsystem` designation exempt |
+| DR-7 | Epic 8 | Prefix/glob `--exclude-critical` — **verify-only** (already landed) |
+| DR-8 | Epic 8 | Integrator migration / release note |
+| DR-9 | Epic 8 | Schema bump is the only intentional byte change |
+| DR-10 | Epic 8 | Re-derive the stale dogfood + verdict-report artifacts *(last story)* |
+| DR-11 | Epic 8 | Reconcile **both** report surfaces — `plain_english.py` (unreachable branch) and `generator.py` (critical-paths section) |
+| RS-1 | Epic 9 | `argus/` is the only live tree — enforced by a committed gate |
+| RS-2 | **Minions handoff** | Remove APAA wiring from Minions |
+| RS-3 | **Minions handoff** | Supersede, don't erase, the historical record |
+| RS-4a | Epic 8 | Package front door (`argus/__init__.py:37`) |
+| RS-4b | — | **Deferred out of the delta**; filed as a `deferred-work.md` entry |
+| IN-0 | Epic 9 | Publish/resolve `argus-agent` — **blocks IN-1** *(story 9.2)* |
+| IN-1 | **Minions handoff** | `minions[argus]` external dependency |
+| IN-2 | Epic 9 | Break the dependency cycle *(story 9.1)* |
+| IN-3 | **Minions handoff** | CI gate on the Argus exit code |
+| IN-4 | **Minions handoff** | Capability registration (descriptor only) |
+| IN-5 | — | Sequencing constraint: `8 → 9` here, then the Minions handoff |
+
+**Every delta requirement is accounted for**: all 11 DRs + RS-1 + RS-4a + IN-0 + IN-2 map to Epics 8–9
+here; RS-2, RS-3, IN-1, IN-3, IN-4 are relocated to the Minions-repo handoff with full detail preserved;
+RS-4b is deferred with a recorded reason. No epic depends on a later epic to function.
+
+### Assumption audit — outcomes carried into the plan (2026-08-03)
+
+| # | Assumption | Outcome | Where it landed |
+|---|---|---|---|
+| **A1** | `argus-agent` is published where Minions CI can resolve it | ❌ **Falsified** — only `audit-ci.yml` exists; no release workflow, no index presence | **New IN-0**, blocking IN-1 |
+| **A9** | Nothing downstream is coupled to the old decision-table ordering | ❌ **Falsified** — `plain_english.py`'s "NOT VOUCHED" branch becomes unreachable | **New DR-11** |
+| **A5** | Minions can adopt the CI gate as blocking on day one | ⚠️ **Unsupported** — Minions lands on row 4 → exit `3`, which still fails CI | Policy flag on IN-3 / handoff **H3** |
+| **A4** | No production Minions code imports `minions_core.apaa` | ✅ **Confirmed** — sole importer is a test already on the removal list | De-risk note on RS-2 |
+| **A8** | The schema bump preserves read-back of pre-amendment verdicts | ⚠️ Conditional — `extra="forbid"` demands a default on the new field | Binding AC on DR-3 |
+| **A3** | The 2026-06-18 placement decision exists and can be superseded | ✅ Verified present in Minions | RS-3 (unchanged) |
+| **A2** | DR-10's dogfood re-derivation is feasible and affordable | ⚠️ Untested — a cheaper analytic re-derivation may suffice (the row-4 outcome is already known) | Flagged for story design |
+| **A7** | `OpenLLMAdapter` is a drop-in for the `minions_core` provider path | ⚠️ Untested — `tests/test_minions_llm_adapter.py` exists and may pin the old behaviour | Flagged for Epic 9 story A |
+
+---
+
+## Epic 8: The Honest Verdict — no block without a finding · *Argus repo*
+
+An operator running `argus audit` on a repository where Argus found nothing wrong receives
+`INSUFFICIENT_COVERAGE` (exit `3`) instead of a verdict asserting a defect it never found, can see **which
+decision row fired** and over what population, and finds **no published Argus artifact contradicting the
+shipped contract**. Critical-subsystem gates become satisfiable.
+
+**Covers:** DR-1 … DR-11 *(DR-7 verify-only)* + RS-4a · **FR16 + FR4 (amended)** · NFR-D1/D2/D3, P1, M2
+**Dependency flow:** 8.1 and 8.2 are each standalone; 8.3–8.5 build only on earlier stories.
+
+### Story 8.1: Findings before coverage — the binding decision table
+
+As an operator running `argus audit`,
+I want a blocking verdict only when Argus actually found something,
+So that a coverage shortfall is never reported to my team as a defect.
+
+**Acceptance Criteria:**
+
+**Given** a ledger with ≥1 verdict-blocking finding at or above the 20% floor
+**When** the verdict is evaluated
+**Then** it is `NOT_READY_FOR_RELEASE` / exit `2` — findings are evaluated *before* coverage (row 2, DR-1).
+
+**Given** a ledger with **zero** blocking findings and an unmet coverage or critical-subsystem gate (ratio ≥20% but <60%, or a critical path not deep)
+**When** the verdict is evaluated
+**Then** it is `INSUFFICIENT_COVERAGE` / exit `3`, never `NOT_READY_FOR_RELEASE` (row 4, DR-2)
+**And** this is demonstrated **RED-first** against the current three-row implementation.
+
+**Given** `assessed_total == 0` or `assessed_ratio < 1/5`
+**When** the verdict is evaluated
+**Then** it is `INSUFFICIENT_COVERAGE` / exit `3` — row 1 keeps precedence over the findings row.
+
+**Given** a ledger **below the 20% floor that also carries ≥1 blocking finding**
+**When** the verdict is evaluated
+**Then** it is `INSUFFICIENT_COVERAGE`, **never** `NOT_READY_FOR_RELEASE` — the LOCKED *floor-vs-blocking precedence = FLOOR WINS* invariant survives the reorder.
+*(Boundary B2: this story's own headline — "findings before coverage" — reads as "put the blocking row first", which would break this. It is the single most likely defect the reorder can introduce.)*
+
+**Given** a ledger where **every coverage gate passes** — ratio ≥ 60%, all critical subsystems deep — **and exactly one blocking finding exists**
+**When** the verdict is evaluated
+**Then** it is `NOT_READY_FOR_RELEASE` / exit `2` (row 2) — the case a healthy repo actually hits.
+
+**Given** a ledger at **exactly** `assessed_ratio == 1/5` with zero blocking findings and an unmet gate
+**When** the verdict is evaluated
+**Then** the verdict is `INSUFFICIENT_COVERAGE` and the **disclosed row is 4, not 1** — the floor is strict (`<`), so exactly-20% is assessable. Rows 1 and 4 are otherwise indistinguishable by verdict and exit code, which is precisely why the row must be disclosed (boundary B4).
+
+**Given** the boundary constants
+**When** the decision table is reordered
+**Then** they are **unchanged**: `RELEASE_READY` at `assessed_ratio >= 3/5` (**inclusive**) and the floor at `< 1/5` (**strict**) — a reorder is exactly when an off-by-one creeps in.
+
+**Given** any evaluated verdict
+**When** the artifact is serialized
+**Then** it discloses **which row fired** and the **assessed population** (DR-3)
+**And** the new field carries a **default**, so a pre-amendment persisted verdict still round-trips under `extra="forbid"` (assumption A8).
+
+**Given** the amendment
+**Then** `VERDICT_SCHEMA_VERSION` is `"2"`, and verdicts already persisted under `.apaa/` are **not rewritten** and keep their `"1"` stamp (DR-4).
+
+**Given** the disclosed row must reach a consumer
+**When** the run completes
+**Then** the row surfaces **per the LOCKED channel decision below** — explicitly on the verdict artifact, in prose on the stderr human register (Story 8.3), and **not** as a new field on the stdout machine summary line, which stays byte-identical.
+
+> **🔒 CHANNEL DECISION — LOCKED 2026-08-03 (operator).**
+> **Artifact: explicit field.** Mandated by FR16 (*"the verdict must disclose which row fired"*), and free
+> of compatibility cost because `schema_version` is bumping anyway (DR-4).
+> **stdout summary line: UNCHANGED.** The row is **already fully derivable** from what the line prints —
+> `verdict=<TOKEN> deep_ratio=<num/den> blocking_findings=<n>` (+ `assessed_deep_ratio`/`scope` when
+> narrowed): `INSUFFICIENT_COVERAGE` with assessed ratio `< 1/5` ⇒ row 1; `NOT_READY_FOR_RELEASE` ⇒ row 2
+> (the only path to it post-amendment); `RELEASE_READY` ⇒ row 3 (likewise); `INSUFFICIENT_COVERAGE` with
+> assessed ratio `>= 1/5` ⇒ row 4. Adding a field would be a **second** wire-contract change stacked on
+> the exit-code shift, for information already present, against a line `argus/cli.py` documents as
+> positionally parsed.
+> **Precedent:** the addendum rejected a `COVERAGE_GATE_UNMET` enum value on exactly this reasoning —
+> *"the distinction is already recoverable from the disclosed ratio and assessed population."* Deciding
+> otherwise here would contradict a decision taken the same day.
+> **Accepted residual risk:** a consumer that derives the row reimplements a slice of the decision
+> table — the fragility that caused this bug. Mitigated by the artifact carrying the row
+> authoritatively, so any consumer needing certainty reads it there rather than re-deriving.
+> *(Corrects an earlier draft of this AC, which claimed a stdout-parsing consumer could not distinguish
+> row 1 from row 4. It can — from the ratio the line already carries.)*
+
+**Given** two evaluations over the same synthetic ledger
+**When** compared byte-for-byte
+**Then** they are identical, and the schema bump plus the new field are the **only** intentional content-hash change (DR-9)
+**And** the gate remains pure — zero LLM tokens, no I/O, no clock (NFR-D2).
+
+### Story 8.2: Critical-subsystem gates an operator can actually satisfy
+
+As an operator,
+I want the critical-subsystem gate to contain only files Argus can grade `audited_deep`,
+So that the gate is a real signal rather than one I learn to ignore.
+
+**Acceptance Criteria:**
+
+**Given** test files that `assess_criticality` flags CRITICAL from security tokens in their content
+**When** the **heuristic** critical set is derived
+**Then** they are excluded — a test file is `audited_shallow` by construction (DR-5).
+
+**Given** a clean-parsed module with zero definitions (`__init__.py`, constants-only, re-export)
+**When** the heuristic set is derived
+**Then** it is excluded — nothing exists in it to ground a claim against (DR-5).
+
+**Given** an operator passes `--critical-subsystem` for a test file, a zero-definition module, **or a path matching nothing**
+**When** the set is derived
+**Then** the designation is honoured and can still withhold `RELEASE_READY` — operator designation is exempt from the eligibility filter (DR-6).
+
+**Given** `--exclude-critical` with an exact path, a directory prefix, and a glob
+**When** applied
+**Then** all three match via `fnmatchcase` (case-sensitive, host-independent) — a regression pin on already-landed behaviour, no new implementation (DR-7).
+
+**Given** a repository whose critical hits were **all** test files, so the eligibility filter empties the critical set
+**When** the verdict is computed
+**Then** the **empty critical set is disclosed**, and it is never reported as "all critical subsystems examined deeply" — a vacuously-satisfied gate must be visible, since a silent vacuous pass is the exact defect class this product exists to name (boundary B3).
+
+**Given** a path that is **both** operator-designated (`--critical-subsystem`) **and** operator-excluded (`--exclude-critical`)
+**When** the set is derived
+**Then** a single explicit precedence order governs — eligibility filter vs designation vs exclusion — and it is pinned by test rather than left to implementation order (boundary B5).
+
+**Given** a repository where a genuinely security-relevant module is `audited_shallow` and **not** operator-designated — for example a clean-parsed zero-definition `__init__.py` that re-exports a security boundary
+**When** the eligibility filter removes it from the heuristic critical set
+**Then** a defect-bearing case proves the loosened gate still **withholds** `RELEASE_READY` where it should, and the residual exposure is documented
+*(Inversion F1 — the **false-green counterweight**. Every other guard in this delta points at "don't over-block", but the net effect of DR-5 plus the already-landed `--coverage-scope application` default is that `RELEASE_READY` becomes **easier** to reach. The PRD names **zero false-`RELEASE_READY`** as the fatal error, and the existing clean-control cartridges only guard the false-**red** direction. Without this AC the delta loosens the gate twice with nothing testing the loosening.)*
+
+**Given** ArgusAgent audited against itself with defaults
+**When** the heuristic critical set is derived
+**Then** the previously unreachable blockers (51 test files + 10 `__init__.py`) are gone — the measured 62 → ~0.
+
+### Story 8.3: The plain-English report stops describing an impossible state
+
+As an operator reading the human output,
+I want the report to describe only states the gate can actually produce,
+So that I am not shown a branch the tool can no longer reach.
+
+**Acceptance Criteria:**
+
+**Given** a `NOT_READY_FOR_RELEASE` verdict
+**When** it is rendered
+**Then** it reads "BLOCKED — N verdict-blocking finding(s)" with **N ≥ 1 always** — the zero-finding blocking case is unreachable after Story 8.1.
+
+**Given** `argus/reports/plain_english.py`
+**When** its branches are audited
+**Then** the trailing "NOT VOUCHED" else-branch is either **removed as unreachable** or retained **with a proof of reachability** — it is not left as untested dead code (DR-11).
+
+**Given** `tests/test_plain_english.py`
+**When** the suite runs
+**Then** no test asserts a state the amended gate cannot produce; cases pinning the zero-finding/blocking split are re-pointed to `INSUFFICIENT_COVERAGE`.
+
+**Given** two `INSUFFICIENT_COVERAGE` verdicts — one from row 1 (below the floor) and one from row 4 (gate unmet, nothing found)
+**When** each is rendered for a human
+**Then** they read **differently**: *"I examined too little to say anything"* versus *"I examined plenty and found nothing, but a coverage or critical-subsystem gate was not met."* Both carry exit `3` and the same enum, so the human register is the **only** surface where an operator can tell which action is called for (boundary B4).
+
+**Given** `argus/reports/generator.py` — the **second** verdict-rendering surface, with its own FR16 reasoning
+**When** Story 8.2's eligibility filter empties the critical set
+**Then** its *"critical paths that withheld `RELEASE_READY`"* section (`:104`, `:122`) renders correctly for an **empty** set, and its *"each must reach `audited_deep`, or be excluded"* guidance no longer instructs an operator to act on paths the filter now removes automatically
+**And** its independent branches on the verdict enum, deep-ratio threshold and `blocking_finding_count` (`:62-79`, `:304`) agree with the amended table.
+
+**Given** any run
+**When** the machine summary line is emitted
+**Then** it is **byte-identical to the pre-amendment format** — `verdict=<TOKEN> deep_ratio=<num/den> blocking_findings=<n>` (+ `assessed_deep_ratio`/`scope`/`held_out` when narrowed) — carrying **no** new decision-row field, per the Story 8.1 LOCKED channel decision
+**And** a golden test pins the format so the row is never appended to stdout by drift
+**And** the existing determinism and secret-safety properties of both report surfaces remain pinned.
+
+### Story 8.4: Tell integrators what changed
+
+As a CI integrator,
+I want a written statement of the exit-code behaviour change,
+So that I can tell whether my pipeline needs to change (it likely does not).
+
+**Acceptance Criteria:**
+
+**Given** the amendment has shipped
+**When** an integrator reads the release note
+**Then** it states that some runs which exited `2` now exit `3`; that a step branching only on `0` vs non-zero is unaffected; and that a step distinguishing `2` from `3` now receives the correct one **with no consumer code change** (DR-8).
+
+**Given** an artifact consumer that validates `schema_version`
+**When** it reads the note
+**Then** the note also states the **`VERDICT_SCHEMA_VERSION` `"1"` → `"2"` bump** and the new disclosed-row field — a consumer-visible change the exit-code framing alone conceals (boundary B8).
+
+**Given** the `--coverage-scope application` default flip landed earlier without a published note
+**Then** the same release note carries it — a pipeline relying on the whole-repository denominator must pass `--coverage-scope repository` explicitly.
+
+**Given** `argus/__init__.py`
+**When** read
+**Then** it no longer claims the package lives at `minions_core/argus/` (RS-4a).
+
+**Given** the bulk provenance sweep is out of scope
+**Then** RS-4b is filed in `deferred-work.md` with the six mandatory fields and this story as its `origin_story`.
+
+### Story 8.5: Re-derive the proof so the evidence matches the tool
+
+As the XAgents platform owner,
+I want the published proof artifacts to agree with the shipped contract,
+So that Argus is not itself over-claiming — the defect it exists to detect.
+
+> ⚠️ **Precondition — this story starts on a red test file.** `tests/test_dogfood_plan.py` carries **two
+> pre-existing failures**, confirmed by running it: `test_committed_partition_plan_artifact_exists_and_matches_live_derivation`
+> and `test_budget_reuses_the_31_accountant_no_fork`. They were present on the clean tree at `ae5f00c`
+> and are **unrelated to this delta** — but their subject is *the dogfood artifacts this story touches*
+> (committed plan stale vs live derivation; `431` absent from the committed budget artifact). The story
+> must state explicitly whether it **fixes** them or **leaves** them, and must not absorb them silently
+> into the delta's result.
+
+**Acceptance Criteria:**
+
+**Given** the Story 7.2 dogfood recorded `NOT_READY_FOR_RELEASE` / exit `2` at deep-% `13/15` with **0** verdict-eligible findings
+**When** it is re-derived under **both** the amended decision table (8.1) **and** the amended critical-set eligibility (8.2)
+**Then** the artifact records **whatever outcome honestly results**, together with the row that fired and the inputs it was computed from (DR-10).
+
+> ⚠️ **This AC deliberately does NOT pin an expected verdict** (boundary B1). Story 8.2 changes the
+> inputs: the dogfood's *only* blocker was the critical-subsystem clause, and DR-5 exists to clear
+> unreachable critical paths. At 87% deep with zero blocking findings, clearing that clause moves the
+> run to **row 3 → `RELEASE_READY` / exit `0`** — not row 4 as an earlier draft of this story asserted.
+> Pinning a predetermined verdict on an assurance tool's own proof artifact invites the story to be
+> "made to pass," which is the failure mode this product exists to name.
+
+**Given** the re-derivation lands on `RELEASE_READY`
+**When** the artifact is published
+**Then** it still carries the hard `grade: demo-heuristic-only` flag and is **not** presented as externalization evidence — a green result from a Tier-A heuristic run is reportable, never a clearance.
+
+**Given** re-derivation may be analytic rather than a fresh run
+**When** the method is chosen
+**Then** the artifact **discloses which** — a re-run cites its commit pin and budget; an analytic re-derivation names the inputs it folded and states plainly that **no new audit was executed**.
+
+**Given** `_bmad-output/reports/final-verdict.md` and `_bmad-output/audit-reports/final-verdict.md`
+**When** inspected
+**Then** both agree with the amended contract.
+
+**Given** DF-6-6-A and DF-7-2-A depend on these artifacts
+**Then** an **append-only** note records that the precision adjudication must run against re-derived artifacts — the original entries are not rewritten (§3.4 evidence immutability).
+
+**Given** the ≥80%-precision externalization gate
+**Then** it stays **PROVISIONAL** — this story does not flip it.
+
+**Given** the operator command that triggered this entire amendment — `argus audit .` on ArgusAgent, which returned `verdict=NOT_READY_FOR_RELEASE deep_ratio=11/28 blocking_findings=0`
+**When** that exact command is re-run after Stories 8.1–8.4
+**Then** the reported symptom — **a blocking verdict carrying zero findings** — is **not reproducible**, and the actual result is recorded
+*(Inversion F5 — this is the acceptance test for the delta as a whole. Without it every AC could pass while the originally-reported behaviour survives through a path nobody modelled.)*
+
+---
+
+## Epic 9: Make Argus Consumable — stand alone, then ship a release · *Argus repo*
+
+Argus has no import path into the thing it audits, and exists as an installable, versioned artifact
+another repository can depend on. This is everything the **Argus repo** owes the Minions integration.
+
+**Covers:** IN-2 + RS-1 (9.1), IN-0 (9.2) · **Depends on Epic 8** (a correct package to release)
+**Dependency flow:** 9.1 is standalone; 9.2 builds on 9.1 so the released artifact is already cycle-free.
+
+### Story 9.1: Argus stops importing the thing it audits
+
+As the Argus maintainer,
+I want Argus to have no import path into Minions,
+So that Minions can depend on Argus without creating a cycle between the auditor and the audited.
+
+**Acceptance Criteria:**
+
+**Given** `argus/audit/minions_llm_adapter.py`
+**When** the module is imported
+**Then** it references `minions_core` in no form, and the dispatch path routes through the shipped `argus/audit/open_llm_adapter.py::OpenLLMAdapter` (IN-2).
+
+**Given** `tests/test_minions_llm_adapter.py` may pin the old behaviour (assumption A7, untested)
+**When** the import is retired
+**Then** each affected test is re-pointed at the `OpenLLMAdapter` path or removed **with a recorded reason** — no test is left asserting a code path that no longer exists.
+
+**Given** a committed gate test
+**When** `argus.*` is imported in a fresh interpreter
+**Then** `minions_core` is absent from `sys.modules` — mirroring the existing `tests/test_no_web_imports.py` pattern (RS-1).
+
+**Given** a clean environment with Minions **not** installed
+**When** `argus audit` runs against a fixture repo
+**Then** it completes and emits a verdict — standalone operation is **proven**, not assumed.
+
+**Given** `MinionsLLMAdapter` no longer touches Minions
+**Then** it is renamed additively (keeping an alias) **or** the retained name is justified in its docstring — a class named for a dependency it no longer has is a future misreading.
+
+### Story 9.2: Ship a distribution another repo can actually resolve
+
+As a downstream integrator,
+I want `argus-agent` to exist as an installable, versioned artifact,
+So that I can depend on it instead of vendoring a copy that drifts.
+
+**Acceptance Criteria:**
+
+**Given** ArgusAgent has no release workflow today — only `audit-ci.yml` (assumption A1, falsified)
+**When** this story completes
+**Then** a release workflow produces an installable artifact for a tagged version, and that tag is recorded.
+
+**Given** a consumer's CI must resolve the artifact
+**When** the distribution target is chosen — PyPI, a private index, or a `git+https://…@<tag>` VCS pin
+**Then** the choice is recorded **with its access requirements**; a private index or VCS pin must state how a consumer's CI authenticates, and a VCS pin is explicitly marked **interim** with the condition for moving to an index.
+
+**Given** `argus-agent` is at version `0.1.0`
+**Then** the released version is **pinned and published**, so a consumer can cite an exact version — no floating dependency on an unreleased tree.
+
+**Given** the release artifact
+**When** installed into a clean environment
+**Then** `argus --help` and a fixture audit both succeed — the artifact is proven, not merely built.
+
+**Given** the release edge cases
+**When** a tag or version already exists, a re-tag is attempted, or the working tree is dirty at build time
+**Then** the workflow behaves explicitly — refusing a dirty-tree build and refusing a silent overwrite of an existing version — rather than producing an artifact whose provenance cannot be established (boundary B10).
+
+---
+
+## Minions-Repo Handoff — not epics in this breakdown
+
+> **Operator scope decision, 2026-08-03.** RS-2, RS-3, IN-1, IN-3 and IN-4 execute in the **Minions
+> repository** and are prompted there. They are recorded here in full so nothing is lost, and are to be
+> **filed as a change request against the Minions backlog** — they are *not* stories in ArgusAgent's
+> sprint, and ArgusAgent's CI cannot verify them. The integration remains planned in full; it is
+> relocated, not dropped.
+
+**Prerequisites before any of this can start:** Epic 8 (correct verdict contract) and Epic 9 (a
+cycle-free, published `argus-agent`).
+
+> 🚩 **H0 — FILING THIS HANDOFF IS ITSELF AN UNOWNED ACTION** (inversion F3). H1–H4 describe work in
+> another repository; **no story in this breakdown owns filing them**, and no owner is named. A handoff
+> nobody files is a handoff that does not exist — this is the single most likely way the integration
+> quietly never happens. Before this delta is considered planned, one of the following must be true:
+> **(a)** a named owner files H1–H4 against the Minions backlog with a link back to this section, or
+> **(b)** it is explicitly recorded that filing is the operator's own step, taken outside this workflow.
+> Silence is not an option — it is how this becomes a document nobody actions.
+
+### H1 — Swap the vendored fork for the package *(RS-2 + IN-1, one change)*
+
+Removal surface, verified by scan 2026-08-03:
+`minions_core/apaa/` · the stale `build/lib/minions_core/apaa/` copy · `tests/apaa/` ·
+`tests/security/test_apaa_secret_containment.py` · `tests/governance/test_apaa_standing_red_baseline_gate.py` ·
+`scripts/check_apaa_standing_red_baseline.py` + `scripts/apaa_standing_red_baseline.txt` ·
+`pyproject.toml` lines 17–20, 25–33, 35–38 (the `apaa` extra, the `apaa` console script, their comments).
+
+- The **same** change adds an optional `argus` extra depending on the Story 9.2 pinned `argus-agent`.
+  Minions declares `dependencies = []` — the dependency must be an **extra**, never a base dependency.
+- **Safe to execute:** no production Minions module imports `minions_core.apaa` (assumption A4, verified —
+  the sole importer outside the package and `tests/apaa/` is `tests/security/test_apaa_secret_containment.py`,
+  itself on the removal list).
+- `.apaa/` at the Minions root is **gitignored, not deleted** — under integration Minions is an audited
+  repo and `.apaa/` is its artifact tree. ⚠️ **If it is currently git-tracked, `.gitignore` alone does
+  nothing** — it needs `git rm --cached` as well, or the AC silently fails to achieve its stated outcome
+  (boundary B9).
+- CI jobs referencing removed scripts/tests are cleaned in the same change — green on landing.
+
+### H2 — Supersede the record, don't erase it *(RS-3)*
+
+- `_bmad-output/planning-artifacts/decisions/2026-06-18-apaa-placement-under-minions-core.md` gains a
+  forward pointer to Agent-Argus + the superseding date; the original text is **not rewritten**
+  (§3.4 evidence immutability).
+- `_bmad-output/design-artifacts/APAA/` and `_bmad-output/implementation-artifacts/25-13-apaa-standing-red-disposition.md`
+  are retained with a superseded marker — never deleted.
+- ~302 files mention `apaa`; the sweep must **partition** them into *wiring* (removed in H1) and
+  *evidence* (marked, retained), recording which rule applied to each.
+- `CLAUDE.md` §4a Component → Driver Map: the APAA row **points at the external Argus product** rather
+  than being silently deleted.
+
+### H3 — CI gate on the Argus exit code *(IN-3)*
+
+Minions CI invokes `argus audit .` as a headless gated step keyed to the wire contract (`0`/`2`/`3`/`1`),
+with exit `3` routed to human review and never auto-proceed (PRD Journeys 3 and 5). Retires
+`scripts/check_apaa_standing_red_baseline.py`. Target: `.github/workflows/minions_core-ci.yml`.
+
+🚩 **Policy decision required before wiring (assumption A5, unsupported):** the amendment stops Minions
+being *falsely accused*; it does **not** make Minions pass. The 7.2 dogfood was row 4 — zero findings,
+critical clause unmet — so post-amendment Minions lands on `INSUFFICIENT_COVERAGE`, **exit `3`**, which
+still fails an unconfigured CI step by design. Land the gate **advisory / non-blocking first**, or
+blocking with explicit `--coverage-scope` / `--exclude-critical` tuning. Decide up front, not when CI
+goes red.
+
+### H4 — Register Argus as an audit capability *(IN-4, descriptor-only)*
+
+Register Argus in `minions_core/interop/a2a_capability_registry.py` as a **discoverable, dispatchable
+out-of-process** audit capability, so a Flow Orchestrator can dispatch an audit — answering *"does Minions
+have an audit agent?"* with a running integration rather than a vendored copy.
+
+🚨 **Binding architectural constraint.** APAA is **downstream of the HTTP/A2A boundary**: *a CLI/library,
+takes no A2A token, registers no FastAPI route* (ADR #20). The registration must invoke Argus
+**out-of-process** (CLI + exit code + `.apaa/` artifacts) and must **not** mount it behind a FastAPI
+route — that would break the `argus.* ⊬ fastapi` import-isolation gate, the pure/impure boundary, and the
+headless-only classification in one move. Full Flow-Orchestrator workflow-step wiring and programmatic
+verdict consumption are **deferred** (depth LOCKED descriptor-only, 2026-08-03).

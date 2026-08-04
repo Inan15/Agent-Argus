@@ -80,12 +80,19 @@ documentCounts:
   brainstorming: 1
   projectDocs: 2
 workflowType: 'prd'
+updated: 2026-08-03
+amendments:
+  - date: 2026-08-03
+    scope: 'FR16 + FR4 (contract change) — verdict decision table reordered so findings are evaluated before coverage; INSUFFICIENT_COVERAGE widened to cover a zero-findings unmet gate; critical-set eligibility predicate added'
+    signal: _bmad-output/design-artifacts/ArgusAgent/sprint-change-proposal-2026-08-03.md
+    approvedBy: Varin
+    sections: ['Technical Success (coverage gates enforced)', 'Verdict vocabulary (canonical)', 'FR16', 'FR4']
 ---
 
 # Product Requirements Document - APAA (AI Project Assurance Audit)
 
 **Author:** XAgent007
-**Date:** 2026-06-17
+**Date:** 2026-06-17 · **Amended:** 2026-08-03 (FR16 / FR4 — see frontmatter `amendments` and `addendum.md`)
 
 ## Executive Summary
 
@@ -137,7 +144,7 @@ The V1 bar is deliberately an **evidence bar, not a usage bar** — success is w
 
 ### Technical Success
 - **Verdict is a pure function of the ledger** — unit-tested vs synthetic ledgers, **0 LLM tokens**.
-- **Coverage gates enforced:** `RELEASE_READY` requires **≥60% `audited_deep` + all critical subsystems `audited_deep` + 0 blocking findings**; `inferred` can never satisfy a gate; **below 20% coverage APAA emits `INSUFFICIENT_COVERAGE` ("not assessed") — never a default `NOT_READY`** (low coverage is APAA's limitation to report, not the repo's failure to bear).
+- **Coverage gates enforced:** `RELEASE_READY` requires **≥60% `audited_deep` + all critical subsystems `audited_deep` + 0 blocking findings**; `inferred` can never satisfy a gate; **an unmet coverage gate emits `INSUFFICIENT_COVERAGE` ("not assessed") — never a default `NOT_READY`** — whether coverage fell below the 20% floor or merely short of the 60% / critical-subsystem bar with nothing found (low coverage is APAA's limitation to report, not the repo's failure to bear). `NOT_READY_FOR_RELEASE` is reserved for **≥1 verdict-blocking finding**.
 - **Reproducible verdict** via **local content-addressed memoization** of recorded findings (cache key = content-hash + model checkpoint + APAA version → a re-run returns the *recorded* result). Content-hashing *addresses* artifacts; memoization *reproduces* them.
 - **Self-audit green in CI:** V1 cartridges (vacuous test, hardcoded secret, orphan function — 3 = full V1 / Tier B; the cut-order floor is 2) detected vs golden keys; integrity lint passes; secrets redacted before storage.
 - **Honest degradation:** budget ceiling halts → marks `skipped` → downgrades → reports truthfully; tool failure becomes a *finding*, never a crash.
@@ -380,7 +387,10 @@ Exact **team headcount**, the **budget-ceiling `$X`**, and **N** for the validat
 - **FR1:** An operator can submit a repository at a pinned commit for audit through a headless invocation.
 - **FR2:** APAA can detect the repository's technology stack and available toolchain without operator configuration.
 - **FR3:** APAA can partition the repository into bounded audit units within a declared budget.
-- **FR4:** APAA can identify critical subsystems (and an operator can designate them) so coverage gates can require them to be examined deeply.
+- **FR4:** APAA can identify critical subsystems (and an operator can designate them) so coverage gates can require them to be examined deeply. **A file APAA can never grade `audited_deep` is ineligible for the heuristically-derived critical set** — a gate no run can satisfy is not a gate, and an unsatisfiable one trains operators to ignore every gate. *(Amended 2026-08-03.)*
+  - **Eligibility (heuristic set):** exclude files that are `audited_shallow` by construction — test files (which are the *subject* of the vacuous-test pass, never a target of deep grounding) and clean-parsed zero-definition modules.
+  - **Operator designation is exempt.** An explicit `--critical-subsystem` designation keeps its conservative behaviour, including for a path that matches nothing: a human saying "this matters" must still be able to withhold `RELEASE_READY`.
+  - An operator can exclude a subtree from the critical set by prefix, not only by exact path.
 
 ### Coverage Ledger & Grounded Evidence
 - **FR5:** APAA can record every file's audit depth in a fixed-enum coverage ledger (`audited_deep` / `audited_shallow` / `tool_scanned_only` / `inferred` / `skipped`).
@@ -397,10 +407,21 @@ Exact **team headcount**, the **budget-ceiling `$X`**, and **N** for the validat
 - **FR14:** APAA can convert a tool failure or unestablishable-traceability condition into a finding rather than a crash.
 
 ### Release-Readiness Verdict
-> **Verdict vocabulary (canonical).** The negative-assurance ladder runs `RELEASE_READY` → … → `NOT_READY_FOR_RELEASE`; **`BLOCKED` is the demo shorthand for a blocking (`NOT_READY`) outcome** — the two names denote one concept. **`INSUFFICIENT_COVERAGE`** is a distinct *not-assessed* state (coverage below the 20% floor), **not** a blocking verdict. Downstream artifacts use this vocabulary.
+> **Verdict vocabulary (canonical).** The negative-assurance ladder runs `RELEASE_READY` → … → `NOT_READY_FOR_RELEASE`; **`BLOCKED` is the demo shorthand for a blocking (`NOT_READY`) outcome** — the two names denote one concept, and it asserts exactly one thing: **APAA found something**. **`INSUFFICIENT_COVERAGE`** is a distinct *not-assessed* state — "I did not examine enough to vouch" — and is **not** a blocking verdict. It is reached two ways: coverage below the 20% floor, **or** an unmet coverage / critical-subsystem gate with **zero blocking findings** (amended 2026-08-03). The two states are never interchangeable: a verdict that asserts a defect APAA did not find is a false accusation, the failure mode cross-cutting concern #6 exists to prevent. Downstream artifacts use this vocabulary.
 
 - **FR15:** APAA can compute a release-readiness verdict as a pure function of the coverage ledger.
-- **FR16:** APAA can emit a verdict only when coverage gates are met (≥60% deep + all critical subsystems deep + 0 blocking findings), and emit `INSUFFICIENT_COVERAGE` below the 20% floor — never a default block.
+- **FR16:** APAA can emit `RELEASE_READY` only when coverage gates are met (≥60% deep + all critical subsystems deep + 0 blocking findings), can emit a blocking verdict **only on the strength of a finding it actually made**, and reports every other outcome as `INSUFFICIENT_COVERAGE` — never a default block. *(Amended 2026-08-03; see the decision table below.)*
+
+  **FR16 decision table (binding, evaluated in order).** Findings are evaluated before coverage, so a coverage shortfall can never be reported as a defect:
+
+  | # | Condition | Verdict | Exit |
+  |---|---|---|---|
+  | 1 | `assessed_total == 0` or `assessed_ratio < 1/5` | `INSUFFICIENT_COVERAGE` | 3 |
+  | 2 | `blocking_findings >= 1` | `NOT_READY_FOR_RELEASE` | 2 |
+  | 3 | `assessed_ratio >= 3/5` **and** all critical subsystems `audited_deep` | `RELEASE_READY` | 0 |
+  | 4 | otherwise — zero blocking findings, a coverage or critical-subsystem gate unmet | `INSUFFICIENT_COVERAGE` | 3 |
+
+  Row 4 is the amendment: the case it covers previously fell through to `NOT_READY_FOR_RELEASE`, which asserted a defect APAA had not found. **Nothing becomes a silent pass** — exit `3` still fails an unconfigured CI step, and Journeys 3 and 5 already route it to human review, never to auto-proceed. The verdict must disclose which row fired and the assessed population it was computed over.
 - **FR17:** APAA can express every verdict in negative-assurance terms with a scope statement, materiality bar, disclaimer, and point-in-time stamp.
 - **FR18:** An integrator can consume the verdict as a deterministic exit code and a machine-readable artifact.
 - **FR33:** APAA can order findings by verdict impact — surfacing verdict-blocking findings before non-blocking ones — so a blocking 🔴 is never buried beneath lower-severity noise (serves the "actionable / no cry-wolf" success criteria; alarm-fatigue defense, risk H2).
