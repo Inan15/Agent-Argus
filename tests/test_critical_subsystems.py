@@ -12,8 +12,10 @@ area). Covers AC1–AC6 of story 2.3:
   conservative policy).
 - AC3 — the MANDATORY FR16 proofs over the REAL 1.6 ``evaluate_verdict``
   (import-verified, NOT a fork): a clean ≥60%-deep ledger with a critical-shallow
-  file → NOT_READY_FOR_RELEASE / exit 2; the SAME ledger with that file deep →
-  RELEASE_READY; a no-critical ledger → byte-identical to the 1.6 default.
+  file → RELEASE_READY WITHHELD (Story 8.1: with zero blocking findings that is
+  ``INSUFFICIENT_COVERAGE`` / exit 3, FR16 row 4 — it was a block before the
+  amendment); the SAME ledger with that file deep → RELEASE_READY; a no-critical
+  ledger → byte-identical to the 1.6 default.
 - AC5 — the module is PURE (AST scan: no I/O / clock / uuid / random / LLM),
   frozen-contract, non-``float``, raises a typed error on malformed input; the
   single 1.1 serializer is honored (no second json.dumps).
@@ -42,6 +44,7 @@ from argus.ledger.coverage_ledger import (
 from argus.ledger.critical_subsystems import (
     CRITICAL_SUBSYSTEMS_SCHEMA_VERSION,
     CriticalCandidate,
+    CriticalIneligibility,
     CriticalOrigin,
     CriticalSubsystemError,
     CriticalSubsystemSet,
@@ -50,7 +53,7 @@ from argus.ledger.critical_subsystems import (
 )
 from argus.ledger.depth_semantics import Criticality, assess_criticality
 from argus.store import canonical
-from argus.verdict.verdict_gate import Verdict, evaluate_verdict
+from argus.verdict.verdict_gate import DecisionRow, Verdict, evaluate_verdict
 
 
 def _candidate(file_path: str, source: str = "", ast_entry: AstIndexEntry | None = None) -> CriticalCandidate:
@@ -211,7 +214,14 @@ def test_predicate_critical_absent_from_ledger_is_false() -> None:
 
 
 def test_fr16_critical_shallow_withholds_release_ready() -> None:
-    """TC-ArgusAgent-LEDGER-001-143 — MANDATORY: ≥60% deep, 0 blocking, BUT a critical shallow → NOT_READY/exit 2."""
+    """TC-ArgusAgent-LEDGER-001-143 — MANDATORY: ≥60% deep, 0 blocking, BUT a critical shallow
+    → RELEASE_READY WITHHELD.
+
+    Story 8.1: the clause still gates, which is this test's subject. With ZERO blocking
+    findings the amended FR16 table renders the withholding as row 4 /
+    ``INSUFFICIENT_COVERAGE`` / exit 3 — the honest "not assessed enough of what matters"
+    state — instead of a block that would blame a defect nobody found.
+    """
     # 4 deep + 1 shallow = 80% deep ≥ 60%, 0 blocking findings. The shallow file is critical.
     ledger = _ledger(
         ("a.py", CoverageDepth.AUDITED_DEEP, True),
@@ -223,8 +233,9 @@ def test_fr16_critical_shallow_withholds_release_ready() -> None:
     all_deep = critical_subsystems_all_deep(("crit.py",), ledger)
     assert all_deep is False
     verdict = evaluate_verdict(ledger, (), critical_subsystems_all_deep=all_deep)
-    assert verdict.verdict is Verdict.NOT_READY_FOR_RELEASE
-    assert verdict.exit_code == 2
+    assert verdict.verdict is not Verdict.RELEASE_READY
+    assert verdict.decision_row is DecisionRow.GATE_UNMET_NO_FINDINGS
+    assert verdict.exit_code == 3
 
 
 def test_fr16_same_ledger_critical_deep_is_release_ready() -> None:
@@ -291,8 +302,15 @@ def test_critical_subsystem_set_is_frozen() -> None:
 
 
 def test_schema_version_is_localized_constant() -> None:
-    """TC-ArgusAgent-LEDGER-001-148 — AC5: schema_version is a localized constant (additive-only)."""
-    assert CRITICAL_SUBSYSTEMS_SCHEMA_VERSION == "1"
+    """TC-ArgusAgent-LEDGER-001-148 — AC5: schema_version is a localized constant (additive-only).
+
+    Story 8.2 moved the stamp "1" → "2": ``paths`` changed MEANING (the heuristic term
+    is now eligibility-filtered, DR-5) and the model gained an always-serialized
+    disclosure field, so the persisted bytes move for every repository. The subject of
+    this test is unchanged — the version is ONE localized constant that the model's
+    default tracks, never a literal duplicated at a write site.
+    """
+    assert CRITICAL_SUBSYSTEMS_SCHEMA_VERSION == "2"
     assert CriticalSubsystemSet().schema_version == CRITICAL_SUBSYSTEMS_SCHEMA_VERSION
 
 
@@ -323,17 +341,36 @@ def test_no_float_anywhere_in_serialized_set() -> None:
 
 
 def test_order_independence_same_designations_two_input_orders() -> None:
-    """TC-ArgusAgent-LEDGER-001-152 — NFR-P1: same designations in two input orders → identical result."""
+    """TC-ArgusAgent-LEDGER-001-152 — NFR-P1: same designations in two input orders → identical result.
+
+    Story 8.2 extends the subject onto the DR-5 disclosure map: an ELIGIBILITY-filtered
+    path enters through a dict rather than a sorted tuple, so its order-independence is
+    asserted here rather than inherited on trust.
+    """
     cands_1 = [
         _candidate("auth.py", "password=1"),
         _candidate("crypto.py", "def encrypt(): ..."),
         _candidate("adder.py", "def add(a, b): return a"),
+        CriticalCandidate(
+            file_path="tests/test_token.py",
+            criticality=Criticality.CRITICAL,
+            ineligibility=CriticalIneligibility.TEST_FILE,
+        ),
+        CriticalCandidate(
+            file_path="auth/__init__.py",
+            criticality=Criticality.CRITICAL,
+            ineligibility=CriticalIneligibility.ZERO_DEFINITION_MODULE,
+        ),
     ]
     cands_2 = list(reversed(cands_1))
     r1 = identify_critical_subsystems(cands_1, operator_designated=("z.py", "a.py"))
     r2 = identify_critical_subsystems(cands_2, operator_designated=("a.py", "z.py"))
     assert r1.paths == r2.paths
     assert r1.designated_but_unmatched == r2.designated_but_unmatched
+    assert r1.heuristic_excluded_ineligible == r2.heuristic_excluded_ineligible
+    assert list(r1.heuristic_excluded_ineligible) == list(
+        r2.heuristic_excluded_ineligible
+    ), "the disclosure map's own key ORDER must not depend on candidate order"
     assert canonical.dumps(r1.model_dump(mode="json")) == canonical.dumps(r2.model_dump(mode="json"))
 
 

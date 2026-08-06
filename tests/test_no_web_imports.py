@@ -545,44 +545,52 @@ def test_pure_audit_seam_is_provider_free() -> None:
         )
 
 
-def test_adapter_is_the_allowed_provider_importer() -> None:
-    """TC-ArgusAgent-AUDIT-001-11 — the adapter IS the one allowed providers importer (AR7).
+def test_minions_llm_adapter_has_no_minions_core_imports() -> None:
+    """TC-ArgusAgent-AUDIT-001-11 — Story 9.1 (IN-2 / RS-1): minions_llm_adapter has ZERO minions_core imports.
 
-    Story 6.1: ``argus.audit.minions_llm_adapter`` is the SINGLE carve-out from the
-    no-LLM gate — it deliberately imports ``minions_core.providers`` (the reused
-    orchestrator). This asserts the carve-out is real (the adapter DOES pull
-    providers) AND that even so it stays web-stack-clean (providers is FastAPI-free
-    — covered by ``_MODULES_UNDER_GUARD`` above). It must NEVER pull the
-    FastAPI-bearing api/service modules (the AR7 leaf-module rule).
+    `argus.audit.minions_llm_adapter` delegates to `OpenLLMAdapter` and carries
+    zero import dependency on `minions_core`. Importing `minions_llm_adapter`
+    must leave `minions_core` completely absent from `sys.modules`.
     """
     script = textwrap.dedent(
         """
         import importlib, sys
-        mod = importlib.import_module("argus.audit.minions_llm_adapter")
-        if not getattr(mod, "MINIONS_CORE_AVAILABLE", True):
-            raise SystemExit(0)
-        pulled_providers = any(
-            m == "minions_core.providers" or m.startswith("minions_core.providers.")
-            for m in sys.modules
-        )
-        forbidden = [
-            "minions_core.api", "minions_core.services.api_app",
-            "minions_core.app_factory", "minions_core.api_server",
-        ]
-        leaked = [m for m in sys.modules
-                  if any(m == f or m.startswith(f + ".") for f in forbidden)]
-        if not pulled_providers:
-            print("ADAPTER_DID_NOT_IMPORT_PROVIDERS")
-            raise SystemExit(2)
+        importlib.import_module("argus.audit.minions_llm_adapter")
+        leaked = [m for m in sys.modules if m == "minions_core" or m.startswith("minions_core.")]
         if leaked:
-            print("API_LEAK:" + ",".join(sorted(leaked)))
+            print("MINIONS_CORE_LEAK:" + ",".join(sorted(leaked)))
             raise SystemExit(1)
         raise SystemExit(0)
-
         """
     )
     proc = subprocess.run([sys.executable, "-c", script], capture_output=True, text=True)
     assert proc.returncode == 0, (
-        "adapter import-isolation contract failed (it must import providers but "
-        f"NOT the FastAPI api/service modules — AR7): {proc.stdout.strip()} {proc.stderr.strip()}"
+        "argus.audit.minions_llm_adapter imported minions_core (RS-1 / IN-2 violation): "
+        f"{proc.stdout.strip()} {proc.stderr.strip()}"
     )
+
+
+def test_all_guarded_modules_have_no_minions_core_imports() -> None:
+    """TC-ArgusAgent-STORE-001-51 — Story 9.1 (RS-1): NO argus module imports minions_core.
+
+    Importing any module under _MODULES_UNDER_GUARD must leave minions_core
+    completely absent from sys.modules.
+    """
+    for module in _MODULES_UNDER_GUARD:
+        script = textwrap.dedent(
+            f"""
+            import importlib, sys
+            importlib.import_module({module!r})
+            leaked = [m for m in sys.modules if m == "minions_core" or m.startswith("minions_core.")]
+            if leaked:
+                print("MINIONS_CORE_LEAK:" + ",".join(sorted(leaked)))
+                raise SystemExit(1)
+            raise SystemExit(0)
+            """
+        )
+        proc = subprocess.run([sys.executable, "-c", script], capture_output=True, text=True)
+        assert proc.returncode == 0, (
+            f"{module} transitively imported minions_core (RS-1 violation): "
+            f"{proc.stdout.strip()} {proc.stderr.strip()}"
+        )
+

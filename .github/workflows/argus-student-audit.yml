@@ -1,0 +1,86 @@
+name: ArgusAgent Student Code Audit & Security Shield 🛡️
+
+# This workflow runs automatic code assurance, vacuous test detection, and secret scanning
+# for student projects, coursework assignments, and group capstones.
+
+on:
+  push:
+    branches: [ main, master ]
+  pull_request:
+    branches: [ main, master ]
+  workflow_dispatch: # Allows manual trigger from GitHub Actions tab
+
+permissions:
+  contents: read
+  pull-requests: write # Required to post audit reports as PR comments
+
+jobs:
+  student-code-audit:
+    name: 🛡️ Argus Code Quality & Security Audit
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: 📥 Checkout Student Repository
+        uses: actions/checkout@v4
+        with:
+          fetch-depth: 0 # Full history for commit-pinned audit verification
+
+      - name: 🐍 Set up Python
+        uses: actions/setup-python@v5
+        with:
+          python-version: "3.11"
+          cache: "pip"
+
+      - name: ⚡ Install ArgusAgent & AST Grammars
+        run: |
+          python -m pip install --upgrade pip
+          # Install ArgusAgent with multi-language AST parsers (Python, JS, TS, Rust, Go, C/C++)
+          pip install .[languages]
+
+      - name: 🔍 Run Argus Deterministic Audit
+        id: argus_audit
+        continue-on-error: true # Ensure workflow creates report even if gate fails
+        run: |
+          mkdir -p argus-reports
+          argus audit . \
+            --commit "${{ github.sha }}" \
+            --report-dir "./argus-reports" \
+            --reports "final-verdict,coverage-ledger,security-review,vacuous-tests" \
+            --coverage-scope application
+
+      - name: 📄 Render Student-Friendly Summary Report
+        id: render_report
+        run: |
+          python -c "
+          import json, os, glob
+          
+          # Read latest state or summary report
+          report_files = glob.glob('./argus-reports/*.md')
+          summary_text = ''
+          if report_files:
+              with open(report_files[0], 'r', encoding='utf-8') as f:
+                  summary_text = f.read()[:3000]
+          
+          with open('pr_summary.md', 'w', encoding='utf-8') as out:
+              out.write('## 🛡️ ArgusAgent Code Quality & Assurance Report\n\n')
+              out.write('Hello! ArgusAgent has audited your commit (**' + '${{ github.sha }}'[:7] + '**).\n\n')
+              if summary_text:
+                  out.write(summary_text)
+              else:
+                  out.write('Audit completed successfully. Full markdown reports are attached as build artifacts.')
+              out.write('\n\n---\n*💡 **Student Tip**: Make sure you have no bare `assert True` tests or committed API keys in your repository before submitting!*')
+          "
+
+      - name: 💬 Post Audit Report as Sticky Pull Request Comment
+        if: github.event_name == 'pull_request'
+        uses: marocchino/sticky-pull-request-comment@v2
+        with:
+          path: pr_summary.md
+          header: argus-audit-report
+
+      - name: 📦 Upload Full Audit Reports as Workflow Artifact
+        uses: actions/upload-artifact@v4
+        with:
+          name: argus-audit-reports
+          path: argus-reports/
+          retention-days: 14

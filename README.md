@@ -4,6 +4,8 @@
 
 `ArgusAgent` combines the high-precision **APAA (AI Project Assurance Audit)** Python verification engine with the vendor-portable **RAM (Repository Audit Method)** framework. Named after *Argus Panoptes* — the mythological 100-eyed all-seeing guardian — `ArgusAgent` provides multi-agent, cross-subsystem vigilance over codebases with zero blind spots.
 
+> **Integrating `argus audit` into a pipeline?** Every consumer-visible change to the exit codes, artifact schemas, defaults, rendered strings and public API — and what deliberately did *not* change — is recorded in **[CHANGELOG.md](CHANGELOG.md)**.
+
 ---
 
 ## 🌟 Key Features

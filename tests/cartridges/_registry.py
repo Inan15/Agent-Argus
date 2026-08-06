@@ -145,12 +145,19 @@ CARTRIDGE_REGISTRY: tuple[CartridgeSpec, ...] = (
         cartridge_id="orphan_basic",
         kind="planted_defect",
         # The planted ``unused_helper`` surfaces as the advisory ``orphan_code``
-        # finding. It does NOT alone block (advisory-by-contract); the cartridge is
-        # NOT_READY here purely on the deep-% gate (1 deep / 2 = 50% < 60%), with
+        # finding. It does NOT alone block (advisory-by-contract); RELEASE_READY is
+        # withheld here purely on the deep-% gate (1 deep / 2 = 50% < 60%), with
         # zero blocking findings (the 6.3 advisory floor).
+        #
+        # Story 8.1 / AC16 — RE-POINTED. This golden key used to pin
+        # ``NOT_READY_FOR_RELEASE`` / exit 2 ALONGSIDE ``max_blocking=0``: a BLOCKING
+        # verdict asserted with zero blocking findings. The cartridge had frozen the
+        # FR16 default-block defect into the trust substrate — the golden keys were
+        # certifying the false accusation. The REQUIRED FINDING is unchanged and still
+        # emitted; only the verdict/exit expectation moves to the honest row-4 state.
         required_findings=(_ORPHAN,),
-        expected_verdict="NOT_READY_FOR_RELEASE",
-        expected_exit=2,
+        expected_verdict="INSUFFICIENT_COVERAGE",
+        expected_exit=3,
         max_blocking=0,
     ),
     # ── (2) Clean-control true negative — the false-accusation floor (any 🔴 = fail).
@@ -215,14 +222,17 @@ CARTRIDGE_REGISTRY: tuple[CartridgeSpec, ...] = (
     #   HEURISTIC-ONLY / advisory (rule_id="vacuous_test_heuristic", depth_supported is
     #   None → verdict-ineligible). A DISTINCT class from the AST-corroborated
     #   vacuous_test_ast. Verified CONFIRMED-emitted over the staged cartridge via
-    #   run_audit_detailed (NOT assumed). The advisory finding does NOT alone block; the
-    #   cartridge is NOT_READY here on the deep-% floor gate with ZERO blocking findings.
+    #   run_audit_detailed (NOT assumed). The advisory finding does NOT alone block;
+    #   RELEASE_READY is withheld here on the deep-% gate with ZERO blocking findings.
+    #   Story 8.1 / AC16 — RE-POINTED from NOT_READY_FOR_RELEASE / 2 for the same reason
+    #   as orphan_basic: a blocking verdict pinned beside ``max_blocking=0``. The required
+    #   finding is unchanged.
     CartridgeSpec(
         cartridge_id="vacuous_heuristic_basic",
         kind="planted_defect",
         required_findings=(_VACUOUS_HEURISTIC,),
-        expected_verdict="NOT_READY_FOR_RELEASE",
-        expected_exit=2,
+        expected_verdict="INSUFFICIENT_COVERAGE",
+        expected_exit=3,
         max_blocking=0,
     ),
     # ── (8) Story 7.1 — NEW distinct class #2: cross_partition (holdout — the
@@ -234,17 +244,19 @@ CARTRIDGE_REGISTRY: tuple[CartridgeSpec, ...] = (
     #   CONFIRMED-emitted over the staged cartridge (NOT assumed). Advisory /
     #   verdict-ineligible → ZERO blocking findings (the seam is recorded-not-analyzed,
     #   the honest V1 limitation). Under the harness budget (100) the 45-file chain
-    #   EXHAUSTS the budget mid-run (26/45 files skipped-on-exhaustion), so the verdict
-    #   is exhaustion-driven NOT_READY_FOR_RELEASE / exit 2 — the ``cross_partition``
-    #   golden finding is still DETERMINISTICALLY emitted (the Prosecutor cut-edge pass
-    #   folds the full partition plan's cut edges regardless of exhaustion). Verified
-    #   over two clean stagings.
+    #   EXHAUSTS the budget mid-run (26/45 files skipped-on-exhaustion), so the verdict is
+    #   exhaustion-driven — the ``cross_partition`` golden finding is still
+    #   DETERMINISTICALLY emitted (the Prosecutor cut-edge pass folds the full partition
+    #   plan's cut edges regardless of exhaustion). Verified over two clean stagings.
+    #   Story 8.1 / AC16 — RE-POINTED from NOT_READY_FOR_RELEASE / 2: exhaustion is a
+    #   COVERAGE shortfall, and reporting a coverage shortfall as a block is the exact
+    #   defect the FR16 amendment removes. The required finding is unchanged.
     CartridgeSpec(
         cartridge_id="cross_partition_seam",
         kind="holdout",
         required_findings=(_CROSS_PARTITION,),
-        expected_verdict="NOT_READY_FOR_RELEASE",
-        expected_exit=2,
+        expected_verdict="INSUFFICIENT_COVERAGE",
+        expected_exit=3,
         max_blocking=0,
     ),
 )

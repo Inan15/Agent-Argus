@@ -17,19 +17,17 @@ from argus.audit.ports import (
     LLMRecording,
 )
 
-try:
-    import minions_core.providers  # type: ignore[import-not-found]
-    MINIONS_CORE_AVAILABLE = True
-except ImportError:
-    MINIONS_CORE_AVAILABLE = False
-
-__all__ = ["MinionsLLMAdapter", "MINIONS_CORE_AVAILABLE", "_credits_to_str"]
+__all__ = ["MinionsLLMAdapter", "_credits_to_str"]
 
 _credits_to_str = credits_to_str
 
 
 class MinionsLLMAdapter:
-    """``LLMDispatchPort`` adapter delegating to open-source multi-provider dispatch."""
+    """``LLMDispatchPort`` adapter delegating to open-source multi-provider dispatch.
+
+    Retained as a backward-compatible wrapper around ``OpenLLMAdapter``. Carries
+    zero dependency on ``minions_core``.
+    """
 
     def __init__(
         self,

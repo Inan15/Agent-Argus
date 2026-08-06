@@ -47,6 +47,7 @@ from argus.verdict.prosecutor import (
 )
 from argus.verdict.verdict_gate import (
     AuditVerdict,
+    DecisionRow,
     Verdict,
     evaluate_verdict,
 )
@@ -66,8 +67,13 @@ def _release_ready_ledger() -> CoverageLedger:
     return CoverageLedger.build(entries)
 
 
-def _not_ready_ledger() -> CoverageLedger:
-    """A ledger between the 20% floor and the 60% gate → NOT_READY_FOR_RELEASE."""
+def _gate_unmet_ledger() -> CoverageLedger:
+    """A ledger between the 20% floor and the 60% gate, with NO findings.
+
+    Story 8.1 / FR16 as amended: with zero blocking findings this is row 4 —
+    ``INSUFFICIENT_COVERAGE`` (a coverage gate was not met), NOT a block. It was
+    ``NOT_READY_FOR_RELEASE`` under the pre-amendment three-row table.
+    """
     entries = [
         grade_entry(
             file_path=f"g{i}.py",
@@ -319,13 +325,188 @@ def test_no_cut_edges_raises_no_cross_partition_finding() -> None:
 
 
 def test_not_ready_candidate_is_never_upgraded() -> None:
-    """TC-ArgusAgent-PROSECUTOR-001-10 — a NOT_READY candidate is never upgraded (asymmetric harm, RED-first)."""
-    ledger = _not_ready_ledger()
-    candidate = evaluate_verdict(ledger, ())
+    """TC-ArgusAgent-PROSECUTOR-001-10 — a NOT_READY candidate is never upgraded (asymmetric harm, RED-first).
+
+    Story 8.1: the candidate is now built from a GENUINE row-2 ledger (≥1 blocking
+    finding), because under the amended FR16 table a zero-findings gate-unmet ledger is
+    row 4 / ``INSUFFICIENT_COVERAGE`` — it was never really "NOT_READY" at all, which is
+    the defect this epic removes. The test's subject — a blocking candidate is never
+    upgraded — is unchanged.
+    """
+    ledger = _release_ready_ledger()
+    blocking = build_recording(
+        FindingDraft(
+            file_path="f0.py", start_line=1, end_line=1, rule_id="vacuous_test_ast", advisory=True
+        ),
+        depth_supported=CoverageDepth.AUDITED_SHALLOW,  # verdict-eligible → row 2
+    )
+    candidate = evaluate_verdict(ledger, (blocking,))
     assert candidate.verdict is Verdict.NOT_READY_FOR_RELEASE
-    result = prosecute(verdict=candidate, ledger=ledger, findings=(), cut_edges=())
+    assert candidate.blocking_finding_count == 1
+    result = prosecute(verdict=candidate, ledger=ledger, findings=(blocking,), cut_edges=())
     assert result.verdict.verdict is Verdict.NOT_READY_FOR_RELEASE
     assert result.downgraded is False
+
+
+def test_gate_unmet_candidate_never_silences_a_promoted_finding() -> None:
+    """TC-ArgusAgent-PROSECUTOR-001-30 — Story 8.1 / AC12 (RED-first): a row-4 candidate + a
+    promoted finding ends BLOCKING.
+
+    After the FR16 reorder a zero-findings gate-unmet run is ``INSUFFICIENT_COVERAGE``
+    (row 4). If the conservatism rank still ordered ``INSUFFICIENT_COVERAGE`` strictly
+    ABOVE ``NOT_READY_FOR_RELEASE``, that candidate would outrank its own blocking
+    re-fold and the Prosecutor would discard the very finding it just promoted — the
+    tool silencing itself. ``_CONSERVATISM_RANK`` therefore expresses only "never move
+    toward RELEASE_READY"; the two withholding states are incomparable (D6).
+    """
+    ledger = _gate_unmet_ledger()
+    candidate = evaluate_verdict(ledger, ())
+    assert candidate.verdict is Verdict.INSUFFICIENT_COVERAGE  # row 4, zero findings
+    assert candidate.blocking_finding_count == 0
+
+    finding = _advisory(ast_span="func:foo")  # AST corroboration present
+    result = prosecute(
+        verdict=candidate,
+        ledger=ledger,
+        findings=(finding,),
+        cut_edges=(),
+        sign_offs={finding.recording_id},
+    )
+
+    assert finding.recording_id in result.promoted_finding_ids
+    assert result.verdict.blocking_finding_count == 1
+    assert result.verdict.verdict is Verdict.NOT_READY_FOR_RELEASE
+    assert result.verdict.exit_code == 2
+    # A row-4 → row-2 move is a RECLASSIFICATION between two equally-conservative
+    # withholding states, not a downgrade (nothing green was withdrawn). The
+    # "promoted:" rationale token is what records that the verdict moved.
+    assert result.downgraded is False
+    assert any(tok.startswith("promoted:") for tok in result.rationale)
+
+
+def test_release_ready_refold_never_upgrades_a_gate_unmet_candidate() -> None:
+    """TC-ArgusAgent-PROSECUTOR-001-31 — Story 8.1 / AC12: FR19 still holds in the other direction.
+
+    Equal-ranking the two withholding states must not open an UPGRADE path: a re-fold
+    that came back ``RELEASE_READY`` can never replace an ``INSUFFICIENT_COVERAGE``
+    candidate. Asserted BEHAVIOURALLY, through ``prosecute()`` — the guarantee, not the
+    mechanism — so it survives any re-expression of the rank map and actually exercises
+    the rejecting branch.
+
+    Constructing it (review R2; an earlier revision of this test claimed the case
+    "cannot be manufactured" — that was false): ``scope_paths`` is a parameter of
+    ``prosecute`` INDEPENDENT of the candidate verdict, so a candidate folded UNSCOPED
+    (2 deep / 5 → row 4) re-folded against a narrower scope (2 deep / 3 = 66% ≥ the 60%
+    gate) comes back ``RELEASE_READY``. That is the one reachable shape of a
+    less-conservative re-fold, and the FR19 guard must discard it.
+
+    The refined finding set must still survive the rejection: the ``cross_partition``
+    seam finding raised by the cut-edge pass is carried onto the kept candidate verdict
+    (never an upgrade, never a silently dropped finding).
+    """
+    ledger = _gate_unmet_ledger()
+    candidate = evaluate_verdict(ledger, ())
+    assert candidate.verdict is Verdict.INSUFFICIENT_COVERAGE
+    assert candidate.decision_row is DecisionRow.GATE_UNMET_NO_FINDINGS
+
+    narrower = ("g0.py", "g1.py", "g2.py")
+    # The re-fold this scope produces IS less conservative — the precondition of the
+    # branch under test, asserted through the public gate rather than assumed.
+    assert evaluate_verdict(ledger, (), scope_paths=narrower).verdict is Verdict.RELEASE_READY
+
+    edge = CutEdge(caller_file="g0.py", callee_file="g3.py", callee="bar")
+    result = prosecute(
+        verdict=candidate,
+        ledger=ledger,
+        findings=(),
+        cut_edges=(edge,),
+        scope_paths=narrower,
+    )
+
+    # The guarantee: the unearned green is discarded, the candidate stands.
+    assert result.verdict.verdict is Verdict.INSUFFICIENT_COVERAGE
+    assert result.verdict.decision_row is DecisionRow.GATE_UNMET_NO_FINDINGS
+    assert result.verdict.exit_code == 3
+    assert result.downgraded is False
+    assert result.verdict_changed is False
+    # …and the refined finding set is NOT lost on the rejection path.
+    assert result.cross_partition_finding_ids != ()
+    assert [f.rule_id for f in result.findings] == [RULE_CROSS_PARTITION]
+
+
+def test_conservatism_rank_expresses_never_toward_release_ready() -> None:
+    """TC-ArgusAgent-PROSECUTOR-001-32 — Story 8.1 / D6: the rank map is a PARTIAL order.
+
+    A white-box pin of the MECHANISM, kept alongside (never instead of) the behavioural
+    guarantee above: ``RELEASE_READY`` ranks strictly below both withholding verdicts,
+    and the two withholding verdicts are INCOMPARABLE — which is exactly what lets a
+    promoted blocking finding surface without ever opening an upgrade path.
+    """
+    from argus.verdict.prosecutor import _CONSERVATISM_RANK
+
+    assert _CONSERVATISM_RANK[Verdict.RELEASE_READY] < _CONSERVATISM_RANK[
+        Verdict.INSUFFICIENT_COVERAGE
+    ]
+    assert _CONSERVATISM_RANK[Verdict.RELEASE_READY] < _CONSERVATISM_RANK[
+        Verdict.NOT_READY_FOR_RELEASE
+    ]
+    assert (
+        _CONSERVATISM_RANK[Verdict.INSUFFICIENT_COVERAGE]
+        == _CONSERVATISM_RANK[Verdict.NOT_READY_FOR_RELEASE]
+    )
+
+
+def test_reclassification_is_reported_as_a_verdict_change_not_a_downgrade() -> None:
+    """TC-ArgusAgent-PROSECUTOR-001-33 — Story 8.1 review R5: a row-4 → row-2 move is signalled.
+
+    ``downgraded`` is False on a row-4 → row-2 move (both verdicts withhold
+    ``RELEASE_READY`` and rank equal), which is correct but left a consumer of
+    ``ProsecutionResult`` with no structured way to answer "did this pass change the
+    verdict?" — it had to infer it from the presence of a ``promoted:`` token.
+    ``verdict_changed`` answers it directly, and exactly ONE rationale token records
+    each move: ``downgrade:`` for a downgrade, ``reclassified:`` otherwise.
+    """
+    ledger = _gate_unmet_ledger()
+    candidate = evaluate_verdict(ledger, ())
+    finding = _advisory(ast_span="func:foo")
+    result = prosecute(
+        verdict=candidate,
+        ledger=ledger,
+        findings=(finding,),
+        cut_edges=(),
+        sign_offs={finding.recording_id},
+    )
+
+    assert result.verdict.verdict is Verdict.NOT_READY_FOR_RELEASE
+    assert result.downgraded is False
+    assert result.verdict_changed is True
+    assert (
+        "reclassified:INSUFFICIENT_COVERAGE->NOT_READY_FOR_RELEASE" in result.rationale
+    )
+    assert not any(tok.startswith("downgrade:") for tok in result.rationale)
+
+    # A genuine downgrade keeps the existing token and is ALSO a change — never both
+    # tokens, and `downgraded` implies `verdict_changed`.
+    green = _release_ready_ledger()
+    green_candidate = evaluate_verdict(green, ())
+    green_finding = _advisory(ast_span="func:foo")
+    downgrade = prosecute(
+        verdict=green_candidate,
+        ledger=green,
+        findings=(green_finding,),
+        cut_edges=(),
+        sign_offs={green_finding.recording_id},
+    )
+    assert downgrade.downgraded is True
+    assert downgrade.verdict_changed is True
+    assert any(tok.startswith("downgrade:") for tok in downgrade.rationale)
+    assert not any(tok.startswith("reclassified:") for tok in downgrade.rationale)
+
+    # An untouched verdict changes nothing and emits neither token.
+    untouched = prosecute(verdict=green_candidate, ledger=green, findings=(), cut_edges=())
+    assert untouched.downgraded is False
+    assert untouched.verdict_changed is False
+    assert untouched.rationale == ()
 
 
 def test_insufficient_coverage_candidate_is_never_upgraded() -> None:

@@ -287,8 +287,20 @@ def _assurance_statement(verdict: AuditVerdict, scope: ScopeStatement) -> str:
     Honest + populated for ALL THREE verdicts and NEVER an over-claim:
     ``RELEASE_READY`` → "no blocking findings within the assessed scope";
     ``NOT_READY_FOR_RELEASE`` → blocking findings found within scope;
-    ``INSUFFICIENT_COVERAGE`` → assessed coverage below the floor (no repo-wide
-    verdict). NONE contains a certification / correctness / "proven" / "guarantee" /
+    ``INSUFFICIENT_COVERAGE`` → split on the DISCLOSED FR16 decision row, because that
+    verdict now covers two genuinely different situations (Story 8.1):
+
+    - row 1 (below the floor) → "assessed coverage is below the floor; no repo-wide
+      verdict was rendered" — BYTE-IDENTICAL to the pre-amendment string;
+    - row 4 (a gate unmet with ZERO findings) → "no blocking findings were detected …
+      a coverage or critical-subsystem gate was not met".
+
+    This is a PERSISTED artifact string. Emitting the row-1 sentence for a row-4 run
+    would state a falsehood on disk — an audit tool asserting a floor breach that did
+    not happen — which §3.4 (evidence immutability) makes strictly worse than a slightly
+    early story boundary.
+
+    NONE contains a certification / correctness / "proven" / "guarantee" /
     "defect-free" / "passed" token.
     """
     scope_clause = (
@@ -308,9 +320,15 @@ def _assurance_statement(verdict: AuditVerdict, scope: ScopeStatement) -> str:
             f"({scope_clause})."
         )
     if verdict.verdict is Verdict.INSUFFICIENT_COVERAGE:
+        if verdict.is_below_floor:
+            return (
+                f"Assessed coverage is below the floor; no repo-wide verdict was "
+                f"rendered ({scope_clause})."
+            )
         return (
-            f"Assessed coverage is below the floor; no repo-wide verdict was "
-            f"rendered ({scope_clause})."
+            f"No blocking findings were detected within the assessed scope; a coverage "
+            f"or critical-subsystem gate was not met, so release readiness was not "
+            f"vouched for ({scope_clause})."
         )
     raise NegativeAssuranceError(  # pragma: no cover - guarded by the gate's closed enum
         f"unhandled verdict {verdict.verdict!r} in the assurance statement"

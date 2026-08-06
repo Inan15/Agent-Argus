@@ -101,6 +101,7 @@ __all__ = [
     "VacuousTestScore",
     "VacuousTestDetector",
     "is_test_file",
+    "is_test_classification_content_dependent",
 ]
 
 RULE_HEURISTIC = "vacuous_test_heuristic"
@@ -236,6 +237,55 @@ def _exhibits_test_definitions(ast_entry: object) -> bool:
     return False
 
 
+def _lower_basename(file_path: str) -> str:
+    parts = file_path.replace("\\", "/").split("/")
+    return parts[-1].lower() if parts else file_path.lower()
+
+
+def _is_unambiguous_test_path(file_path: str) -> bool:
+    """Tiers 1-2 — a test LOCATION, or a filename convention reserved for tests.
+
+    Split out so the tier structure is declared exactly ONCE and both public
+    predicates below READ it rather than restate it (AR7/§3.3 no-fork). Answers here
+    are properties of what the file IS: they hold whatever the parse did.
+    """
+    parts = file_path.replace("\\", "/").split("/")
+    if any(p in _TEST_DIRECTORY_NAMES for p in parts[:-1]) or (
+        parts and parts[0] in ("tests", "test", "spec")
+    ):
+        return True
+    name = _lower_basename(file_path)
+    if name.startswith("test_") or name.startswith("test."):
+        return True
+    return any(name.endswith(s) for s in _UNAMBIGUOUS_TEST_SUFFIXES)
+
+
+def is_test_classification_content_dependent(file_path: str) -> bool:
+    """True iff :func:`is_test_file` must read the CONTENT to classify *file_path*.
+
+    True means the path reached **tier 3** — neither the test-directory tier nor the
+    unambiguous-name tier fired — so the answer is a judgement about what this file
+    CONTAINS, and when the content cannot be read
+    :func:`_exhibits_test_definitions` returns a deliberately conservative **guess**
+    (``True``) rather than a fact. False means the answer came from the location or a
+    filename convention reserved for tests, which holds however the parse went.
+
+    Exported because that distinction is not the same question for every consumer.
+    For GRADING — this module's original consumer — "assume test when unreadable" is
+    the safe direction: it keeps the false-accusation moat and the vacuous-test pass
+    closed over the file. For the FR4/DR-5 critical-set ELIGIBILITY filter the
+    identical direction is the LOOSENING one: it would drop an unreadable,
+    security-token-bearing PRODUCTION module out of the critical set and disclose a
+    FALSE reason (``test_file``) for it. That consumer therefore distrusts a tier-3
+    label on an unreadable entry — see ``pipeline._critical_ineligibility``.
+    """
+    if _is_unambiguous_test_path(file_path):
+        return False
+    return any(
+        _lower_basename(file_path).endswith(s) for s in _AMBIGUOUS_PYTHON_TEST_SUFFIXES
+    )
+
+
 def is_test_file(file_path: str, *, ast_entry: "AstIndexEntry | None" = None) -> bool:
     """True iff *file_path* is a test file under multi-language conventions.
 
@@ -253,18 +303,13 @@ def is_test_file(file_path: str, *, ast_entry: "AstIndexEntry | None" = None) ->
     that HAS the pre-built AST entry — the pipeline does — passes it and gets the
     content-derived answer, which is what stops a production module named
     ``*_test.py`` from being mistaken for a test suite.
+
+    A caller that needs to know WHICH tier answered (because the tier-3 guess is not
+    a fact) asks :func:`is_test_classification_content_dependent`.
     """
-    parts = file_path.replace("\\", "/").split("/")
-    if any(p in _TEST_DIRECTORY_NAMES for p in parts[:-1]) or (
-        parts and parts[0] in ("tests", "test", "spec")
-    ):
+    if _is_unambiguous_test_path(file_path):
         return True
-    name = parts[-1].lower() if parts else file_path.lower()
-    if name.startswith("test_") or name.startswith("test."):
-        return True
-    if any(name.endswith(s) for s in _UNAMBIGUOUS_TEST_SUFFIXES):
-        return True
-    if any(name.endswith(s) for s in _AMBIGUOUS_PYTHON_TEST_SUFFIXES):
+    if is_test_classification_content_dependent(file_path):
         if ast_entry is None:
             return True
         return _exhibits_test_definitions(ast_entry)

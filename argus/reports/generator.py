@@ -38,33 +38,59 @@ __all__ = [
 _MAX_LISTED_CRITICAL_BLOCKERS = 20
 
 
-def _render_test_dilution_hint(verdict: AuditVerdict, ledger: CoverageLedger) -> list[str]:
-    """Explain a coverage block that is an artifact of test-file dilution, if it is one.
+def _render_test_dilution_hint(
+    verdict: AuditVerdict, ledger: CoverageLedger, ast_index: object | None = None
+) -> list[str]:
+    """Explain a COVERAGE outcome that is an artifact of test-file dilution, if it is one.
 
     A test file is graded ``audited_shallow`` BY CONSTRUCTION — it is the subject of
     the vacuous-test pass, not a target of deep grounding. In a repository with more
     test files than application files those entries dominate the denominator, and the
-    repository gets blocked for being well-tested.
+    repository is denied ``RELEASE_READY`` for being well-tested.
 
     ``--coverage-scope application`` fixes that, but it is opt-in (the default stays
     whole-repository so persisted evidence and existing CI gates keep their meaning).
     Opt-in only helps an operator who knows the flag exists — so when the coverage
-    gate is the thing blocking AND narrowing would clear it, the report says so here
-    rather than leaving them to discover it.
+    gate is the thing withholding the verdict AND narrowing would clear it, the report
+    says so here rather than leaving them to discover it.
+
+    Called from the two ``INSUFFICIENT_COVERAGE`` arms of
+    :func:`render_final_verdict_report` ONLY — FR16 row 1 and row 4. It is deliberately
+    NOT called for row 2: the amended decision table short-circuits at the findings row,
+    so coverage was never evaluated and "this coverage result is driven by test-file
+    dilution" would describe a result that coverage did not drive (Story 8.3 / AC6).
+    That call-site restriction is why this function carries no ``RELEASE_READY`` guard
+    and no ``blocking_finding_count`` clause: both became unreachable with the split,
+    and DR-11's rule is to remove an unreachable branch rather than leave it as untested
+    dead code.
 
     Deliberately does NOT promise ``RELEASE_READY``: it reports only that the COVERAGE
-    gate would be satisfied, because blocking findings and the critical-subsystem
-    clause are unaffected by scope. Over-promising here would be the same class of
-    dishonesty as the block message it replaces.
+    gate would be satisfied, because the critical-subsystem clause is unaffected by
+    scope. Over-promising here would be the same class of dishonesty as the false block
+    message this work replaced.
+
+    *ast_index* is the pre-built 1.4 index when the caller has one (the pipeline does).
+    It disambiguates an ambiguously-named ``*_test.py`` module BY CONTENT, exactly as
+    ``pipeline._assessment_scope_paths`` does when it narrows the assessed population —
+    without it the report's APPLICATION denominator and the verdict's assessed
+    population can disagree inside a single run. ``None`` (the unit-test callers) keeps
+    the previous name-only behaviour byte-for-byte.
     """
     if verdict.coverage_scope is not None:
         return []  # already narrowed — nothing to suggest
-    if verdict.verdict is Verdict.RELEASE_READY:
-        return []
     if verdict.deep_ratio >= RELEASE_READY_DEEP_THRESHOLD:
-        return []  # coverage is not what is blocking
+        return []  # coverage is not what withheld the verdict
 
-    application = [e for e in ledger.entries if not is_test_file(e.file_path)]
+    # ONE test-file predicate for the whole run (§3.3 / AR7): the same call the
+    # pipeline's scope narrowing makes, fed from the same index.
+    entry_by_path = {
+        entry.file_path: entry for entry in (getattr(ast_index, "entries", ()) or ())
+    }
+    application = [
+        e
+        for e in ledger.entries
+        if not is_test_file(e.file_path, ast_entry=entry_by_path.get(e.file_path))
+    ]
     held_out = len(ledger.entries) - len(application)
     if not application or held_out == 0:
         return []
@@ -74,14 +100,12 @@ def _render_test_dilution_hint(verdict: AuditVerdict, ledger: CoverageLedger) ->
     if app_ratio < RELEASE_READY_DEEP_THRESHOLD:
         return []  # narrowing would not clear the gate — do not suggest it
 
-    remaining = []
-    if verdict.blocking_finding_count > 0:
-        remaining.append(f"{verdict.blocking_finding_count} blocking finding(s)")
-    if not verdict.critical_subsystems_all_deep:
-        remaining.append("the critical-subsystem clause")
+    # The critical-subsystem clause is the ONE gate narrowing cannot clear. It WITHHOLDS
+    # `RELEASE_READY` (row 4) rather than blocking — saying "block" here would repeat,
+    # in miniature, the false accusation this story removes from the callout above.
     caveat = (
-        f" Note that {' and '.join(remaining)} would still block."
-        if remaining
+        " Note that the critical-subsystem clause would still withhold `RELEASE_READY`."
+        if not verdict.critical_subsystems_all_deep
         else " No other gate is currently unmet."
     )
 
@@ -100,12 +124,55 @@ def _render_test_dilution_hint(verdict: AuditVerdict, ledger: CoverageLedger) ->
     ]
 
 
-def _render_critical_blockers(verdict: AuditVerdict, ledger: CoverageLedger) -> list[str]:
-    """Render the critical paths that withheld RELEASE_READY, with their actual depth.
+#: The lead sentence for FR16 row 4, where the unmet critical clause IS the cause of
+#: the verdict (jointly with, or instead of, the coverage threshold).
+_CRITICAL_LEAD_CAUSAL = "These withheld `RELEASE_READY` (FR16)."
 
-    "At least one critical subsystem is not audited deep" tells an operator that they
-    are blocked but not by what, so there is no next action. Naming each file and the
-    depth it actually reached turns the block into a work list.
+#: The lead for every OTHER row. Rows 1 and 2 fire before the critical clause is ever
+#: evaluated, so it caused nothing there and may not be presented as a reason (AC6 /
+#: D3) — but the work list still belongs in the document, because the ship-readiness
+#: block counts these files and points here for their names.
+_CRITICAL_LEAD_NOT_THE_CAUSE = (
+    "Not the reason for this verdict — that is stated in the callout above. Listed "
+    "because the clause is still unmet and will withhold `RELEASE_READY` once the "
+    "stated reason is resolved."
+)
+
+#: The row-independent half of the section's prose (AC7). Every row below the heading
+#: is a REAL work item because FR4/DR-5 already removed the ungradable ones, and the
+#: single exception — a DR-6 operator designation — is stated rather than left to be
+#: discovered. Contains no ``_FALSE_POSITIVE_CLAIMS`` substring
+#: (``TC-ArgusAgent-PIPELINE-002-07``).
+_CRITICAL_LIST_GUIDANCE = (
+    "A file Argus can never grade `audited_deep` — a test file, or a clean-parsed "
+    "module with zero definitions — is already dropped from the heuristic critical set "
+    "automatically (FR4/DR-5), so every row below is a real work item: bring it to "
+    "`audited_deep`, or remove it with `--exclude-critical` if it is not genuinely "
+    "critical. The one exception is a path you designated yourself with "
+    "`--critical-subsystem`: an explicit designation is exempt from that automatic "
+    "removal (DR-6), so it can be listed here even when Argus has no way to grade it "
+    "deeply."
+)
+
+
+def _render_critical_blockers(
+    verdict: AuditVerdict, ledger: CoverageLedger, *, lead: str
+) -> list[str]:
+    """Render the critical paths below ``audited_deep``, with their actual depth.
+
+    "At least one critical subsystem is not audited deep" tells an operator that a gate
+    is unmet but not by what, so there is no next action. Naming each file and the
+    depth it actually reached turns the gate into a work list.
+
+    Rendered on EVERY row that has a non-empty set, not only the row the clause caused
+    (Story 8.3 review finding R1). ``render_ship_readiness`` counts these files on the
+    other human surface and says "see the final-verdict report for the named critical
+    files" — so omitting the section on rows 1 and 2 left one surface of a single run
+    pointing at a work list the other surface did not contain, which is the
+    cross-surface contradiction DR-11 exists to delete. *lead* is supplied by the
+    calling arm and is the ONLY row-dependent sentence: causal on row 4, explicitly
+    non-causal elsewhere, because appending it as a REASON on rows 1 and 2 would be the
+    false causal claim AC6 removed from the reason list.
 
     The list is TRUNCATED at :data:`_MAX_LISTED_CRITICAL_BLOCKERS` with an explicit
     "and N more" line — never a silent cut, because a report that quietly drops rows
@@ -119,8 +186,13 @@ def _render_critical_blockers(verdict: AuditVerdict, ledger: CoverageLedger) -> 
     lines = [
         f"### Critical subsystems below `audited_deep` ({len(blockers)})",
         "",
-        "These withheld `RELEASE_READY` (FR16). Each must reach `audited_deep`, or be",
-        "removed from the critical set with `--exclude-critical` if it is not genuinely critical.",
+        lead,
+        "",
+        # ONE Markdown paragraph, emitted as ONE line. The guidance used to be
+        # hard-wrapped across list items, which meant every asserted phrase in it
+        # straddled a newline and any re-wrap silently broke a pin for a reason that
+        # had nothing to do with the words.
+        _CRITICAL_LIST_GUIDANCE,
         "",
         "| File | Depth reached |",
         "|---|---|",
@@ -301,24 +373,51 @@ def render_final_verdict_report(
     lines.append(render_callout("NOTE", render_depth_meaning(request.enabled_passes)))
     lines.append("")
 
-    if verdict.verdict.value == "RELEASE_READY":
+    # ── The four arms below are EXACTLY the four FR16 rows, in the table's own order
+    # of precedence. One arm per row is what stops this surface from describing a run
+    # in another row's words — the DF-8-1-A defect, where row 4 was rendered with row
+    # 2's sentence six lines under its own non-blocking verdict token.
+    #
+    # The critical-subsystem WORK LIST is not part of that split: it is rendered once,
+    # below the chain, for every row that has one. Only its lead sentence is
+    # row-dependent, and row 4 is the only row entitled to a causal one.
+    critical_lead = _CRITICAL_LEAD_NOT_THE_CAUSE
+    if verdict.verdict is Verdict.RELEASE_READY:  # row 3
         lines.append(render_callout("TIP", "Repository satisfies all deterministic release readiness criteria. Zero blocking findings emitted."))
-    elif verdict.verdict.value == "INSUFFICIENT_COVERAGE":
+    elif verdict.is_below_floor:  # row 1 — the FLOOR, the single source of truth (§3.3)
+        # Since the amendment (Story 8.1) INSUFFICIENT_COVERAGE is also row 4 — a run
+        # ABOVE the floor that found nothing and missed a coverage or critical-subsystem
+        # gate — and that run needs the gate-naming + critical-blocker sections below,
+        # not a below-floor warning it would contradict. Branching on the verdict enum
+        # here silently dropped both sections for every row-4 run.
         lines.append(render_callout("WARNING", "Repository deep coverage ratio is below the required floor. Additional definitions or tests required."))
         lines.append("")
         # Dilution can push a repo under the FLOOR too, not just under the threshold.
-        lines.extend(_render_test_dilution_hint(verdict, ledger))
-    else:
-        # Name the gate(s) that ACTUALLY failed. A fixed "due to blocking findings"
-        # string is false whenever the block came from coverage or the critical-
-        # subsystem clause with zero findings — and an operator who reads
-        # "blocking findings" beside "Blocking Findings: 0" cannot act on it.
+        lines.extend(_render_test_dilution_hint(verdict, ledger, ast_index))
+    elif verdict.blocking_finding_count > 0:  # row 2 — the ONLY blocking outcome
+        # The finding is the whole reason, and the only one this row is entitled to
+        # give. FR16's table is evaluated IN ORDER and short-circuits here: rows 3 and
+        # 4 were never reached, so the coverage threshold and the critical-subsystem
+        # clause were never evaluated and are not causes of anything. Appending them
+        # (as this arm did before Story 8.3, alongside a "this coverage result is
+        # driven by test-file dilution" note) is a false causal claim — the mirror
+        # image of DF-8-1-A, which described a coverage outcome as a defect.
+        lines.append(
+            render_callout(
+                "CAUTION",
+                f"Repository is NOT ready for release — "
+                f"{verdict.blocking_finding_count} verdict-blocking finding(s).",
+            )
+        )
+    else:  # row 4 — nothing blocking found, a gate unmet
+        # NOT a block, and it may not read as one. The verdict is INSUFFICIENT_COVERAGE
+        # with zero findings; asserting the repository is not ready for release here is
+        # a defect claim the audit never made (DF-8-1-A). The register matches
+        # `negative_assurance._assurance_statement`'s already-landed row-4 sentence, so
+        # the two artifacts of one run describe it the same way.
+        critical_lead = _CRITICAL_LEAD_CAUSAL
         assessed_ratio = scope.assessed_deep_ratio if scope is not None else verdict.deep_ratio
         reasons: list[str] = []
-        if verdict.blocking_finding_count > 0:
-            reasons.append(
-                f"{verdict.blocking_finding_count} verdict-blocking finding(s)"
-            )
         if assessed_ratio < RELEASE_READY_DEEP_THRESHOLD:
             reasons.append(
                 f"deep coverage `{assessed_ratio}` is below the "
@@ -328,13 +427,27 @@ def render_final_verdict_report(
             reasons.append(
                 "at least one critical subsystem is not audited deep (FR16)"
             )
-        detail = "; ".join(reasons) if reasons else "a release gate was not satisfied"
+        # No "a release gate was not satisfied" fallback: row 4 fires BECAUSE at least
+        # one of those two gates is unmet (it is the negation of row 3's conjunction
+        # over the same assessed ratio the gate used), so `reasons` cannot be empty. The
+        # old fallback became unreachable the moment row 2 got its own arm, and DR-11's
+        # rule is to delete an unreachable branch rather than keep it as untested code.
+        detail = "; ".join(reasons)
         lines.append(
-            render_callout("CAUTION", f"Repository is NOT ready for release — {detail}.")
+            render_callout(
+                "WARNING",
+                f"Release readiness is NOT VOUCHED — Argus found nothing blocking, but "
+                f"{detail}. This is a statement about the audit, not about the code.",
+            )
         )
         lines.append("")
-        lines.extend(_render_test_dilution_hint(verdict, ledger))
-        lines.extend(_render_critical_blockers(verdict, ledger))
+        lines.extend(_render_test_dilution_hint(verdict, ledger, ast_index))
+
+    critical_blockers = _render_critical_blockers(verdict, ledger, lead=critical_lead)
+    if critical_blockers:
+        if lines[-1] != "":
+            lines.append("")  # a Markdown heading needs a blank line above it
+        lines.extend(critical_blockers)
 
     lines.append("")
     default_scope_statement = "Scope: Whole repository audit at pinned commit."
