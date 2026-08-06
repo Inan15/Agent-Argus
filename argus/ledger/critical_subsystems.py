@@ -42,11 +42,44 @@ Decisions LOCKED here (frozen for downstream — recorded per the story)
   partitioning proper is ``index/partitioner.py`` (Story 2.4) — NOT here; a critical
   subsystem is a content-derived + operator-adjusted FILE SET in V1, ``partition_id``
   stays ``"root"``.
-- **The merge formula** — FINAL critical set = ``(heuristic ∪ operator_designated)
-  − operator_excluded`` (operator designation/exclusion takes PRECEDENCE over the
-  content heuristic — the documented correction lever for the 2.1 reviewer's
-  bare-substring over-flag Low). An operator may FORCE a file critical the heuristic
-  missed AND EXCLUDE a heuristic over-flag.
+- **The merge formula** — FINAL critical set = ``(heuristic_eligible ∪
+  operator_designated) − operator_excluded`` (operator designation/exclusion takes
+  PRECEDENCE over the content heuristic — the documented correction lever for the 2.1
+  reviewer's bare-substring over-flag Low). An operator may FORCE a file critical the
+  heuristic missed AND EXCLUDE a heuristic over-flag.
+- **Heuristic ELIGIBILITY filter (FR4 as amended, DR-5) + its LOCKED precedence
+  order (Story 8.2, boundary B5).** A file this tool can never grade ``audited_deep``
+  is ineligible for the HEURISTICALLY-derived critical set — a gate no run can
+  satisfy is not a gate, and an operator who learns to ignore one gate learns to
+  ignore all of them. Exactly two by-construction classes qualify, and they are the
+  closed :class:`CriticalIneligibility` vocabulary: a TEST FILE (``audited_shallow``
+  by construction — it is the SUBJECT of the vacuous-test pass) and a CLEAN-PARSED
+  ZERO-DEFINITION module (nothing in it to ground a deep claim against). A
+  parse-failed / AST-ineligible file is ``skipped`` by CIRCUMSTANCE, not shallow by
+  construction, and deliberately stays ELIGIBLE — quietly dropping the one
+  security-relevant file the tool could not read would be a false green. The
+  precedence order is::
+
+      (i)  eligibility filter — applied to the HEURISTIC term ONLY
+      (ii) union with operator designation (EXEMPT from the filter — DR-6)
+      (iii) minus operator exclusion (pattern-matched; exclude still wins)
+
+  A path that is ineligible AND excluded is recorded as eligibility-excluded (the
+  FIRST rule that removed it), so the disclosure map is a function of the inputs and
+  never of evaluation order.
+- **The eligibility FACT is DATA, not a computation done here.** It is derived in the
+  IMPURE shell (which already owns ``is_test_file`` / ``is_deep_claim_grounded``) and
+  carried on :class:`CriticalCandidate`, precisely so this PURE ``ledger/`` module
+  never imports a ``detectors/`` or ``audit/`` layer above it — the same ruling the
+  pipeline records for the verdict gate's scope membership. The field DEFAULTS to
+  ``None`` (= eligible), so a caller that forgets to supply it OVER-includes (a
+  stricter gate), never under-includes.
+- **A vacuously satisfied gate must be VISIBLE (boundary B3).** Every path the
+  eligibility filter removed from the heuristic term is disclosed on the persisted
+  result as ``heuristic_excluded_ineligible`` (path → closed reason token), so an
+  EMPTY critical set is distinguishable on disk from a repository that genuinely had
+  no critical subsystems. An operator-designated path is never recorded there — the
+  operator's intent is honoured, not second-guessed.
 - **Add-vs-exclude tie policy = EXCLUDE WINS.** A path that is in BOTH the operator
   add set and the operator exclude set is EXCLUDED. An explicit ``--exclude-critical``
   is the unambiguous "this is not critical" lever; this is the safe direction for
@@ -73,8 +106,9 @@ Decisions LOCKED here (frozen for downstream — recorded per the story)
 PURE (AR8): no filesystem I/O, no clock, no LLM, no ``uuid4``/``random``, no
 set/dict iteration-order reliance. Imports ONLY the 2.1 ``depth_semantics``
 (``assess_criticality`` / ``Criticality``) + the 1.2 ledger models (and, for typing
-only, the 1.4 AST-index entry). Joins the import-isolation ``_MODULES_UNDER_GUARD``
-gate.
+only, the 1.4 AST-index entry) — the Story-8.2 eligibility filter added NO import,
+which is exactly why the fact arrives as data. Joins the import-isolation
+``_MODULES_UNDER_GUARD`` gate.
 """
 
 from __future__ import annotations
@@ -94,6 +128,7 @@ if TYPE_CHECKING:  # pragma: no cover - typing-only, no runtime import (keeps PU
 __all__ = [
     "CRITICAL_SUBSYSTEMS_SCHEMA_VERSION",
     "CriticalSubsystemError",
+    "CriticalIneligibility",
     "CriticalOrigin",
     "CriticalCandidate",
     "CriticalSubsystemSet",
@@ -103,7 +138,12 @@ __all__ = [
 ]
 
 # Single localized source for this contract's schema version (additive-only).
-CRITICAL_SUBSYSTEMS_SCHEMA_VERSION = "1"
+# "1" → "2" (Story 8.2): ``paths`` changed MEANING (the heuristic term is now
+# eligibility-filtered) and the model gained an always-serialized disclosure field, so
+# the persisted bytes move for every repository. NFR-M2's localized stamp is the
+# sanctioned lever; leaving it at "1" would ship an artifact whose version misdescribes
+# the contract that produced it.
+CRITICAL_SUBSYSTEMS_SCHEMA_VERSION = "2"
 
 
 class CriticalSubsystemError(ValueError):
@@ -130,6 +170,29 @@ class CriticalOrigin(str, enum.Enum):
     OPERATOR_DESIGNATED = "operator_designated"
 
 
+class CriticalIneligibility(str, enum.Enum):
+    """Why a heuristic-CRITICAL file can never be graded ``audited_deep`` (FR4/DR-5).
+
+    A ``str``-valued CLOSED enum (the 1.2/1.6/2.1 precedent) naming exactly the two
+    BY-CONSTRUCTION classes FR4 enumerates. It is deliberately not open-ended: every
+    member is a class of file the tool stops asking about, so a third one is a
+    widening of the tool's blind spot and must be argued at story level rather than
+    added in passing.
+
+    NOT a member, deliberately: a parse-failed / AST-ineligible file. That file is
+    ``skipped`` by CIRCUMSTANCE (a missing grammar, a syntax error — resolvable), not
+    ``audited_shallow`` by construction, and it stays in the heuristic critical set.
+    """
+
+    #: A test file — graded ``audited_shallow`` always, because it is the SUBJECT of
+    #: the vacuous-test pass rather than a target of deep grounding.
+    TEST_FILE = "test_file"
+    #: A cleanly-parsed module with ZERO definitions (``__init__.py``, constants-only,
+    #: re-export, docstring-only) — nothing in it to ground a deep claim against, and
+    #: already downgraded to ``audited_shallow`` by the FR7 grounding rule.
+    ZERO_DEFINITION_MODULE = "zero_definition_module"
+
+
 class CriticalCandidate(BaseModel):
     """A file the identification stage considered, with its content assessment.
 
@@ -137,6 +200,13 @@ class CriticalCandidate(BaseModel):
     read the source via ``_read_source``) hands to
     :func:`identify_critical_subsystems`. ``frozen=True, extra="forbid"`` (the
     1.1/1.2 precedent). NO ``float``; construction-pure.
+
+    ``ineligibility`` carries the DR-5 eligibility FACT as data: the impure shell —
+    which already owns ``is_test_file`` and ``is_deep_claim_grounded`` — derives it,
+    so this PURE ``ledger/`` module never imports the ``detectors/`` / ``audit/``
+    layers above it. ``None`` means ELIGIBLE, and it is the default, so a caller that
+    does not supply the fact keeps the pre-8.2 behaviour and fails toward a STRICTER
+    gate rather than a false green.
     """
 
     model_config = ConfigDict(frozen=True, extra="forbid")
@@ -144,6 +214,10 @@ class CriticalCandidate(BaseModel):
     file_path: str = Field(..., description="Repo-root-relative POSIX path (the deterministic sort key).")
     criticality: Criticality = Field(
         ..., description="Content-derived criticality (the 2.1 assess_criticality result; closed enum)."
+    )
+    ineligibility: CriticalIneligibility | None = Field(
+        default=None,
+        description="Why this file can never be audited_deep, or None when it is ELIGIBLE (DR-5).",
     )
 
 
@@ -157,8 +231,12 @@ class CriticalSubsystemSet(BaseModel):
     :class:`CriticalOrigin`. ``designated_but_unmatched`` holds operator-forced paths
     that match no analyzable candidate (the conservative unmatched-path policy): they
     ARE in ``paths`` but have no ledger entry, so they can never be ``audited_deep``
-    and conservatively withhold ``RELEASE_READY``. NO ``float`` (AR4); any JSON of
-    this model routes through the single 1.1 ``store/canonical.dumps``.
+    and conservatively withhold ``RELEASE_READY``. ``heuristic_excluded_ineligible``
+    discloses every path the DR-5 eligibility filter removed from the HEURISTIC term
+    and why (boundary B3 — a vacuously satisfied gate must be visible; an EMPTY
+    ``paths`` with a non-empty map is a very different claim from an empty ``paths``
+    with an empty one). NO ``float`` (AR4); any JSON of this model routes through the
+    single 1.1 ``store/canonical.dumps``.
     """
 
     model_config = ConfigDict(frozen=True, extra="forbid")
@@ -176,6 +254,10 @@ class CriticalSubsystemSet(BaseModel):
     designated_but_unmatched: tuple[str, ...] = Field(
         default=(),
         description="Operator-forced critical paths matching no analyzable candidate (conservative; sorted).",
+    )
+    heuristic_excluded_ineligible: dict[str, CriticalIneligibility] = Field(
+        default_factory=dict,
+        description="Paths the DR-5 eligibility filter removed from the heuristic term → the reason (B3).",
     )
 
 
@@ -248,8 +330,14 @@ def identify_critical_subsystems(
 
     The heuristic critical set is every ``candidate`` whose ``criticality`` is
     :attr:`Criticality.CRITICAL` (derived upstream by the REUSED 2.1
-    ``assess_criticality`` — this function does NOT re-assess). The operator channel
-    is applied with PRECEDENCE:
+    ``assess_criticality`` — this function does NOT re-assess) **and** whose
+    ``ineligibility`` is ``None``. The DR-5 eligibility filter is applied to the
+    HEURISTIC term ONLY, before the union, because operator designation is EXEMPT
+    from it (DR-6) — that exemption is only expressible in this order. Each filtered
+    path is disclosed in ``heuristic_excluded_ineligible`` with its reason, so an
+    emptied critical set can never look like a repository that had none (B3).
+
+    The operator channel is applied with PRECEDENCE:
 
     - ``operator_designated`` FORCES a path critical (even a heuristic-NORMAL or
       heuristic-absent path) — the lever for a true critical the substring matcher
@@ -277,22 +365,39 @@ def identify_critical_subsystems(
 
     candidate_paths: set[str] = set()
     heuristic: set[str] = set()
+    ineligible: dict[str, CriticalIneligibility] = {}
     for candidate in candidates:
         if not isinstance(candidate, CriticalCandidate):
             raise CriticalSubsystemError(
                 f"identify_critical_subsystems requires CriticalCandidate items, got {type(candidate)!r}"
             )
         candidate_paths.add(candidate.file_path)
-        if candidate.criticality is Criticality.CRITICAL:
+        if candidate.criticality is not Criticality.CRITICAL:
+            continue
+        # (i) The DR-5 eligibility filter — HEURISTIC term only. A file that can never
+        # be graded audited_deep is partitioned out and DISCLOSED rather than dropped.
+        if candidate.ineligibility is None:
             heuristic.add(candidate.file_path)
+        else:
+            ineligible[candidate.file_path] = candidate.ineligibility
 
-    # (heuristic ∪ operator_designated) − operator_excluded — exclude wins on a tie.
-    # Exclusion is now PATTERN-matched (exact / directory-prefix / glob) rather than a
-    # plain set difference; the exclude-wins-on-a-tie precedence is unchanged.
+    # (ii) union with operator designation (EXEMPT from the filter — DR-6), then
+    # (iii) − operator_excluded — exclude still wins on a tie. Exclusion is
+    # PATTERN-matched (exact / directory-prefix / glob) rather than a plain set
+    # difference; the exclude-wins-on-a-tie precedence is unchanged.
     final = {
         path
         for path in (heuristic | designated)
         if not _matches_exclusion(path, excluded)
+    }
+
+    # Disclosure (B3). An operator-designated path is NEVER reported as
+    # eligibility-excluded — it is in ``final`` on the operator's authority, and
+    # claiming the filter removed it would be false. An ineligible-AND-excluded path
+    # IS reported: eligibility is the first rule that removed it, which keeps the map a
+    # function of the inputs rather than of evaluation order.
+    excluded_ineligible = {
+        path: reason for path, reason in sorted(ineligible.items()) if path not in designated
     }
 
     origins: dict[str, CriticalOrigin] = {}
@@ -313,6 +418,7 @@ def identify_critical_subsystems(
         paths=tuple(sorted(final)),
         origins=origins,
         designated_but_unmatched=tuple(sorted(unmatched)),
+        heuristic_excluded_ineligible=excluded_ineligible,
     )
 
 

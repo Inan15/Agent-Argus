@@ -58,7 +58,7 @@ import sys
 
 from argus.models import AuditRequest
 from argus.pipeline import run_audit
-from argus.reports.plain_english import render_ship_readiness
+from argus.reports.plain_english import ShipReadinessError, render_ship_readiness
 
 __all__ = ["build_parser", "main"]
 
@@ -232,6 +232,18 @@ def main(argv: list[str] | None = None) -> int:
     on a TYPED pipeline failure (with a secret-safe stderr line). NO business logic
     lives here — all audit logic is in ``pipeline.py`` + the reused modules.
     """
+    # The HUMAN register is full of em dashes (every ship-readiness headline carries
+    # one). On a console whose code page cannot encode them — Windows cp437/cp850,
+    # ``PYTHONIOENCODING=ascii``, POSIX ``LC_ALL=C`` — writing that prose raises
+    # ``UnicodeEncodeError``, which is a ``ValueError``. PROSE MUST NEVER BE THE THING
+    # THAT FAILS A RUN: degrade the un-encodable characters instead, so a completed
+    # audit reports its own verdict rather than the terminal's limitation.
+    for stream in (sys.stdout, sys.stderr):
+        try:
+            stream.reconfigure(errors="backslashreplace")  # type: ignore[union-attr]
+        except (AttributeError, ValueError):  # pragma: no cover - non-reconfigurable stream
+            pass
+
     parser = build_parser()
     args = parser.parse_args(argv)
 
@@ -267,8 +279,18 @@ def main(argv: list[str] | None = None) -> int:
     )
 
 
+    # AUDIT + WIRE CONTRACT. A failure here means no verdict reached the consumer, so
+    # exit `1` is the honest answer (AR10 / NFR-R1).
     try:
         verdict = run_audit(request)
+        print(
+            _summary_line(
+                verdict.verdict.value,
+                verdict.deep_ratio,
+                verdict.blocking_finding_count,
+                verdict.coverage_scope,
+            )
+        )
     except ValueError as exc:
         # RepoIntakeError / WorkspaceContainmentError / CanonicalSerializationError
         # / PipelineError are all ValueError subclasses — TYPED, secret-safe (AR10).
@@ -276,21 +298,30 @@ def main(argv: list[str] | None = None) -> int:
         print(f"{_PROG}: audit failed: {exc}", file=sys.stderr)
         return _CRASH_EXIT_CODE
 
-    print(
-        _summary_line(
-            verdict.verdict.value,
-            verdict.deep_ratio,
-            verdict.blocking_finding_count,
-            verdict.coverage_scope,
-        )
-    )
-    # The HUMAN register (the brief's dual-register output) goes to STDERR, on purpose.
-    # stdout is the wire contract a CI step / orchestrating agent parses (FR18/AR3), and
-    # appending prose to it would break any consumer reading the summary line
-    # positionally. stderr reaches a human at a terminal and lands in CI logs, so nothing
-    # is hidden — the two registers simply stop competing for one stream.
-    for line in render_ship_readiness(verdict, enabled_passes=enabled_passes):
-        print(line, file=sys.stderr)
+    # HUMAN REGISTER, guarded SEPARATELY (DF-8-3-B). It goes to STDERR on purpose: stdout
+    # is the wire contract a CI step / orchestrating agent parses positionally (FR18/AR3),
+    # and appending prose to it would break that. Two failures are possible here and they
+    # are NOT the same class, so they do not share an exit code:
+    #
+    #   * `ShipReadinessError` — the renderer refusing a verdict FR16 cannot produce. That
+    #     is a CONTRACT VIOLATION; the run is not trustworthy, so it degrades to the AR10
+    #     typed exit `1`. Before DF-8-3-B this escaped `main()` as an uncaught traceback on
+    #     every default invocation (masked only when `--report-dir` was set, because the
+    #     pipeline renders the same block inside `run_audit`, whose own guard caught it).
+    #   * any other `ValueError` — overwhelmingly an encoding failure on the em-dash-bearing
+    #     prose. The audit COMPLETED, persisted, and already printed its verdict on stdout.
+    #     Reporting "audit failed" / exit `1` there would be a false statement about a run
+    #     that succeeded, and would contradict the published contract that exit `1` means no
+    #     verdict exists. The prose degrades; the verdict stands.
+    try:
+        for line in render_ship_readiness(verdict, enabled_passes=enabled_passes):
+            print(line, file=sys.stderr)
+    except ShipReadinessError as exc:
+        print(f"{_PROG}: audit failed: {exc}", file=sys.stderr)
+        return _CRASH_EXIT_CODE
+    except ValueError as exc:
+        print(f"{_PROG}: ship-readiness not rendered: {exc}", file=sys.stderr)
+
     return verdict.exit_code
 
 

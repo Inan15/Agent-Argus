@@ -137,7 +137,7 @@ from argus.audit.grounding import is_deep_claim_grounded
 from argus.detectors.orphan_code import RULE_ORPHAN_CODE, OrphanCodeDetector
 from argus.detectors.secret_scan import SecretScanDetector
 from argus.detectors.tool_runner import ToolRunnerDetector
-from argus.detectors.vacuous_test import VacuousTestDetector, is_test_file
+from argus.detectors.vacuous_test import VacuousTestDetector, is_test_classification_content_dependent, is_test_file
 from argus.index.ast_index import AstIndex, AstIndexEntry, build_ast_index
 from argus.cost.budget_governor import (
     BudgetConfig,
@@ -180,6 +180,7 @@ from argus.ledger.coverage_ledger import (
 from argus.ledger.coverage_report import CoverageReport, build_coverage_report
 from argus.ledger.critical_subsystems import (
     CriticalCandidate,
+    CriticalIneligibility,
     critical_subsystems_not_deep,
     identify_critical_subsystems,
 )
@@ -396,6 +397,38 @@ def _grade_non_test_source(entry: AstIndexEntry) -> CoverageLedgerEntry:
     )
 
 
+def _critical_ineligibility(
+    entry: AstIndexEntry, *, is_test: bool
+) -> CriticalIneligibility | None:
+    """Why this file can never be graded ``audited_deep``, or ``None`` (FR4/DR-5).
+
+    The eligibility FACT the PURE ``ledger/critical_subsystems`` fold consumes as data, derived
+    HERE in the impure shell that already owns ``is_test_file`` and ``is_deep_claim_grounded``,
+    so a ``ledger/`` module never imports the ``detectors/`` / ``audit/`` layers above it (AR8 —
+    the ruling :func:`_assessment_scope_paths` already records). Both are REUSED by import
+    (AR7/§3.3) and ``is_test`` is passed IN, so eligibility and GRADING cannot disagree.
+
+    The answers mirror the grading table: a test file is ``audited_shallow`` ALWAYS, a cleanly
+    parsed file with no grounding fact (zero definitions) is downgraded by FR7, anything else is
+    ELIGIBLE. BOTH unreadable-entry guards below are LOAD-BEARING for ONE reason (D3): a file the
+    tool could not READ is ``skipped`` by CIRCUMSTANCE, never shallow by construction, so it
+    STAYS eligible — quietly dropping the one security-token-bearing file the tool could not read
+    is a false green of exactly the class the PRD names as fatal. That covers the TEST label too
+    when the unreadable content itself forced it, i.e. when the label is a tier-3 GUESS
+    (:func:`is_test_classification_content_dependent`) and not a property of what the file IS.
+    """
+    unreadable = entry.parse_failed or not entry.ast_eligible
+    if is_test:
+        if unreadable and is_test_classification_content_dependent(entry.file_path):
+            return None
+        return CriticalIneligibility.TEST_FILE
+    if unreadable:
+        return None
+    if not is_deep_claim_grounded(entry):
+        return CriticalIneligibility.ZERO_DEFINITION_MODULE
+    return None
+
+
 def _detect_per_file(
     repo_root: Path,
     index_entries: tuple[AstIndexEntry, ...],
@@ -431,10 +464,15 @@ def _detect_per_file(
         source = _read_source(repo_root, rel)
         if is_python:
             breadth_targets.append((rel, source))
+        # Evaluated ONCE and reused by BOTH the eligibility fact below and the grading
+        # branch, so the two stages cannot disagree. The AST entry is passed so an
+        # ambiguously-named ``*_test.py`` is classified by CONTENT, not by filename.
+        is_test = is_test_file(rel, ast_entry=entry)
         candidates.append(
             CriticalCandidate(
                 file_path=rel,
                 criticality=assess_criticality(file_path=rel, source=source, ast_entry=entry),
+                ineligibility=_critical_ineligibility(entry, is_test=is_test),
             )
         )
         if "security" in enabled_passes:
@@ -449,11 +487,10 @@ def _detect_per_file(
             )
             findings.extend(secret_result.findings)
 
-        # The AST entry is passed so an ambiguously-named Python module (``*_test.py``)
-        # is classified by its CONTENT, not by its filename — a production module whose
-        # subject is testing must not be mistaken for a test suite and skipped from
-        # deep grading.
-        if is_test_file(rel, ast_entry=entry):
+        # ``is_test`` was resolved above from the CONTENT-aware classification, so a
+        # production module whose subject is testing is not mistaken for a test suite
+        # and skipped from deep grading. The eligibility fact came from this same value.
+        if is_test:
             if is_python and "vacuous" in enabled_passes:
                 result = detector.run(file_path=rel, source=source, ast_entry=entry)
                 entries.extend(result.entries)

@@ -45,6 +45,7 @@ from argus.ledger.recording import Recording
 from argus.store import canonical
 from argus.verdict.verdict_gate import (
     INSUFFICIENT_COVERAGE_FLOOR,
+    DecisionRow,
     Verdict,
     evaluate_verdict,
 )
@@ -244,13 +245,19 @@ def test_release_ready_exit_0_distinct() -> None:
 
 
 def test_above_floor_under_exhaustion_does_not_over_fire() -> None:
-    """TC-ArgusAgent-COST-001-103 — a halt that left >=20% deep gets a real release verdict, not INSUFFICIENT."""
-    # 3 deep + 7 skipped = 30% (>=20%, <60%) → NOT_READY_FOR_RELEASE (the gate's normal call).
+    """TC-ArgusAgent-COST-001-103 — a halt that left >=20% deep does NOT fire the floor.
+
+    Story 8.1: the SUBJECT — the floor must not over-fire on the mere fact of exhaustion —
+    is unchanged and is asserted on the FLOOR ROW, which is what "the floor fired" actually
+    means. The verdict VALUE moved by design: 30% deep with ZERO blocking findings is FR16
+    row 4 (a coverage gate unmet, nothing found), no longer a default block.
+    """
+    # 3 deep + 7 skipped = 30% (>=20%, <60%), zero findings → row 4, NOT the floor.
     ledger = _ledger(deep=3, skipped=7)
     verdict = evaluate_verdict(ledger, ())
     assert verdict.deep_ratio == Fraction(3, 10)
-    assert verdict.verdict is Verdict.NOT_READY_FOR_RELEASE
-    assert verdict.verdict is not Verdict.INSUFFICIENT_COVERAGE
+    assert verdict.decision_row is DecisionRow.GATE_UNMET_NO_FINDINGS
+    assert verdict.decision_row is not DecisionRow.BELOW_FLOOR
     halt = _halt_report(
         halted=True,
         assessed=tuple(f"deep_{i}.py" for i in range(3)),
@@ -260,7 +267,7 @@ def test_above_floor_under_exhaustion_does_not_over_fire() -> None:
     # The floor report reflects a non-floor verdict honestly.
     assert report.below_floor is False
     assert report.driven_by_exhaustion is True
-    assert report.message == "assessed 30% deep; verdict rendered: NOT_READY_FOR_RELEASE"
+    assert report.message == "assessed 30% deep; verdict rendered: INSUFFICIENT_COVERAGE"
 
 
 def test_above_floor_exactly_20pct_is_not_below_floor() -> None:
@@ -268,7 +275,11 @@ def test_above_floor_exactly_20pct_is_not_below_floor() -> None:
     ledger = _ledger(deep=2, skipped=8)  # 2/10 = 20% — NOT below the strict floor
     verdict = evaluate_verdict(ledger, ())
     assert verdict.deep_ratio == Fraction(1, 5)
-    assert verdict.verdict is not Verdict.INSUFFICIENT_COVERAGE
+    # Story 8.1 / boundary B4: exactly-20% is ASSESSABLE, so the floor row cannot fire
+    # here. (It is row 4 — a gate unmet with nothing found — which renders the same
+    # verdict value and exit code, which is exactly why the row is what we assert.)
+    assert verdict.decision_row is not DecisionRow.BELOW_FLOOR
+    assert verdict.is_below_floor is False
     halt = _halt_report(
         halted=True,
         assessed=tuple(f"deep_{i}.py" for i in range(2)),
@@ -397,10 +408,18 @@ def test_floor_report_is_byte_stable() -> None:
 
 
 def test_below_floor_predicate_agrees_with_deep_ratio_comparison() -> None:
-    """TC-ArgusAgent-COST-001-111 — below_floor (verdict==INSUFFICIENT) AGREES with deep_ratio < floor.
+    """TC-ArgusAgent-COST-001-111 — below_floor AGREES with deep_ratio < floor.
 
     Pins the locked predicate against the alternative comparison across the boundary
-    (including the total==0 short-circuit where deep_ratio is 0/1 < 1/5).
+    (including the total==0 short-circuit where deep_ratio is 0/1 < 1/5). THIS is the
+    real invariant, and it is unchanged.
+
+    Story 8.1: the second assertion previously read
+    ``below_floor == (verdict is INSUFFICIENT_COVERAGE)``. The FR16 amendment FALSIFIES
+    that equivalence — ``INSUFFICIENT_COVERAGE`` is now also row 4, above the floor — so
+    it is re-pointed to the DISCLOSED row, which is the thing ``below_floor`` is supposed
+    to mean. The 30%-deep case below is precisely the one that used to agree by accident
+    and would now assert a falsehood.
     """
     cases = [
         _ledger(deep=0, skipped=10),  # 0% < 20%
@@ -415,7 +434,7 @@ def test_below_floor_predicate_agrees_with_deep_ratio_comparison() -> None:
         report = build_floor_report(verdict, halt)
         ratio_below = verdict.deep_ratio < INSUFFICIENT_COVERAGE_FLOOR
         assert report.below_floor == ratio_below
-        assert report.below_floor == (verdict.verdict is Verdict.INSUFFICIENT_COVERAGE)
+        assert report.below_floor == (verdict.decision_row is DecisionRow.BELOW_FLOOR)
 
 
 def test_build_floor_report_rejects_non_verdict() -> None:

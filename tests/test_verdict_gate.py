@@ -28,7 +28,9 @@ from argus.verdict.verdict_gate import (
     BLOCKED,
     INSUFFICIENT_COVERAGE_FLOOR,
     RELEASE_READY_DEEP_THRESHOLD,
+    VERDICT_SCHEMA_VERSION,
     AuditVerdict,
+    DecisionRow,
     Verdict,
     blocking_finding_count,
     evaluate_verdict,
@@ -119,23 +121,27 @@ class TestThreeWayVerdict:
         assert av.verdict is Verdict.RELEASE_READY
         assert av.exit_code == 0
 
-    def test_TC_ArgusAgent_VERDICT_001_11_not_ready_low_deep(self) -> None:
-        # 40% deep (2/5), 0 blocking → NOT_READY (enough to assess, gate unmet).
+    def test_TC_ArgusAgent_VERDICT_001_11_gate_unmet_low_deep(self) -> None:
+        # 40% deep (2/5), 0 blocking → enough to assess, coverage gate unmet, NOTHING
+        # found → the not-assessed state (row 4), never a block (FR16 amended).
         av = evaluate_verdict(_ledger_ratio(deep=2, total=5))
-        assert av.verdict is Verdict.NOT_READY_FOR_RELEASE
-        assert av.exit_code == 2
+        assert av.verdict is Verdict.INSUFFICIENT_COVERAGE
+        assert av.exit_code == 3
+        assert av.decision_row is DecisionRow.GATE_UNMET_NO_FINDINGS
 
     def test_TC_ArgusAgent_VERDICT_001_12_not_ready_blocking_finding(self) -> None:
-        # 100% deep but ≥1 verdict-eligible finding → NOT_READY.
+        # 100% deep but ≥1 verdict-eligible finding → NOT_READY (row 2, the ONLY block).
         av = evaluate_verdict(_ledger_ratio(deep=5, total=5), [_ast_finding()])
         assert av.verdict is Verdict.NOT_READY_FOR_RELEASE
         assert av.exit_code == 2
+        assert av.decision_row is DecisionRow.BLOCKING_FINDINGS
 
     def test_TC_ArgusAgent_VERDICT_001_13_insufficient_coverage(self) -> None:
-        # 10% deep (1/10) → below floor → INSUFFICIENT_COVERAGE.
+        # 10% deep (1/10) → below floor → INSUFFICIENT_COVERAGE (row 1).
         av = evaluate_verdict(_ledger_ratio(deep=1, total=10))
         assert av.verdict is Verdict.INSUFFICIENT_COVERAGE
         assert av.exit_code == 3
+        assert av.decision_row is DecisionRow.BELOW_FLOOR
 
     def test_TC_ArgusAgent_VERDICT_001_14_never_default_block_clean_ready(self) -> None:
         # A clean ledger with adequate coverage + no findings is READY, not blocked.
@@ -154,16 +160,21 @@ class TestBoundaries:
         assert av.verdict is Verdict.INSUFFICIENT_COVERAGE
 
     def test_TC_ArgusAgent_VERDICT_001_21_exactly_floor_is_assessable(self) -> None:
-        # Exactly 20% → assessable (not below floor) → NOT_READY (< 60%).
+        # Exactly 20% → assessable (NOT below the strict floor). The subject of this
+        # test is the strictness of the floor, which is why the row matters more than
+        # the verdict here: with zero findings and the 60% gate unmet it is row 4, NOT
+        # row 1 — the two are indistinguishable by verdict and exit code (boundary B4).
         av = evaluate_verdict(_ledger_ratio(deep=1, total=5))
         assert av.deep_ratio == INSUFFICIENT_COVERAGE_FLOOR
-        assert av.verdict is Verdict.NOT_READY_FOR_RELEASE
+        assert av.decision_row is DecisionRow.GATE_UNMET_NO_FINDINGS
+        assert av.is_below_floor is False
 
     def test_TC_ArgusAgent_VERDICT_001_22_just_below_ready(self) -> None:
-        # 59.99% → below 60% → NOT_READY.
+        # 59.99% → below 60% → RELEASE_READY withheld. Zero findings → row 4, not a block.
         av = evaluate_verdict(_ledger_ratio(deep=5999, total=10000))
         assert av.deep_ratio < RELEASE_READY_DEEP_THRESHOLD
-        assert av.verdict is Verdict.NOT_READY_FOR_RELEASE
+        assert av.verdict is not Verdict.RELEASE_READY
+        assert av.decision_row is DecisionRow.GATE_UNMET_NO_FINDINGS
 
     def test_TC_ArgusAgent_VERDICT_001_23_exactly_ready_inclusive(self) -> None:
         # Exactly 60% → RELEASE_READY (>= inclusive).
@@ -197,8 +208,11 @@ class TestInferredNeverSatisfies:
         av = evaluate_verdict(led)
         assert av.deep_count == 3
         assert av.total_count == 7
-        assert av.deep_ratio == Fraction(3, 7)  # < 60% → NOT_READY
-        assert av.verdict is Verdict.NOT_READY_FOR_RELEASE
+        # The FR8 numerator assertion is the subject and is unchanged; < 60% with zero
+        # findings withholds RELEASE_READY as row 4.
+        assert av.deep_ratio == Fraction(3, 7)
+        assert av.verdict is not Verdict.RELEASE_READY
+        assert av.decision_row is DecisionRow.GATE_UNMET_NO_FINDINGS
 
     def test_TC_ArgusAgent_VERDICT_001_32_shallow_does_not_inflate_to_ready(self) -> None:
         # 50% deep + 50% shallow → 50% < 60% → NOT_READY (shallow not in numerator).
@@ -208,7 +222,8 @@ class TestInferredNeverSatisfies:
         )
         av = evaluate_verdict(led)
         assert av.deep_ratio == Fraction(1, 2)
-        assert av.verdict is Verdict.NOT_READY_FOR_RELEASE
+        assert av.verdict is not Verdict.RELEASE_READY  # shallow is not in the numerator
+        assert av.decision_row is DecisionRow.GATE_UNMET_NO_FINDINGS
 
 
 # ── AC4 — advisory-by-contract moat (THE keystone) ──
@@ -350,11 +365,14 @@ class TestHonestDegradation:
 class TestFloorVsBlockingPrecedence:
     def test_TC_ArgusAgent_VERDICT_001_80_floor_wins_over_blocking(self) -> None:
         # 10% deep (below floor) + an eligible blocking finding → INSUFFICIENT,
-        # NOT NOT_READY. Floor is evaluated first.
+        # NOT NOT_READY. Floor is evaluated first — row 1 keeps precedence over row 2
+        # after the FR16 reorder (boundary B2: "findings before coverage" means before
+        # the GATES, never before the FLOOR).
         led = _ledger_ratio(deep=1, total=10)
         av = evaluate_verdict(led, [_ast_finding()])
         assert av.blocking_finding_count == 1
         assert av.verdict is Verdict.INSUFFICIENT_COVERAGE
+        assert av.decision_row is DecisionRow.BELOW_FLOOR
 
 
 # ── critical-subsystem clause seam (Story 2.3) ──
@@ -367,17 +385,326 @@ class TestCriticalSubsystemSeam:
         assert av.verdict is Verdict.RELEASE_READY
 
     def test_TC_ArgusAgent_VERDICT_001_86_critical_not_deep_withholds_ready(self) -> None:
-        # ≥60% deep + 0 blocking but a critical subsystem not deep → NOT_READY.
+        # ≥60% deep + 0 blocking but a critical subsystem not deep → RELEASE_READY is
+        # WITHHELD (the subject). With nothing found that is row 4, not a block.
         av = evaluate_verdict(
             _ledger_ratio(deep=3, total=5), critical_subsystems_all_deep=False
         )
+        assert av.verdict is not Verdict.RELEASE_READY
+        assert av.decision_row is DecisionRow.GATE_UNMET_NO_FINDINGS
+
+
+# ── Story 8.1 / FR16 as amended 2026-08-03 — the four-row decision table ──
+#
+# The amendment evaluates FINDINGS BEFORE THE COVERAGE GATES. Row 1 (the 20% floor)
+# keeps precedence over row 2 (blocking findings) — "before coverage" means before the
+# 60% / critical-subsystem GATES, never before the FLOOR (boundary B2).
+#
+#   | # | condition (in order)                                     | verdict                | exit |
+#   | 1 | assessed_total == 0 or assessed_ratio < 1/5              | INSUFFICIENT_COVERAGE  | 3    |
+#   | 2 | blocking_findings >= 1                                   | NOT_READY_FOR_RELEASE  | 2    |
+#   | 3 | assessed_ratio >= 3/5 and all criticals audited_deep      | RELEASE_READY          | 0    |
+#   | 4 | otherwise (zero findings, a gate unmet)                  | INSUFFICIENT_COVERAGE  | 3    |
+
+
+class TestAmendedDecisionTable:
+    """AC1–AC7 — the reordered table, and the row each evaluation discloses."""
+
+    def test_TC_ArgusAgent_VERDICT_001_100_row_4_coverage_gate_unmet_no_findings(self) -> None:
+        """AC2 (RED-first) — 2/5 deep, ZERO blocking findings → the NOT-ASSESSED state.
+
+        The defect this story removes: the pre-amendment table fell through to
+        ``NOT_READY_FOR_RELEASE`` — a verdict whose canonical meaning is "Argus found
+        something" — on a run where Argus found nothing. A coverage shortfall is never
+        reported as a defect.
+        """
+        av = evaluate_verdict(_ledger_ratio(deep=2, total=5))
+        assert av.blocking_finding_count == 0
+        assert av.verdict is Verdict.INSUFFICIENT_COVERAGE
+        assert av.exit_code == 3
+        assert av.decision_row is DecisionRow.GATE_UNMET_NO_FINDINGS
+
+    def test_TC_ArgusAgent_VERDICT_001_101_row_4_critical_gate_unmet_no_findings(self) -> None:
+        """AC2 (RED-first) — ratio ≥ 60% but a critical path not deep, ZERO findings → row 4."""
+        av = evaluate_verdict(
+            _ledger_ratio(deep=3, total=5), critical_subsystems_all_deep=False
+        )
+        assert av.blocking_finding_count == 0
+        assert av.deep_ratio >= RELEASE_READY_DEEP_THRESHOLD
+        assert av.verdict is Verdict.INSUFFICIENT_COVERAGE
+        assert av.exit_code == 3
+        assert av.decision_row is DecisionRow.GATE_UNMET_NO_FINDINGS
+
+    def test_TC_ArgusAgent_VERDICT_001_102_row_2_findings_beat_the_coverage_gate(self) -> None:
+        """AC1 — a blocking finding between the floor and the 60% gate is row 2, not row 4.
+
+        This is the "findings before coverage" reorder itself: the finding decides,
+        even though the coverage gate is also unmet.
+        """
+        av = evaluate_verdict(_ledger_ratio(deep=2, total=5), [_ast_finding()])
+        assert av.deep_ratio < RELEASE_READY_DEEP_THRESHOLD
+        assert av.deep_ratio >= INSUFFICIENT_COVERAGE_FLOOR
         assert av.verdict is Verdict.NOT_READY_FOR_RELEASE
+        assert av.exit_code == 2
+        assert av.decision_row is DecisionRow.BLOCKING_FINDINGS
+
+    def test_TC_ArgusAgent_VERDICT_001_103_row_2_all_gates_met_one_finding(self) -> None:
+        """AC5 — the case a healthy repo actually hits: gates met, one real finding."""
+        av = evaluate_verdict(
+            _ledger_ratio(deep=5, total=5),
+            [_ast_finding()],
+            critical_subsystems_all_deep=True,
+        )
+        assert av.blocking_finding_count == 1
+        assert av.verdict is Verdict.NOT_READY_FOR_RELEASE
+        assert av.exit_code == 2
+        assert av.decision_row is DecisionRow.BLOCKING_FINDINGS
+
+    def test_TC_ArgusAgent_VERDICT_001_104_row_1_below_floor_and_empty(self) -> None:
+        """AC3 — below the floor, and the empty ledger, are row 1."""
+        below = evaluate_verdict(_ledger_ratio(deep=1, total=10))
+        assert below.verdict is Verdict.INSUFFICIENT_COVERAGE
+        assert below.exit_code == 3
+        assert below.decision_row is DecisionRow.BELOW_FLOOR
+
+        empty = evaluate_verdict(CoverageLedger.build([]))
+        assert empty.total_count == 0
+        assert empty.verdict is Verdict.INSUFFICIENT_COVERAGE
+        assert empty.decision_row is DecisionRow.BELOW_FLOOR
+
+    def test_TC_ArgusAgent_VERDICT_001_105_row_1_wins_over_row_2(self) -> None:
+        """AC4 / boundary B2 — FLOOR WINS survives the reorder, unmodified in meaning."""
+        av = evaluate_verdict(_ledger_ratio(deep=1, total=10), [_ast_finding()])
+        assert av.blocking_finding_count == 1
+        assert av.verdict is Verdict.INSUFFICIENT_COVERAGE
+        assert av.verdict is not Verdict.NOT_READY_FOR_RELEASE
+        assert av.decision_row is DecisionRow.BELOW_FLOOR
+
+    def test_TC_ArgusAgent_VERDICT_001_106_exactly_at_floor_is_row_4_not_row_1(self) -> None:
+        """AC6 / boundary B4 — exactly 20% is ASSESSABLE, so an unmet gate there is row 4.
+
+        Rows 1 and 4 are indistinguishable by verdict AND exit code. Without the
+        disclosed row an operator at exactly the floor could not tell "I examined too
+        little to say anything" from "I examined enough and found nothing" — which is
+        the whole reason the row is on the artifact.
+        """
+        at_floor = evaluate_verdict(_ledger_ratio(deep=1, total=5))
+        just_below = evaluate_verdict(_ledger_ratio(deep=1999, total=10000))
+
+        assert at_floor.deep_ratio == INSUFFICIENT_COVERAGE_FLOOR
+        assert just_below.deep_ratio < INSUFFICIENT_COVERAGE_FLOOR
+        # Same verdict, same exit code…
+        assert at_floor.verdict is just_below.verdict is Verdict.INSUFFICIENT_COVERAGE
+        assert at_floor.exit_code == just_below.exit_code == 3
+        # …different rows. That is the disclosure earning its keep.
+        assert at_floor.decision_row is DecisionRow.GATE_UNMET_NO_FINDINGS
+        assert just_below.decision_row is DecisionRow.BELOW_FLOOR
+
+    def test_TC_ArgusAgent_VERDICT_001_107_thresholds_and_vocabularies_unchanged(self) -> None:
+        """AC7 / D1 — the reorder moved rows, not boundaries, and did not grow Verdict."""
+        assert RELEASE_READY_DEEP_THRESHOLD == Fraction(3, 5)
+        assert INSUFFICIENT_COVERAGE_FLOOR == Fraction(1, 5)
+        assert isinstance(RELEASE_READY_DEEP_THRESHOLD, Fraction)
+        assert isinstance(INSUFFICIENT_COVERAGE_FLOOR, Fraction)
+        assert not isinstance(RELEASE_READY_DEEP_THRESHOLD, float)
+        assert not isinstance(INSUFFICIENT_COVERAGE_FLOOR, float)
+        # `>= 3/5` is INCLUSIVE and `< 1/5` is STRICT — the two off-by-one risks.
+        assert evaluate_verdict(_ledger_ratio(deep=3, total=5)).verdict is Verdict.RELEASE_READY
+        assert evaluate_verdict(_ledger_ratio(deep=1, total=5)).is_below_floor is False
+        # Verdict MUST NOT grow; DecisionRow is a separate, exactly-four-member vocabulary.
+        assert len(Verdict) == 3
+        assert {r.value for r in DecisionRow} == {
+            "row_1_below_floor",
+            "row_2_blocking_findings",
+            "row_3_gates_met",
+            "row_4_gate_unmet_no_findings",
+        }
+        assert len(DecisionRow) == 4
+
+    def test_TC_ArgusAgent_VERDICT_001_108_row_3_implies_zero_blocking(self) -> None:
+        """Row 3 carries no redundant ``blocking == 0`` clause — row-2 precedence pins it."""
+        av = evaluate_verdict(_ledger_ratio(deep=5, total=5), [_heuristic_finding()])
+        assert av.decision_row is DecisionRow.GATES_MET
+        assert av.blocking_finding_count == 0
+        # …and one eligible finding on the SAME ledger leaves row 3 entirely.
+        blocked = evaluate_verdict(_ledger_ratio(deep=5, total=5), [_ast_finding()])
+        assert blocked.decision_row is DecisionRow.BLOCKING_FINDINGS
+
+    def test_TC_ArgusAgent_VERDICT_001_109_every_evaluation_discloses_a_row(self) -> None:
+        """D2 — ``None`` means "pre-amendment payload"; the gate NEVER returns it."""
+        evaluations = [
+            evaluate_verdict(_ledger_ratio(deep=1, total=10)),  # row 1
+            evaluate_verdict(_ledger_ratio(deep=5, total=5), [_ast_finding()]),  # row 2
+            evaluate_verdict(_ledger_ratio(deep=3, total=5)),  # row 3
+            evaluate_verdict(_ledger_ratio(deep=2, total=5)),  # row 4
+        ]
+        assert {av.decision_row for av in evaluations} == set(DecisionRow)
+        assert all(av.decision_row is not None for av in evaluations)
+
+
+# ── AC8 / AC9 — disclosure sufficiency, the schema bump, and v1 read-back ──
+
+
+def _one_verdict_per_row() -> dict[DecisionRow, AuditVerdict]:
+    """One evaluated verdict per FR16 row — the population every AC8/AC11 proof folds over."""
+    return {
+        DecisionRow.BELOW_FLOOR: evaluate_verdict(_ledger_ratio(deep=1, total=10)),
+        DecisionRow.BLOCKING_FINDINGS: evaluate_verdict(
+            _ledger_ratio(deep=5, total=5), [_ast_finding()]
+        ),
+        DecisionRow.GATES_MET: evaluate_verdict(_ledger_ratio(deep=3, total=5)),
+        DecisionRow.GATE_UNMET_NO_FINDINGS: evaluate_verdict(_ledger_ratio(deep=2, total=5)),
+    }
+
+
+class TestDisclosureAndSchema:
+    def test_TC_ArgusAgent_VERDICT_001_110_schema_version_is_2(self) -> None:
+        """AC9 — the bump is the sanctioned lever for an intentional content-hash change."""
+        assert VERDICT_SCHEMA_VERSION == "2"
+        assert _golden_verdict().schema_version == "2"
+
+    def test_TC_ArgusAgent_VERDICT_001_111_pre_amendment_payload_round_trips(self) -> None:
+        """AC8 / A8 — a ``"1"``-stamped payload with NO ``decision_row`` still validates.
+
+        ``AuditVerdict`` is ``extra="forbid"``; a MISSING key is only tolerable because
+        the new field carries a default. Without it every verdict already persisted
+        under ``.apaa/`` / ``.argus/`` would stop round-tripping — assumption A8, binding.
+        """
+        v1_payload = {
+            "schema_version": "1",
+            "verdict": "NOT_READY_FOR_RELEASE",
+            "deep_ratio": "3/5",
+            "deep_count": 3,
+            "total_count": 5,
+            "counts_by_depth": {
+                "audited_deep": 3,
+                "audited_shallow": 2,
+                "inferred": 0,
+                "skipped": 0,
+                "tool_scanned_only": 0,
+            },
+            "blocking_finding_count": 1,
+            "ordered_findings": [],
+            "critical_subsystems_all_deep": True,
+            "exit_code": 2,
+        }
+        restored = AuditVerdict.model_validate(v1_payload)
+
+        assert restored.decision_row is None  # never disclosed; not invented
+        assert restored.deep_ratio == Fraction(3, 5)  # canonical "3/5" → exact Fraction
+        # AC9 — no migration: the "1" stamp survives read-back untouched…
+        assert restored.schema_version == "1"
+        # …and re-serializes to the SAME bytes it was written with (no null key added).
+        text = canonical.dumps(restored.to_canonical_payload())
+        assert "decision_row" not in text
+        assert '"schema_version":"1"' in text
+
+    def test_TC_ArgusAgent_VERDICT_001_112_disclosure_re_derives_verdict_and_exit(self) -> None:
+        """AC8 — the disclosed fields alone reproduce the verdict + exit code.
+
+        The proof that the disclosure is SUFFICIENT rather than merely asserted: this
+        re-derivation reads ONLY the verdict artifact — never the ledger — and must
+        agree with the gate on all four rows. If it ever needs a field that is not on
+        the artifact, the artifact is under-disclosed.
+        """
+
+        def _re_derive(av: AuditVerdict) -> tuple[Verdict, int]:
+            scope = av.coverage_scope
+            assessed_total = (
+                scope.assessed_total_count if scope is not None else av.total_count
+            )
+            assessed_ratio = (
+                scope.assessed_deep_ratio if scope is not None else av.deep_ratio
+            )
+            if av.decision_row is DecisionRow.BELOW_FLOOR:
+                assert assessed_total == 0 or assessed_ratio < INSUFFICIENT_COVERAGE_FLOOR
+                return Verdict.INSUFFICIENT_COVERAGE, 3
+            if av.decision_row is DecisionRow.BLOCKING_FINDINGS:
+                assert av.blocking_finding_count >= 1
+                return Verdict.NOT_READY_FOR_RELEASE, 2
+            if av.decision_row is DecisionRow.GATES_MET:
+                assert assessed_ratio >= RELEASE_READY_DEEP_THRESHOLD
+                assert av.critical_subsystems_all_deep
+                return Verdict.RELEASE_READY, 0
+            assert av.blocking_finding_count == 0
+            assert (
+                assessed_ratio < RELEASE_READY_DEEP_THRESHOLD
+                or not av.critical_subsystems_all_deep
+            )
+            return Verdict.INSUFFICIENT_COVERAGE, 3
+
+        by_row = _one_verdict_per_row()
+        # Scoped runs disclose their assessed population through coverage_scope instead.
+        by_row["scoped"] = evaluate_verdict(  # type: ignore[index]
+            _ledger_ratio(deep=3, total=5), scope_paths=("f0.py", "f1.py", "f3.py")
+        )
+        for av in by_row.values():
+            assert _re_derive(av) == (av.verdict, av.exit_code)
+
+    def test_TC_ArgusAgent_VERDICT_001_113_assessed_population_is_disclosed(self) -> None:
+        """AC8 / D3 — the population the row was computed over is on the artifact.
+
+        Unscoped: ``deep_count`` / ``total_count``. Scoped: ``coverage_scope``, whose
+        ``Present ⇔ the gate keyed on a narrowed population`` semantics four downstream
+        modules branch on — so no second always-present copy of the same numbers.
+        """
+        unscoped = evaluate_verdict(_ledger_ratio(deep=2, total=5))
+        assert unscoped.coverage_scope is None
+        assert (unscoped.deep_count, unscoped.total_count) == (2, 5)
+
+        scoped = evaluate_verdict(
+            _ledger_ratio(deep=3, total=5), scope_paths=("f0.py", "f1.py", "f3.py")
+        )
+        assert scoped.coverage_scope is not None
+        assert scoped.coverage_scope.assessed_deep_ratio == Fraction(2, 3)
+        # The whole-ledger numbers keep their LOCKED meaning alongside the assessed ones.
+        assert scoped.deep_ratio == Fraction(3, 5)
+
+
+# ── AC11 — determinism and the single intentional content-hash change ──
+
+
+class TestDeterminismAndByteDelta:
+    def test_TC_ArgusAgent_VERDICT_001_114_two_evaluations_are_byte_identical(self) -> None:
+        """AC11 — same synthetic ledger → identical canonical bytes AND content hash."""
+        for _row, av in _one_verdict_per_row().items():
+            again = evaluate_verdict(
+                _ledger_ratio(deep=av.deep_count, total=av.total_count),
+                av.ordered_findings,
+                critical_subsystems_all_deep=av.critical_subsystems_all_deep,
+            )
+            assert canonical.dumps(av.to_canonical_payload()) == canonical.dumps(
+                again.to_canonical_payload()
+            )
+            assert compute_content_hash(av.to_canonical_payload()) == compute_content_hash(
+                again.to_canonical_payload()
+            )
+
+    def test_TC_ArgusAgent_VERDICT_001_115_only_schema_and_row_changed(self) -> None:
+        """AC11 — the schema bump + the new key are the ONLY intentional payload delta.
+
+        Strips the two amendment-introduced changes back out of a live payload and
+        requires what remains to be byte-identical to the pre-amendment encoding of the
+        same fold. Anything else that moved — a reordered key, a changed ratio encoding,
+        a dropped field — fails here.
+        """
+        av = _golden_verdict()  # row 2: the verdict VALUE itself does not change
+        payload = av.to_canonical_payload()
+        assert payload["schema_version"] == "2"
+        assert payload["decision_row"] is DecisionRow.BLOCKING_FINDINGS
+
+        payload.pop("decision_row")
+        payload["schema_version"] = "1"
+        assert canonical.dumps(payload) == GOLDEN_VERDICT_CANONICAL_V1_PRE_AMENDMENT
 
 
 # ── AC6 — frozen result model + golden canonical round-trip ──
 
 
-GOLDEN_VERDICT_CANONICAL = (
+# The PRE-amendment (schema_version "1") encoding of the SAME fold, kept verbatim as the
+# baseline for TC-…-115: the amendment's only intentional payload delta is the schema
+# bump plus the added ``decision_row`` key.
+GOLDEN_VERDICT_CANONICAL_V1_PRE_AMENDMENT = (
     '{"blocking_finding_count":1,'
     '"counts_by_depth":{"audited_deep":3,"audited_shallow":2,"inferred":0,'
     '"skipped":0,"tool_scanned_only":0},'
@@ -392,6 +719,29 @@ GOLDEN_VERDICT_CANONICAL = (
     'b4c46d6774c2e9b63c115d209eb8faac181115dc36b87dedb6c4a7872486eb56",'
     '"rule_id":"vacuous_test_ast","schema_version":"1"}],'
     '"schema_version":"1","total_count":5,'
+    '"verdict":"NOT_READY_FOR_RELEASE"}\n'
+)
+
+# Regenerated by RUNNING the fold and pasting the produced bytes (Story 8.1) — never
+# hand-edited. This is a ROW 2 case (one blocking finding), so the verdict VALUE and the
+# exit code are unchanged by the amendment; only ``schema_version`` and the added
+# ``decision_row`` key move, which is the whole point of TC-…-115.
+GOLDEN_VERDICT_CANONICAL = (
+    '{"blocking_finding_count":1,'
+    '"counts_by_depth":{"audited_deep":3,"audited_shallow":2,"inferred":0,'
+    '"skipped":0,"tool_scanned_only":0},'
+    '"critical_subsystems_all_deep":true,'
+    '"decision_row":"row_2_blocking_findings","deep_count":3,"deep_ratio":"3/5",'
+    '"exit_code":2,'
+    '"ordered_findings":[{"advisory":true,"cartridge_id":null,'
+    '"claim_present":false,"coverage_envelope_slice":null,'
+    '"depth_supported":"audited_shallow",'
+    '"locators":[{"ast_span":null,"end_line":1,"file_path":"b.py",'
+    '"start_line":1}],"partition_id":"root",'
+    '"recording_id":"vacuous_test_ast:'
+    'b4c46d6774c2e9b63c115d209eb8faac181115dc36b87dedb6c4a7872486eb56",'
+    '"rule_id":"vacuous_test_ast","schema_version":"1"}],'
+    '"schema_version":"2","total_count":5,'
     '"verdict":"NOT_READY_FOR_RELEASE"}\n'
 )
 

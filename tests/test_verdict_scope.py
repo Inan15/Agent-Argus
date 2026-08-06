@@ -2,9 +2,10 @@
 
 Verification area ArgusAgent-VERDICT (TC-ArgusAgent-VERDICT-002-NN). Covers the
 ``scope_paths`` narrowing added to :func:`evaluate_verdict`: the false-negative it
-removes (a test-heavy repository graded ``NOT_READY_FOR_RELEASE`` with ZERO blocking
-findings), and — the load-bearing half — the invariants that keep the narrowing from
-becoming a loophole.
+removes (a test-heavy repository denied ``RELEASE_READY`` with ZERO blocking findings —
+graded ``NOT_READY_FOR_RELEASE`` before the FR16 amendment, ``INSUFFICIENT_COVERAGE``
+row 4 after it), and — the load-bearing half — the invariants that keep the narrowing
+from becoming a loophole.
 
 The rejected design (a ``core_app_ready`` flag that let a healthy-looking application
 BYPASS ``INSUFFICIENT_COVERAGE_FLOOR``) is pinned as forbidden by
@@ -24,6 +25,7 @@ from argus.ledger.coverage_ledger import (
 from argus.store import canonical
 from argus.verdict.verdict_gate import (
     CoverageScope,
+    DecisionRow,
     Verdict,
     evaluate_verdict,
 )
@@ -63,12 +65,19 @@ def test_test_heavy_repo_is_a_false_negative_without_scope() -> None:
     """TC-ArgusAgent-VERDICT-002-01 — the motivating defect, pinned.
 
     Every application file audited deep, zero blocking findings, and the whole-ledger
-    fold STILL returns NOT_READY_FOR_RELEASE — earned purely by being well-tested.
+    fold STILL withholds RELEASE_READY — earned purely by being well-tested.
+
+    Story 8.1: the FR16 amendment removed HALF of this defect. The whole-ledger fold used
+    to call this ``NOT_READY_FOR_RELEASE`` — a BLOCK, on a repository where nothing was
+    found — and it is now the honest ``INSUFFICIENT_COVERAGE`` row 4. The scope seam is
+    still what fixes the remaining half (what was actually assessed).
     """
     ledger = _repo(app_deep=40, app_shallow=0, tests=86)
     verdict = evaluate_verdict(ledger)
 
-    assert verdict.verdict is Verdict.NOT_READY_FOR_RELEASE
+    assert verdict.verdict is not Verdict.RELEASE_READY
+    assert verdict.decision_row is DecisionRow.GATE_UNMET_NO_FINDINGS
+    assert verdict.verdict is not Verdict.NOT_READY_FOR_RELEASE  # never a false accusation
     assert verdict.blocking_finding_count == 0  # nothing is actually wrong
     assert verdict.deep_ratio == Fraction(40, 126)
     assert verdict.coverage_scope is None
@@ -110,14 +119,20 @@ def test_scope_never_bypasses_the_floor() -> None:
 
 
 def test_scope_still_applies_the_release_ready_threshold() -> None:
-    """TC-ArgusAgent-VERDICT-002-04 — between floor and threshold stays blocking."""
+    """TC-ArgusAgent-VERDICT-002-04 — between floor and threshold still WITHHOLDS ready.
+
+    The subject is that the 60% threshold is re-applied WITHIN the narrowed population —
+    a scope may not lower the bar. With zero findings the amended FR16 table renders that
+    as row 4 / exit 3 (not assessed), not as a block.
+    """
     ledger = _repo(app_deep=10, app_shallow=30, tests=86)  # 25%: over floor, under 60%
     verdict = evaluate_verdict(ledger, scope_paths=_application_paths(ledger))
 
     assert verdict.coverage_scope is not None
     assert verdict.coverage_scope.assessed_deep_ratio == Fraction(1, 4)
-    assert verdict.verdict is Verdict.NOT_READY_FOR_RELEASE
-    assert verdict.exit_code == 2
+    assert verdict.verdict is not Verdict.RELEASE_READY
+    assert verdict.decision_row is DecisionRow.GATE_UNMET_NO_FINDINGS
+    assert verdict.exit_code == 3
 
 
 def test_blocking_finding_in_a_held_out_file_still_blocks() -> None:
@@ -146,7 +161,10 @@ def test_critical_subsystem_clause_still_in_force_under_scope() -> None:
         critical_subsystems_all_deep=False,
     )
 
-    assert verdict.verdict is Verdict.NOT_READY_FOR_RELEASE
+    # The clause still GATES (RELEASE_READY is withheld even at 100% assessed deep);
+    # with zero findings that is row 4, not a block.
+    assert verdict.verdict is not Verdict.RELEASE_READY
+    assert verdict.decision_row is DecisionRow.GATE_UNMET_NO_FINDINGS
 
 
 def test_empty_assessed_population_is_insufficient_coverage() -> None:

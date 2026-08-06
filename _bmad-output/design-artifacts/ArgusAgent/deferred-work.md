@@ -492,3 +492,311 @@ voluntarily for consistency.
   - target_story: epic-7-minions-dogfood-proof-run
   - category: governance
   - severity: 🟡
+
+## Deferred from: code review of 8-1-findings-before-coverage-binding-decision-table (2026-08-04)
+
+- **DF-8-1-A** — A row-4 (`INSUFFICIENT_COVERAGE`, zero blocking findings, a coverage or
+  critical-subsystem gate unmet) run still renders the pre-amendment false-accusation sentence in the
+  persisted `final-verdict.md`: `argus/reports/generator.py:339` emits
+  `> [!CAUTION] Repository is NOT ready for release — deep coverage `2/5` is below the `3/5` release
+  threshold.` six lines below `- **Final Verdict**: **`INSUFFICIENT_COVERAGE`** (Exit Code `3`)`, and
+  `render_ship_readiness` (`argus/reports/plain_english.py:109`) heads the same document with
+  `Ship-readiness: NOT ASSESSED — too little of the code was examined deeply`, which is false for row 4
+  (plenty was examined; nothing was found). Reproduced by the reviewer on a synthetic 2-deep/5-total
+  zero-findings fold. This is CORRECT for Story 8.1 — AC15 explicitly fences the branch change to
+  "change no rendered string" and AC18 fences `plain_english.py` — but it means the human surface of a
+  clean-but-under-covered repository still ships a self-contradicting artifact, which is the residual
+  half of the very defect Epic 8 exists to remove. Close = Story 8.3 / DR-11's report-surface wording
+  reconciliation (the row-1-vs-row-4 split and the `plain_english.py` "NOT VOUCHED" branch audit),
+  applying D4's own rule (a persisted artifact must not assert a falsehood) to this callout the way
+  Story 8.1 applied it to `negative_assurance.py`.
+  - id: DF-8-1-A
+  - origin_story: 8-1-findings-before-coverage-binding-decision-table
+  - owner: Delivery Orchestrator
+  - target_story: 8-3 (DR-11 report-surface reconciliation)
+  - category: correctness
+  - severity: 🟡
+  - **CLOSED 2026-08-05 by story 8-3-plain-english-report-stops-describing-impossible-state**
+    (append-only closure note — the original entry above is NOT rewritten, §3.4 evidence
+    immutability). BOTH halves are fixed, RED-first. (a) `argus/reports/generator.py`'s
+    verdict block now has FOUR arms, one per FR16 row: FR16 row 4 got its own arm and no
+    longer borrows row 2's sentence, so the measured
+    `> [!CAUTION] Repository is NOT ready for release — deep coverage `2/5` is below the
+    `3/5` release threshold.` is gone and is replaced by
+    `> [!WARNING] Release readiness is NOT VOUCHED — Argus found nothing blocking, but deep
+    coverage `2/5` is below the `3/5` release threshold. This is a statement about the
+    audit, not about the code.` (b) `argus/reports/plain_english.py::_headline` splits
+    `INSUFFICIENT_COVERAGE` on `AuditVerdict.is_below_floor`, so the document headline at
+    `generator.py:269` no longer heads a row-4 run with row 1's
+    `NOT ASSESSED — too little of the code was examined deeply`. Closing evidence:
+    `TC-ArgusAgent-REPORT-002-20` (`tests/test_report_surface_consistency.py`), which was
+    demonstrated RED against the pre-fix implementation for BOTH row-4 causes (the 2/5
+    coverage cause and the 5/5-deep critical-subsystem cause), plus the four-row
+    cross-surface net `TC-ArgusAgent-REPORT-002-21` — the single test that would have
+    caught this defect — and `TC-ArgusAgent-REPORT-002-12`/`-13` on the human register.
+    The unreachable `NOT VOUCHED` predicate DR-11 also named is gone: its prose relocated
+    to row 4 (where it is true) and the impossible `NOT_READY_FOR_RELEASE ∧ blocking == 0`
+    input is now the typed `ShipReadinessError`, proven unreachable by the 270-fold
+    exhaustive sweep `TC-ArgusAgent-REPORT-002-10` (0 occurrences, re-derived in place).
+
+## Deferred from: code review of 8-2-critical-subsystem-gates-operator-can-actually-satisfy (2026-08-05)
+
+- **DF-8-2-A** — `argus/pipeline.py` ends Story 8.2 at **1199 lines against the NFR-M1 cap of 1200**, so
+  the next line added to it breaches the standard. This is NOT a defect in the 8.2 delta: the story
+  explicitly forbade a new module ("No new module. Everything is an edit to two existing source files"),
+  the dev complied, condensed the `_critical_ineligibility` docstring rather than dropping the reasoning,
+  and recorded the consequence in the Completion Notes. Recorded here so the constraint is discovered at
+  planning time rather than at edit time. The underlying pressure is real: `pipeline.py` already owns
+  intake wiring, per-file detection (`_detect_per_file`), grading, scope resolution
+  (`_assessment_scope_paths`), assembly/persistence (`_assemble_and_persist`) and the resume path, and
+  `_critical_ineligibility` is a cohesive derived-fact helper that best practice would site next to the
+  predicates it composes. Close = extract a shell-helper module (e.g. `argus/pipeline_facts.py` carrying
+  `_critical_ineligibility` and its siblings) as the FIRST act of whichever story next edits
+  `pipeline.py`, rather than adding to it. Reviewer verified no other `argus/` source file exceeds the
+  cap (next largest: `argus/dogfood/proof_run.py` 749).
+  - id: DF-8-2-A
+  - origin_story: 8-2-critical-subsystem-gates-operator-can-actually-satisfy
+  - owner: Delivery Orchestrator
+  - target_story: 8-3 (or the first story after 8.2 that edits `argus/pipeline.py`)
+  - category: maintainability
+  - severity: 🟢
+  - **CARRIED FORWARD, NOT CLOSED — 2026-08-05, story 8-3** (append-only note; the entry
+    above is NOT rewritten, §3.4). Story 8.3 did not edit `argus/pipeline.py` at all (its
+    AC14 fenced the file and its AC8 reached the AST index through the `ast_index`
+    argument `generate_reports` already receives), so the close condition — "extract a
+    shell-helper module as the FIRST act of whichever story next edits `pipeline.py`" —
+    never triggered. The file is still **1199 lines**, byte-identical to its post-8.2
+    state, and the extraction remains owed by the next story that genuinely edits it.
+
+- **DF-8-2-B** — Two entries in `_UNAMBIGUOUS_TEST_SUFFIXES` (`argus/detectors/vacuous_test.py:195-199`)
+  are written **without a word separator** — `"test.java"` and `"spec.rb"` rather than
+  `"_test.java"`/`"Test.java"` and `"_spec.rb"` — so tier 2 of `is_test_file` claims ordinary production
+  files whose basename merely *ends* with those letters. Reviewer-confirmed: `svc/latest.java` and
+  `svc/myspec.rb` both return `is_test_file(...) == True` with
+  `is_test_classification_content_dependent(...) == False`, i.e. classified as tests by name alone, with
+  **no** content check available to correct it (that is what tier 2 means). Since Story 8.2 they have a
+  second consumer: such a file leaves the heuristic critical set and is disclosed under the reason
+  `test_file`. **This is NOT a defect in the 8.2 delta.** The suffix table is byte-identical at
+  `9109e16` and untouched by this story — the reviewer's 2 567-comparison differential proof shows the
+  old and new `is_test_file` agree exactly on these paths — and it is not a false green relative to what
+  Argus can actually grade, because the GRADING stage misclassifies them identically (they are
+  `audited_shallow`, never `audited_deep`), so AC7's "the two stages cannot disagree" invariant still
+  holds. Zero instances in this repository (no `.java`/`.rb` sources among the 147 indexed files), so the
+  exposure is latent and lands only on a polyglot target repo. Close = add the missing separators and
+  pin the near-miss corpus (`latest.java`, `myspec.rb`, `attest.py`, `greatest.py`) in
+  `tests/test_vacuous_detector.py` beside `TC-ArgusAgent-DETECT-001-85`/`-95`.
+  - id: DF-8-2-B
+  - origin_story: 8-2-critical-subsystem-gates-operator-can-actually-satisfy
+  - owner: Delivery Orchestrator
+  - target_story: 8-3 (or the first story that edits `argus/detectors/vacuous_test.py`)
+  - category: correctness
+  - severity: 🟢
+  - **CARRIED FORWARD, NOT CLOSED — 2026-08-05, story 8-3** (append-only note; the entry
+    above is NOT rewritten, §3.4). The `target_story` is conditional and its condition did
+    not fire: story 8.3 READ `is_test_file` / `is_test_classification_content_dependent`
+    (reusing them rather than forking a second predicate, AC8) but did not edit
+    `argus/detectors/vacuous_test.py`, which stayed on its AC14 fence and is byte-identical
+    to its post-8.2 state. Still zero live instances in this repository.
+
+## Deferred from: implementation of 8-3-plain-english-report-stops-describing-impossible-state (2026-08-05)
+
+- **DF-8-3-A** — Neither human surface can tell an operator that the FR16 critical-subsystem
+  clause was satisfied **VACUOUSLY** — i.e. that the eligibility filter (FR4/DR-5, Story 8.2)
+  emptied the heuristic critical set rather than that every designated critical file reached
+  `audited_deep`. Story 8.2's D5 handed the positive prose to 8.3/DR-11; Story 8.3 examined it
+  and DECLINED it deliberately (its **D5**), for three converging reasons recorded there: the
+  epic's own 8.3 AC block asks only that the critical-paths section render correctly for an
+  empty set and that the `--exclude-critical` guidance stop being wrong (both delivered by its
+  AC7); the information does not exist on `AuditVerdict` (`critical_subsystems_all_deep=True`
+  with an empty `critical_subsystems_not_deep` is IDENTICAL for "the set was emptied by the
+  filter" and "there were never any criticals" — only
+  `CriticalSubsystemSet.heuristic_excluded_ineligible` distinguishes them); and getting that
+  disclosure map into the report needs a new argument on `generate_reports` threaded from
+  `argus/pipeline.py:793`, i.e. an edit to a file at 1199 of the 1200-line NFR-M1 cap, which
+  **DF-8-2-A** says must trigger a module extraction first. Re-deriving the vacuity inside
+  `generator.py` from `ast_index` is categorically forbidden (a §3.3/AR7 fork of the
+  eligibility filter). This is an OMISSION, not a falsehood: `TC-ArgusAgent-PIPELINE-002-07`
+  proves no surface asserts the vacuous positive, and Story 8.3's
+  `TC-ArgusAgent-REPORT-002-18` additionally pins that an empty critical set renders nothing
+  at all. Close = thread `CriticalSubsystemSet` (or just its `heuristic_excluded_ineligible`
+  map) into `generate_reports`/`render_final_verdict_report` and name the vacuity in prose,
+  AFTER the DF-8-2-A shell-helper extraction has made room in `pipeline.py`.
+  - id: DF-8-3-A
+  - origin_story: 8-3-plain-english-report-stops-describing-impossible-state
+  - owner: Delivery Orchestrator
+  - target_story: the story that performs the DF-8-2-A `pipeline.py` extraction
+  - category: correctness
+  - severity: 🟢
+
+## Deferred from: code review of 8-3-plain-english-report-stops-describing-impossible-state (2026-08-06)
+
+- **DF-8-3-B** — `argus/reports/plain_english.render_ship_readiness` can now RAISE (the Story 8.3
+  `ShipReadinessError`, AR10), but `argus/cli.py` calls it at `:292` **outside** the `try/except ValueError`
+  that wraps `run_audit(request)` at `:271-276`. A raise at that site would therefore escape `main()` as an
+  uncaught traceback rather than the typed, secret-safe exit `1` the AR10 / NFR-R1 degradation contract
+  requires. It is masked whenever `--report-dir` is set — the pipeline then calls `generate_reports` →
+  `render_final_verdict_report` → `render_ship_readiness` *inside* `run_audit`, so the raise is caught — but
+  `report_dir` defaults to empty, so the default `argus audit <path>` invocation has no guard. Story 8.3's
+  `TC-ArgusAgent-CLI-001-32` monkeypatches `cli.run_audit` itself, so it proves the AC's letter
+  ("`cli.py:272` catches `ValueError` → exit 1") without ever exercising the real raise site. **Not a live
+  defect:** the reviewer proved the triggering state (`NOT_READY_FOR_RELEASE` with
+  `blocking_finding_count == 0`) has no producer — `AuditVerdict` has exactly one construction site
+  (`verdict_gate.py:651`), no persisted verdict is ever rehydrated, and the prosecutor's `model_copy`
+  updates only `ordered_findings` — so this is defence-in-depth, not an operator-visible bug. **Not fixable
+  in Story 8.3:** its AC14 fences `argus/cli.py` as must-not-modify. Close = widen the `try` to cover the
+  summary-line + ship-readiness block (or move the render inside it) and add a test that lets the REAL
+  `render_ship_readiness` raise on the way out of `main()` with no `--report-dir`.
+  - id: DF-8-3-B
+  - origin_story: 8-3-plain-english-report-stops-describing-impossible-state
+  - owner: Delivery Orchestrator
+  - target_story: 8-4 (or the first story that edits `argus/cli.py`)
+  - category: correctness
+  - severity: 🟢
+
+- **DF-8-3-C** — The ast-index → application/test partition is now written twice. Story 8.3's AC8 correctly
+  REUSED the predicate (`is_test_file(path, ast_entry=…)`) rather than forking a second classifier, and the
+  reviewer confirmed the two call sites agree — but the plumbing around it is duplicated verbatim:
+  `argus/pipeline.py:686-694` builds `{e.file_path: e for e in index.entries} if index is not None else {}`
+  and filters `ledger.entries`, and `argus/reports/generator.py:86-93` now builds
+  `{entry.file_path: entry for entry in (getattr(ast_index, "entries", ()) or ())}` and filters
+  `ledger.entries` the same way. Two spellings of the same derivation, in two modules, with the report's
+  APPLICATION denominator and the verdict's assessed population depending on them staying identical — which
+  is precisely the disagreement class AC8 was raised to remove one level down. **Not fixable in Story 8.3:**
+  its AC14 fences BOTH `argus/pipeline.py` (DF-8-2-A, 1199/1200 lines) and `argus/detectors/vacuous_test.py`
+  (DF-8-2-B), which are the only two sensible homes for the shared helper. Close = add one helper beside
+  `is_test_file` in `argus/detectors/vacuous_test.py` (e.g.
+  `partition_application_files(ledger_entries, ast_index) -> tuple[list, int]`) and call it from both sites,
+  as part of the story that performs the DF-8-2-A extraction.
+  - id: DF-8-3-C
+  - origin_story: 8-3-plain-english-report-stops-describing-impossible-state
+  - owner: Delivery Orchestrator
+  - target_story: the story that performs the DF-8-2-A `pipeline.py` extraction
+  - category: maintainability
+  - severity: 🟢
+
+## Deferred from: dev of 8-4-tell-integrators-what-changed (2026-08-06)
+
+- **RS-4b** — The bulk `minions_core` provenance sweep across `argus/`. Story 8.4 fixed the package FRONT
+  DOOR only (`argus/__init__.py`, RS-4a); every other stale reference remains. **Measured in place on this
+  tree** with `grep -rn "minions_core" argus/ --include=*.py`, excluding `__pycache__` and the foreign
+  Epic-9-owned `argus/audit/minions_llm_adapter.py`: **15 references across 8 files** —
+  `audit/deep_audit.py:21` · `audit/ports.py:4` · `cost/budget_governor.py:15` ·
+  `dogfood/partition_plan.py:481,490,554` · `dogfood/proof_run.py:52,53,486,597,609,610` ·
+  `governance/escalation.py:35` · `store/envelope.py:25` · `verdict/prosecutor.py:36`.
+  ⚠️ **This is NOT a prose-only sweep.** Six of the fifteen, across five `lines.append(...)` call sites,
+  emit the stale path INTO GENERATED Markdown artifacts rather than into a docstring:
+  `partition_plan.py:481` and `:554` (the two "AUTO-GENERATED by" banners naming
+  `minions_core/apaa/dogfood/partition_plan.py`, on the partition plan and the budget plan),
+  `partition_plan.py:490` (the provenance line naming `minions_core/` and `minions_core/apaa/`),
+  `proof_run.py:597` (the proof artifact's "AUTO-GENERATED by" banner naming
+  `minions_core/argus/dogfood/proof_run.py`) and
+  `proof_run.py:609-610` (the scope paragraph). A docstring/comment-only pass would miss all five, and the
+  committed artifacts they produce would keep regenerating stale. (`proof_run.py:486` is a third kind
+  again — an operator-visible `DogfoodProofError` message.) The remaining nine are genuine
+  docstring/comment prose.
+  ⚠️ **Sequencing constraint — this sweep must FOLLOW Story 8.5.** The generators above produce
+  `minions-dogfood-partition-plan.md`, `minions-dogfood-budget-plan.md` and `minions-dogfood-proof.md`,
+  which are **Story 8.5 / DR-10's** deliverable (8.5 re-derives them, and `tests/test_dogfood_proof.py`
+  carries a committed-artifact rot check that compares them against a live run). Editing the generators
+  before 8.5 re-derives would either break that rot check or force 8.5 to re-derive twice. Close = sweep
+  the 15 references after 8.5 lands, re-derive the three generated artifacts in the same change, and keep
+  the rot check green.
+  - id: RS-4b
+  - origin_story: 8-4-tell-integrators-what-changed
+  - owner: Delivery Orchestrator
+  - target_story: 9-2-ship-distribution-another-repo-can-actually-resolve (after 8-5-re-derive-proof-evidence-matches-tool)
+  - category: maintainability
+  - severity: 🟢
+
+- **DF-8-4-A** — `action.yml` publishes a CRASHED run as an under-covered one. The composite action maps the
+  audit exit code to its `verdict` output as `0 → RELEASE_READY`, `2 → NOT_READY_FOR_RELEASE`,
+  **`else → INSUFFICIENT_COVERAGE`**. That `else` also swallows exit **`1`** — the AR10 typed-failure code,
+  which means the run produced NO verdict at all — and publishes it downstream as
+  `verdict=INSUFFICIENT_COVERAGE`, i.e. a *ran-and-under-covered* result. A consuming workflow cannot
+  distinguish "Argus examined the repo and could not vouch" from "Argus never produced a verdict", so a
+  crash reads as a completed audit. `INSUFFICIENT_COVERAGE` is also, per the PRD, a **not-assessed** state
+  rather than a failure, which makes the mislabel an over-claim in the direction this epic exists to
+  remove. **Pre-existing, not introduced by Epic 8:** exit `1` predates the FR16/FR4 amendment and the
+  amendment changed no exit-code VALUE. **Not fixable in Story 8.4:** `action.yml` is untracked, foreign
+  and Epic-9-owned, a concurrent session is editing it, and Story 8.4's AC12 fences it — filing it is
+  exactly what the register is for. Close = give exit `1` its own arm (an explicit
+  `verdict=AUDIT_FAILED`-style value, or fail the step outright) rather than letting it fall into the
+  `else`; decide the output vocabulary with the packaging/distribution work that owns this file.
+  - id: DF-8-4-A
+  - origin_story: 8-4-tell-integrators-what-changed
+  - owner: Delivery Orchestrator
+  - target_story: 9-2-ship-distribution-another-repo-can-actually-resolve
+  - category: correctness
+  - severity: 🟢
+
+- **DF-8-3-B — CLOSURE NOTE (append-only; the original entry above is NOT rewritten).** Closed by Story
+  8.4. The `try/except ValueError` in `argus/cli.py::main` was widened to span the summary-line print and
+  the ship-readiness render, rather than wrapping `run_audit(request)` alone — so the render is now inside
+  the guard on the default no-`--report-dir` path. Widening (rather than moving the render) was chosen
+  deliberately: it leaves the write ORDER of the two registers unchanged, so every non-raising run is
+  byte-identical on both stdout and stderr, and the frozen stdout-summary goldens
+  (`TC-ArgusAgent-CLI-001-30` / `-31`) still pass unchanged. Closing test:
+  **`TC-ArgusAgent-CLI-001-33`** (`tests/test_cli.py::test_cli_degrades_when_the_real_renderer_raises_on_the_way_out`)
+  — it does NOT monkeypatch the raise: `run_audit` is stubbed to RETURN the one verdict FR16 cannot
+  produce, and the REAL `render_ship_readiness` raises the REAL `ShipReadinessError` at the real call site,
+  with no `--report-dir`. Demonstrated RED-first against the pre-fix `cli.py`, where it failed with an
+  uncaught `argus.reports.plain_english.ShipReadinessError` escaping `main()`. Post-fix `main()` returns
+  `1` with a secret-safe stderr line (no traceback, no host path, no source bytes).
+
+
+---
+
+## Deferred from: code review of story 8-4-tell-integrators-what-changed (2026-08-06)
+
+Three items raised by code-review **iteration 2** and routed to `defer`. None is an AC failure for Story
+8.4 — all 13 ACs were assessed MET and R1-R4 independently confirmed fixed. These are recorded so the
+rot-check's remaining blind spots do not become invisible once the epic closes.
+
+- **id:** `DF-8-4-B`
+  **origin_story:** `8-4-tell-integrators-what-changed`
+  **owner:** Delivery Orchestration
+  **target_story:** the first story after 8.5 that edits `tests/test_release_note.py` (or Epic-9 `9-2`, whichever fires first)
+  **category:** test-adequacy
+  **severity:** 🟢
+  The AC9 rot check pins what the code *renders* and the schema constants it *imports*, but pins **no prose**
+  in `CHANGELOG.md`. Verified by mutation: deleting the entire *"Do I need to change anything?"* section, the
+  entire *"Defaults: `--coverage-scope`"* section (the only warning that a pipeline must now pass
+  `--coverage-scope repository`), the content-address *"your pinned artifact path moved"* warning, and the
+  *"If you call `render_ship_readiness()` directly, it can now raise."* line each leave the whole module
+  **green**; so does corrupting the published before/after artifact-bytes example. Every **consumer-action**
+  claim in the note is therefore unpinned. AC9 enumerates what must be pinned and prose sections are not on
+  that list, so this is hardening, not a breach — but it is the largest remaining route to the silent rot
+  AC9 names as its own failure mode. **Suggested close:** a section-presence assertion over each `###`
+  heading and each `- **You …** →` bullet, plus an equality check of the published bytes example against
+  `CriticalSubsystemSet().model_dump(mode="json")` (verified byte-accurate today, so it would pass on
+  arrival).
+
+- **id:** `DF-8-4-C`
+  **origin_story:** `8-4-tell-integrators-what-changed`
+  **owner:** Delivery Orchestration
+  **target_story:** the first story that edits `argus/reports/generator.py`'s critical-subsystems section
+  **category:** documentation-completeness
+  **severity:** 🟢
+  `CHANGELOG.md:180-182` summarises the `### Critical subsystems below \`audited_deep\`` change (*"now
+  renders on every row … its lead sentence is row-dependent"*) without quoting a before/after pair. Measured
+  HEAD vs live over a non-empty critical set: HEAD emitted on **every** row `These withheld \`RELEASE_READY\`
+  (FR16). Each must reach \`audited_deep\`, or be removed from the critical set with \`--exclude-critical\` if it
+  is not genuinely critical.`; live emits a **row-dependent** lead (row 2: *"Not the reason for this verdict
+  — that is stated in the callout above. Listed because the clause is still unmet …"*) **plus a wholly new
+  FR4/DR-5 exemption paragraph on every row**. AC4's *"at minimum"* list is satisfied, so this is a
+  completeness gap rather than a breach — but a consumer grepping `final-verdict.md` gets no quotable
+  before/after for a paragraph that changed on every affected run.
+
+- **id:** `DF-8-4-D`
+  **origin_story:** `8-4-tell-integrators-what-changed`
+  **owner:** Engineering
+  **target_story:** the first story that edits `argus/cli.py::main`'s exception handling
+  **category:** error-handling-precision
+  **severity:** 🟢
+  The `except ValueError` at `argus/cli.py:295-299` catches the **base** class while the comment beside it
+  enumerates five typed subclasses. Pydantic's `ValidationError` is a `ValueError` subclass, so a genuine
+  internal validation bug is reported as an expected, typed *"audit failed"* degradation instead of
+  surfacing. **Pre-existing** — the same clause wrapped `run_audit` at HEAD; Story 8.4's widening added only
+  the two `print` calls, so the newly-swallowed surface is `ShipReadinessError` plus stream/encoding errors.
+  The encoding half is tracked separately as review finding **D1** on the story, which is a live decision,
+  not a deferral. **Suggested close:** catch the named subclasses explicitly.

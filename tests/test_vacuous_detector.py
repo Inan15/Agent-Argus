@@ -23,6 +23,7 @@ from argus.detectors.vacuous_test import (
     RULE_AST,
     RULE_HEURISTIC,
     VacuousTestDetector,
+    is_test_classification_content_dependent,
     is_test_file,
 )
 from argus.index.ast_index import AstIndexEntry, CodeEdge, Definition
@@ -50,6 +51,36 @@ def test_is_test_file_rule() -> None:
     assert is_test_file("thing_test.py")
     assert not is_test_file("argus/detectors/vacuous.py")
     assert not is_test_file("pkg/widget.py")
+
+
+def test_test_classification_content_dependence_names_the_tier_that_answered() -> None:
+    """TC-ArgusAgent-DETECT-001-95 — which TIER decided, exposed for the FR4/DR-5 consumer.
+
+    ``is_test_file`` answers three ways and only ONE of them is a guess: tier 3 reads the
+    file's definitions, so for an entry it cannot read it deliberately assumes "test"
+    (conservative for grading — it keeps the vacuous-test moat closed). The critical-set
+    eligibility filter consumes the same value in the opposite direction, where that
+    assumption would drop an unreadable security module out of the gate, so it needs to
+    know when the answer was content-derived. Both predicates read ONE tier structure
+    (AR7/§3.3), which is why this asserts them together rather than in isolation.
+    """
+    # tier 1 (location) and tier 2 (reserved name) — properties of what the file IS.
+    for path in ("tests/foo_test.py", "pkg/tests/thing.py", "test_thing.py", "svc/x_test.go"):
+        assert is_test_file(path)
+        assert not is_test_classification_content_dependent(path)
+
+    # tier 3 — the ambiguous Python suffix, the ONE tier resolved by CONTENT.
+    for path in ("app/auth_test.py", "svc/token_test.py", "pkg/conftest.py"):
+        assert is_test_classification_content_dependent(path)
+
+    # not a test path at all: no tier fired, so nothing was guessed.
+    for path in ("argus/detectors/vacuous.py", "pkg/widget.py"):
+        assert not is_test_file(path)
+        assert not is_test_classification_content_dependent(path)
+
+    # …and the guess itself is unchanged: tier 3 with an unreadable entry stays "test".
+    unreadable = AstIndexEntry(file_path="app/auth_test.py", ast_eligible=False, parse_failed=True)
+    assert is_test_file("app/auth_test.py", ast_entry=unreadable)
 
 
 def test_vacuous_mock_dominated_test_flagged_and_corroborated() -> None:

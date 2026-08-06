@@ -38,7 +38,7 @@ from argus.pipeline import (  # noqa: E402
 )
 from argus.store.reader import ApaaStoreReader  # noqa: E402
 from argus.store.writer import ApaaStoreWriter  # noqa: E402
-from argus.verdict.verdict_gate import Verdict  # noqa: E402
+from argus.verdict.verdict_gate import DecisionRow, Verdict  # noqa: E402
 
 
 def _request(repo: Path, commit: str = "HEAD") -> AuditRequest:
@@ -342,19 +342,25 @@ def _request_with_designation(
 
 
 def test_e2e_operator_designated_critical_shallow_withholds_release_ready(tmp_path: Path) -> None:
-    """TC-ArgusAgent-PIPELINE-001-10 — story 2.3: forcing a shallow file critical → NOT_READY/exit 2.
+    """TC-ArgusAgent-PIPELINE-001-10 — story 2.3: forcing a shallow file critical withholds RELEASE_READY.
 
     The clean control is RELEASE_READY by default. The shallow test file
     ``tests/test_math.py`` is graded ``audited_shallow``; forcing it critical means a
     critical subsystem is below deep → the wired evaluate_verdict withholds
     RELEASE_READY (the FR16 clause), end-to-end through the pipeline.
+
+    Story 8.1: the clause still gates — that is the subject. The clean control emits ZERO
+    blocking findings, so the withholding is FR16 row 4 / exit 3 (nothing was found), not
+    the block it was before the amendment.
     """
     repo, _sha = stage_cartridge("clean_control", tmp_path / "repo")
     verdict = run_audit(
         _request_with_designation(repo, critical=("tests/test_math.py",))
     )
-    assert verdict.verdict is Verdict.NOT_READY_FOR_RELEASE
-    assert verdict.exit_code == 2
+    assert verdict.verdict is not Verdict.RELEASE_READY
+    assert verdict.blocking_finding_count == 0
+    assert verdict.decision_row is DecisionRow.GATE_UNMET_NO_FINDINGS
+    assert verdict.exit_code == 3
     assert verdict.critical_subsystems_all_deep is False
 
 
@@ -637,9 +643,14 @@ def test_e2e_above_floor_under_exhaustion_does_not_over_fire(tmp_path: Path) -> 
 
     A budget of 6 admits the first Python file (5 < 6) then halts at the second
     (5+5=10 >= 6). 1 deep assessed / 2 total = 50% deep — at/above the 20% floor →
-    the gate's NORMAL decision (NOT_READY_FOR_RELEASE, the vacuous finding still
-    blocks), NOT INSUFFICIENT_COVERAGE. The floor does not over-fire on the mere
+    the gate's NORMAL decision, NOT the floor. The floor does not over-fire on the mere
     fact of exhaustion; the floor report reflects below_floor=False.
+
+    Story 8.1: the SUBJECT — the floor must not over-fire — is asserted on the FLOOR ROW,
+    which is what "the floor fired" actually means. The halt skips the file carrying the
+    vacuous finding, so this run has ZERO blocking findings and the amended FR16 table
+    calls it row 4 (a coverage gate unmet) — the same verdict VALUE as the floor, which is
+    exactly why keying on the enum here would have been wrong.
     """
     repo, _sha = stage_cartridge("vacuous_basic", tmp_path / "repo")
     result = run_audit_detailed(_request_budget(repo, 6))
@@ -649,8 +660,9 @@ def test_e2e_above_floor_under_exhaustion_does_not_over_fire(tmp_path: Path) -> 
     assert report["halted_on_exhaustion"] is True
     assert report["assessed_count"] == 1  # one file admitted
 
-    # The halt left >=20% deep → a real release verdict, NOT the floor.
-    assert result.verdict.verdict is not Verdict.INSUFFICIENT_COVERAGE
+    # The halt left >=20% deep → the gate's normal decision, NOT the floor row.
+    assert result.verdict.decision_row is not DecisionRow.BELOW_FLOOR
+    assert result.verdict.is_below_floor is False
     assert result.verdict.deep_ratio == Fraction(1, 2)
     floor = result.floor_report
     assert floor is not None

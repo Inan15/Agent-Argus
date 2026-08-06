@@ -402,9 +402,9 @@ class InsufficientCoverageFloorReport(BaseModel):
 
     Fields are READ-folded (no re-derivation): ``deep_ratio`` is the EXISTING
     ``AuditVerdict.deep_ratio``; ``floor`` is the EXISTING
-    ``INSUFFICIENT_COVERAGE_FLOOR``; ``below_floor`` is
-    ``verdict == INSUFFICIENT_COVERAGE`` (which the gate guarantees equals
-    ``deep_ratio < floor``); ``driven_by_exhaustion`` is exactly
+    ``INSUFFICIENT_COVERAGE_FLOOR``; ``below_floor`` is the gate's DISCLOSED decision row
+    via ``AuditVerdict.is_below_floor`` (row 1), which is what the gate guarantees equals
+    ``deep_ratio < floor``; ``driven_by_exhaustion`` is exactly
     ``HaltReport.halted_on_exhaustion`` (the FR22↔FR16 join the raw verdict cannot
     express).
     """
@@ -423,7 +423,12 @@ class InsufficientCoverageFloorReport(BaseModel):
         ..., description="The REUSED INSUFFICIENT_COVERAGE_FLOOR (Fraction(1, 5) = 20%)."
     )
     below_floor: bool = Field(
-        ..., description="True iff the verdict is INSUFFICIENT_COVERAGE (deep-% below the 20% floor)."
+        ...,
+        description=(
+            "True iff the gate fired FR16 row 1 — the deep-% is below the 20% floor. NOT "
+            "'the verdict is INSUFFICIENT_COVERAGE': since the FR16 amendment that "
+            "verdict is also row 4 (a zero-findings unmet gate ABOVE the floor)."
+        ),
     )
     driven_by_exhaustion: bool = Field(
         ..., description="True iff the floor was driven by a budget halt (HaltReport.halted_on_exhaustion)."
@@ -458,10 +463,16 @@ def build_floor_report(
     """Fold the EXISTING ``AuditVerdict`` + ``HaltReport`` into the floor report (PURE, AC2).
 
     READS the two records — it does NOT re-run the gate, re-derive the deep-%, or
-    re-declare the floor (AR4 / §3.3). ``below_floor`` reads the gate's decision
-    directly (``verdict.verdict == INSUFFICIENT_COVERAGE``); the gate guarantees this
-    equals ``deep_ratio < INSUFFICIENT_COVERAGE_FLOOR`` (including the ``total == 0``
+    re-declare the floor (AR4 / §3.3). ``below_floor`` reads the gate's DISCLOSED
+    decision row (``AuditVerdict.is_below_floor`` ⇔ FR16 row 1); that is what equals
+    ``deep_ratio < INSUFFICIENT_COVERAGE_FLOOR`` (including the ``total == 0``
     short-circuit, where ``deep_ratio`` is ``0/1 < 1/5``) — pinned by a test.
+
+    It deliberately does NOT key on ``verdict.verdict is INSUFFICIENT_COVERAGE``. Since
+    the FR16 amendment (Story 8.1) that verdict is ALSO returned for row 4 — a run ABOVE
+    the floor that found nothing and missed a coverage or critical-subsystem gate. Keying
+    on the enum would make this PERSISTED report claim the floor was breached when it was
+    not, and print "no repo-wide verdict rendered (floor: 20%)" beside an assessed 30%.
     ``driven_by_exhaustion`` reads ``halt_report.halted_on_exhaustion`` EXACTLY (the
     exhaustion-driven-vs-intrinsic signal). The ``message`` is the deterministic
     PRD-J2 line rendered from the EXACT ``Fraction`` whole-percent (no ``float``):
@@ -482,7 +493,7 @@ def build_floor_report(
             f"build_floor_report requires a HaltReport, got {type(halt_report).__name__}"
         )
 
-    below_floor = verdict.verdict is Verdict.INSUFFICIENT_COVERAGE
+    below_floor = verdict.is_below_floor
     deep_pct = _whole_percent(verdict.deep_ratio)
     if below_floor:
         floor_pct = _whole_percent(INSUFFICIENT_COVERAGE_FLOOR)

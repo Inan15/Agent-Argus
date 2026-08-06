@@ -42,6 +42,34 @@ than leaving the reader to infer it.
 
 The disclosure is DERIVED from ``enabled_passes``, not hardcoded: when a deep
 LLM-backed pass is built and enabled, the text changes with it and cannot go stale.
+
+The four FR16 rows this module renders (Story 8.3 / DR-11)
+----------------------------------------------------------
+Since the FR16 amendment (Story 8.1) the gate discloses WHICH of four rows produced a
+verdict, and two of them share one enum member. :func:`_headline` renders one message
+per row, and exactly four exist:
+
+===========================  ==========================  =====================
+FR16 row                     Verdict / exit              Headline opens with
+===========================  ==========================  =====================
+1 — below the floor          ``INSUFFICIENT_COVERAGE`` 3 ``NOT ASSESSED``
+2 — blocking findings        ``NOT_READY_FOR_RELEASE`` 2 ``BLOCKED``
+3 — gates met                ``RELEASE_READY`` 0         ``READY``
+4 — gate unmet, nothing      ``INSUFFICIENT_COVERAGE`` 3 ``NOT VOUCHED``
+    found
+===========================  ==========================  =====================
+
+Rows 1 and 4 are the reason this split exists: same token, same exit code, opposite
+operator actions ("give me more to look at" vs "I looked, found nothing, and a gate is
+unmet"). The human register is the ONLY surface on which the two are distinguishable,
+so getting the words wrong here is not cosmetic.
+
+The row-1/row-4 split reads :attr:`AuditVerdict.is_below_floor` and NOTHING else — never
+``decision_row`` directly (it is ``None`` for a pre-amendment payload, which
+``is_below_floor`` already resolves correctly) and never a re-derived
+``deep_ratio < INSUFFICIENT_COVERAGE_FLOOR`` comparison, which would fork the decision
+table (§3.3 / AR7). This module holds no copy of the table; it restates the row the gate
+disclosed.
 """
 
 from __future__ import annotations
@@ -54,9 +82,29 @@ from argus.verdict.verdict_gate import (
 
 __all__ = [
     "LLM_DEEP_PASSES",
+    "ShipReadinessError",
     "render_depth_meaning",
     "render_ship_readiness",
 ]
+
+
+class ShipReadinessError(ValueError):
+    """A verdict the FR16 gate cannot produce reached the human renderer (AR10).
+
+    Raised ONLY for ``NOT_READY_FOR_RELEASE`` with ``blocking_finding_count == 0``.
+    Post-amendment (Story 8.1) the ONLY path to ``NOT_READY_FOR_RELEASE`` is FR16
+    row 2, which fires on ``blocking >= 1`` — so that state has no producer, proven
+    by an exhaustive sweep of the real fold (``TC-ArgusAgent-REPORT-002-10``).
+
+    It is a raise rather than a rendered default because the default is the bug:
+    falling through to the row-2 arm would print ``BLOCKED — 0 verdict-blocking
+    finding(s)``, the exact false accusation Epic 8 exists to delete. The house
+    pattern for a closed vocabulary with an exhaustive branch is a typed failure and
+    never a silent default — ``exit_code_for_verdict`` raises for an unmapped verdict,
+    ``_assurance_statement`` raises ``NegativeAssuranceError`` for an unhandled one. A
+    ``ValueError`` subclass specifically, because ``cli.py`` already degrades one to a
+    typed, secret-safe exit ``1``.
+    """
 
 # Pass names that dispatch an LLM-backed deep read. EMPTY-in-effect today: the Epic-6
 # LLMDispatchPort + adapters exist, but no pass wires them into the pipeline, so no
@@ -95,31 +143,50 @@ def render_depth_meaning(enabled_passes: tuple[str, ...] | list[str]) -> str:
 def _headline(verdict: AuditVerdict) -> str:
     """The one line a human reads first — names the OUTCOME, not the enum (PURE).
 
-    The critical split is inside ``NOT_READY_FOR_RELEASE``: with ≥1 verdict-blocking
-    finding it genuinely means "I found something"; with zero it means "I found
-    nothing, but a gate about how much I saw was not met". One enum member, two very
-    different messages to a human — so the wording separates them even though the
-    machine verdict (and its exit code) stay exactly as the frozen gate produced them.
+    One branch per FR16 row (see the module docstring's table), and no others. The
+    load-bearing split is inside ``INSUFFICIENT_COVERAGE``: row 1 examined too little
+    to say anything, row 4 examined plenty, found nothing, and missed a gate. Both
+    carry exit ``3``, so an operator who cannot tell them apart cannot tell whether to
+    widen the audit or to fix a gate.
+
+    The ``NOT VOUCHED`` wording below is the pre-amendment else-branch's own text,
+    RELOCATED (Story 8.3 / D2) rather than re-authored: it was always the row-4
+    message, written back when row 4's case arrived wearing a ``NOT_READY_FOR_RELEASE``
+    label. Its old predicate — ``NOT_READY_FOR_RELEASE`` with zero blocking findings —
+    is now unreachable and is a :class:`ShipReadinessError` instead of a branch. The
+    only widening is "a coverage gate" → "a coverage or critical-subsystem gate": row 4
+    also fires with 100 % of files at ``audited_deep``, on the critical clause alone,
+    and the old text was false for exactly that run.
+
+    Raises:
+        ShipReadinessError: the verdict is ``NOT_READY_FOR_RELEASE`` with zero blocking
+            findings — a state the gate cannot produce.
     """
-    if verdict.verdict is Verdict.RELEASE_READY:
+    if verdict.verdict is Verdict.RELEASE_READY:  # FR16 row 3
         return (
             "READY — no blocking problems found, and enough of the code was examined "
             "deeply to say so."
         )
     if verdict.verdict is Verdict.INSUFFICIENT_COVERAGE:
-        return (
-            "NOT ASSESSED — too little of the code was examined deeply to make any "
-            "call. This is a statement about the audit, not about the code."
+        if verdict.is_below_floor:  # FR16 row 1 — the FLOOR, not a gate
+            return (
+                "NOT ASSESSED — too little of the code was examined deeply to make any "
+                "call. This is a statement about the audit, not about the code."
+            )
+        return (  # FR16 row 4 — a gate unmet with nothing found
+            "NOT VOUCHED — nothing broken was found, but a coverage or "
+            "critical-subsystem gate was not met, so no release-readiness claim is "
+            "made. This is a statement about the audit, not about the code."
         )
-    if verdict.blocking_finding_count > 0:
-        return (
-            f"BLOCKED — {verdict.blocking_finding_count} verdict-blocking finding(s) "
-            f"must be resolved."
+    if verdict.blocking_finding_count < 1:
+        raise ShipReadinessError(
+            f"{verdict.verdict.value} with blocking_finding_count="
+            f"{verdict.blocking_finding_count}: FR16 row 2 is the only producer of "
+            f"this verdict and it requires at least one verdict-eligible finding"
         )
-    return (
-        "NOT VOUCHED — nothing broken was found, but a coverage gate was not met, so "
-        "no release-readiness claim is made. This is a statement about the audit, not "
-        "about the code."
+    return (  # FR16 row 2 — the only blocking outcome, always with N >= 1
+        f"BLOCKED — {verdict.blocking_finding_count} verdict-blocking finding(s) "
+        f"must be resolved."
     )
 
 
@@ -140,6 +207,11 @@ def render_ship_readiness(
     ``RELEASE_READY``: narrowing the scope can clear the coverage gate but leaves
     blocking findings and the critical-subsystem clause untouched, and over-promising
     here would be the same dishonesty as the contradiction it replaces.
+
+    Raises:
+        ShipReadinessError: *verdict* is a state the FR16 gate cannot produce (see
+            :func:`_headline`). The CLI degrades this to a typed, secret-safe exit
+            ``1`` (AR10) rather than printing a sentence about an impossible run.
     """
     scope = verdict.coverage_scope
     assessed_ratio = scope.assessed_deep_ratio if scope is not None else verdict.deep_ratio

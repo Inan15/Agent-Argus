@@ -1,9 +1,12 @@
 """PURE release-readiness verdict gate — fold + finding ordering + exit code.
 
 Drivers: ArgusAgent-FR-15 (release-readiness verdict as a PURE function of the coverage
-ledger), ArgusAgent-FR-16 (gate+floor core: ``RELEASE_READY`` only when gates met —
-≥60% deep + 0 blocking findings; ``INSUFFICIENT_COVERAGE`` below the 20% floor;
-never a default block), ArgusAgent-FR-8-honored (``inferred`` evidence can never satisfy
+ledger), ArgusAgent-FR-16 as amended 2026-08-03 (the binding FOUR-row decision table:
+findings are evaluated BEFORE the coverage gates, so a blocking verdict is emitted only
+on the strength of a finding Argus actually made; ``INSUFFICIENT_COVERAGE`` below the
+20% floor AND for a zero-findings unmet gate; never a default block), ArgusAgent-DR-3
+(the fired decision row is DISCLOSED on the artifact), ArgusAgent-DR-4 (the
+``schema_version`` bump that pays for it), ArgusAgent-FR-8-honored (``inferred`` evidence can never satisfy
 a gate — honored by the gate's coverage math), ArgusAgent-FR-18 (deterministic exit code
 + machine-readable verdict artifact), ArgusAgent-FR-33 (order findings by verdict impact
 — verdict-blocking before non-blocking, alarm-fatigue defense), ArgusAgent-NFR-D2
@@ -34,25 +37,47 @@ Contract decisions LOCKED here (frozen for every downstream consumer)
   ONE blocking concept) — exposed as the module constant ``BLOCKED`` aliasing the
   enum member, NOT a fourth member. There is no ``ERROR`` verdict — ``crash`` is
   the exit code ``1``, never a verdict the gate emits.
-- **Gate thresholds (decision table, evaluated IN ORDER)** — with
-  ``deep_ratio = Fraction(deep_count, total)`` and
+- **Gate thresholds (the binding FR16 decision table, evaluated IN ORDER)** — with
+  ``assessed_ratio`` the deep-% over the assessed population and
   ``blocking = (# findings where depth_supported is not None)``:
 
-  | condition (evaluated in order)                                       | verdict                | exit |
-  |----------------------------------------------------------------------|------------------------|------|
-  | ``total == 0`` OR ``deep_ratio < Fraction(1, 5)`` (< 20%)            | INSUFFICIENT_COVERAGE  | 3    |
-  | ``deep_ratio >= Fraction(3, 5)`` (≥ 60%) AND ``blocking == 0`` AND   |                        |      |
-  | ``critical_subsystems_all_deep``                                     | RELEASE_READY          | 0    |
-  | otherwise (≥ 20% AND (< 60% OR ≥1 blocking OR a critical not deep))  | NOT_READY_FOR_RELEASE  | 2    |
+  | # | condition (evaluated in order)                                   | verdict                | exit |
+  |---|------------------------------------------------------------------|------------------------|------|
+  | 1 | ``assessed_total == 0`` OR ``assessed_ratio < Fraction(1, 5)``   | INSUFFICIENT_COVERAGE  | 3    |
+  | 2 | ``blocking >= 1``                                                | NOT_READY_FOR_RELEASE  | 2    |
+  | 3 | ``assessed_ratio >= Fraction(3, 5)`` AND all criticals deep       | RELEASE_READY          | 0    |
+  | 4 | otherwise — zero findings, a coverage/critical gate unmet         | INSUFFICIENT_COVERAGE  | 3    |
 
   Boundary semantics LOCKED: ``RELEASE_READY`` at deep-% ``>= 60%`` (inclusive);
-  ``INSUFFICIENT_COVERAGE`` at deep-% ``< 20%`` (strict — exactly-20% is
-  assessable/blocking-eligible).
+  the floor is deep-% ``< 20%`` (strict — exactly-20% is assessable/blocking-eligible).
+- **FINDINGS ARE EVALUATED BEFORE THE COVERAGE GATES (FR16 amended 2026-08-03)** — the
+  pre-amendment table had a THREE-row shape whose ``else`` was a DEFAULT BLOCK: any run
+  above the floor that missed the 60% gate or the critical-subsystem clause returned
+  ``NOT_READY_FOR_RELEASE`` — a verdict whose canonical meaning is "**Argus found
+  something**" — while carrying ZERO blocking findings. That is a false accusation
+  emitted by the tool whose product thesis is that it does not cry wolf, and it is the
+  last asymmetry in cross-cutting #6 (the advisory-by-contract / false-accusation moat),
+  which was enforced on FINDINGS but not on the VERDICT itself. Row 4 replaces it: a
+  coverage shortfall is reported as the honest NOT-ASSESSED state, never as a defect.
+  ``INSUFFICIENT_COVERAGE`` is therefore reached TWO ways — below the floor (row 1) or a
+  zero-findings unmet gate (row 4) — which is precisely why the fired row is DISCLOSED.
 - **Floor-vs-blocking precedence = FLOOR WINS** — a below-20% ledger returns
   ``INSUFFICIENT_COVERAGE`` EVEN WITH blocking findings. Rationale: below the floor
   ArgusAgent has not assessed enough to honestly claim it saw enough to BLOCK either; low
   coverage is ArgusAgent's limitation to report, not a verdict to render. The floor row
-  is evaluated FIRST. Pinned by a test.
+  is evaluated FIRST — row 1 keeps precedence over row 2, so "findings before coverage"
+  means before the 60% / critical-subsystem GATES (row 3), NEVER before the FLOOR.
+  Pinned by a test.
+- **Decision-row disclosure vocabulary** — :class:`DecisionRow`, a ``str``-valued closed
+  enum with EXACTLY four members, one per FR16 row. It is a SEPARATE disclosure
+  vocabulary: the addendum's "the verdict enum MUST NOT grow" constrains
+  :class:`Verdict` (still exactly three members — adding ``COVERAGE_GATE_UNMET`` was
+  considered and REJECTED), not the introduction of a field that records WHICH row
+  fired. Rows 1 and 4 are indistinguishable by verdict and exit code, so without the
+  row every downstream consumer would have to re-derive the gate's reasoning from the
+  counters — a forked second decision table, the exact failure mode §3.3 forbids.
+  Consumers that need to know "was this the floor?" read
+  :attr:`AuditVerdict.is_below_floor`.
 - **``inferred`` never satisfies a gate (FR8)** — the deep-% numerator counts ONLY
   ``audited_deep`` entries (via ``CoverageLedger.deep_count()``); ``inferred`` /
   ``skipped`` / ``tool_scanned_only`` / ``audited_shallow`` are in the DENOMINATOR
@@ -103,8 +128,10 @@ Contract decisions LOCKED here (frozen for every downstream consumer)
   the gate never classifies files, preserving AR8 import isolation). It exists for
   the test-heavy repository, where entries graded ``audited_shallow`` BY CONSTRUCTION
   (test files — the subject of the vacuous pass, never a deep-grounding target)
-  swamp the denominator and manufacture a ``NOT_READY_FOR_RELEASE`` carrying ZERO
-  blocking findings. LOCKED invariants: the floor and the RELEASE_READY threshold are
+  swamp the denominator and withhold ``RELEASE_READY`` from a repository carrying ZERO
+  blocking findings (a row-4 ``INSUFFICIENT_COVERAGE``; before the FR16 amendment this
+  was the far worse ``NOT_READY_FOR_RELEASE``). LOCKED invariants: the floor and the
+  RELEASE_READY threshold are
   BOTH re-applied WITHIN the narrowed population (a narrowing may change what is
   claimed, NEVER the bar for claiming it — an under-audited application is still
   ``INSUFFICIENT_COVERAGE``); ``findings`` are NOT filtered, so a blocking finding in
@@ -134,6 +161,7 @@ __all__ = [
     "RELEASE_READY_DEEP_THRESHOLD",
     "INSUFFICIENT_COVERAGE_FLOOR",
     "Verdict",
+    "DecisionRow",
     "BLOCKED",
     "CoverageScope",
     "AuditVerdict",
@@ -146,7 +174,12 @@ __all__ = [
 
 # Single localized source for this contract's schema version (additive-only;
 # part of the hashed payload — a bump deliberately changes the content hash).
-VERDICT_SCHEMA_VERSION = "1"
+# "1" → "2" (Story 8.1 / DR-4): the FR16 reorder + the additive ``decision_row``
+# disclosure. NFR-M2 sanctions the bump as the lever for an INTENTIONAL content-hash
+# change; there is deliberately NO migration code and NO rewrite pass — verdicts already
+# persisted under ``.apaa/`` / ``.argus/`` keep their "1" stamp and still round-trip,
+# because every field added since has carried a default.
+VERDICT_SCHEMA_VERSION = "2"
 
 # LOCKED gate thresholds — exact fixed-precision Fractions (NEVER float, AR4).
 # RELEASE_READY requires deep-% >= 60% (inclusive); INSUFFICIENT_COVERAGE is
@@ -172,6 +205,32 @@ class Verdict(str, enum.Enum):
     RELEASE_READY = "RELEASE_READY"
     NOT_READY_FOR_RELEASE = "NOT_READY_FOR_RELEASE"
     INSUFFICIENT_COVERAGE = "INSUFFICIENT_COVERAGE"
+
+
+class DecisionRow(str, enum.Enum):
+    """Closed, fixed-enum disclosure of WHICH FR16 row produced the verdict (DR-3).
+
+    A ``str``-valued closed enum with EXACTLY four members — one per row of the binding
+    FR16 decision table — mirroring the :class:`Verdict` / ``CoverageDepth`` pattern; the
+    membership set is pinned by a committed test. The string VALUES carry the row number
+    so "which row fired" is LITERAL on the artifact rather than inferred.
+
+    This does NOT grow :class:`Verdict`, which still has exactly three members. One
+    verdict value carries one meaning; the row records the REASONING that produced it.
+    The distinction matters because rows 1 and 4 both render ``INSUFFICIENT_COVERAGE`` /
+    exit ``3`` and are otherwise indistinguishable:
+
+    - ``BELOW_FLOOR`` — too little was assessed to claim anything at all.
+    - ``GATE_UNMET_NO_FINDINGS`` — plenty was assessed and NOTHING was found; a coverage
+      or critical-subsystem gate simply was not met.
+
+    A consumer that reports the second as the first (or as a block) states a falsehood.
+    """
+
+    BELOW_FLOOR = "row_1_below_floor"
+    BLOCKING_FINDINGS = "row_2_blocking_findings"
+    GATES_MET = "row_3_gates_met"
+    GATE_UNMET_NO_FINDINGS = "row_4_gate_unmet_no_findings"
 
 
 # Documented demo shorthand: BLOCKED denotes the NOT_READY_FOR_RELEASE concept.
@@ -206,8 +265,9 @@ class CoverageScope(BaseModel):
     application file was audited deep — the ledger grades a test file
     ``audited_shallow`` by construction (it is the SUBJECT of the vacuous-test pass,
     not a target of deep grounding). Folding those shallow-by-design entries into the
-    denominator produces a FALSE NEGATIVE: ``NOT_READY_FOR_RELEASE`` with zero
-    blocking findings, purely because the repo is well-tested.
+    denominator produces a FALSE NEGATIVE: ``RELEASE_READY`` withheld (row 4,
+    ``INSUFFICIENT_COVERAGE``) with zero blocking findings, purely because the repo is
+    well-tested.
 
     Narrowing the assessed population is the honest fix — but ONLY when the narrowing
     is DISCLOSED. That is what this model is: the machine-readable record of what was
@@ -275,6 +335,14 @@ class AuditVerdict(BaseModel):
         default=VERDICT_SCHEMA_VERSION, description="Verdict schema version (part of the hash)."
     )
     verdict: Verdict = Field(..., description="The closed-enum release-readiness verdict.")
+    decision_row: DecisionRow | None = Field(
+        default=None,
+        description=(
+            "Which row of the binding FR16 decision table produced this verdict (DR-3). "
+            "None ONLY for a pre-amendment (schema_version '1') payload read back from "
+            "disk, where the row was never disclosed; evaluate_verdict always sets it."
+        ),
+    )
     deep_ratio: Fraction = Field(
         ..., description="audited_deep / total as an exact Fraction (NEVER float, AR4)."
     )
@@ -309,6 +377,30 @@ class AuditVerdict(BaseModel):
     )
     exit_code: int = Field(..., description="Mapped process exit code (AR3 wire contract).")
 
+    @property
+    def is_below_floor(self) -> bool:
+        """Whether the FLOOR (row 1) — not a gate — withheld the verdict.
+
+        THE single source of truth for every consumer that has to distinguish "too
+        little was assessed to claim anything" (row 1) from "nothing was found and a
+        gate was not met" (row 4). Both render ``INSUFFICIENT_COVERAGE`` / exit ``3``,
+        so keying on the verdict enum states a falsehood for row 4 — which is exactly
+        what ``exhaustion.build_floor_report`` and the negative-assurance statement did
+        before Story 8.1.
+
+        Re-deriving this from the counters in each consumer would fork the decision
+        table (§3.3). It reads the DISCLOSED row instead. A pre-amendment payload
+        (``decision_row is None``, ``schema_version "1"``) falls back to the enum, which
+        for a ``"1"``-stamped verdict is exactly the old — and then still correct —
+        equivalence, so read-back of persisted state is unchanged.
+
+        A property, not a field: it is derived, so it adds no key to the canonical
+        payload and cannot become a second source of truth on disk.
+        """
+        if self.decision_row is not None:
+            return self.decision_row is DecisionRow.BELOW_FLOOR
+        return self.verdict is Verdict.INSUFFICIENT_COVERAGE
+
     def to_canonical_payload(self) -> dict[str, object]:
         """Return a canonical-serializable payload dict for the 1.1 serializer.
 
@@ -339,6 +431,12 @@ class AuditVerdict(BaseModel):
         # repo with no non-deep criticals stays byte-identical to a pre-seam run.
         if not self.critical_subsystems_not_deep:
             payload.pop("critical_subsystems_not_deep", None)
+        # …and again for the row: every LIVE verdict discloses one, so this only ever
+        # fires for a pre-amendment payload read back from disk, which then re-serializes
+        # BYTE-IDENTICALLY to how it was written (NFR-D3: a "1"-stamped verdict keeps its
+        # hash). A `"decision_row":null` key is never emitted.
+        if self.decision_row is None:
+            payload.pop("decision_row", None)
         return payload
 
 
@@ -418,21 +516,39 @@ def evaluate_verdict(
 
     The terminal pure fold (FR15 / AR8): imports only the 1.2 ledger/finding
     models, performs no I/O, reads no clock, calls no ``dispatch()``, uses zero LLM
-    tokens (NFR-D2). The decision table (evaluated IN ORDER, floor first):
+    tokens (NFR-D2). The binding FR16 decision table (evaluated IN ORDER, floor first),
+    each row also DISCLOSED on the result as :attr:`AuditVerdict.decision_row`:
 
-    1. ``total == 0`` OR ``deep_ratio < 20%`` → ``INSUFFICIENT_COVERAGE`` (the
-       floor; wins over blocking findings — guards the deep-% denominator so a
-       divide-by-zero is structurally impossible, AC8).
-    2. ``deep_ratio >= 60%`` AND ``blocking == 0`` AND
-       ``critical_subsystems_all_deep`` → ``RELEASE_READY``.
-    3. otherwise → ``NOT_READY_FOR_RELEASE`` (≥20% with a gate unmet).
+    1. ``assessed_total == 0`` OR ``assessed_ratio < 20%`` → ``INSUFFICIENT_COVERAGE``
+       (``DecisionRow.BELOW_FLOOR``; the floor, which WINS over blocking findings — and
+       guards the deep-% denominator so a divide-by-zero is structurally impossible).
+    2. ``blocking >= 1`` → ``NOT_READY_FOR_RELEASE`` (``DecisionRow.BLOCKING_FINDINGS``).
+    3. ``assessed_ratio >= 60%`` AND ``critical_subsystems_all_deep`` →
+       ``RELEASE_READY`` (``DecisionRow.GATES_MET``).
+    4. otherwise → ``INSUFFICIENT_COVERAGE``
+       (``DecisionRow.GATE_UNMET_NO_FINDINGS``): zero blocking findings with a coverage
+       or critical-subsystem gate unmet.
 
-    Never a default block (FR16): the only blocking verdict requires either
-    insufficient deep coverage (≥20% but <60%), ≥1 verdict-eligible finding, or a
-    critical subsystem below deep (the Story-2.3 seam). A clean ledger with adequate
-    coverage and no blocking findings returns ``RELEASE_READY``; a below-floor
-    ledger returns ``INSUFFICIENT_COVERAGE``. The same fold runs over a partial
-    ledger with no special mode (the Epic-3 Story-3.3 reuse seam, AC8).
+    **Findings are evaluated BEFORE the coverage GATES, never before the FLOOR.** Row 1
+    keeps precedence over row 2 (the LOCKED floor-vs-blocking precedence): below the
+    floor ArgusAgent has not assessed enough to honestly claim it saw enough to BLOCK
+    either. Row 3 deliberately carries NO ``blocking == 0`` clause — that is GUARANTEED
+    by row-2 precedence, and restating it would be a second, silently divergable copy of
+    the same condition.
+
+    Never a default block (FR16 as amended): the ONLY blocking verdict is row 2, which
+    requires ≥1 verdict-eligible finding. A coverage shortfall or an unmet
+    critical-subsystem clause with nothing found is reported as the honest NOT-ASSESSED
+    state, not as a defect the tool never detected. A clean ledger with adequate
+    coverage and no blocking findings returns ``RELEASE_READY``. The same fold runs over
+    a partial ledger with no special mode (the Epic-3 Story-3.3 reuse seam).
+
+    Disclosure (DR-3): the result carries the fired row PLUS the assessed population it
+    was computed over — ``coverage_scope`` when the assessment was narrowed, otherwise
+    ``deep_count`` / ``total_count``. Together with ``blocking_finding_count`` and
+    ``critical_subsystems_all_deep`` that is sufficient to RE-DERIVE the verdict and the
+    exit code without re-reading the ledger (pinned by a test), so no consumer ever needs
+    a second copy of this table.
 
     ``critical_subsystems_all_deep`` defaults to satisfied in V1; Story 2.3 supplies
     the real value additively (the FR16 critical-subsystem clause).
@@ -448,9 +564,10 @@ def evaluate_verdict(
     This exists because a test file is graded ``audited_shallow`` BY CONSTRUCTION (it
     is the subject of the vacuous-test pass, not a target of deep grounding). In a
     repository with more test files than application files those shallow-by-design
-    entries dominate the denominator and manufacture a FALSE NEGATIVE — a
-    ``NOT_READY_FOR_RELEASE`` carrying zero blocking findings, earned solely by being
-    well-tested. Narrowing to the application files reports what was actually assessed.
+    entries dominate the denominator and manufacture a FALSE NEGATIVE — ``RELEASE_READY``
+    withheld (row 4) from a repository carrying zero blocking findings, earned solely by
+    being well-tested. Narrowing to the application files reports what was actually
+    assessed.
 
     Three invariants make the narrowing honest rather than a loophole:
 
@@ -505,22 +622,35 @@ def evaluate_verdict(
             excluded_count=total - assessed_total,
         )
 
-    # Decision table, floor first — evaluated over the ASSESSED population. An empty
-    # assessed population is `total == 0`-equivalent: nothing was examined, so nothing
-    # can be claimed (guards the divide-by-zero structurally, AC8).
+    # ── The binding FR16 decision table, VERBATIM and IN ORDER, over the ASSESSED
+    # population. Each branch sets both the verdict and the row it fired.
     if assessed_total == 0 or assessed_ratio < INSUFFICIENT_COVERAGE_FLOOR:
+        # Row 1 — the FLOOR, first and above the findings row (LOCKED precedence). An
+        # empty assessed population is `total == 0`-equivalent: nothing was examined, so
+        # nothing can be claimed (guards the divide-by-zero structurally).
         verdict = Verdict.INSUFFICIENT_COVERAGE
-    elif (
-        assessed_ratio >= RELEASE_READY_DEEP_THRESHOLD
-        and blocking == 0
-        and critical_subsystems_all_deep
-    ):
-        verdict = Verdict.RELEASE_READY
-    else:
+        row = DecisionRow.BELOW_FLOOR
+    elif blocking >= 1:
+        # Row 2 — findings BEFORE the coverage gates. The only blocking verdict, and it
+        # is earned by a finding Argus actually made.
         verdict = Verdict.NOT_READY_FOR_RELEASE
+        row = DecisionRow.BLOCKING_FINDINGS
+    elif assessed_ratio >= RELEASE_READY_DEEP_THRESHOLD and critical_subsystems_all_deep:
+        # Row 3 — the gates. NO `blocking == 0` clause: row-2 precedence already
+        # guarantees it here, and a redundant copy of that condition could silently
+        # diverge from the one that is actually load-bearing.
+        verdict = Verdict.RELEASE_READY
+        row = DecisionRow.GATES_MET
+    else:
+        # Row 4 — zero blocking findings, a coverage or critical-subsystem gate unmet.
+        # The honest NOT-ASSESSED state. This row replaces the pre-amendment default
+        # block, which reported a coverage shortfall as a defect.
+        verdict = Verdict.INSUFFICIENT_COVERAGE
+        row = DecisionRow.GATE_UNMET_NO_FINDINGS
 
     return AuditVerdict(
         verdict=verdict,
+        decision_row=row,
         deep_ratio=deep_ratio,
         deep_count=deep,
         total_count=total,

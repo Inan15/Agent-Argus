@@ -67,6 +67,13 @@ asymmetric-harm direction — an unearned green is the lethal failure, an over-c
 is recoverable). The downgrade is recorded with a structured rationale (reason tokens +
 the promoted/seam finding ids — no source bytes, NFR-S1).
 
+"More conservative" is a PARTIAL order (Story 8.1 / FR16 as amended): the two withholding
+verdicts — ``INSUFFICIENT_COVERAGE`` (nothing was found; not enough was assessed, or a
+gate was unmet) and ``NOT_READY_FOR_RELEASE`` (something WAS found) — are incomparable,
+and are ranked EQUAL. Ordering them would make a zero-findings gate-unmet candidate
+outrank its own blocking re-fold, and the Prosecutor would discard a finding it had just
+promoted. See :data:`_CONSERVATISM_RANK`.
+
 CC #4 — the ``cross_partition`` cut-edge pass (the V1 seam mitigation, OI2)
 ---------------------------------------------------------------------------
 The 2.4 partitioner RECORDS the ``cut_edges`` (a caller in partition A whose callee is
@@ -118,15 +125,29 @@ RULE_CROSS_PARTITION = "cross_partition"
 # (verdict-eligible without claiming a deep grade it did not earn).
 PROMOTED_DEPTH = CoverageDepth.AUDITED_SHALLOW
 
-# Verdict conservatism rank (higher = more conservative). The Prosecutor only ever
-# moves the candidate toward a higher rank, never lower (the asymmetric-harm rule).
-# RELEASE_READY (least conservative) < NOT_READY_FOR_RELEASE; INSUFFICIENT_COVERAGE
-# is the floor ArgusAgent reports when it has not assessed enough to claim either — it is
-# the most conservative honest state and is never moved away from by the Prosecutor.
+# Verdict conservatism rank (higher = more conservative). The Prosecutor only ever moves
+# the candidate toward a higher rank, never lower (FR19, the asymmetric-harm rule).
+#
+# A PARTIAL order, deliberately (Story 8.1 / D6). Under the amended FR16 table
+# ``INSUFFICIENT_COVERAGE`` (a NOT-ASSESSED state) and ``NOT_READY_FOR_RELEASE`` (a
+# FOUND-SOMETHING state) are INCOMPARABLE: both withhold ``RELEASE_READY`` and neither is
+# "safer" than the other. Ranking INSUFFICIENT_COVERAGE strictly above
+# NOT_READY_FOR_RELEASE — as this map did before the amendment, when INSUFFICIENT_COVERAGE
+# could only mean "below the floor" — makes a row-4 candidate outrank its own blocking
+# re-fold, so the Prosecutor would DISCARD a finding it had just promoted. The tool would
+# silence itself.
+#
+# The only invariant FR19 actually needs is NEVER MOVE TOWARD ``RELEASE_READY``. Equal
+# ranks express exactly that: a ``RELEASE_READY`` re-fold can never outrank a withholding
+# candidate, while a promoted blocking finding still surfaces (the comparison is
+# ``refolded_rank >= candidate_rank``, so an equal-rank re-fold wins). Safe by
+# construction: the re-fold sees the same ledger, scope and critical flags with a
+# strictly larger/promoted finding set, so ``blocking`` can only INCREASE — the only
+# reachable transitions are row-1→row-1, row-2→row-2, row-3→row-2 and row-4→row-2.
 _CONSERVATISM_RANK: dict[Verdict, int] = {
     Verdict.RELEASE_READY: 0,
     Verdict.NOT_READY_FOR_RELEASE: 1,
-    Verdict.INSUFFICIENT_COVERAGE: 2,
+    Verdict.INSUFFICIENT_COVERAGE: 1,
 }
 
 
@@ -153,7 +174,8 @@ class ProsecutionResult(BaseModel):
     EXISTING ``order_findings``), the structured adversarial rationale (reason tokens
     + the ids of promoted / seam-raised findings — NO source bytes, NFR-S1), the
     promoted-finding ids, the raised ``cross_partition`` finding ids, whether the
-    verdict was DOWNGRADED, and the AR10 recorded degraded conditions.
+    verdict was DOWNGRADED, whether it CHANGED at all, and the AR10 recorded degraded
+    conditions.
     """
 
     model_config = ConfigDict(frozen=True, extra="forbid")
@@ -172,7 +194,27 @@ class ProsecutionResult(BaseModel):
         default=(), description="recording_ids of raised cross_partition seam findings (CC #4)."
     )
     downgraded: bool = Field(
-        default=False, description="True iff the candidate verdict was made MORE conservative (FR19)."
+        default=False,
+        description=(
+            "True iff the candidate verdict was made MORE conservative (FR19) — i.e. it "
+            "moved UP the conservatism rank, which in practice means an unearned "
+            "RELEASE_READY was withdrawn. A row-4 -> row-2 move (a promoted finding "
+            "turning a not-assessed verdict into a blocking one) is a RECLASSIFICATION "
+            "between two equally-conservative withholding states, not a downgrade, and "
+            "is reported False — read ``verdict_changed`` for that question."
+        ),
+    )
+    verdict_changed: bool = Field(
+        default=False,
+        description=(
+            "True iff this pass CHANGED the verdict value (final != candidate) — the "
+            "strictly weaker question ``downgraded`` cannot answer since the FR16 "
+            "amendment. Every downgrade is a change; a row-4 -> row-2 reclassification "
+            "is a change that is NOT a downgrade (both verdicts withhold RELEASE_READY "
+            "and rank equal). Exactly one rationale token records each move: "
+            "'downgrade:<from>-><to>' for a downgrade, 'reclassified:<from>-><to>' "
+            "otherwise."
+        ),
     )
     degraded: tuple[DegradedCondition, ...] = Field(
         default=(), description="AR10 recorded degraded conditions (a malformed finding/cut-edge — never a crash)."
@@ -438,6 +480,8 @@ def prosecute(
     )
 
     # ── FR19 — only ever MORE conservative: pick the higher conservatism rank ──
+    # `>=` (not `>`) is what lets an EQUAL-rank re-fold win, which after the FR16
+    # amendment is how a promoted blocking finding replaces a row-4 candidate.
     candidate_rank = _CONSERVATISM_RANK[verdict.verdict]
     refolded_rank = _CONSERVATISM_RANK[refolded.verdict]
     if refolded_rank >= candidate_rank:
@@ -451,10 +495,21 @@ def prosecute(
             update={"ordered_findings": order_findings(tuple(refined))}
         )
 
+    # Two DISTINCT questions, both answered structurally (Story 8.1 review R5). Since
+    # the two withholding verdicts rank EQUAL, `downgraded` can only ever be True for
+    # RELEASE_READY -> withholding; a row-4 -> row-2 move is a real verdict change that
+    # `downgraded` reports False. A consumer must not have to infer it from the
+    # presence of a `promoted:` token, so it is reported directly and carries exactly
+    # one rationale token, mirroring the existing `downgrade:` pairing.
     downgraded = _CONSERVATISM_RANK[final_verdict.verdict] > candidate_rank
+    verdict_changed = final_verdict.verdict is not verdict.verdict
     if downgraded:
         rationale.append(
             f"downgrade:{verdict.verdict.value}->{final_verdict.verdict.value}"
+        )
+    elif verdict_changed:
+        rationale.append(
+            f"reclassified:{verdict.verdict.value}->{final_verdict.verdict.value}"
         )
 
     cross_ids = tuple(f.recording_id for f in cross_findings)
@@ -468,5 +523,6 @@ def prosecute(
         promoted_finding_ids=tuple(promoted_ids),
         cross_partition_finding_ids=cross_ids,
         downgraded=downgraded,
+        verdict_changed=verdict_changed,
         degraded=tuple(degraded),
     )

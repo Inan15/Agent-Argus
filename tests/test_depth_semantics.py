@@ -47,7 +47,7 @@ from argus.ledger.depth_semantics import (
     assess_criticality,
     classify_depth,
 )
-from argus.verdict.verdict_gate import Verdict, evaluate_verdict
+from argus.verdict.verdict_gate import DecisionRow, Verdict, evaluate_verdict
 
 
 # ─────────────────────────────────────────────────────────────────────────────
@@ -176,9 +176,12 @@ def test_fr8_inferred_cannot_tip_a_sub_60_ledger_to_release_ready() -> None:
 
     The keystone: ``inferred`` entries inflate the DENOMINATOR (so they can only
     LOWER deep-%), never the numerator. A ledger with 10 audited_deep + 7 inferred
-    is 10/17 ≈ 58.8% deep (< 60%) -> NOT_READY_FOR_RELEASE; the inferred entries
+    is 10/17 ≈ 58.8% deep (< 60%) -> RELEASE_READY is WITHHELD; the inferred entries
     cannot tip it over the line. If a future author let inferred into the
     numerator, 17/17 = 100% would wrongly read RELEASE_READY and this fails loudly.
+
+    Story 8.1: the FR8 assertion is unchanged. The withholding is now expressed as FR16
+    row 4 (zero blocking findings, the coverage gate unmet) rather than a block.
     """
     deep_specs = [(f"deep_{i}.py", CoverageDepth.AUDITED_DEEP, True) for i in range(10)]
     inferred_specs = [(f"narr_{i}.py", CoverageDepth.INFERRED, False) for i in range(7)]
@@ -188,8 +191,8 @@ def test_fr8_inferred_cannot_tip_a_sub_60_ledger_to_release_ready() -> None:
     assert result.deep_count == 10
     assert result.total_count == 17
     assert result.deep_ratio < Fraction(3, 5)
-    assert result.verdict is Verdict.NOT_READY_FOR_RELEASE
     assert result.verdict is not Verdict.RELEASE_READY
+    assert result.decision_row is DecisionRow.GATE_UNMET_NO_FINDINGS
 
 
 def test_fr8_only_audited_deep_drives_release_ready() -> None:
