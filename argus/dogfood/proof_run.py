@@ -111,6 +111,7 @@ from argus.cost.budget_governor import (
 from argus.dogfood.partition_plan import (
     FullRepoPlan,
     build_full_repo_plan,
+    effective_exclusions,
 )
 from argus.evidence.bundle import (
     EvidenceBundle,
@@ -119,8 +120,10 @@ from argus.evidence.bundle import (
     persist_evidence_bundle,
 )
 from argus.intake.repo_loader import _SOURCE_SUFFIXES
+from argus.ledger.critical_subsystems import CriticalSubsystemSet
 from argus.models import AuditRequest
 from argus.pipeline import AuditResult, run_audit_detailed
+from argus.pipeline_persist import CRITICAL_SUBSYSTEMS_PRODUCER
 from argus.precision.replay_harness import (
     MatchKey,
     finding_match_key,
@@ -138,6 +141,8 @@ __all__ = [
     "DogfoodProofError",
     "AdjudicationRow",
     "CostSummary",
+    "ScopeDisclosure",
+    "CriticalClauseDisclosure",
     "DogfoodProofRun",
     "enumerate_tracked_sources",
     "materialize_snapshot",
@@ -175,6 +180,14 @@ DOGFOOD_EXTERNALIZATION_GUARD = (
 )
 
 _GIT_TIMEOUT_SECONDS = 120
+
+# The DEFAULT enumeration scope of the dogfood run. Named constants (not inline
+# literals) so the SUBJECT the rendered artifact names is the SAME value the enumerator
+# actually used — the artifact can never claim a tree the run did not read (Story 8.5 /
+# AC2). Both impure call sites (:func:`run_dogfood`, :func:`build_dogfood_proof`) take
+# these defaults.
+_DEFAULT_SCOPE_PREFIX = "argus"
+_DEFAULT_EXCLUDE_PREFIXES = ("argus/tests/",)
 
 
 class DogfoodProofError(ValueError):
@@ -235,6 +248,72 @@ class CostSummary:
     baseline_ratio: Fraction | str
     fits_within_ceiling: bool
     breaches_below_total: bool
+    # The CEILING HONESTY PAIR (Story 8.5 / AC1 / D7). ``ceiling`` above is the FROZEN
+    # historical execution parameter the run was actually executed under; the 7.1
+    # generator re-sizes ``$X`` from the LIVE tree on every derivation and has drifted
+    # away from it. Recording only one of the two lets the proof artifact and the budget
+    # artifact — both published by the same change — disagree about what "the 7.1
+    # empirical ceiling" is. Both are recorded, with a fit verdict for EACH. Defaults so
+    # every existing construction site keeps working (NFR-M2 additive-only).
+    # ``None`` means NO live sizing was supplied — never ``0``, which is a legitimate
+    # sizing for an empty tree; collapsing the two would publish "not supplied" about a
+    # derivation that WAS supplied a zero ceiling (the same ambiguity
+    # :class:`CriticalClauseDisclosure.set_retrieved` exists to refuse).
+    live_sized_ceiling: int | None = None
+    fits_within_live_sized_ceiling: bool = False
+
+
+@dataclass(frozen=True)
+class ScopeDisclosure:
+    """The verdict's DISCLOSED assessment-scope narrowing, flattened for render (PURE).
+
+    A value copy of the frozen ``verdict.CoverageScope`` fields the proof artifact must
+    print (Story 8.5 / AC1 — the ASSESSED population the row was computed from, not only
+    the whole-ledger numbers), kept a plain dataclass so :class:`DogfoodProofRun` stays a
+    pure value holder. ``assessed_deep_ratio`` is an exact ``Fraction`` (AR4). ``None``
+    on the run means ``coverage_scope is None``, i.e. **no narrowing occurred** — which
+    the renderer states EXPLICITLY rather than by omission.
+    """
+
+    scope_id: str
+    excluded_reason: str
+    assessed_deep_count: int
+    assessed_total_count: int
+    assessed_deep_ratio: Fraction
+    excluded_count: int
+
+
+@dataclass(frozen=True)
+class CriticalClauseDisclosure:
+    """The FR4/FR16 critical-subsystem clause state the gate keyed on (PURE; boundary B3).
+
+    Epic 8 LOOSENS the critical gate twice (the DR-5 eligibility filter, the
+    ``application`` scope default) and nothing guards the PRD-fatal
+    false-``RELEASE_READY`` direction (inversion F1). A green verdict whose clause held
+    because the critical set was **EMPTY** is a vacuously satisfied gate, and that must
+    be VISIBLE, never implied.
+
+    ``all_deep`` / ``not_deep`` come from the verdict and are always present.
+    ``set_retrieved`` records whether the run's persisted :class:`CriticalSubsystemSet`
+    was actually read back; when ``False`` the remaining counters are meaningless and the
+    renderer says so — reporting ``set_size = 0`` for "not retrieved" would fabricate the
+    very vacuous-gate claim this disclosure exists to make falsifiable.
+    ``retrieval_note`` carries the MEASURED reason it could not be read, so an unread set
+    is not merely unread but explained.
+    """
+
+    all_deep: bool
+    not_deep: tuple[str, ...] = ()
+    set_retrieved: bool = False
+    set_size: int = 0
+    excluded_ineligible_count: int = 0
+    designated_but_unmatched: tuple[str, ...] = ()
+    retrieval_note: str = ""
+
+    @property
+    def vacuously_satisfied(self) -> bool:
+        """Whether the clause was satisfied by an EMPTY critical set (a vacuous gate)."""
+        return self.set_retrieved and self.all_deep and self.set_size == 0
 
 
 @dataclass(frozen=True)
@@ -267,6 +346,25 @@ class DogfoodProofRun:
     integrity_consistent: bool
     grade: str
     gate_status: str
+    # ── DR-3 row + input disclosure (Story 8.5 / AC1) — all defaulted (NFR-M2) ──
+    # The LITERAL DecisionRow value the gate disclosed, never a re-derivation from the
+    # verdict token: rows 1 and 4 both render INSUFFICIENT_COVERAGE / exit 3, so a
+    # consumer that infers the row from the token states a falsehood for one of them.
+    # Empty string ONLY for a pre-amendment payload that never disclosed a row.
+    decision_row: str = ""
+    deep_count: int = 0
+    total_count: int = 0
+    scope: ScopeDisclosure | None = None
+    critical: CriticalClauseDisclosure | None = None
+    # The enumeration SUBJECT this run actually audited (Story 8.5 / AC2) — recorded
+    # from the module-level enumeration defaults BOTH impure call sites pass, so the
+    # artifact cannot name a tree the run did not read.
+    scope_prefix: str = ""
+    exclude_prefixes: tuple[str, ...] = ()
+    # What the enumerator MEASURABLY held out: the subset of ``exclude_prefixes`` that
+    # matched >=1 tracked file (:func:`effective_exclusions`). Rendering the CONFIGURED set
+    # asserts a held-out sub-tree a stale/renamed prefix may never have matched.
+    effective_exclude_prefixes: tuple[str, ...] = ()
 
 
 # ──────────────────────────────────────────────────────────────────────────────
@@ -297,8 +395,8 @@ def _run_git(repo: Path, *args: str, check: bool = True) -> subprocess.Completed
 def enumerate_tracked_sources(
     repo_root: str | Path,
     *,
-    scope_prefix: str = "argus",
-    exclude_prefixes: tuple[str, ...] = ("argus/tests/",),
+    scope_prefix: str = _DEFAULT_SCOPE_PREFIX,
+    exclude_prefixes: tuple[str, ...] = _DEFAULT_EXCLUDE_PREFIXES,
 ) -> tuple[str, ...]:
     """Enumerate the git-TRACKED Minions source files (the SAME 7.1 scope; the impure read).
 
@@ -407,7 +505,12 @@ def adjudication_rows(result: AuditResult) -> tuple[AdjudicationRow, ...]:
     return tuple(rows)
 
 
-def cost_summary(source_files: tuple[str, ...], total_loc: int) -> CostSummary:
+def cost_summary(
+    source_files: tuple[str, ...],
+    total_loc: int,
+    *,
+    live_sized_ceiling: int | None = None,
+) -> CostSummary:
     """Compute the within-ceiling + 3.2-halt cost accounting (PURE; AC-EXECUTE / AR4).
 
     Folds the V1 deterministic zero-token contributions (``files_indexed`` +
@@ -417,6 +520,13 @@ def cost_summary(source_files: tuple[str, ...], total_loc: int) -> CostSummary:
     ``$X`` = 843 (``ceiling_reached is False``) while a ceiling one credit below the total
     demonstrably BREACHES (the >=-is-a-breach REUSE — the halt->skip->downgrade->report
     path). All ``int`` credits / a ``Fraction`` baseline ratio (NFR-C1) — never float.
+
+    *live_sized_ceiling* is the 7.1 ``build_full_repo_plan`` sizing measured on the LIVE
+    tree by the SAME derivation the budget artifact publishes. When supplied, the fit is
+    re-folded through the SAME 3.1 accountant under that ceiling too, so the proof can
+    state the CEILING HONESTY PAIR (Story 8.5 / AC1 / D7): the frozen historical ``$X``
+    the run was executed under AND the live sizing, with a fit verdict for each. No
+    second accountant, no re-derived comparison (AR7).
     """
     python_files = sum(1 for f in source_files if f.endswith((".py", ".pyi", ".pyx")))
     contributions = {
@@ -435,6 +545,13 @@ def cost_summary(source_files: tuple[str, ...], total_loc: int) -> CostSummary:
         config=BudgetConfig(ceiling_credits=max(total_credits - 1, 0)),
         build_cost_proxy=total_loc,
     )
+    fits_live = False
+    if live_sized_ceiling is not None:
+        fits_live = not account_spend(
+            {"total": total_credits},
+            config=BudgetConfig(ceiling_credits=live_sized_ceiling),
+            build_cost_proxy=total_loc,
+        ).ceiling_reached
     return CostSummary(
         total_credits=total_credits,
         ceiling=DOGFOOD_BUDGET_CEILING,
@@ -442,6 +559,8 @@ def cost_summary(source_files: tuple[str, ...], total_loc: int) -> CostSummary:
         baseline_ratio=baseline_ratio(total_credits, total_loc),
         fits_within_ceiling=not fitted.ceiling_reached,
         breaches_below_total=breach.ceiling_reached,
+        live_sized_ceiling=live_sized_ceiling,
+        fits_within_live_sized_ceiling=fits_live,
     )
 
 
@@ -459,6 +578,67 @@ class _DogfoodExecution:
     bundle: EvidenceBundle
     bundle_locator: str
     bundle_bytes: bytes
+    # The run's own persisted critical-subsystem set, or None when no such envelope was
+    # written. Defaulted so no existing construction site breaks (NFR-M2).
+    critical_subsystems: CriticalSubsystemSet | None = None
+    # The MEASURED reason the set is None (empty when it was retrieved).
+    critical_subsystems_note: str = ""
+
+
+def _read_critical_subsystem_set(
+    reader: ApaaStoreReader,
+) -> tuple[CriticalSubsystemSet | None, str]:
+    """Read the run's persisted :class:`CriticalSubsystemSet` back out (IMPURE; AR8/AR7).
+
+    REUSES the ``ApaaStoreReader`` :func:`run_dogfood` already builds for the 4.2 lint
+    and the ``CRITICAL_SUBSYSTEMS_PRODUCER`` token ``pipeline_persist`` publishes — no
+    second store reader, no re-derived critical set (AR7), so the proof discloses the
+    SAME set the gate keyed on. Enumeration is ``sorted`` (AR4).
+
+    Returns ``(set, "")`` on success and ``(None, measured_reason)`` otherwise. This is an
+    OPTIONAL disclosure on an artifact whose §3 REPORTS store integrity, so an unreadable
+    UNRELATED envelope DEGRADES to "not retrieved, because …" rather than aborting: a
+    store the 4.2 lint would report as ``integrity_consistent: False`` must still be able
+    to produce the artifact that reports it (8.5 review, iteration 1). Only an envelope
+    that ACTUALLY claims the producer fails hard (AR10): a malformed payload under it, or
+    MORE THAN ONE such envelope — filenames are content-addressed, so ``sorted`` is
+    lexicographic, not recency, and disclosing whichever hash sorts first would name a set
+    the gate may never have keyed on. Message locators are ``.argus/``-relative (NFR-S1).
+    """
+    state_dir = reader.paths.argus_root / "state"
+    if not state_dir.is_dir():
+        return None, "the snapshot store holds no `state/` directory"
+    matches: list[tuple[str, object]] = []
+    unreadable: list[str] = []
+    for child in sorted(state_dir.glob("*.json")):
+        locator = f"state/{child.name}"
+        try:
+            envelope = reader.read_envelope(locator)
+        except Exception as exc:  # noqa: BLE001 — degraded, never fatal (see docstring)
+            unreadable.append(f"`{locator}` ({type(exc).__name__})")
+            continue
+        if envelope.producer == CRITICAL_SUBSYSTEMS_PRODUCER:
+            matches.append((locator, envelope.payload))
+    if len(matches) > 1:
+        raise DogfoodProofError(
+            f"{len(matches)} persisted envelopes claim producer "
+            f"{CRITICAL_SUBSYSTEMS_PRODUCER!r} ({', '.join(m for m, _ in matches)}) — the "
+            "set the gate keyed on is ambiguous and is NOT guessed by filename order"
+        )
+    if not matches:
+        seen = f" ({len(unreadable)} unreadable: {', '.join(unreadable)})" if unreadable else ""
+        return None, (
+            "no persisted envelope in `state/` claimed producer "
+            f"`{CRITICAL_SUBSYSTEMS_PRODUCER}`{seen}"
+        )
+    try:
+        return CriticalSubsystemSet.model_validate(matches[0][1]), ""
+    except Exception as exc:  # noqa: BLE001 — typed failure, never a bare raise
+        raise DogfoodProofError(
+            f"the envelope at {matches[0][0]!r} claims producer "
+            f"{CRITICAL_SUBSYSTEMS_PRODUCER!r} but its payload is not a "
+            f"CriticalSubsystemSet ({type(exc).__name__})"
+        ) from exc
 
 
 def run_dogfood(
@@ -495,7 +675,11 @@ def run_dogfood(
     )
     result = run_audit_detailed(request)
 
-    integrity = lint_referential_integrity(ApaaStoreReader(snapshot_repo))
+    # ONE reader over the snapshot store, REUSED for both the 4.2 lint and the
+    # critical-subsystem read-back (AR7 — no second store reader).
+    reader = ApaaStoreReader(snapshot_repo)
+    integrity = lint_referential_integrity(reader)
+    critical_subsystems, critical_note = _read_critical_subsystem_set(reader)
     bundle = build_evidence_bundle(
         result, integrity, commit=commit_label, argus_version=argus_version
     )
@@ -507,6 +691,8 @@ def run_dogfood(
         bundle=bundle,
         bundle_locator=bundle_locator,
         bundle_bytes=bundle_bytes,
+        critical_subsystems=critical_subsystems,
+        critical_subsystems_note=critical_note,
     )
 
 
@@ -535,8 +721,40 @@ def build_dogfood_proof(
     result = execution.result
     verdict = result.verdict
     source_files = enumerate_tracked_sources(root)
-    cost = cost_summary(source_files, plan.total_loc)
+    cost = cost_summary(
+        source_files, plan.total_loc, live_sized_ceiling=plan.budget.sized_ceiling
+    )
     rows = adjudication_rows(result)
+
+    # DR-3 row + input disclosure (Story 8.5 / AC1): read STRAIGHT off the verdict the
+    # gate produced. Nothing here re-derives a row from the verdict token and nothing
+    # here is hand-written — a hardcoded historical figure in a generator is the exact
+    # fork/staleness shape AR7 exists to prevent.
+    scope_disclosure: ScopeDisclosure | None = None
+    if verdict.coverage_scope is not None:
+        cs = verdict.coverage_scope
+        scope_disclosure = ScopeDisclosure(
+            scope_id=cs.scope_id,
+            excluded_reason=cs.excluded_reason,
+            assessed_deep_count=cs.assessed_deep_count,
+            assessed_total_count=cs.assessed_total_count,
+            assessed_deep_ratio=cs.assessed_deep_ratio,
+            excluded_count=cs.excluded_count,
+        )
+    critical_set = execution.critical_subsystems
+    critical_disclosure = CriticalClauseDisclosure(
+        all_deep=verdict.critical_subsystems_all_deep,
+        not_deep=tuple(verdict.critical_subsystems_not_deep),
+        set_retrieved=critical_set is not None,
+        set_size=0 if critical_set is None else len(critical_set.paths),
+        excluded_ineligible_count=(
+            0 if critical_set is None else len(critical_set.heuristic_excluded_ineligible)
+        ),
+        designated_but_unmatched=(
+            () if critical_set is None else tuple(critical_set.designated_but_unmatched)
+        ),
+        retrieval_note=execution.critical_subsystems_note,
+    )
 
     # OI1: the gate STAYS PROVISIONAL. The precision NUMBER is NOT computed / presented as
     # authoritative here — the proof reports the gate status string with provisional=True
@@ -567,12 +785,205 @@ def build_dogfood_proof(
         integrity_consistent=execution.integrity.consistent,
         grade=DOGFOOD_GRADE,
         gate_status=gate_status,
+        decision_row="" if verdict.decision_row is None else verdict.decision_row.value,
+        deep_count=verdict.deep_count,
+        total_count=verdict.total_count,
+        scope=scope_disclosure,
+        critical=critical_disclosure,
+        scope_prefix=_DEFAULT_SCOPE_PREFIX,
+        exclude_prefixes=_DEFAULT_EXCLUDE_PREFIXES,
+        effective_exclude_prefixes=effective_exclusions(
+            enumerate_tracked_sources(root, exclude_prefixes=()), _DEFAULT_EXCLUDE_PREFIXES
+        ),
     )
 
 
 # ──────────────────────────────────────────────────────────────────────────────
 # PURE markdown renderer (AR8) — provenance + counts + locators only (NFR-S1)
 # ──────────────────────────────────────────────────────────────────────────────
+
+
+# The provenance banner this renderer stamps. ONE definition so the artifact can never
+# name a generator module that does not exist (Story 8.5 / AC2 — pinned by a committed
+# test that resolves every path the artifact cites).
+_GENERATOR_MODULE = "argus/dogfood/proof_run.py"
+
+# The preserved, non-regenerable independent run this artifact path used to hold (AC5).
+_SUPERSEDED_ARTIFACT = "minions-dogfood-proof-story-7-2-superseded.md"
+
+_SELF_AUDIT_HONESTY = (
+    "**This is a SELF-audit — Argus auditing Argus (Story 8.5 / AC2).** The subject is "
+    "this repository's own package, not an independent codebase. A self-audit is "
+    "MATERIALLY WEAKER evidence than the independent-repository run it supersedes: the "
+    "tool and the tree share authorship, so the run cannot demonstrate that the tool "
+    "finds defects it was not written alongside. It is reportable as a reproducibility "
+    "and no-source-retention demonstration; it is NEVER independent corroboration of "
+    "the tool's detection ability. The independent Story-7.2 run over the Minions "
+    f"platform repository is preserved verbatim at `{_SUPERSEDED_ARTIFACT}` and cannot "
+    "be re-executed here, because that source is not in this repository. The filename "
+    "`minions-dogfood-proof.md` is a retained HISTORICAL identifier (an evidence path "
+    "that moves is an evidence path that gets lost); the subject is what this section "
+    "names, not what the filename suggests."
+)
+
+
+def _audited_tree_clause(proof: DogfoodProofRun) -> str:
+    """Name the tree the run ACTUALLY enumerated (PURE; Story 8.5 / AC2).
+
+    Rendered from the scope the impure orchestration recorded onto the run — never a
+    hardcoded subject — so the artifact cannot name a tree the audit did not read. An
+    unrecorded scope degrades to an explicit marker rather than a guessed subject. Only
+    the MEASURED exclusions are named: a configured prefix that held nothing out is not
+    rendered as a held-out sub-tree (Story 8.5 review, iteration 1).
+    """
+    if not proof.scope_prefix:
+        return "the audited tree (scope not recorded by this run)"
+    excluded = ", ".join(f"`{p}`" for p in proof.effective_exclude_prefixes)
+    tail = f", excluding {excluded}" if excluded else ""
+    return f"the git-tracked `{proof.scope_prefix}` package tree{tail}"
+
+
+def _row_token(proof: DogfoodProofRun) -> str:
+    """Render the LITERAL disclosed ``DecisionRow`` value, never a re-derivation (PURE)."""
+    if not proof.decision_row:
+        return (
+            "`not disclosed` (a pre-amendment verdict payload carried no row; the row is "
+            "NOT inferred from the verdict token here, because rows 1 and 4 render the "
+            "same token)"
+        )
+    return f"`{proof.decision_row}`"
+
+
+def _render_assessed_population(proof: DogfoodProofRun) -> list[str]:
+    """Render the population the gate keyed on (PURE; Story 8.5 / AC1).
+
+    States the whole-ledger numbers AND, when a narrowing was disclosed, the assessed
+    sub-population with its scope id, held-out count and reason. An absent narrowing is
+    stated EXPLICITLY — it must never be readable as a silent one.
+    """
+    if proof.scope is None:
+        return [
+            "**No narrowing occurred.** The verdict carries no `coverage_scope`, so the "
+            "gate keyed on the WHOLE coverage ledger: "
+            f"**{proof.deep_count} `audited_deep` of {proof.total_count} entries** "
+            f"(`{proof.deep_ratio.numerator}/{proof.deep_ratio.denominator}`, exact "
+            "`Fraction`). No entry was held out of the assessment and no scope "
+            "identifier was applied.",
+        ]
+    s = proof.scope
+    return [
+        "**A narrowing WAS applied and is disclosed on the verdict.** The gate keyed on "
+        "the assessed sub-population below, not on the whole ledger:",
+        "",
+        f"- Scope identifier: `{s.scope_id}`",
+        f"- Assessed deep / assessed total: **{s.assessed_deep_count} / "
+        f"{s.assessed_total_count}** "
+        f"(`{s.assessed_deep_ratio.numerator}/{s.assessed_deep_ratio.denominator}`, "
+        "exact `Fraction`)",
+        f"- Held out of the assessment: **{s.excluded_count}** entries, reason "
+        f"`{s.excluded_reason}`",
+        f"- Whole-ledger deep / total (for comparison): **{proof.deep_count} / "
+        f"{proof.total_count}** "
+        f"(`{proof.deep_ratio.numerator}/{proof.deep_ratio.denominator}`)",
+        "",
+        "The `INSUFFICIENT_COVERAGE` floor is re-applied WITHIN the narrowed population, "
+        "so a narrowing changes WHAT is claimed and never lowers the bar for claiming it.",
+    ]
+
+
+def _render_critical_clause(proof: DogfoodProofRun) -> list[str]:
+    """Render the critical-subsystem clause state (PURE; Story 8.5 / AC1, boundary B3).
+
+    Distinguishes a clause satisfied over a NON-EMPTY, fully-deep critical set from one
+    satisfied over an EMPTY set — the second is VACUOUS and is named as such.
+    """
+    c = proof.critical
+    if c is None:
+        return [
+            "**Not captured by this run.** This artifact makes NO claim about the "
+            "critical-subsystem clause state.",
+        ]
+    if not c.set_retrieved:
+        why = f" MEASURED reason: {c.retrieval_note}." if c.retrieval_note else ""
+        return [
+            "**The run's persisted critical-subsystem set could NOT be read back** from "
+            "the snapshot's `.argus/state/` tree, so its SIZE is unknown here. This "
+            "artifact therefore does NOT state whether the clause was satisfied over a "
+            "real set or vacuously over an empty one — an unread set is reported as "
+            f"unread, never as empty.{why}",
+            "",
+            f"- Clause satisfied (`critical_subsystems_all_deep`): **{c.all_deep}**",
+            f"- Critical paths NOT `audited_deep`: **{len(c.not_deep)}**",
+        ]
+    if not c.all_deep:
+        headline = (
+            "**NOT satisfied.** At least one critical path is not `audited_deep`; the "
+            "paths below are the evidence behind the clause result."
+        )
+    elif c.set_size == 0:
+        headline = (
+            "**VACUOUSLY satisfied — the critical set is EMPTY.** The clause held "
+            "because there was nothing in it to hold over, NOT because critical code "
+            "was audited deep. Read this run's verdict accordingly."
+        )
+    else:
+        headline = (
+            "**Satisfied over a NON-EMPTY set.** Every path in the critical set is "
+            "`audited_deep`; the gate is not vacuous."
+        )
+    out = [
+        headline,
+        "",
+        f"- Clause satisfied (`critical_subsystems_all_deep`): **{c.all_deep}**",
+        f"- Critical-set size (`CriticalSubsystemSet.paths`): **{c.set_size}**",
+        "- Paths the DR-5 eligibility filter removed from the HEURISTIC term as "
+        f"ineligible: **{c.excluded_ineligible_count}**",
+        f"- `designated_but_unmatched` operator paths: **{len(c.designated_but_unmatched)}**",
+    ]
+    for path in c.designated_but_unmatched:
+        out.append(f"  - `{path}`")
+    out.append(f"- Critical paths NOT `audited_deep`: **{len(c.not_deep)}**")
+    for path in c.not_deep:
+        out.append(f"  - `{path}`")
+    return out
+
+
+def _render_ceiling_pair(proof: DogfoodProofRun) -> list[str]:
+    """Render the CEILING HONESTY PAIR (PURE; Story 8.5 / AC1, D7).
+
+    ``$X`` = :data:`DOGFOOD_BUDGET_CEILING` is a FROZEN historical execution parameter;
+    the 7.1 generator re-sizes its ceiling from the live tree every derivation and has
+    drifted away from it. Stating only one lets this artifact and the budget artifact —
+    published together — disagree about "the 7.1 empirical ceiling". Both are stated,
+    with a fit verdict for EACH.
+    """
+    cost = proof.cost
+    out = [
+        "**The ceiling honesty pair (Story 8.5 / AC1).** Two different numbers are in "
+        "play and this artifact states both rather than letting them be confused:",
+        "",
+        f"- **Frozen historical execution parameter** `$X` = `DOGFOOD_BUDGET_CEILING` = "
+        f"**{cost.ceiling}** credits — the ceiling this run was actually EXECUTED under. "
+        "It is a pinned constant recording a past sizing, NOT a live measurement.",
+    ]
+    if cost.live_sized_ceiling is not None:
+        out.append(
+            "- **Live 7.1 sizing** — the `sized_ceiling` derived from the CURRENT tree by "
+            "the same `build_full_repo_plan` call this generator already makes (REUSED — "
+            f"no second accountant): **{cost.live_sized_ceiling}** credits. This is the "
+            "number `minions-dogfood-budget-plan.md` publishes."
+        )
+        out.append(
+            f"- Fits under the frozen `$X` = {cost.ceiling}: **{cost.fits_within_ceiling}** "
+            f"· Fits under the live 7.1 sizing = {cost.live_sized_ceiling}: "
+            f"**{cost.fits_within_live_sized_ceiling}**"
+        )
+    else:
+        out.append(
+            "- **Live 7.1 sizing:** not supplied to this derivation, so no live figure is "
+            "stated here. Read `minions-dogfood-budget-plan.md` for the current sizing."
+        )
+    return out
 
 
 def render_proof_markdown(proof: DogfoodProofRun) -> str:
@@ -590,28 +1001,44 @@ def render_proof_markdown(proof: DogfoodProofRun) -> str:
     baseline_str = (
         f"{b.numerator}/{b.denominator}" if isinstance(b, Fraction) else str(b)
     )
+    scope = _audited_tree_clause(proof)
     lines: list[str] = []
-    lines.append("# Minions Dogfood — Proof Artifact (Story 7.2, ArgusAgent CAPSTONE)")
+    lines.append(
+        "# Argus Dogfood — Proof Artifact (Story 7.2 generator, RE-DERIVED by Story 8.5 "
+        "as a SELF-audit)"
+    )
     lines.append("")
     lines.append(
-        "> AUTO-GENERATED by `minions_core/argus/dogfood/proof_run.py` "
+        f"> AUTO-GENERATED by `{_GENERATOR_MODULE}` "
         "(`render_proof_markdown`). Reproducible + byte-stable for the same tracked "
-        "Minions content — do NOT hand-edit. Drivers: ArgusAgent-FR-29 / ArgusAgent-FR-17 / "
+        "content of the tree named in §1 — do NOT hand-edit. "
+        "Drivers: ArgusAgent-FR-29 / ArgusAgent-FR-17 / "
         "ArgusAgent-FR-30 / ArgusAgent-FR-21 / ArgusAgent-NFR-D1 / ArgusAgent-NFR-S1 / ArgusAgent-AR4 / ArgusAgent-AR7."
     )
     lines.append("")
 
     # ── Run provenance + verdict ────────────────────────────────────────────
-    lines.append("## 1. Dogfood execution (AC-EXECUTE) — the frozen audit over the REAL Minions repo")
+    lines.append(
+        f"## 1. Dogfood execution (AC-EXECUTE) — the frozen audit over {scope}"
+    )
     lines.append("")
     lines.append(
-        "The frozen `pipeline.run_audit_detailed` (REUSED — no fork) was run over the "
-        "REAL Minions platform source (git-tracked `minions_core/`, excluding the "
-        "self-audited `minions_core/argus/` sub-tree — the SAME 7.1 scope), materialized "
-        "into a CLEAN on-pin snapshot (the 6.5 `stage_cartridge` pattern) so the frozen "
-        "`load_repo_at_commit` clean-tree precondition holds. The audited BYTES are the "
-        "real Minions source at the tracked commit below."
+        "**Derivation method: RE-RUN** (Story 8.5 / AC4). Every figure in this artifact "
+        "was produced by EXECUTING the shipped pipeline on the tree named below, pinned "
+        "by the commit descriptor and the `$X` ceiling recorded in §1 and §2. Nothing "
+        "here is analytic, nothing is hand-written into the file, and no historical "
+        "figure is hardcoded into the generator."
     )
+    lines.append("")
+    lines.append(
+        "The frozen `pipeline.run_audit_detailed` (REUSED — no fork) was run over "
+        f"{scope} of THIS repository. That tree was materialized into a CLEAN on-pin "
+        "snapshot (the 6.5 `stage_cartridge` pattern) so the frozen "
+        "`load_repo_at_commit` clean-tree precondition holds. The audited BYTES are this "
+        "repository's own package source at the commit descriptor below."
+    )
+    lines.append("")
+    lines.append(_SELF_AUDIT_HONESTY)
     lines.append("")
     lines.append(f"- Commit descriptor (HEAD at generation): `{proof.commit_descriptor}`")
     lines.append(f"- Source files audited: **{proof.source_file_count}**")
@@ -620,12 +1047,29 @@ def render_proof_markdown(proof: DogfoodProofRun) -> str:
     lines.append(
         f"- **Verdict: `{proof.verdict}` (exit `{proof.exit_code}`)**"
     )
+    lines.append(f"- **Decision row (FR16 / DR-3), as DISCLOSED by the gate: {_row_token(proof)}**")
     lines.append(
         f"- Coverage-ledger deep-%: **`{proof.deep_ratio.numerator}/{proof.deep_ratio.denominator}`** "
         "(exact `Fraction`, never a float — AR4)"
     )
+    lines.append(
+        f"- Coverage-ledger deep count / total entries: **{proof.deep_count} / "
+        f"{proof.total_count}**"
+    )
     lines.append(f"- Blocking (verdict-eligible) findings: **{proof.blocking_finding_count}**")
     lines.append(f"- Total findings emitted: **{proof.total_finding_count}**")
+    lines.append("")
+
+    # ── The inputs the row was computed from (DR-3) ─────────────────────────
+    lines.append("### 1a. The assessed population the row was computed from (DR-3)")
+    lines.append("")
+    lines.extend(_render_assessed_population(proof))
+    lines.append("")
+    lines.append(
+        "### 1b. The critical-subsystem clause (FR4 / DR-5 / boundary B3)"
+    )
+    lines.append("")
+    lines.extend(_render_critical_clause(proof))
     lines.append("")
 
     # ── Within-ceiling + 3.2 halt ───────────────────────────────────────────
@@ -633,9 +1077,10 @@ def render_proof_markdown(proof: DogfoodProofRun) -> str:
     lines.append("")
     lines.append(
         f"The run's V1 deterministic zero-token cost total is **{proof.cost.total_credits} "
-        f"credits** (folded via the 3.1 `account_spend` — no fork). It FITS under the 7.1 "
-        f"empirical ceiling `$X` = **{proof.cost.ceiling}** credits."
+        "credits** (folded via the 3.1 `account_spend` — no fork)."
     )
+    lines.append("")
+    lines.extend(_render_ceiling_pair(proof))
     lines.append("")
     lines.append(
         f"- Under `BudgetConfig(ceiling_credits={proof.cost.ceiling})` the run FITS "
@@ -669,17 +1114,19 @@ def render_proof_markdown(proof: DogfoodProofRun) -> str:
     lines.append(f"- Canonical bundle byte length: **{proof.bundle_byte_length}**")
     lines.append(f"- Referential-integrity report consistent (4.2 lint): **{proof.integrity_consistent}**")
     lines.append(
-        "- **No-source-retention MOAT (NFR-S1 / NFR-S3):** the bundle retains NO Minions "
-        "source byte and NO secret value — the moat is STRUCTURAL (no bundle field holds "
+        "- **No-source-retention MOAT (NFR-S1 / NFR-S3):** the bundle retains NO source "
+        "byte and NO secret value — the moat is STRUCTURAL (no bundle field holds "
         "a source/secret value; only locations + redacted indicators). Proven over the "
-        "REAL Minions tree by `tests/security/test_argus_secret_containment.py`."
+        "REAL audited tree by `tests/test_secret_containment.py` "
+        "(`TC-ArgusAgent-SECURITY-001-23`) and `tests/test_dogfood_proof.py` "
+        "(`TC-ArgusAgent-DOGFOOD-001-22`)."
     )
     lines.append(
         "- **100% reproducibility (AC-REPRODUCIBLE / NFR-D1 / P1):** two dogfood runs on "
         "the same tracked content yield a BYTE-IDENTICAL verdict + bundle canonical bytes "
         "(the builder sorts/order-fixes every collection; no clock/float/set-order in the "
         "hashed payload). Demonstrated (RED against injected non-determinism, then green) "
-        "in `tests/argus/test_dogfood_proof.py`."
+        "in `tests/test_dogfood_proof.py` (`TC-ArgusAgent-DOGFOOD-001-24`)."
     )
     lines.append("")
 
@@ -692,7 +1139,7 @@ def render_proof_markdown(proof: DogfoodProofRun) -> str:
         "finding → verdict `NOT_READY_FOR_RELEASE` / exit `2` (the 🔴), reproducing the "
         "`GitHub green · Sonar green · ArgusAgent 🔴 tests appear vacuous` line as a real, "
         "repeatable committed artifact (the 1.7 `TC-ArgusAgent-PIPELINE-001-01` precedent). "
-        "Asserted in `tests/argus/test_dogfood_proof.py` "
+        "Asserted in `tests/test_dogfood_proof.py` "
         "(`test_signature_demo_vacuous_test_blocks`)."
     )
     lines.append("")

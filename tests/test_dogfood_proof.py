@@ -24,7 +24,17 @@ The complete-the-declared-set matrix (AI-E5-1 / AI-E6-1 / AI-E4-2 / AR10) — ea
   (6) the adjudication-ready findings layout (AC-ADJUDICATION-READY)      → TC-...-27/28
   (7) the provisional-gate honesty + the DF-6-6-A note + the human defer  → TC-...-29/30/31
   (8) the complete-the-declared-set enumeration + no-crash edges          → TC-...-32/33
+  (9) Story 8.5 / DR-10 — the artifact matches the SHIPPED verdict contract → TC-...-35..44
 Every assertion NAMES the unit / finding class / cartridge id (the AI-E4-2 no-crash leg).
+
+STORY 8.5 (DR-10) — why members (9) exist. Epic 8 amended what a verdict MEANS, and this
+repository was publishing proof/verdict artifacts that contradicted the shipped contract
+(a blocking verdict beside zero blocking findings) AND that named a repository the
+generator never audits (``enumerate_tracked_sources`` defaults to ``scope_prefix="argus"``
+— the dogfood is a SELF-audit of this package). Members (9) pin the DISCLOSURES that make
+the artifact falsifiable rather than trustworthy: the LITERAL decision row, the honest
+subject + resolvable citations, the impossible-state end-to-end guard, the ceiling honesty
+pair, the preserved supersession record, and the vacuous-vs-real critical-gate split.
 
 THE OI1 LOCK (DN-PROVISIONAL — read twice): the ≥80%-precision gate STAYS PROVISIONAL.
 Story 7.2 EXECUTES the dogfood + produces the REAL findings + lays them ADJUDICATION-READY
@@ -36,7 +46,9 @@ the exact failure mode this lock forbids (RED-first in TC-...-26 / TC-...-30).
 
 from __future__ import annotations
 
+import re
 import sys
+from dataclasses import replace
 from fractions import Fraction
 from pathlib import Path
 
@@ -51,11 +63,14 @@ sys.path.insert(0, str(Path(__file__).resolve().parent / "cartridges"))
 from _cartridge import stage_cartridge  # noqa: E402
 from _registry import precision_gate_status  # noqa: E402
 
+from argus.dogfood import proof_run as proof_run_module  # noqa: E402
+from argus.dogfood.partition_plan import build_full_repo_plan  # noqa: E402
 from argus.dogfood.proof_run import (  # noqa: E402
     DOGFOOD_ArgusAgent_VERSION,
     DOGFOOD_BUDGET_CEILING,
     DOGFOOD_GRADE,
     AdjudicationRow,
+    CriticalClauseDisclosure,
     DogfoodProofError,
     DogfoodProofRun,
     build_dogfood_proof,
@@ -64,6 +79,10 @@ from argus.dogfood.proof_run import (  # noqa: E402
     render_proof_markdown,
     run_dogfood,
 )
+from argus.pipeline_persist import CRITICAL_SUBSYSTEMS_PRODUCER  # noqa: E402
+from argus.store.reader import ApaaStoreReader  # noqa: E402
+from argus.store.writer import ApaaStoreWriter  # noqa: E402
+from argus.verdict.verdict_gate import DecisionRow  # noqa: E402
 from argus.evidence.bundle import (  # noqa: E402
     build_evidence_bundle,
     bundle_to_canonical_bytes,
@@ -77,6 +96,31 @@ _PROOF_ARTIFACT = (
 )
 _DEFERRED_WORK = (
     _REPO_ROOT / "_bmad-output" / "design-artifacts" / "ArgusAgent" / "deferred-work.md"
+)
+# Story 8.5 / AC5 — the RS-3 "supersede, don't erase" preservation of the Story-7.2
+# Minions run whose bytes the re-derivation would otherwise have destroyed.
+_SUPERSEDED_PROOF = (
+    _REPO_ROOT
+    / "_bmad-output"
+    / "design-artifacts"
+    / "ArgusAgent"
+    / "minions-dogfood-proof-story-7-2-superseded.md"
+)
+# The two sibling plan artifacts, re-derived by the same story and subject to the SAME
+# citation-resolution guard (Story 8.5 / AC2 last clause, AC6).
+_PARTITION_PLAN_8_5 = (
+    _REPO_ROOT
+    / "_bmad-output"
+    / "design-artifacts"
+    / "ArgusAgent"
+    / "minions-dogfood-partition-plan.md"
+)
+_BUDGET_PLAN_8_5 = (
+    _REPO_ROOT
+    / "_bmad-output"
+    / "design-artifacts"
+    / "ArgusAgent"
+    / "minions-dogfood-budget-plan.md"
 )
 
 # Distinctive Minions SOURCE-BODY bytes that MUST NOT leak into the bundle (NFR-S1).
@@ -603,3 +647,396 @@ def test_dogfood_proof_result_is_typed(dogfood_proof: DogfoodProofRun) -> None:
     assert proof.bundle_content_hash
     # argus_version provenance is the pyproject version token.
     assert DOGFOOD_ArgusAgent_VERSION == "1.43.0"
+
+
+# ─────────────────────────────────────────────────────────────────────────────
+# Member (9) / Story 8.5 (DR-10) — the artifact matches the SHIPPED verdict contract
+# ─────────────────────────────────────────────────────────────────────────────
+
+# Claim substrings (lowercased) that assert a tree the dogfood does NOT audit, or cite a
+# path that does not exist. Each was GENUINELY rendered by the pre-8.5 generator into the
+# committed artifact; the RED-first demonstration is the pre-fix artifact itself.
+_FALSE_SUBJECT_CLAIMS: tuple[str, ...] = (
+    "the real minions repo",
+    "real minions platform source",
+    "the audited bytes are the real minions source",
+    "tracked `minions_core/`",
+    "minions_core/",
+    "tests/argus/",
+    "tests/security/",
+)
+
+# A backticked token that LOOKS like a repo file path: optional dirs, a known source /
+# document suffix, optionally followed by a ``:line`` locator.
+_PATH_TOKEN = re.compile(r"`([A-Za-z0-9_.\-/]+\.(?:py|md|yaml|toml))(?::\d+)?`")
+# A backticked token that LOOKS like a repo DIRECTORY: path segments ending in ``/``.
+# AC11b demands that every path an artifact CITES resolves — not every path that happens
+# to carry a file suffix. A suffix-only guard is structurally blind to the exact defect
+# the 8.5 review found: all three artifacts rendered "excluding `argus/tests/`" while the
+# tests are flat under `tests/`, so the clause asserted a held-out sub-tree that does not
+# exist. This pattern is generic; nothing about `argus/tests/` is special-cased.
+_DIR_TOKEN = re.compile(r"`([A-Za-z0-9_.\-]+(?:/[A-Za-z0-9_.\-]+)*/)`")
+
+
+def _cited_paths_resolve(artifact: Path) -> list[str]:
+    """Return every backticked path token in *artifact* that resolves to NOTHING on disk.
+
+    Covers BOTH file-shaped and directory-shaped citations. A citation is resolved against
+    the repository root first, then against the artifact's own directory (sibling
+    artifacts are cited by bare filename); a directory token must resolve to a directory,
+    so a stale prefix cannot be excused by a same-named file. Anything left over is a
+    dangling citation — the defect class Story 8.5 / AC2 exists to delete.
+    """
+    text = artifact.read_text(encoding="utf-8")
+    dangling: list[str] = []
+    for token in sorted(set(_PATH_TOKEN.findall(text))):
+        if (_REPO_ROOT / token).exists() or (artifact.parent / token).exists():
+            continue
+        dangling.append(token)
+    for token in sorted(set(_DIR_TOKEN.findall(text))):
+        if (_REPO_ROOT / token).is_dir() or (artifact.parent / token).is_dir():
+            continue
+        dangling.append(token)
+    return sorted(dangling)
+
+
+def test_artifact_discloses_the_live_decision_row(dogfood_proof: DogfoodProofRun) -> None:
+    """TC-ArgusAgent-DOGFOOD-001-35 — Story 8.5/AC1/AC11a: the artifact discloses the LIVE DecisionRow.
+
+    DR-3: the artifact must record WHICH row of the binding FR16 table fired, by its
+    literal ``DecisionRow`` value — not a paraphrase and not a re-derivation from the
+    verdict token (rows 1 and 4 both render ``INSUFFICIENT_COVERAGE`` / exit ``3``, so
+    inferring the row from the token states a falsehood for one of them). The value the
+    run carries must be a real closed-enum member, must appear verbatim in the committed
+    markdown, and must be CONSISTENT with the verdict token it was disclosed beside.
+    """
+    proof = dogfood_proof
+    valid = {row.value for row in DecisionRow}
+    assert proof.decision_row in valid, (
+        f"the run must carry a literal DecisionRow value; got {proof.decision_row!r}"
+    )
+    text = _PROOF_ARTIFACT.read_text(encoding="utf-8")
+    assert f"`{proof.decision_row}`" in text, (
+        f"the committed proof must disclose the live decision row {proof.decision_row!r} "
+        "(rot? re-run the generator)"
+    )
+    # The row and the verdict token cannot disagree — the row IS the reasoning behind it.
+    row_to_verdicts = {
+        DecisionRow.BELOW_FLOOR.value: {"INSUFFICIENT_COVERAGE"},
+        DecisionRow.BLOCKING_FINDINGS.value: {"NOT_READY_FOR_RELEASE"},
+        DecisionRow.GATES_MET.value: {"RELEASE_READY"},
+        DecisionRow.GATE_UNMET_NO_FINDINGS.value: {"INSUFFICIENT_COVERAGE"},
+    }
+    assert proof.verdict in row_to_verdicts[proof.decision_row], (
+        f"row {proof.decision_row!r} cannot produce verdict {proof.verdict!r}"
+    )
+
+
+def test_artifact_names_its_real_subject_and_every_citation_resolves() -> None:
+    """TC-ArgusAgent-DOGFOOD-001-36 — Story 8.5/AC2/AC11b: honest subject + resolvable citations.
+
+    ``enumerate_tracked_sources`` defaults to ``scope_prefix="argus"``: the dogfood audits
+    THIS repository's own package and never the Minions platform. The committed artifact
+    must therefore make NO Minions-source-audited claim, must state plainly that it is a
+    SELF-audit, and EVERY file path it cites must resolve on disk (the pre-8.5 artifact
+    cited three paths that do not exist). NAMED per offending claim / citation.
+    """
+    text = _PROOF_ARTIFACT.read_text(encoding="utf-8")
+    lowered = text.lower()
+    for claim in _FALSE_SUBJECT_CLAIMS:
+        assert claim not in lowered, (
+            f"FALSE SUBJECT — the proof artifact claims {claim!r}, but the dogfood "
+            "enumerates scope_prefix='argus' (it audits THIS repository's own package)"
+        )
+    # The self-audit weakness is STATED, not left to the reader to infer.
+    assert "self-audit" in lowered
+    assert "argus auditing argus" in lowered
+    assert "never independent corroboration" in lowered
+    # Every cited path resolves (repo-root or artifact-sibling).
+    for artifact in (_PROOF_ARTIFACT, _PARTITION_PLAN_8_5, _BUDGET_PLAN_8_5):
+        dangling = _cited_paths_resolve(artifact)
+        assert not dangling, (
+            f"DANGLING CITATION in {artifact.name}: {dangling} — an artifact that cites a "
+            "path which does not exist is asserting a falsehood"
+        )
+
+
+def test_real_dogfood_never_blocks_without_a_finding(dogfood_proof: DogfoodProofRun) -> None:
+    """TC-ArgusAgent-DOGFOOD-001-37 — Story 8.5/AC11c: the end-to-end impossible-state guard.
+
+    THE symptom this whole epic exists to delete: a blocking verdict carrying ZERO
+    blocking findings. Under the amended FR16 table only row 2 renders
+    ``NOT_READY_FOR_RELEASE``, and row 2 requires ``blocking_finding_count >= 1``. Asserted
+    end-to-end on the REAL dogfood run (the module-scoped fixture, so it costs no extra
+    runtime) and on the committed artifact, because a unit-level table test cannot prove
+    the wiring produces it.
+    """
+    proof = dogfood_proof
+    assert not (proof.verdict == "NOT_READY_FOR_RELEASE" and proof.blocking_finding_count == 0), (
+        "IMPOSSIBLE STATE — the real dogfood returned NOT_READY_FOR_RELEASE with "
+        f"blocking_finding_count=0 (row {proof.decision_row!r}); under the amended FR16 "
+        "table only row 2 blocks and row 2 requires >=1 blocking finding"
+    )
+    if proof.verdict == "NOT_READY_FOR_RELEASE":
+        assert proof.decision_row == DecisionRow.BLOCKING_FINDINGS.value
+    text = _PROOF_ARTIFACT.read_text(encoding="utf-8")
+    blocks = "`NOT_READY_FOR_RELEASE` (exit `2`)" in text
+    zero_blocking = "Blocking (verdict-eligible) findings: **0**" in text
+    assert not (blocks and zero_blocking), (
+        "the committed proof artifact pairs a blocking verdict with zero blocking "
+        "findings — the exact published contradiction DR-10 deletes"
+    )
+
+
+def test_artifact_states_the_ceiling_honesty_pair(dogfood_proof: DogfoodProofRun) -> None:
+    """TC-ArgusAgent-DOGFOOD-001-38 — Story 8.5/AC1/AC11d/D7: BOTH ceilings, with a fit for each.
+
+    ``$X`` = ``DOGFOOD_BUDGET_CEILING`` is a FROZEN historical execution parameter; the 7.1
+    generator re-sizes its ceiling from the live tree on every derivation. Publishing only
+    one of the two lets the proof artifact and the budget artifact — regenerated together —
+    disagree about what "the 7.1 empirical ceiling" is. The run must carry BOTH, the live
+    figure must be the one ``build_full_repo_plan`` actually derives (no second
+    accountant, AR7), and both must be rendered with an explicit fit verdict.
+    """
+    cost = dogfood_proof.cost
+    assert cost.ceiling == DOGFOOD_BUDGET_CEILING == 843, "the frozen $X must not float"
+    live = build_full_repo_plan(str(_REPO_ROOT)).budget.sized_ceiling
+    assert cost.live_sized_ceiling == live, (
+        f"the proof's live ceiling {cost.live_sized_ceiling} must be the SAME sizing the "
+        f"7.1 generator derives ({live}) — a divergence means a forked accountant"
+    )
+    assert isinstance(cost.fits_within_live_sized_ceiling, bool)
+    text = _PROOF_ARTIFACT.read_text(encoding="utf-8")
+    assert str(cost.ceiling) in text and str(cost.live_sized_ceiling) in text, (
+        "the artifact must state BOTH the frozen $X and the live 7.1 sizing"
+    )
+    assert "ceiling honesty pair" in text.lower()
+    assert f"Fits under the frozen `$X` = {cost.ceiling}: **{cost.fits_within_ceiling}**" in text
+    assert (
+        f"Fits under the live 7.1 sizing = {cost.live_sized_ceiling}: "
+        f"**{cost.fits_within_live_sized_ceiling}**"
+    ) in text
+
+
+def test_superseded_story_7_2_record_is_preserved_verbatim() -> None:
+    """TC-ArgusAgent-DOGFOOD-001-39 — Story 8.5/AC5/AC11e: the Minions record survives regeneration.
+
+    Regenerating ``minions-dogfood-proof.md`` OVERWRITES the only surviving on-disk record
+    of the real Story-7.2 Minions run — the 135-file / 36712-LOC execution whose three
+    finding classes (332 / 2289 / 285) are the substrate ``DF-7-2-A``'s human TP/FP
+    adjudication is DEFINED over, and which can never be re-derived here because Minions
+    source is not in this repository. §3.4 evidence immutability / RS-3 say supersede,
+    don't erase: the original bytes must be preserved at a sibling path, beneath a header
+    that says so, with pointers in both directions.
+    """
+    assert _SUPERSEDED_PROOF.exists(), (
+        f"the preserved Story-7.2 record must exist at {_SUPERSEDED_PROOF}"
+    )
+    preserved = _SUPERSEDED_PROOF.read_text(encoding="utf-8")
+    # The DISTINCTIVE bytes of the original run — provenance, scale and the three
+    # adjudication classes at their recorded counts.
+    for token in (
+        "7f8e1478573d3208c1df16aaaaa4f6f0bb0afea0",   # the 7.2 commit descriptor
+        "c0c4c35e1d32b5d435064bfdbf01550f2fb8acd16abde3413fc595dd7c72341b",  # bundle hash
+        "**135**",                                     # source files audited
+        "**36712**",                                   # total LOC
+        "| 332 |",                                     # cross_partition class count
+        "| 2289 |",                                    # hardcoded_secret class count
+        "| 285 |",                                     # orphan_code class count
+    ):
+        assert token in preserved, (
+            f"the preserved record lost the distinctive Story-7.2 byte {token!r} — the "
+            "supersession must keep the original body VERBATIM"
+        )
+    # The header states the method honestly and refuses to pick a row it cannot know.
+    lowered = preserved.lower()
+    assert "no new audit was executed over minions" in lowered
+    assert "cannot** produce `not_ready_for_release`" in lowered or (
+        "cannot produce `not_ready_for_release`" in lowered
+    )
+    assert "does not assert" in lowered, "the header must refuse to pick row 3 vs row 4"
+    # Pointers in BOTH directions.
+    assert "minions-dogfood-proof.md" in preserved, "forward pointer missing"
+    assert _SUPERSEDED_PROOF.name in _PROOF_ARTIFACT.read_text(encoding="utf-8"), (
+        "the re-derived artifact must carry a back pointer to the preserved record"
+    )
+
+
+def test_red_first_vacuously_satisfied_critical_gate_is_named(
+    dogfood_proof: DogfoodProofRun,
+) -> None:
+    """TC-ArgusAgent-DOGFOOD-001-40 — Story 8.5/AC1 (boundary B3 / inversion F1): vacuous gate visible.
+
+    Epic 8 LOOSENS the critical gate twice and nothing guards the PRD-fatal
+    false-``RELEASE_READY`` direction. A green verdict whose critical clause held because
+    the critical set was EMPTY is a vacuously satisfied gate and MUST be visible. RED-first
+    against a rendered proof whose retrieved set is empty: the artifact must say VACUOUSLY
+    for that input and must NOT say it for the live run's real, non-empty set.
+    """
+    proof = dogfood_proof
+    assert proof.critical is not None, "the run must disclose the critical-clause state"
+    live_text = render_proof_markdown(proof)
+    # The live disclosure names the set size, the DR-5 exclusions and the unmatched paths.
+    assert f"Critical-set size (`CriticalSubsystemSet.paths`): **{proof.critical.set_size}**" in live_text
+    assert "DR-5 eligibility filter removed" in live_text
+    assert "designated_but_unmatched" in live_text
+    # RED-first injection: the SAME renderer over an EMPTY-but-retrieved set must name the
+    # gate vacuous. If it did not, the non-vacuity assertion below would be decorative.
+    empty = CriticalClauseDisclosure(all_deep=True, set_retrieved=True, set_size=0)
+    vacuous_text = render_proof_markdown(replace(proof, critical=empty))
+    assert "VACUOUSLY satisfied" in vacuous_text, (
+        "B3 violated — an EMPTY critical set must be reported as a VACUOUSLY satisfied "
+        "gate, never as a satisfied one"
+    )
+    # An unretrieved set is reported as unread, never as empty (no fabricated vacuity).
+    unread = CriticalClauseDisclosure(all_deep=True, set_retrieved=False)
+    unread_text = render_proof_markdown(replace(proof, critical=unread))
+    assert "could NOT be read back" in unread_text
+    assert "VACUOUSLY" not in unread_text
+    # The committed artifact carries whichever case the live run actually produced.
+    committed = _PROOF_ARTIFACT.read_text(encoding="utf-8")
+    if proof.critical.vacuously_satisfied:
+        assert "VACUOUSLY satisfied" in committed
+    else:
+        assert "VACUOUSLY satisfied" not in committed
+        assert f"Critical-set size (`CriticalSubsystemSet.paths`): **{proof.critical.set_size}**" in committed
+
+
+# ─────────────────────────────────────────────────────────────────────────────
+# Story 8.5 code review, iteration 1 — the four behavioural patches, pinned
+# ─────────────────────────────────────────────────────────────────────────────
+
+
+def test_citation_guard_covers_directories_and_exclusions_are_measured(
+    dogfood_proof: DogfoodProofRun, tmp_path: Path
+) -> None:
+    """TC-ArgusAgent-DOGFOOD-001-42 — Story 8.5/AC2/AC11b (review it.1): a directory IS a citation.
+
+    Two halves of one defect. (a) The AC11b guard only matched tokens ending in a file
+    suffix, so a backticked DIRECTORY citation was structurally outside it — which is how
+    all three artifacts came to render "excluding ``argus/tests/``" when no such directory
+    exists (tests are flat under ``tests/``), telling a reader a sub-tree was held out of
+    the 69-file population when nothing was held out at all. (b) The generator now renders
+    only the exclusions the enumerator MEASURABLY applied, so a stale or renamed prefix
+    can never be published as a held-out sub-tree. RED-first on a deliberately-stale
+    artifact, because an assertion never shown to fail is not a rot check.
+    """
+    stale = tmp_path / "deliberately-stale-artifact.md"
+    stale.write_text(
+        "Source files (tracked `argus/`, excluding `argus/tests/`) — generated by "
+        "`argus/dogfood/proof_run.py`.\n",
+        encoding="utf-8",
+    )
+    assert _cited_paths_resolve(stale) == ["argus/tests/"], (
+        "the citation guard must flag a backticked DIRECTORY that resolves to nothing; "
+        "AC11b says EVERY path an artifact cites must resolve, not every file path"
+    )
+    # (b) Whatever the run rendered as excluded, it measurably held >=1 tracked file out.
+    tracked_unfiltered = enumerate_tracked_sources(_REPO_ROOT, exclude_prefixes=())
+    assert tracked_unfiltered, "the un-excluded enumeration is the measurement baseline"
+    for prefix in dogfood_proof.effective_exclude_prefixes:
+        assert any(f.startswith(prefix) for f in tracked_unfiltered), (
+            f"{prefix!r} is rendered as an exclusion but held NO tracked file out"
+        )
+    rendered = render_proof_markdown(dogfood_proof)
+    for prefix in dogfood_proof.exclude_prefixes:
+        if prefix not in dogfood_proof.effective_exclude_prefixes:
+            assert f"excluding `{prefix}`" not in rendered, (
+                f"{prefix!r} matched nothing and must not be rendered as an exclusion"
+            )
+    # The configured set is still recorded on the run — measured, not silently dropped.
+    assert dogfood_proof.exclude_prefixes == proof_run_module._DEFAULT_EXCLUDE_PREFIXES
+
+
+def test_optional_critical_set_read_degrades_and_refuses_ambiguity(
+    dogfood_proof: DogfoodProofRun, tmp_path: Path
+) -> None:
+    """TC-ArgusAgent-DOGFOOD-001-43 — Story 8.5 review it.1: an OPTIONAL disclosure never aborts.
+
+    The critical-set read-back is an OPTIONAL disclosure on an artifact whose §3 REPORTS
+    store integrity. Re-raising ANY ``state/`` read failure as fatal meant a store the 4.2
+    lint would have reported as ``integrity_consistent: False`` could no longer produce
+    the artifact that reports it. It now degrades to ``set_retrieved=False`` plus a
+    MEASURED reason, which the renderer prints. Separately: filenames are
+    content-addressed, so ``sorted`` is lexicographic and NOT recency — two envelopes
+    claiming the producer is an ambiguity that must raise, never a coin flip disclosed as
+    fact.
+    """
+    writer = ApaaStoreWriter(tmp_path)
+    writer.paths.ensure_tree()
+    reader = ApaaStoreReader(tmp_path)
+
+    # (a) An UNRELATED, unreadable envelope degrades — it does not abort.
+    unrelated = writer.write_payload(
+        "state",
+        {"note": "unrelated"},
+        schema_version="1",
+        producer="argus.pipeline.some_other_producer",
+    )
+    on_disk = writer.paths.resolve(unrelated)
+    on_disk.write_bytes(on_disk.read_bytes().replace(b"unrelated", b"tampered!"))
+    with pytest.raises(Exception):
+        reader.read_envelope(unrelated)  # the tamper guard genuinely fires
+    found, note = proof_run_module._read_critical_subsystem_set(reader)
+    assert found is None, "no producer-matching envelope was written yet"
+    assert unrelated in note and "unreadable" in note, (
+        f"the degraded reason must NAME the unreadable locator; got {note!r}"
+    )
+    # The renderer states that measured reason instead of asserting an empty set.
+    unread_text = render_proof_markdown(
+        replace(
+            dogfood_proof,
+            critical=CriticalClauseDisclosure(
+                all_deep=True, set_retrieved=False, retrieval_note=note
+            ),
+        )
+    )
+    assert "could NOT be read back" in unread_text and "MEASURED reason" in unread_text
+    assert "VACUOUSLY" not in unread_text
+
+    # (b) The real set is still found DESPITE the unreadable sibling.
+    writer.write_payload(
+        "state", {"paths": ["a.py"]}, schema_version="1", producer=CRITICAL_SUBSYSTEMS_PRODUCER
+    )
+    retrieved, clean_note = proof_run_module._read_critical_subsystem_set(reader)
+    assert retrieved is not None and retrieved.paths == ("a.py",)
+    assert clean_note == "", "a successful read reports no degradation reason"
+
+    # (c) A SECOND producer-matching envelope is ambiguous and raises the typed error.
+    writer.write_payload(
+        "state", {"paths": ["b.py"]}, schema_version="1", producer=CRITICAL_SUBSYSTEMS_PRODUCER
+    )
+    with pytest.raises(DogfoodProofError) as ambiguous:
+        proof_run_module._read_critical_subsystem_set(reader)
+    message = str(ambiguous.value)
+    assert "ambiguous" in message and str(tmp_path) not in message, (
+        "the typed error must name the ambiguity with RELATIVE locators only (NFR-S1)"
+    )
+
+
+def test_live_sizing_sentinel_separates_absent_from_zero(
+    dogfood_proof: DogfoodProofRun,
+) -> None:
+    """TC-ArgusAgent-DOGFOOD-001-44 — Story 8.5 review it.1: ``0`` is a sizing, not an absence.
+
+    ``live_sized_ceiling`` once used ``0`` as its "absent" sentinel, so a genuinely-zero
+    live sizing (an empty tree is a legitimate derivation — the 7.1 generator has an
+    explicit no-crash empty-repo leg) would have been PUBLISHED as "not supplied to this
+    derivation": a false statement about what the generator was actually given. The
+    sentinel is now ``None``, matching :class:`CriticalClauseDisclosure.set_retrieved`,
+    which exists to refuse exactly this ambiguity.
+    """
+    absent = cost_summary(("a.py",), total_loc=10)
+    zero = cost_summary(("a.py",), total_loc=10, live_sized_ceiling=0)
+    assert absent.live_sized_ceiling is None
+    assert zero.live_sized_ceiling == 0, "a supplied 0 must survive as 0, never as absent"
+
+    absent_text = render_proof_markdown(replace(dogfood_proof, cost=absent))
+    zero_text = render_proof_markdown(replace(dogfood_proof, cost=zero))
+    assert "not supplied to this derivation" in absent_text
+    assert "not supplied to this derivation" not in zero_text, (
+        "a derivation that WAS given a zero ceiling must not be reported as un-supplied"
+    )
+    assert (
+        f"Fits under the live 7.1 sizing = 0: **{zero.fits_within_live_sized_ceiling}**"
+    ) in zero_text

@@ -89,6 +89,7 @@ __all__ = [
     "BudgetSizing",
     "FullRepoPlan",
     "enumerate_minions_source_files",
+    "effective_exclusions",
     "read_sources",
     "derive_partition_plan",
     "unit_contributions",
@@ -111,6 +112,14 @@ DEFAULT_HEADROOM_DENOMINATOR = 4  # 5/4 = the total + 25% headroom
 # INSUFFICIENT_COVERAGE). Recorded in the plan so the per-unit floor-clearing claim is
 # explicit (AC2). A ``Fraction`` — never a float (AR4).
 COVERAGE_FLOOR = Fraction(1, 5)
+
+# The DEFAULT enumeration scope of the plan generator. Named constants (not inline
+# literals) so the SUBJECT the rendered artifact names is the SAME value the enumerator
+# actually used — the artifact can never claim a tree the derivation did not read
+# (Story 8.5 / AC2). ``build_full_repo_plan`` records whatever scope it was CALLED with
+# onto :class:`FullRepoPlan`, so a non-default call renders its own scope, not this one.
+_DEFAULT_SCOPE_PREFIX = "argus/"
+_DEFAULT_EXCLUDE_PREFIXES = ("argus/tests/",)
 
 
 class DogfoodPlanError(ValueError):
@@ -173,8 +182,11 @@ class FullRepoPlan:
 
     ``commit_descriptor`` is the pinned provenance (the ``git rev-parse HEAD`` at
     generation, recorded for reproducibility — the plan derivation itself is over the
-    tracked content). PURE / value-free: only paths, counts, credits, and content-
-    derived ids cross a byte boundary (NFR-S1).
+    tracked content). ``scope_prefix`` / ``exclude_prefixes`` record the SUBJECT the
+    enumeration actually read, so the pure renderers can NAME the planned tree instead
+    of asserting a hardcoded one (Story 8.5 / AC2); both carry defaults so every
+    existing construction site keeps working (NFR-M2 additive-only). PURE / value-free:
+    only paths, counts, credits, and content-derived ids cross a byte boundary (NFR-S1).
     """
 
     commit_descriptor: str
@@ -182,6 +194,14 @@ class FullRepoPlan:
     total_loc: int
     partition_plan: PartitionPlan
     budget: BudgetSizing
+    scope_prefix: str = _DEFAULT_SCOPE_PREFIX
+    exclude_prefixes: tuple[str, ...] = _DEFAULT_EXCLUDE_PREFIXES
+    # The CONFIGURED exclusions above are what the enumerator was ASKED to hold out; this
+    # field is what it MEASURABLY held out — the subset that matched >=1 tracked file
+    # (:func:`effective_exclusions`). Rendering the configured set tells a reader a
+    # sub-tree was held out of the population when a stale/renamed prefix may have
+    # matched nothing at all. The renderers name this one.
+    effective_exclude_prefixes: tuple[str, ...] = ()
 
 
 # ──────────────────────────────────────────────────────────────────────────────
@@ -242,6 +262,20 @@ def enumerate_minions_source_files(
         )
     )
     return files
+
+
+def effective_exclusions(
+    candidates: tuple[str, ...], exclude_prefixes: tuple[str, ...]
+) -> tuple[str, ...]:
+    """Keep only the exclusion prefixes that MEASURABLY held a tracked file out (PURE).
+
+    *candidates* is the UN-excluded enumeration (the same enumerator called with
+    ``exclude_prefixes=()`` — no forked scan, AR7). A configured prefix that matches
+    nothing removed nothing, so rendering it as an exclusion asserts a held-out sub-tree
+    that does not exist (Story 8.5 review, iteration 1). Order-preserving and
+    deterministic; no I/O (AR8).
+    """
+    return tuple(p for p in exclude_prefixes if any(c.startswith(p) for c in candidates))
 
 
 def read_sources(repo_root: str | Path, source_files: tuple[str, ...]) -> dict[str, str]:
@@ -418,8 +452,8 @@ def _resolve_commit_descriptor(repo_root: Path) -> str:
 def build_full_repo_plan(
     repo_root: str | Path,
     *,
-    scope_prefix: str = "argus/",
-    exclude_prefixes: tuple[str, ...] = ("argus/tests/",),
+    scope_prefix: str = _DEFAULT_SCOPE_PREFIX,
+    exclude_prefixes: tuple[str, ...] = _DEFAULT_EXCLUDE_PREFIXES,
 ) -> FullRepoPlan:
     """Enumerate + read + derive the full-repo partition + budget plan (the impure shell).
 
@@ -434,6 +468,10 @@ def build_full_repo_plan(
     source_files = enumerate_minions_source_files(
         root, scope_prefix=scope_prefix, exclude_prefixes=exclude_prefixes
     )
+    measured_exclusions = effective_exclusions(
+        enumerate_minions_source_files(root, scope_prefix=scope_prefix, exclude_prefixes=()),
+        tuple(exclude_prefixes),
+    )
     source_by_file = read_sources(root, source_files)
     loc_by_file = compute_loc_by_file(source_by_file)
     index = build_ast_index(root, source_files, partition_id="root")
@@ -445,6 +483,9 @@ def build_full_repo_plan(
         total_loc=sum(loc_by_file.values()),
         partition_plan=plan,
         budget=budget,
+        scope_prefix=scope_prefix,
+        exclude_prefixes=tuple(exclude_prefixes),
+        effective_exclude_prefixes=measured_exclusions,
     )
 
 
@@ -464,6 +505,39 @@ _SEAM_LIMITATION = (
 )
 
 
+# The provenance banner both renderers stamp. ONE definition so the two artifacts can
+# never disagree about which module generated them (Story 8.5 / AC2 — every path an
+# artifact cites must resolve on disk; this one is verified by a committed test).
+_GENERATOR_MODULE = "argus/dogfood/partition_plan.py"
+
+
+def _scope_clause(result: FullRepoPlan) -> str:
+    """Name the tree the plan ACTUALLY enumerated (PURE; Story 8.5 / AC2).
+
+    Rendered from the :class:`FullRepoPlan` scope fields the impure
+    :func:`build_full_repo_plan` recorded — never from a hardcoded subject — so the
+    artifact cannot name a tree the derivation did not read. Only the MEASURED
+    exclusions are named: a configured prefix that held nothing out is not rendered as a
+    held-out sub-tree (Story 8.5 review, iteration 1).
+    """
+    excluded = ", ".join(f"`{p}`" for p in result.effective_exclude_prefixes)
+    tail = f", excluding {excluded}" if excluded else ""
+    return f"tracked `{result.scope_prefix}`{tail}"
+
+
+_SELF_SCOPE_HONESTY = (
+    "**Subject honesty (Story 8.5 / AC2).** The tree planned above is **this "
+    "repository's own package** — Argus planning over Argus. It is a SELF-scoped plan, "
+    "materially weaker evidence than a plan derived over an independent repository, and "
+    "it is reportable only as such — never as independent corroboration. The "
+    "`minions-dogfood-` filename prefix is a retained HISTORICAL identifier (an evidence "
+    "path that moves is an evidence path that gets lost); the subject is whatever this "
+    "section names, not what the filename suggests. The independent Story-7.2 run this "
+    "generator once described is preserved verbatim at "
+    "`minions-dogfood-proof-story-7-2-superseded.md`."
+)
+
+
 def render_partition_plan_markdown(result: FullRepoPlan) -> str:
     """Render the reproducible full-repo partition map as committed markdown (AC1/AC2/AC4).
 
@@ -475,19 +549,24 @@ def render_partition_plan_markdown(result: FullRepoPlan) -> str:
     """
     plan = result.partition_plan
     lines: list[str] = []
-    lines.append("# Minions Dogfood — Full-Repo Partition Plan (Story 7.1)")
+    scope = _scope_clause(result)
+    lines.append(
+        "# Argus Dogfood — Full-Repo Partition Plan (Story 7.1 generator, "
+        f"re-derived over {scope})"
+    )
     lines.append("")
     lines.append(
-        "> AUTO-GENERATED by `minions_core/apaa/dogfood/partition_plan.py` "
+        f"> AUTO-GENERATED by `{_GENERATOR_MODULE}` "
         "(`render_partition_plan_markdown`). Reproducible + byte-stable for the same "
-        "tracked Minions content — do NOT hand-edit. Drivers: ArgusAgent-FR-3 / ArgusAgent-NFR-SC1 "
+        "tracked content of the tree named under Provenance below — do NOT hand-edit. "
+        "Drivers: ArgusAgent-FR-3 / ArgusAgent-NFR-SC1 "
         "/ ArgusAgent-NFR-D1 / ArgusAgent-AR7."
     )
     lines.append("")
     lines.append("## Provenance")
     lines.append("")
     lines.append(f"- Commit descriptor (HEAD at generation): `{result.commit_descriptor}`")
-    lines.append(f"- Source files (tracked `minions_core/`, excluding `minions_core/apaa/`): **{result.source_file_count}**")
+    lines.append(f"- Source files ({scope}): **{result.source_file_count}**")
     lines.append(f"- Total physical LOC (build-cost proxy): **{result.total_loc}**")
     lines.append(
         f"- NFR-SC1 scale envelope: soft ≤{DEFAULT_SOFT_FILE_LIMIT} files / "
@@ -527,6 +606,8 @@ def render_partition_plan_markdown(result: FullRepoPlan) -> str:
     lines.append("")
     lines.append("## Scope honesty")
     lines.append("")
+    lines.append(_SELF_SCOPE_HONESTY)
+    lines.append("")
     lines.append(_SEAM_LIMITATION)
     lines.append("")
     return "\n".join(lines)
@@ -548,13 +629,24 @@ def render_budget_plan_markdown(result: FullRepoPlan) -> str:
     else:
         baseline_str = br  # the BASELINE_UNDEFINED marker (0-build-cost, total-safe)
     lines: list[str] = []
-    lines.append("# Minions Dogfood — Budget-Sizing Plan (Story 7.1)")
+    scope = _scope_clause(result)
+    lines.append(
+        "# Argus Dogfood — Budget-Sizing Plan (Story 7.1 generator, "
+        f"re-derived over {scope})"
+    )
     lines.append("")
     lines.append(
-        "> AUTO-GENERATED by `minions_core/apaa/dogfood/partition_plan.py` "
+        f"> AUTO-GENERATED by `{_GENERATOR_MODULE}` "
         "(`render_budget_plan_markdown`). Reproducible + byte-stable. Drivers: "
         "ArgusAgent-FR-21 / ArgusAgent-NFR-C1 / ArgusAgent-AR4 / ArgusAgent-AR7."
     )
+    lines.append("")
+    lines.append("## Provenance")
+    lines.append("")
+    lines.append(f"- Commit descriptor (HEAD at generation): `{result.commit_descriptor}`")
+    lines.append(f"- Source files ({scope}): **{result.source_file_count}**")
+    lines.append("")
+    lines.append(_SELF_SCOPE_HONESTY)
     lines.append("")
     lines.append("## Empirical `$X` sizing (OI3 — no pre-locked numeric default)")
     lines.append("")
@@ -604,7 +696,8 @@ def render_budget_plan_markdown(result: FullRepoPlan) -> str:
     lines.append(
         "OI3's \"no numeric `$X` default\" is RESOLVED **for the dogfood** by THIS "
         "empirical sizing — the number lives in THIS plan artifact, NOT baked into "
-        "`budget_governor.py` (which keeps `ceiling_credits: int | None = None`; the "
+        "`argus/cost/budget_governor.py` (which keeps `ceiling_credits: int | None = "
+        "None`; the "
         "operator supplies `$X` to the 7.2 run). No hardcoded numeric ceiling default is "
         "introduced anywhere in the module (AR7 / §3.3)."
     )
