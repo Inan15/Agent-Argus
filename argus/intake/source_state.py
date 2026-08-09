@@ -56,6 +56,7 @@ from argus.intake.ignore_rules import (
     gitignore_matches,
     parse_gitignore,
 )
+from argus.store import canonical
 
 __all__ = [
     "SourceStateKind",
@@ -119,7 +120,10 @@ def _digest_of(root: Path, rel_paths: tuple[str, ...]) -> str:
             inner.update((root / rel).read_bytes())
         except OSError as exc:
             raise SourceStateError(f"could not read {rel!r} while pinning source state: {exc}") from exc
-        outer.update(rel.encode("utf-8"))
+        # See canonical.safe_utf8_bytes — a bare .encode crashes on the surrogates a
+        # C-locale POSIX host produces for a non-ASCII path, and would make this
+        # digest host-dependent (NFR-P1).
+        outer.update(canonical.safe_utf8_bytes(rel))
         outer.update(b"\0")
         outer.update(inner.hexdigest().encode("ascii"))
         outer.update(b"\0")

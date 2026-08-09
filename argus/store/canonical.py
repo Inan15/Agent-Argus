@@ -61,6 +61,7 @@ __all__ = [
     "CanonicalSerializationError",
     "dumps",
     "dumps_bytes",
+    "safe_utf8_bytes",
     "loads",
     "canonicalize",
 ]
@@ -232,7 +233,25 @@ def dumps_bytes(payload: Any) -> bytes:
     Hashing and writing share these exact bytes so a ``content_hash`` is taken
     over the very bytes that hit disk (single source of truth, NFR-D3).
     """
-    return dumps(payload).encode("utf-8")
+    return safe_utf8_bytes(dumps(payload))
+
+
+def safe_utf8_bytes(text: str) -> bytes:
+    """UTF-8 bytes of *text*, independent of the host's filename decoding (NFR-P1).
+
+    The single encode helper for any call site that hashes or writes a string DERIVED
+    FROM A PATH without going through :func:`dumps`. A bare ``text.encode("utf-8")``
+    raises ``UnicodeEncodeError`` on the lone surrogates a C-locale POSIX host produces
+    for a non-ASCII filename (see :func:`_repair_surrogates`), so every such site is a
+    latent crash and a latent cross-host byte divergence.
+
+    Two sites bypassed :func:`dumps` and therefore the repair — ``index/partitioner``'s
+    ``_partition_id`` (which hashes the joined member paths) and ``intake/source_state``'s
+    ``_digest_of`` (which hashes each relative path). Both are content-addressed
+    identifiers, so an unrepaired surrogate there does not merely crash: it would key an
+    artifact differently per host, which is exactly what NFR-P1 forbids.
+    """
+    return _repair_surrogates(text).encode("utf-8")
 
 
 def loads(text: str | bytes) -> Any:

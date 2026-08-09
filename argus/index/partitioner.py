@@ -77,6 +77,7 @@ from pathlib import Path
 from pydantic import BaseModel, ConfigDict, Field
 
 from argus.index.ast_index import AstIndex
+from argus.store import canonical
 
 __all__ = [
     "PARTITION_SCHEMA_VERSION",
