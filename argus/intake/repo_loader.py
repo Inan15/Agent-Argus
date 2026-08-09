@@ -35,6 +35,7 @@ construction-pure (no clock / uuid / random / float).
 
 from __future__ import annotations
 
+import os
 import subprocess
 from pathlib import Path
 
@@ -46,6 +47,7 @@ __all__ = [
     "RepoIntakeError",
     "RepoIntake",
     "load_repo_at_commit",
+    "to_native_fs_path",
 ]
 
 # Source-file extensions enumerated into the intake (V1 cares about Python; the
@@ -125,6 +127,44 @@ def _run_git(repo_root: Path, *args: str, strip_output: bool = True) -> str:
     return stdout if not strip_output else stdout.strip()
 
 
+def to_native_fs_path(path: str) -> str:
+    """Convert a UTF-8-decoded relative path into the host's OPENABLE form (NFR-P1).
+
+    THE INVERSE of ``store.canonical._repair_surrogates``, and the second half of the
+    same host-locale boundary.
+
+    ``_run_git`` decodes git's output as explicit UTF-8, so a file named ``café``
+    arrives here as the true text ``'caf\\xe9'``. That is the right form to RECORD, but
+    on POSIX under a non-UTF-8 locale (``LC_ALL=C`` with ``PYTHONUTF8=0``) it is NOT the
+    form the host can open: ``sys.getfilesystemencoding()`` is ASCII there, so any
+    filesystem call re-encodes the argument with the ASCII codec and raises::
+
+        UnicodeEncodeError: 'ascii' codec can't encode character '\\xe9'
+
+    Every downstream consumer of ``RepoIntake.source_files`` opens the file it names
+    (``detect_stack``, ``build_ast_index``, the per-file detector reads), so on such a
+    host the RESUME path — the one caller still routed through this loader — crashed on
+    any repository holding a non-ASCII filename.
+
+    ``os.fsdecode(text.encode("utf-8"))`` re-reads git's real on-disk bytes through the
+    host's own filename rule, yielding the surrogate-bearing native str that host can
+    actually open (``'caf\\udcc3\\udca9'``). On a UTF-8 host it is an exact identity, so
+    nothing changes there.
+
+    This makes both intake producers agree on ONE contract — ``source_files`` holds
+    OS-NATIVE strings — which is what the fresh-run producer (``intake.source_state``,
+    walking via ``os.walk``) has always returned. Recording stays host-independent
+    because the serializer repairs the surrogates back to ``'caf\\xe9'`` on the way to
+    disk, and that round trip is exact: the two functions are inverses over every path
+    git emits, so the persisted bytes are identical on both hosts.
+
+    A path whose bytes were NOT valid UTF-8 was already lossy before this call
+    (``_run_git`` decodes with ``errors="replace"``), and it stays lossy in the same
+    deterministic way — U+FFFD, never an exception.
+    """
+    return os.fsdecode(path.encode("utf-8"))
+
+
 def load_repo_at_commit(repo_path: str | Path, commit: str) -> RepoIntake:
     """Load *repo_path* @ *commit*, refusing a drifted working tree (FR1).
 
@@ -171,7 +211,7 @@ def load_repo_at_commit(repo_path: str | Path, commit: str) -> RepoIntake:
     tracked = _run_git(root, "ls-files", "-z", strip_output=False)
     source_files = tuple(
         sorted(
-            line
+            to_native_fs_path(line)
             for line in tracked.split("\0")
             if line and Path(line).suffix in _SOURCE_SUFFIXES
         )

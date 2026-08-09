@@ -803,3 +803,43 @@ def test_payloads_without_surrogates_are_untouched() -> None:
         assert canonical.dumps({"v": value}) == (
             '{"v":' + json.dumps(value, ensure_ascii=False) + "}\n"
         )
+
+
+# ── The OTHER half of the same boundary: a recorded path must stay OPENABLE ──
+#
+# `_repair_surrogates` makes the RECORDED form host-independent. Its inverse,
+# `repo_loader.to_native_fs_path`, makes the I/O form host-openable. They are needed
+# together because the two intake producers start from opposite ends: `source_state`
+# walks the filesystem (native, surrogate-bearing), while `repo_loader` decodes git's
+# UTF-8 bytes (true text). Without the inverse, the resume path — the remaining
+# `load_repo_at_commit` caller — handed true-text paths to `open()` and a C-locale host
+# raised "'ascii' codec can't encode character", a DIFFERENT crash from the surrogate
+# one above and invisible to every other test.
+
+
+def test_git_path_round_trips_through_the_host_filename_rule() -> None:
+    """to_native_fs_path -> _repair_surrogates is the identity, on EVERY host (NFR-P1).
+
+    The composition is what guarantees the persisted bytes match across locales: I/O
+    uses the native form, the serializer restores the recorded form. On a UTF-8 host
+    both halves are identities; on a C-locale host they are exact inverses.
+    """
+    from argus.intake.repo_loader import to_native_fs_path
+    from argus.store.canonical import _repair_surrogates
+
+    for name in ("café/x.py", "тесты/test_a.py", "ünïcode/mixed_日本.py", "plain.py"):
+        assert _repair_surrogates(to_native_fs_path(name)) == name
+
+
+def test_c_locale_native_form_repairs_back_to_the_git_form() -> None:
+    """The inverse holds for the exact host view the cross-locale CI leg exercises.
+
+    Asserted from a SIMULATED C-locale string so the guard fires on Windows too, where
+    ``os.fsdecode`` never produces a surrogate and the real defect is unobservable.
+    """
+    from argus.store.canonical import _repair_surrogates
+
+    for name in ("café/x.py", "тесты/test_a.py", "ünïcode/mixed_日本.py"):
+        native = _as_c_locale(name)
+        assert native != name, "precondition: the C-locale view must carry surrogates"
+        assert _repair_surrogates(native) == name
