@@ -30,3 +30,4 @@ build/
 .claude/
 .vscode/
 .idea/
+coverage.xml
