@@ -37,9 +37,15 @@ pin.
 
 from __future__ import annotations
 
+import re
 from pathlib import Path
 
 from argus.shared.workspace_containment import WorkspaceContainmentError
+
+#: A drive-letter prefix (``C:``), which is absolute on Windows and an ordinary
+#: filename character on POSIX. Matched explicitly so containment does not depend on
+#: which OS is resolving the path — see :meth:`ApaaStorePaths.resolve`.
+_DRIVE_LETTER_RE = re.compile(r"^[A-Za-z]:")
 
 __all__ = [
     "ArgusAgent_DIR_NAME",
@@ -116,6 +122,34 @@ class ApaaStorePaths:
         the offending RELATIVE path only — never file content / an absolute host
         path (NFR-S1 spirit, AR10).
         """
+        # HOST-INDEPENDENT rejection FIRST (NFR-S5 + NFR-P1). ``Path`` below is the
+        # host-native flavour, so it answers these three questions differently per OS:
+        # on Windows ``C:\\evil`` is absolute and ``..\\..\\x`` is a traversal, while on
+        # POSIX both are ordinary single filenames — legal, contained, and silently
+        # accepted. The docstring above has always claimed both are rejected, so on Linux
+        # it over-claimed.
+        #
+        # This is not merely test portability. ``.argus/`` state is designed to travel
+        # between hosts (NFR-P1 byte-identity; the resume path reads a store that may
+        # have been written elsewhere), so a locator written on Linux as the legal
+        # filename ``..\\..\\escape.json`` becomes a REAL traversal the moment that store
+        # is resolved on Windows. Containment has to be decided identically everywhere or
+        # it is not containment.
+        #
+        # The rules mirror ``index/partitioner.normalize_rel_path``, which already gets
+        # this right; they are restated rather than imported because ``store`` sits below
+        # ``index`` and must not depend upward.
+        raw = str(relative_path)
+        posix = raw.replace("\\", "/")
+        if posix.startswith("/") or _DRIVE_LETTER_RE.match(posix):
+            raise WorkspaceContainmentError(
+                f"path '{relative_path}' escapes .argus root (absolute sub-path)"
+            )
+        if any(segment == ".." for segment in posix.split("/")):
+            raise WorkspaceContainmentError(
+                f"path '{relative_path}' escapes .argus root (parent traversal)"
+            )
+
         rel = Path(relative_path)
         if rel.is_absolute():
             raise WorkspaceContainmentError(
