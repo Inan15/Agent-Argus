@@ -29,15 +29,21 @@ and reports, it simply admits everything. It is expressed via
 ``request.budget == 0 → None`` (the existing CLI default), NOT a magic default
 int. There is no hardcoded numeric ceiling default anywhere in this module.
 
-Reuse BY IMPORT, never fork (AR7 / §3.3 — the 21-2 ``evaluate_preflight`` precedent)
-------------------------------------------------------------------------------------
-The hard-ceiling breach decision is the Minions ``BudgetGuardrails``
+Delegated hard-ceiling decision — originally "reuse BY IMPORT, never fork" (AR7 / §3.3)
+----------------------------------------------------------------------------------------
+NOTE (status correction, see ``_coerce_breach``): this section's heading described a
+reuse of the UPSTREAM Minions cost-guardrails module ACROSS a product boundary. The repo
+separation vendored that module to ``argus/shared/budget_guardrails.py``, so the
+"no fork / single authority" property it claims no longer holds — ArgusAgent owns a
+private copy. The DECISION SEMANTIC below is unchanged and still accurate; only the
+provenance claim was stale. Retiring the vendored copy is a story-level change.
+
+The hard-ceiling breach decision is the ``BudgetGuardrails``
 ``>=``-is-a-breach semantic (``evaluate_worker_spend``: ``within = credits_consumed
 < max_worker_credits`` ⇒ the exact at-ceiling boundary ``total == ceiling`` is a
 BREACH — mirror ``TC-COST-001-46``). ArgusAgent maps its ``int`` running total onto the
 SAME comparison by constructing a ``BudgetPolicy(max_worker_credits=ceiling)`` and
-calling ``evaluate_worker_spend(total)`` — there is no second budget authority and
-no parallel re-derived comparison. The Minions ``BudgetPolicy`` fields are
+calling ``evaluate_worker_spend(total)``. The vendored ``BudgetPolicy`` fields are
 ``float`` — that ``float`` NEVER reaches an ``.argus/`` payload; the import is used
 purely for its DECISION over ``int`` ArgusAgent values, and every ArgusAgent-persisted cost
 figure is ``int`` credits / a ``Fraction`` ratio (the canonical serializer rejects
@@ -254,19 +260,36 @@ class CostLedger(BaseModel):
 
 
 def _coerce_breach(*, total_credits: int, ceiling_credits: int | None) -> bool:
-    """The breach decision, REUSED from ``BudgetGuardrails`` BY IMPORT (AR7 / §3.3).
+    """The breach decision, delegated to the vendored ``BudgetGuardrails`` (Story 3.1).
 
     When ``ceiling_credits is None`` → no ceiling → admit everything → ``False``
     (the NFR-C1 baseline still records the total). Otherwise ArgusAgent maps its ``int``
-    ``total_credits`` onto the SAME D3 ``>=``-is-a-breach hard-ceiling comparison
-    the Minions ``BudgetGuardrails.evaluate_worker_spend`` encodes
+    ``total_credits`` onto the D3 ``>=``-is-a-breach hard-ceiling comparison
+    ``BudgetGuardrails.evaluate_worker_spend`` encodes
     (``within = credits_consumed < max_worker_credits``), by constructing a
     ``BudgetPolicy`` whose ``max_worker_credits`` IS the configured ceiling and
     reading ``within_budget``. ``ceiling_reached = not within_budget`` ⇒ the exact
-    at-ceiling boundary (``total == ceiling``) is a breach. There is NO fork and NO
-    parallel comparison — the Minions guardrails are the single hard-ceiling
-    authority. The ``float`` the policy carries internally never leaves this
-    function; the ArgusAgent-visible result is a ``bool`` over ``int`` inputs.
+    at-ceiling boundary (``total == ceiling``) is a breach.
+
+    STATUS CORRECTION — the "no fork / single authority" rationale has EXPIRED.
+    Story 3.1 required wrapping the UPSTREAM Minions cost-guardrails module BY IMPORT
+    (AR7) so that Minions stayed the ONE hard-ceiling authority and ArgusAgent carried no
+    second copy of the comparison. The repo separation then VENDORED that file to
+    ``argus/shared/budget_guardrails.py``, which is precisely the fork the requirement
+    existed to prevent: there is no longer an upstream to stay in sync with, and
+    ArgusAgent now owns an unmaintained private copy of another product's code — one
+    carrying pod / worker-pool / tool-execution concepts that have no meaning here, a
+    ``datetime.now()`` call in a tree whose AR4 forbids clocks, and ``float`` policy
+    fields. Story 9.1 retired the upstream IMPORTS and Story 9.2 swept the stale
+    provenance TOKENS, but neither addressed the vendored COPY itself — it is still
+    here, unowned. Replacing this delegation with a direct ``total >= ceiling`` changes
+    an epic-stated design decision, so it belongs in a story, not in a comment.
+
+    What IS still true and load-bearing: the ``float`` the policy carries internally
+    never leaves this function — the ArgusAgent-visible result is a ``bool`` over ``int``
+    inputs. (The dataclass annotation does not coerce, so the ceiling stays an ``int``
+    and the comparison is exact at every magnitude; the containment is belt-and-braces,
+    and ``store/canonical`` would raise on any float that did escape.)
     """
     if ceiling_credits is None:
         return False

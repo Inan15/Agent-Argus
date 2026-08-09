@@ -115,15 +115,12 @@ from __future__ import annotations
 
 import enum
 from fnmatch import fnmatchcase
-from typing import TYPE_CHECKING, Iterable
+from typing import Iterable
 
 from pydantic import BaseModel, ConfigDict, Field
 
 from argus.ledger.coverage_ledger import CoverageDepth, CoverageLedger
 from argus.ledger.depth_semantics import Criticality
-
-if TYPE_CHECKING:  # pragma: no cover - typing-only, no runtime import (keeps PURE/web-free)
-    pass
 
 __all__ = [
     "CRITICAL_SUBSYSTEMS_SCHEMA_VERSION",

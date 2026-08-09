@@ -28,8 +28,17 @@ The LOCKED CLI contract (frozen + documented per the story)
 ``argus audit <repo> --commit <sha> --budget <int> --materiality-bar <bar>``
 - sub-command ``audit`` (the only V1 sub-command; an additive seam for future ones)
 - positional ``<repo>`` — the audited-repo path → ``AuditRequest.repo_path``
-- ``--commit`` — REQUIRED (a pinned commit is the FR1 determinism precondition;
-  there is no silent HEAD default — an unpinned audit is not reproducible)
+- ``--commit`` — OPTIONAL, defaulting to ``HEAD``. A pinned commit is the FR1
+  determinism precondition, and this contract was originally written as REQUIRED
+  with "no silent HEAD default". The default was later relaxed so a first run works
+  on any directory — including one with no git metadata at all — and the enforcement
+  moved to ``--strict``, but THIS PARAGRAPH WAS NOT UPDATED and went on asserting the
+  opposite of the shipped behaviour on the single flag that carries the determinism
+  guarantee. The binding statement is: the pin is enforced by ``--strict`` (below),
+  which refuses a non-git, dirty, or ``HEAD != --commit`` tree; without it the audit
+  proceeds over whatever source state is present and RECORDS which state that was
+  (``intake/source_state.resolve_source_state``), so a relaxed run is still honest
+  about what it examined — it is simply not reproducible.
 - ``--budget`` — an ``int`` of credits (AR4 — argparse ``type=int`` rejects a
   float spelling) → ``AuditRequest.budget``. Story 3.1 gives it CONFIGURATION
   meaning: ``0`` / omitted = NO ceiling (OI3 — first-class no-ceiling; no
@@ -59,12 +68,16 @@ import sys
 from argus.models import AuditRequest
 from argus.pipeline import run_audit
 from argus.reports.plain_english import ShipReadinessError, render_ship_readiness
+from argus.verdict.verdict_gate import AuditVerdict
 
 __all__ = ["build_parser", "main"]
 
 _PROG = "argus"
 # Exit code reserved for a fatal/typed pipeline error (AR3 — the crash code).
 _CRASH_EXIT_CODE = 1
+# The full pass set a bare invocation runs, and the reports a bare invocation renders.
+_ALL_PASSES = ("coverage", "vacuous", "security", "orphan", "prosecutor")
+_DEFAULT_REPORTS = ("final-verdict", "coverage-ledger")
 
 
 def build_parser() -> argparse.ArgumentParser:
@@ -224,6 +237,108 @@ def _summary_line(
     return line
 
 
+def _harden_output_streams() -> None:
+    """Make the output streams tolerate characters the console cannot encode.
+
+    The HUMAN register is full of em dashes (every ship-readiness headline carries
+    one). On a console whose code page cannot encode them — Windows cp437/cp850,
+    ``PYTHONIOENCODING=ascii``, POSIX ``LC_ALL=C`` — writing that prose raises
+    ``UnicodeEncodeError``, which is a ``ValueError``. PROSE MUST NEVER BE THE THING
+    THAT FAILS A RUN: degrade the un-encodable characters instead, so a completed
+    audit reports its own verdict rather than the terminal's limitation.
+    """
+    for stream in (sys.stdout, sys.stderr):
+        try:
+            stream.reconfigure(errors="backslashreplace")  # type: ignore[union-attr]
+        except (AttributeError, ValueError):  # pragma: no cover - non-reconfigurable stream
+            pass
+
+
+def _split_csv(raw: str | None, default: tuple[str, ...]) -> tuple[str, ...]:
+    """Parse a comma-separated option into a tuple; an omitted flag yields ``default``.
+
+    Blank segments are dropped so a trailing comma is not a selection. An explicit flag
+    that selects nothing at all stays empty rather than silently reverting to the
+    default — narrowing to zero is an operator statement, not a missing one.
+    """
+    if not raw:
+        return default
+    return tuple(item.strip() for item in raw.split(",") if item.strip())
+
+
+def _resolve_passes(args: argparse.Namespace) -> tuple[str, ...]:
+    """Resolve ``--passes`` / ``--skip-pass`` into the enabled pass tuple.
+
+    ``--skip-pass`` subtracts from whatever ``--passes`` selected, so the two compose
+    in one direction only: a skip can never re-add a pass the operator excluded.
+    """
+    enabled = _split_csv(args.passes, _ALL_PASSES)
+    if not args.skip_pass:
+        return enabled
+    skipped = set(args.skip_pass)
+    return tuple(name for name in enabled if name not in skipped)
+
+
+def _build_request(
+    args: argparse.Namespace, enabled_passes: tuple[str, ...]
+) -> AuditRequest:
+    """Project the parsed namespace onto the frozen ``AuditRequest`` (FR30).
+
+    Pure translation — every ``or ()`` here is argparse's ``append`` default (``None``)
+    being normalised to the empty tuple the model requires, NOT a policy decision.
+    """
+    return AuditRequest(
+        repo_path=args.repo,
+        commit=args.commit,
+        budget=args.budget,
+        materiality_bar=args.materiality_bar,
+        critical_paths=tuple(args.critical_subsystem or ()),
+        excluded_critical_paths=tuple(args.exclude_critical or ()),
+        enabled_passes=enabled_passes,
+        enabled_reports=_split_csv(args.reports, _DEFAULT_REPORTS),
+        report_dir=args.report_dir or "",
+        ignore_paths=tuple(args.ignore_paths or ()),
+        ignore_patterns=tuple(args.ignore_patterns or ()),
+        coverage_scope=args.coverage_scope,
+        strict=args.strict,
+    )
+
+
+def _emit_ship_readiness(
+    verdict: AuditVerdict, enabled_passes: tuple[str, ...]
+) -> int | None:
+    """Print the human register to stderr; return an exit code ONLY on contract violation.
+
+    HUMAN REGISTER, guarded SEPARATELY (DF-8-3-B). It goes to STDERR on purpose: stdout
+    is the wire contract a CI step / orchestrating agent parses positionally (FR18/AR3),
+    and appending prose to it would break that. Two failures are possible here and they
+    are NOT the same class, so they do not share an exit code:
+
+    * ``ShipReadinessError`` — the renderer refusing a verdict FR16 cannot produce. That
+      is a CONTRACT VIOLATION; the run is not trustworthy, so it degrades to the AR10
+      typed exit ``1``. Before DF-8-3-B this escaped ``main()`` as an uncaught traceback on
+      every default invocation (masked only when ``--report-dir`` was set, because the
+      pipeline renders the same block inside ``run_audit``, whose own guard caught it).
+    * any other ``ValueError`` — overwhelmingly an encoding failure on the em-dash-bearing
+      prose. The audit COMPLETED, persisted, and already printed its verdict on stdout.
+      Reporting "audit failed" / exit ``1`` there would be a false statement about a run
+      that succeeded, and would contradict the published contract that exit ``1`` means no
+      verdict exists. The prose degrades; the verdict stands.
+
+    Returns ``_CRASH_EXIT_CODE`` for the first case and ``None`` for the second — a
+    ``None`` return means "the verdict's own exit code still governs".
+    """
+    try:
+        for line in render_ship_readiness(verdict, enabled_passes=enabled_passes):
+            print(line, file=sys.stderr)
+    except ShipReadinessError as exc:
+        print(f"{_PROG}: audit failed: {exc}", file=sys.stderr)
+        return _CRASH_EXIT_CODE
+    except ValueError as exc:
+        print(f"{_PROG}: ship-readiness not rendered: {exc}", file=sys.stderr)
+    return None
+
+
 def main(argv: list[str] | None = None) -> int:
     """Parse argv → ``AuditRequest`` → pipeline → exit code (FR30/FR18/AR3).
 
@@ -232,52 +347,11 @@ def main(argv: list[str] | None = None) -> int:
     on a TYPED pipeline failure (with a secret-safe stderr line). NO business logic
     lives here — all audit logic is in ``pipeline.py`` + the reused modules.
     """
-    # The HUMAN register is full of em dashes (every ship-readiness headline carries
-    # one). On a console whose code page cannot encode them — Windows cp437/cp850,
-    # ``PYTHONIOENCODING=ascii``, POSIX ``LC_ALL=C`` — writing that prose raises
-    # ``UnicodeEncodeError``, which is a ``ValueError``. PROSE MUST NEVER BE THE THING
-    # THAT FAILS A RUN: degrade the un-encodable characters instead, so a completed
-    # audit reports its own verdict rather than the terminal's limitation.
-    for stream in (sys.stdout, sys.stderr):
-        try:
-            stream.reconfigure(errors="backslashreplace")  # type: ignore[union-attr]
-        except (AttributeError, ValueError):  # pragma: no cover - non-reconfigurable stream
-            pass
+    _harden_output_streams()
 
-    parser = build_parser()
-    args = parser.parse_args(argv)
-
-    all_passes = ("coverage", "vacuous", "security", "orphan", "prosecutor")
-    if args.passes:
-        enabled_passes = tuple(p.strip() for p in args.passes.split(",") if p.strip())
-    else:
-        enabled_passes = all_passes
-
-    if args.skip_pass:
-        skips = set(args.skip_pass)
-        enabled_passes = tuple(p for p in enabled_passes if p not in skips)
-
-    if args.reports:
-        enabled_reports = tuple(r.strip() for r in args.reports.split(",") if r.strip())
-    else:
-        enabled_reports = ("final-verdict", "coverage-ledger")
-
-    request = AuditRequest(
-        repo_path=args.repo,
-        commit=args.commit,
-        budget=args.budget,
-        materiality_bar=args.materiality_bar,
-        critical_paths=tuple(args.critical_subsystem or ()),
-        excluded_critical_paths=tuple(args.exclude_critical or ()),
-        enabled_passes=enabled_passes,
-        enabled_reports=enabled_reports,
-        report_dir=args.report_dir or "",
-        ignore_paths=tuple(args.ignore_paths or ()),
-        ignore_patterns=tuple(args.ignore_patterns or ()),
-        coverage_scope=args.coverage_scope,
-        strict=args.strict,
-    )
-
+    args = build_parser().parse_args(argv)
+    enabled_passes = _resolve_passes(args)
+    request = _build_request(args, enabled_passes)
 
     # AUDIT + WIRE CONTRACT. A failure here means no verdict reached the consumer, so
     # exit `1` is the honest answer (AR10 / NFR-R1).
@@ -298,29 +372,9 @@ def main(argv: list[str] | None = None) -> int:
         print(f"{_PROG}: audit failed: {exc}", file=sys.stderr)
         return _CRASH_EXIT_CODE
 
-    # HUMAN REGISTER, guarded SEPARATELY (DF-8-3-B). It goes to STDERR on purpose: stdout
-    # is the wire contract a CI step / orchestrating agent parses positionally (FR18/AR3),
-    # and appending prose to it would break that. Two failures are possible here and they
-    # are NOT the same class, so they do not share an exit code:
-    #
-    #   * `ShipReadinessError` — the renderer refusing a verdict FR16 cannot produce. That
-    #     is a CONTRACT VIOLATION; the run is not trustworthy, so it degrades to the AR10
-    #     typed exit `1`. Before DF-8-3-B this escaped `main()` as an uncaught traceback on
-    #     every default invocation (masked only when `--report-dir` was set, because the
-    #     pipeline renders the same block inside `run_audit`, whose own guard caught it).
-    #   * any other `ValueError` — overwhelmingly an encoding failure on the em-dash-bearing
-    #     prose. The audit COMPLETED, persisted, and already printed its verdict on stdout.
-    #     Reporting "audit failed" / exit `1` there would be a false statement about a run
-    #     that succeeded, and would contradict the published contract that exit `1` means no
-    #     verdict exists. The prose degrades; the verdict stands.
-    try:
-        for line in render_ship_readiness(verdict, enabled_passes=enabled_passes):
-            print(line, file=sys.stderr)
-    except ShipReadinessError as exc:
-        print(f"{_PROG}: audit failed: {exc}", file=sys.stderr)
-        return _CRASH_EXIT_CODE
-    except ValueError as exc:
-        print(f"{_PROG}: ship-readiness not rendered: {exc}", file=sys.stderr)
+    readiness_failure = _emit_ship_readiness(verdict, enabled_passes)
+    if readiness_failure is not None:
+        return readiness_failure
 
     return verdict.exit_code
 
