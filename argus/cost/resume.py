@@ -78,6 +78,8 @@ Test area ArgusAgent-COST (``TC-ArgusAgent-COST-001-NN``) — continuing the 3-1
 
 from __future__ import annotations
 
+from typing import Any
+
 from pydantic import BaseModel, ConfigDict, Field
 
 from argus.cost.budget_governor import BudgetConfig
@@ -175,6 +177,84 @@ def _require_ledger(value: object) -> CoverageLedger:
     return value
 
 
+def _read_halt_report(prior_halt_report: object) -> tuple[Any, Any, int]:
+    """Duck-typed read of the three 3-2 ``HaltReport`` fields this fold consumes.
+
+    Duck-typed on purpose: a hard import would create a cycle and an ``isinstance``
+    fence would couple this fold to an evolving sibling — the FIELDS are the contract.
+    A missing or malformed field is a typed :class:`ResumeError`, never an
+    ``AttributeError`` traceback escaping the fold (AR10).
+    """
+    assessed = getattr(prior_halt_report, "assessed_files", None)
+    skipped = getattr(prior_halt_report, "skipped_on_exhaustion_files", None)
+    prior_credits = getattr(prior_halt_report, "total_credits", None)
+    if assessed is None or skipped is None or prior_credits is None:
+        raise ResumeError(
+            f"build_resume_plan requires a HaltReport prior_halt_report, got "
+            f"{type(prior_halt_report).__name__}"
+        )
+    if not isinstance(prior_credits, int) or isinstance(prior_credits, bool) or prior_credits < 0:
+        raise ResumeError("prior halt report total_credits must be a non-negative int")
+    return assessed, skipped, prior_credits
+
+
+def _index_units_by_path(
+    current_index_units: tuple[CostUnit, ...] | list[CostUnit],
+) -> dict[str, CostUnit]:
+    """Key the current index by repo-relative path, rejecting a non-``CostUnit`` member.
+
+    The index position is named in the error because a caller handing in a heterogeneous
+    sequence needs to know WHICH element, not just that one was wrong.
+    """
+    units_by_path: dict[str, CostUnit] = {}
+    for index, unit in enumerate(current_index_units):
+        if not isinstance(unit, CostUnit):
+            raise ResumeError(
+                f"current_index_units[{index}] must be a CostUnit, got {type(unit).__name__}"
+            )
+        units_by_path[unit.path] = unit
+    return units_by_path
+
+
+def _assert_carried_forward_is_resumable(
+    carried_forward: tuple[str, ...],
+    units_by_path: dict[str, CostUnit],
+    ledger: CoverageLedger,
+) -> None:
+    """The V1 divergence guard (AR10) — refuse a resume that would mis-merge.
+
+    Two distinct inconsistencies, two distinct messages, because they have two distinct
+    remedies: a path missing from the CURRENT INDEX means the tree/commit moved under the
+    prior state (re-run fresh), while a path missing from the PRIOR LEDGER means the
+    on-disk ``.argus/`` state contradicts itself (the state is the problem, not the tree).
+    """
+    known_paths = frozenset(entry.file_path for entry in ledger.entries)
+    for path in carried_forward:
+        if path not in units_by_path:
+            raise ResumeError(
+                f"carried-forward assessed path '{path}' is absent from the current "
+                f"index — the tree/commit diverged from the prior run; refusing to resume "
+                f"(re-run a fresh audit on the current commit)"
+            )
+        if path not in known_paths:
+            raise ResumeError(
+                f"prior halt report assessed path '{path}' has no entry in the prior "
+                f"coverage ledger — the prior .argus/ state is inconsistent; refusing to resume"
+            )
+
+
+def _assert_remainder_is_resumable(
+    remainder_paths: tuple[str, ...], units_by_path: dict[str, CostUnit]
+) -> None:
+    """The same divergence guard applied to the not-yet-audited remainder."""
+    for path in remainder_paths:
+        if path not in units_by_path:
+            raise ResumeError(
+                f"prior skipped-on-exhaustion path '{path}' is absent from the current "
+                f"index — the tree/commit diverged from the prior run; refusing to resume"
+            )
+
+
 def build_resume_plan(
     prior_ledger: CoverageLedger,
     prior_halt_report: object,
@@ -201,28 +281,8 @@ def build_resume_plan(
     remainder remains skipped (AC4).
     """
     ledger = _require_ledger(prior_ledger)
-    # Duck-typed read of the 3-2 HaltReport (avoid a hard import cycle / a tight
-    # isinstance fence on an evolving sibling — the fields are the contract). A
-    # missing field is a typed ResumeError, never an AttributeError traceback.
-    assessed = getattr(prior_halt_report, "assessed_files", None)
-    skipped = getattr(prior_halt_report, "skipped_on_exhaustion_files", None)
-    prior_credits = getattr(prior_halt_report, "total_credits", None)
-    if assessed is None or skipped is None or prior_credits is None:
-        raise ResumeError(
-            f"build_resume_plan requires a HaltReport prior_halt_report, got "
-            f"{type(prior_halt_report).__name__}"
-        )
-    if not isinstance(prior_credits, int) or isinstance(prior_credits, bool) or prior_credits < 0:
-        raise ResumeError("prior halt report total_credits must be a non-negative int")
-
-    units = tuple(current_index_units)
-    units_by_path: dict[str, CostUnit] = {}
-    for index, unit in enumerate(units):
-        if not isinstance(unit, CostUnit):
-            raise ResumeError(
-                f"current_index_units[{index}] must be a CostUnit, got {type(unit).__name__}"
-            )
-        units_by_path[unit.path] = unit
+    assessed, skipped, prior_credits = _read_halt_report(prior_halt_report)
+    units_by_path = _index_units_by_path(current_index_units)
 
     # Carry forward EVERY prior-ASSESSED entry verbatim (NFR-R2 "no loss of prior
     # coverage") — the prior halt report's assessed_files is the authoritative
@@ -233,27 +293,10 @@ def build_resume_plan(
     # run of the equivalent budget). The prior ledger holds the verbatim entries for
     # these paths; the pipeline reuses them by file_path (the same frozen entries).
     carried_forward = tuple(sorted(str(p) for p in assessed))
-    known_paths = frozenset(entry.file_path for entry in ledger.entries)
-    for path in carried_forward:
-        if path not in units_by_path:
-            raise ResumeError(
-                f"carried-forward assessed path '{path}' is absent from the current "
-                f"index — the tree/commit diverged from the prior run; refusing to resume "
-                f"(re-run a fresh audit on the current commit)"
-            )
-        if path not in known_paths:
-            raise ResumeError(
-                f"prior halt report assessed path '{path}' has no entry in the prior "
-                f"coverage ledger — the prior .argus/ state is inconsistent; refusing to resume"
-            )
+    _assert_carried_forward_is_resumable(carried_forward, units_by_path, ledger)
 
     remainder_paths = tuple(sorted(str(p) for p in skipped))
-    for path in remainder_paths:
-        if path not in units_by_path:
-            raise ResumeError(
-                f"prior skipped-on-exhaustion path '{path}' is absent from the current "
-                f"index — the tree/commit diverged from the prior run; refusing to resume"
-            )
+    _assert_remainder_is_resumable(remainder_paths, units_by_path)
 
     # Re-project the halt over the remainder against the RAISED ceiling, seeding the
     # already-spent prior credits so the resume CONTINUES (the raised ceiling is a

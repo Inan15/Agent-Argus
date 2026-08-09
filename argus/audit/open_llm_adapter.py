@@ -59,9 +59,14 @@ class OpenLLMAdapter:
         temperature: float = 0.2,
         use_litellm: bool = True,
     ) -> None:
-        self._model = model
+        self._model = os.getenv("ARGUS_LLM_MODEL") or os.getenv("OLLAMA_MODEL") or model
         self._provider_id = provider_id
-        self._api_base = api_base or os.getenv("OPENAI_BASE_URL") or os.getenv("OLLAMA_HOST")
+        self._api_base = (
+            api_base
+            or os.getenv("OPENAI_BASE_URL")
+            or os.getenv("OLLAMA_HOST")
+            or os.getenv("OLLAMA_URL")
+        )
         self._api_key = api_key or os.getenv("OPENAI_API_KEY") or "mock-key"
         self._temperature = temperature
         self._use_litellm = use_litellm and LITELLM_AVAILABLE

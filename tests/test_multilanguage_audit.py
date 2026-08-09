@@ -18,12 +18,53 @@ the breadth downstream again.
 
 from __future__ import annotations
 
+import importlib.util
+import os
 import sys
 from pathlib import Path
 
 import pytest
 
 pytest.importorskip("tree_sitter")
+
+# The two end-to-end JavaScript tests below assert that source files reach
+# `audited_deep`, which is only reachable with the `tree-sitter-javascript` grammar from
+# the OPTIONAL `[languages]` extra. Under a bare `pip install .[dev]` they fail with
+# `deep_count == 0`, which is an ENVIRONMENT statement, not a defect statement — the
+# graceful-degradation contract for that same state is pinned separately by
+# `test_missing_grammar_is_named_not_reported_as_unsupported`.
+#
+# Skipping is only defensible because it cannot hide a regression: audit-ci.yml installs
+# `.[dev,languages]` and sets ARGUS_REQUIRE_LANGUAGE_GRAMMARS=1, which converts the skip
+# back into a hard failure. A silently-skipped multi-language claim would be exactly the
+# false green this suite exists to prevent.
+_REQUIRE_GRAMMARS = os.getenv("ARGUS_REQUIRE_LANGUAGE_GRAMMARS") == "1"
+
+
+def _grammar_installed(module_name: str) -> bool:
+    """True when a tree-sitter grammar package is importable in this environment.
+
+    Total by construction. ``find_spec`` returns ``None`` for a simply-absent package but
+    RAISES for a broken one — a finder that itself errors, a missing parent package
+    (``ModuleNotFoundError``), or a ``None`` entry left in ``sys.modules``
+    (``ValueError``). Every one of those means the same thing here: the grammar is not
+    usable. Letting one escape would abort COLLECTION of this whole module, taking the
+    grammar-independent tests down with it.
+    """
+    try:
+        return importlib.util.find_spec(module_name) is not None
+    except (ImportError, ValueError):
+        return False
+
+
+requires_js_grammar = pytest.mark.skipif(
+    not _grammar_installed("tree_sitter_javascript") and not _REQUIRE_GRAMMARS,
+    reason=(
+        "tree-sitter-javascript is not installed (optional `[languages]` extra). "
+        "Install it with `pip install .[languages]`, or set "
+        "ARGUS_REQUIRE_LANGUAGE_GRAMMARS=1 to fail instead of skip."
+    ),
+)
 
 sys.path.insert(0, str(Path(__file__).resolve().parent / "cartridges"))
 
@@ -99,6 +140,7 @@ def test_the_ten_claimed_languages_are_enumerable() -> None:
 # ─────────────────────────────────────────────────────────────────────────────
 
 
+@requires_js_grammar
 def test_javascript_project_enumerates_and_grades(tmp_path: Path) -> None:
     """TC-ArgusAgent-INTAKE-003-03 — a JS repo audits; it used to enumerate ZERO files."""
     root = _make(tmp_path / "jsapp", _JS_PROJECT)
@@ -130,6 +172,7 @@ def test_go_project_enumerates_and_excludes_vendor(tmp_path: Path) -> None:
     assert not any(f.startswith("vendor/") for f in state.source_files)
 
 
+@requires_js_grammar
 def test_non_python_test_file_is_not_run_through_the_python_vacuous_detector(
     tmp_path: Path,
 ) -> None:
