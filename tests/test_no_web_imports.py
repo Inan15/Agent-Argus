@@ -11,6 +11,7 @@ pulled in by an unrelated test earlier in the session cannot mask a real leak.
 
 from __future__ import annotations
 
+import pathlib
 import subprocess
 import sys
 import textwrap
@@ -86,7 +87,7 @@ _MODULES_UNDER_GUARD = (
     # no web stack, no LLM/api module, no impure .argus/ writer.
     "argus.ledger.critical_subsystems",
     # Story 3.1 — pure budget-ceiling config + deterministic cost-accounting core.
-    # It reuses minions_core.cost.budget_guardrails BY IMPORT (AR7) for the
+    # It reuses argus.shared.budget_guardrails BY IMPORT (AR7) for the
     # >=-is-a-breach hard-ceiling DECISION; that leaf is verified FastAPI-free, so
     # importing the cost module must NOT transitively pull the web stack or any
     # LLM/api/providers module. Extend the guard (do NOT fork) per AI-E2-5.
@@ -232,6 +233,15 @@ _MODULES_UNDER_GUARD = (
     # finding_match_key. No web stack, no LLM/api/providers module, no live LLM dispatch.
     # Extend the guard (do NOT fork) per AI-E5-7.
     "argus.dogfood.proof_run",
+    # Story 9.2 / DF-8-5-D — the two PURE siblings the proof-run generator was split
+    # into. ``proof_types`` holds the five frozen result dataclasses; ``proof_render``
+    # holds the pure markdown renderer + the externalization-guard sentence it renders.
+    # Neither imports ``proof_run`` (the impure shell) — the edge runs one way only,
+    # which is what makes the AR8 pure/impure line structural rather than narrated. Both
+    # are registered here so importing them can never quietly pull the web stack or a
+    # provider module through a future edit. Extend the guard (do NOT fork) per AI-E5-7.
+    "argus.dogfood.proof_types",
+    "argus.dogfood.proof_render",
 )
 
 # Story 1.7 — the Epic-1 verdict path is ZERO-LLM-token (NFR-D2). The pipeline /
@@ -594,3 +604,89 @@ def test_all_guarded_modules_have_no_minions_core_imports() -> None:
             f"{proc.stdout.strip()} {proc.stderr.strip()}"
         )
 
+
+
+# ─────────────────────────────────────────────────────────────────────────────
+# Story 9.2 / AC11 (ledger item RS-4b) — the `minions_core` TEXTUAL sweep, as an
+# ALLOWLIST over an enumerated space, not a zero-count assertion.
+#
+# TC-ArgusAgent-STORE-001-51 above proves no argus module IMPORTS minions_core. That is
+# the runtime half. This is the textual half: after the repo separation, `minions_core`
+# survived in nine docstrings/comments and one operator-visible error message as a stale
+# PROVENANCE claim — prose asserting a dependency, a reuse-by-import, or a source tree
+# that no longer exists anywhere in this repository. Story 9.2 swept all nine.
+#
+# It is deliberately an ALLOWLIST and never `count == 0`. Two occurrences MUST survive,
+# both in `argus/audit/minions_llm_adapter.py`, and both written by Story 9.1 as TRUE
+# NEGATIVE statements — "requiring the unpackaged `minions_core` library" (the thing the
+# adapter exists NOT to need) and "zero dependency on `minions_core`". Deleting them
+# would delete the documentation of RS-1/IN-2, which is the opposite of the sweep's
+# intent; a naive grep-and-delete gets exactly this wrong. RS-4b's own text excludes the
+# file by name.
+#
+# The enumerated space is the allowlist itself: any occurrence in any OTHER module fails,
+# so a re-introduction cannot hide, and a new allowlisted file cannot be added silently.
+# ─────────────────────────────────────────────────────────────────────────────
+
+# The ONLY paths permitted to mention the token, with the number of occurrences each is
+# permitted to carry. Both are Story 9.1's true negative statements.
+_MINIONS_CORE_ALLOWLIST: dict[str, int] = {
+    "argus/audit/minions_llm_adapter.py": 2,
+}
+
+_MINIONS_CORE_TOKEN = "minions_core"
+
+
+def test_TC_ArgusAgent_STORE_001_109_minions_core_text_only_in_the_allowlist() -> None:
+    """TC-ArgusAgent-STORE-001-109 — Story 9.2/AC11 (RS-4b): no stale provenance claim survives.
+
+    Walks every ``argus/**/*.py`` module and counts occurrences of the token. Any module
+    outside :data:`_MINIONS_CORE_ALLOWLIST` fails, and an allowlisted module that grows
+    or loses occurrences also fails — so neither a re-introduction nor a silent deletion
+    of Story 9.1's negative statements can pass.
+    """
+    package_root = pathlib.Path(__file__).resolve().parents[1] / "argus"
+    repo_root = package_root.parent
+    counts: dict[str, int] = {}
+    modules = 0
+    for path in sorted(package_root.rglob("*.py")):
+        if "__pycache__" in path.parts:
+            continue
+        modules += 1
+        n = path.read_text(encoding="utf-8").count(_MINIONS_CORE_TOKEN)
+        if n:
+            counts[path.relative_to(repo_root).as_posix()] = n
+
+    # Non-vacuity: the sweep really walked the package.
+    assert modules >= 60, f"the sweep only walked {modules} modules"
+    unexpected = {k: v for k, v in counts.items() if k not in _MINIONS_CORE_ALLOWLIST}
+    assert not unexpected, (
+        "RS-4b: a stale `minions_core` provenance claim was re-introduced outside the "
+        f"allowlist: {unexpected}"
+    )
+    assert counts == _MINIONS_CORE_ALLOWLIST, (
+        "the allowlisted true-negative statements changed; they document RS-1/IN-2 and "
+        f"must not be deleted. expected {_MINIONS_CORE_ALLOWLIST}, measured {counts}"
+    )
+
+
+def test_TC_ArgusAgent_STORE_001_110_allowlisted_mentions_are_negative_statements() -> None:
+    """TC-ArgusAgent-STORE-001-110 — Story 9.2/AC11 (D9): the allowlist is not a loophole.
+
+    An allowlist that merely permits a filename would let a genuine stale claim be
+    smuggled back into the one exempt module. Each surviving occurrence must sit in a
+    line that DENIES the dependency, so the exemption cannot be repurposed into a
+    provenance claim.
+    """
+    repo_root = pathlib.Path(__file__).resolve().parents[1]
+    denial_markers = ("zero dependency", "unpackaged", "without", "no longer", "never")
+    for rel in _MINIONS_CORE_ALLOWLIST:
+        lines = (repo_root / rel).read_text(encoding="utf-8").splitlines()
+        hits = [ln for ln in lines if _MINIONS_CORE_TOKEN in ln]
+        assert len(hits) == _MINIONS_CORE_ALLOWLIST[rel]
+        for line in hits:
+            lowered = line.lower()
+            assert any(marker in lowered for marker in denial_markers), (
+                f"{rel}: {line.strip()!r} mentions the token without denying the "
+                "dependency — the allowlist covers TRUE NEGATIVE statements only"
+            )

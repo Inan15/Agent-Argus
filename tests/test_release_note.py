@@ -358,10 +358,40 @@ def _headline(verdict: AuditVerdict) -> str:
 # ─────────────────────────────────────────────────────────────────────────────
 
 
-def test_TC_ArgusAgent_DOCS_001_01_note_exists_and_is_headed_unreleased() -> None:
-    """TC-ArgusAgent-DOCS-001-01 — AC7/AC9: the note is findable and headed UNRELEASED."""
+def test_TC_ArgusAgent_DOCS_001_01_note_exists_and_heads_the_released_version() -> None:
+    """TC-ArgusAgent-DOCS-001-01 — AC7/AC9, UPDATED by Story 9.2 / AC6: the note heads a VERSION.
+
+    Story 8.4 wrote this as ``assert "## Unreleased" in note`` because there was no
+    release path at all: no tag, no workflow, nothing an index could resolve. Story 9.2
+    ships the release path, so the note stops being permanently unreleased — and this
+    assertion is updated THROUGH that change rather than deleted around it, because its
+    job is unchanged: the note must never lose its heading.
+
+    What it now pins is stronger than what it replaced. The heading must be a real
+    version, and that version must be the one the package actually ships — so a note that
+    announces a version the code does not carry fails here. ``## Unreleased`` must ALSO
+    still exist, as the place the next change lands; a note with only a released heading
+    invites the next contributor to edit the released section in place.
+    """
     note = _note()
-    assert "## Unreleased" in note, "the note must carry an `## Unreleased` heading (D2)"
+    import argus
+
+    version_headings = [
+        line.strip()
+        for line in note.splitlines()
+        if re.match(r"^##\s+\[?v?\d+\.\d+\.\d+", line.strip())
+    ]
+    assert version_headings, (
+        "the note must head a released version section (Story 9.2 / AC6); it carries none"
+    )
+    assert any(argus.__version__ in heading for heading in version_headings), (
+        f"the note heads {version_headings} but the package ships "
+        f"{argus.__version__!r} — a note may not announce a version the code does not carry"
+    )
+    assert "## Unreleased" in note, (
+        "the note must keep an `## Unreleased` heading for the next change; without one, "
+        "the next edit lands inside a released section"
+    )
 
 
 def test_TC_ArgusAgent_DOCS_001_02_note_carries_both_live_schema_versions() -> None:
@@ -627,29 +657,40 @@ def test_TC_ArgusAgent_DOCS_001_16_note_publishes_the_live_assurance_sentences()
     )
 
 
-def test_TC_ArgusAgent_DOCS_001_07_note_makes_no_published_distribution_claim() -> None:
-    """TC-ArgusAgent-DOCS-001-07 — AC7/AC9 (the D2 honesty pin): no release claim.
+def test_TC_ArgusAgent_DOCS_001_07_note_makes_no_published_index_claim() -> None:
+    """TC-ArgusAgent-DOCS-001-07 — AC7/AC9 (the D2 honesty pin), NARROWED by Story 9.2 / AC6.
 
-    ``argus-agent`` is on no package index and carries no tag. A note asserting
-    otherwise would itself be a published Argus artifact stating something untrue —
-    the exact defect class this epic deletes. Pinned so a later edit cannot quietly
-    turn the heading into a release.
+    Story 8.4 pinned three things at once: no index install instruction, no version
+    heading, and an explicit "not tagged and not published" sentence. Story 9.2 ships a
+    release workflow and a version heading, so the middle clause moved to ``-01`` — but
+    the honesty clause it existed for did NOT weaken, it got MORE specific.
+
+    Two claims remain forbidden and one is now required, and the distinction between them
+    is the whole point: *a committed workflow is a committed workflow; a published release
+    is a URL.* The note may say the first. It may not imply the second.
     """
     note = _note()
-    assert not re.search(r"pip\s+install\s+argus-agent", note), (
-        "the note must not instruct an install from an index — there is no published "
-        "distribution to install"
+    assert not re.search(r"pip\s+install\s+argus-agent(?![-\w])", note), (
+        "the note must not instruct an install from an index — `argus-agent` is on no "
+        "package index, so that command cannot work for any reader"
     )
-    version_headings = [
-        line
-        for line in note.splitlines()
-        if re.match(r"^##\s+\[?v?\d+\.\d+\.\d+", line.strip())
-    ]
-    assert not version_headings, (
-        f"the note must not head a released version section: {version_headings}"
+    lowered = note.lower()
+    for claim in (
+        "published to pypi",
+        "available on pypi",
+        "released to pypi",
+        "now on pypi",
+    ):
+        assert claim not in lowered, f"the note claims an index publication: {claim!r}"
+    assert "not published to any package index" in lowered, (
+        "the note must still state out loud that no distribution is published to an "
+        "index (D2) — shipping a release workflow does not publish one"
     )
-    assert "not tagged and not published to" in note, (
-        "the note must state out loud that no distribution is published (D2)"
+    # And it must say plainly that the workflow itself has not run, so a reader cannot
+    # infer a release from the existence of the automation (Story 9.2 / AC2, D13).
+    assert "never executed" in lowered, (
+        "the note must state that the release workflow is committed but has not run; "
+        "no release may be implied without a URL or an Actions run id as evidence"
     )
 
 
@@ -779,8 +820,21 @@ def test_TC_ArgusAgent_DOCS_001_09_front_door_carries_no_stale_claim() -> None:
 def test_TC_ArgusAgent_DOCS_001_10_front_door_version_surface_is_unchanged() -> None:
     """TC-ArgusAgent-DOCS-001-10 — AC8/AC12: ``__version__`` is load-bearing, not prose.
 
-    ``__version__`` is the envelope's ``argus_version`` field and is folded into every
-    content hash (NFR-P1) — changing it moves every artifact hash in the repository.
+    ``__version__`` is the DEFAULT ``argus_version`` field on every envelope
+    (``store/envelope.py``), so changing it changes the BYTES of every persisted
+    ``.argus/`` artifact.
+
+    Precision correction (Story 9.2): it is NOT "folded into every content hash".
+    ``compute_content_hash`` hashes the **payload only** (NFR-D3) and ``argus_version``
+    is an **envelope** field, so for every artifact except the evidence bundle a version
+    change moves the file's bytes but NOT its content hash or its content-addressed
+    filename. The evidence bundle is the sole exception, because
+    ``bundle_to_canonical_payload`` also carries the version INSIDE the hashed payload —
+    which is exactly why DF-8-5-A's literal was able to move a published signature.
+
+    ``0.1.0`` is asserted here as a DELIBERATE pin: Story 9.2 ships ``0.1.0`` un-bumped
+    (D1), so this assertion was left untouched by the release rather than edited to
+    accommodate one.
     """
     import argus
 
@@ -838,3 +892,102 @@ def test_TC_ArgusAgent_DOCS_001_13_front_door_facts_match_pyproject() -> None:
     assert sorted(scripts) == ["argus", "argus-agent", "repo-audit"], scripts
     for script in scripts:
         assert script in text, f"the front door does not name the console script {script!r}"
+
+
+# ─────────────────────────────────────────────────────────────────────────────
+# Story 9.2 / AC1 — the version-bearing surfaces are ONE enumerated space
+#
+# Before 9.2 this repository stated its own version three times and the three did not
+# agree: ``pyproject.toml`` ``0.1.0``, ``argus.__version__`` ``0.1.0``, and
+# ``argus.dogfood.proof_run.DOGFOOD_ArgusAgent_VERSION`` ``1.43.0`` — and the third one
+# reached the SIGNED, content-hashed evidence payload, so one persisted envelope asserted
+# two versions of the same package on its two levels (DF-8-5-A).
+#
+# ``-14`` pins AGREEMENT across the enumerated surfaces. ``-15`` pins COMPLETENESS of the
+# enumeration: an AST sweep over the whole ``argus/**`` tree fails on ANY semver-shaped
+# string literal outside the single registered source, so a *fourth* version literal
+# introduced by a future module goes RED instead of quietly disagreeing (AI-E8-6 — an AC
+# that quantifies universally needs a test that enumerates and rejects the unenumerated).
+# ─────────────────────────────────────────────────────────────────────────────
+
+# The ONE place in the package permitted to hold a version literal: (posix path, binding).
+_VERSION_LITERAL_SITE = ("argus/__init__.py", "__version__")
+
+# A whole string that is exactly a semver release token. Deliberately anchored and
+# 3-part: ``schema_version`` constants ("1") and ratio/marker strings do not match, so the
+# sweep flags package-version literals and not every numeric string in the tree.
+_SEMVER_LITERAL = re.compile(r"^\d+\.\d+\.\d+$")
+
+
+def _pyproject_version() -> str:
+    pyproject = (_REPO_ROOT / "pyproject.toml").read_text(encoding="utf-8")
+    match = re.search(r"^version\s*=\s*\"([^\"]+)\"", pyproject, flags=re.MULTILINE)
+    assert match, "pyproject.toml states no `version = ` for the argus-agent distribution"
+    return match.group(1)
+
+
+def test_TC_ArgusAgent_DOCS_001_14_every_version_surface_states_one_value() -> None:
+    """TC-ArgusAgent-DOCS-001-14 — Story 9.2 / AC1: the enumerated version surfaces AGREE.
+
+    Each surface is read from where it actually lives (the packaging metadata, the
+    package front door, the dogfood generator) rather than compared against a literal
+    repeated in this test — a fourth copy of the value in the guard would be the defect
+    the guard exists to catch.
+    """
+    import argus
+    from argus.dogfood.proof_run import DOGFOOD_ArgusAgent_VERSION
+
+    surfaces = {
+        "pyproject.toml [project] version": _pyproject_version(),
+        "argus.__version__": argus.__version__,
+        "argus.dogfood.proof_run.DOGFOOD_ArgusAgent_VERSION": DOGFOOD_ArgusAgent_VERSION,
+    }
+    distinct = set(surfaces.values())
+    assert len(distinct) == 1, (
+        f"the package states more than one version: {surfaces}"
+    )
+
+
+def test_TC_ArgusAgent_DOCS_001_15_no_unregistered_version_literal_in_argus() -> None:
+    """TC-ArgusAgent-DOCS-001-15 — Story 9.2 / AC1: the enumeration is COMPLETE.
+
+    Walks the AST of every ``argus/**/*.py`` module and collects every string constant
+    that is exactly a semver release token, wherever it appears — an assignment, a
+    default argument, a keyword argument at a call site. Exactly ONE is permitted, at
+    :data:`_VERSION_LITERAL_SITE`. Any other is a second source of truth for the package
+    version and fails here, which is what makes ``-14``'s three-surface enumeration a
+    closed space rather than a sample of an open one.
+    """
+    import ast
+
+    package_root = _REPO_ROOT / "argus"
+    found: list[tuple[str, int, str]] = []
+    modules = 0
+    for path in sorted(package_root.rglob("*.py")):
+        if "__pycache__" in path.parts:
+            continue
+        modules += 1
+        tree = ast.parse(path.read_text(encoding="utf-8"))
+        rel = path.relative_to(_REPO_ROOT).as_posix()
+        for node in ast.walk(tree):
+            if (
+                isinstance(node, ast.Constant)
+                and isinstance(node.value, str)
+                and _SEMVER_LITERAL.match(node.value)
+            ):
+                found.append((rel, node.lineno, node.value))
+
+    # Non-vacuity: the sweep really walked the package, and really found the one site.
+    assert modules >= 60, f"the version sweep only walked {modules} modules"
+    assert len(found) == 1, (
+        "exactly one semver version literal may exist in argus/**; found: " f"{found}"
+    )
+    rel, _lineno, value = found[0]
+    assert rel == _VERSION_LITERAL_SITE[0], (
+        f"the version literal moved to {rel}; the single source is {_VERSION_LITERAL_SITE[0]}"
+    )
+
+    import argus
+
+    assert value == argus.__version__
+    assert f"{_VERSION_LITERAL_SITE[1]} = " in (_REPO_ROOT / rel).read_text(encoding="utf-8")

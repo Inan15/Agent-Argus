@@ -32,7 +32,7 @@ frozen findings + the candidate verdict-state into a deterministic ``bool``
 :class:`EscalationResolution`. It dispatches NO LLM. A richer LLM-driven escalation
 adjudicator is the documented FORWARD seam behind the 6.1 ``LLMDispatchPort`` (a
 ``FakeDispatch`` for zero-token tests if any seam is ever wired) — NEVER a direct
-``minions_core.providers`` import, NEVER the V1 default. This module imports NO
+provider import of any kind, NEVER the V1 default. This module imports NO
 providers and NO FastAPI (the no-web-imports + no-LLM gates stay green).
 
 DN-RESOLUTION — the FR23 fail-safe matrix (the keystone, read twice)

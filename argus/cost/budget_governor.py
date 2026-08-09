@@ -12,9 +12,10 @@ zero-LLM-token — the fold is a pure reduction over ``int`` contributions),
 ArgusAgent-NFR-P1 (byte-identical accounting across hosts/runs + input orderings — no
 ``float`` money), ArgusAgent-NFR-M2 (frozen, additive-only contracts), AR4 (no
 ``float`` — ``int`` credits / ``Fraction`` ratios; the single canonical
-serializer is the determinism backstop), AR7 (reuse ``minions_core.cost.
-budget_guardrails`` BY IMPORT — verified FastAPI-free; no fork of the hard-ceiling
-semantic, §3.3), AR8 (pure/impure separation — this module is PURE; the snapshot
+serializer is the determinism backstop), AR7 (reuse ``argus.shared.budget_guardrails``
+BY IMPORT — verified FastAPI-free; no fork of the hard-ceiling semantic, §3.3; the
+guardrail module was vendored into ``argus/shared/`` by the repo separation, and this
+line named its pre-separation location until Story 9.2 / RS-4b), AR8 (pure/impure separation — this module is PURE; the snapshot
 WRITE is the impure pipeline shell), AR10 (typed failure — ``BudgetGovernorError``,
 never a silent coerce / uncaught raise), AR11 (content-derived stable output).
 

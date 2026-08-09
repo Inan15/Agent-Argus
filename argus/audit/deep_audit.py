@@ -18,8 +18,9 @@ Why this module is PURE of providers
 ------------------------------------
 ``deep_audit`` is the consumer side of the determinism quarantine. It depends on
 the PORT TYPE (``LLMDispatchPort``), which is injected (constructor/parameter),
-so it is provider-agnostic and never imports ``minions_core.providers`` or the
-concrete adapter. The full Python AST-grounding of deep claims is Story 6.2; in
+so it is provider-agnostic and never imports ANY provider package or the
+concrete adapter (RS-1/IN-2: ArgusAgent imports nothing from a host product; the
+provider-package reference this sentence used to name no longer exists here). The full Python AST-grounding of deep claims is Story 6.2; in
 V1 this module is a THIN seam: it dispatches through the injected port and folds
 the returned ``LLMRecording`` into a cache key via the closure-builder below.
 

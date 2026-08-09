@@ -999,3 +999,326 @@ because the review's own remedy for each was a ledger id rather than a code chan
   - target_story: the first story that edits `argus/dogfood/proof_run.py` for any reason
   - category: maintainability
   - severity: 🟠
+
+---
+
+## Deferred from: 9-2-ship-distribution-another-repo-can-actually-resolve (2026-08-08) — THE LAST STORY IN THE PLAN
+
+**APPEND-ONLY.** Nothing above this line was edited, reordered or deleted.
+
+> **Read this section differently from every other one in this register.** Story 9.2 is the last story of
+> Epic 9 and the last story in the entire ArgusAgent plan. **There is no successor story to inherit a
+> deferral.** Every `target_story` below that names "the first story that…" is now a conditional pointing at
+> a story that does not exist and may never exist. Where that is the case it is said explicitly, because an
+> item that reads like a handoff and is in fact abandoned is worse than an item marked abandoned: the first
+> costs someone a search, the second costs them nothing. §5 of the Epic-8 retrospective established that
+> items framed as handoffs evaporate while items attached to a named deliverable land; this section is
+> written to make the evaporation visible rather than to prevent it, which is not in a story's power.
+
+### Closed by this story
+
+- **DF-8-5-A — CLOSED.** `argus/dogfood/proof_run.py` now reads
+  `DOGFOOD_ArgusAgent_VERSION = _ARGUS_VERSION` with `from argus import __version__ as _ARGUS_VERSION`;
+  the module literal `"1.43.0"` is gone. **Closing evidence, measured in place, not asserted:**
+  (a) RED-first, through the shipped path — an evidence bundle was built with the pre-fix constant and
+  persisted, and the resulting `.argus/state/<hash>.json` read
+  `envelope.argus_version = "0.1.0"` while `envelope.payload.argus_version = "1.43.0"` (AGREE = False);
+  post-fix the same path yields `0.1.0` on both levels (AGREE = True).
+  (b) The dogfood bundle content hash moved
+  `a1e76c01cbd29241a928f71b724b4c4c01d1211e0a4ae8a6e266386f811e0c0e` (which matched the committed
+  `minions-dogfood-proof.md:57` signature line exactly, re-derived rather than read off the document) →
+  `b3588816088920936de7a3fea17eaba747f7ad3c1af1ff93b0f4f4474acb6dc6` from the version fix alone →
+  `da17b0fe19d121a4414ea542e8b9061abc73eca549aadb45b178cfc1fced89fc` after the DF-8-5-D extraction
+  changed the audited population. The artifact was regenerated so it publishes the last of these.
+  (c) `TC-ArgusAgent-DOGFOOD-001-34` was updated THROUGH the fix — it now asserts
+  `DOGFOOD_ArgusAgent_VERSION == argus.__version__` rather than a second copy of the value — and its
+  adjacent comment, which claimed the provenance was "the pyproject version token" while the code carried
+  a literal that disagreed with pyproject, was corrected.
+  (d) New enumerated guards: `TC-ArgusAgent-DOCS-001-14` (the three version-bearing surfaces agree) and
+  `TC-ArgusAgent-DOCS-001-15` (an AST sweep of all 71 `argus/**` modules permits exactly ONE semver
+  literal, at `argus/__init__.py`), so a fourth version literal goes RED.
+  - id: DF-8-5-A
+  - closed_by: 9-2-ship-distribution-another-repo-can-actually-resolve
+  - closed_on: 2026-08-08
+  - status: CLOSED
+
+- **DF-8-5-D — CLOSED.** `argus/dogfood/proof_run.py` was split into three modules with a re-export shim.
+  **Measured line counts:** `proof_run.py` 1196 → **679**, new `argus/dogfood/proof_render.py` **447**,
+  new `argus/dogfood/proof_types.py` **207**; all three under the NFR-M1 1200 ceiling. (The three do not
+  sum to 1196 + headers: the DF-8-5-A fix added 3 lines, the shim adds an import block, and each new
+  module carries its own docstring and `__all__`.)
+  **Corrections to this entry's own text, measured rather than inherited:**
+  (a) The entry estimates the renderer at "~390 lines"; **measured it is 391** (`:809-1199` of the
+  pre-split file).
+  (b) The entry says "the next edit of any size breaches NFR-M1". The DF-8-5-A fix is **+3 lines net**
+  and left the module at **1199/1200** — it FIT. The NFR-M1 fence did **not** force this extraction; the
+  `target_story` did ("the first story that edits `argus/dogfood/proof_run.py` for any reason"), together
+  with the absence of any later story. This correction matters because the fence narrative implies the
+  work was unavoidable; it was not — it was *chosen*, on the ledger's instruction and because deferring it
+  here means dropping it.
+  (c) The entry warns that `unit_count` may drop to 2. **It did not: it held at 3**, measured on the real
+  tree after the extraction. What moved instead was **every one of the three `partition_id`s** —
+  `2c0f52f60457`/`681c496d09ed`/`973f3f199d1c` → `085854c90586`/`477ef77d7b65`/`bde14bbf3bcf` — because
+  a `partition_id` is a sha256 over its unit's sorted member paths and adding two modules re-balanced all
+  three units. A simulation over an isolated copy had predicted only ONE id would move; the real split
+  moved three. The prediction was directionally right and numerically wrong, which is exactly why the
+  measurement was repeated on the real tree.
+  **Closing evidence:** the pure-move was proven by rendering the SAME `DogfoodProofRun` before and after
+  the extraction and comparing bytes — **9927 → 9927 bytes byte-identical** for a real dogfood run, and
+  **55101 → 55101 bytes byte-identical** across six synthetic runs covering every renderer branch (scope
+  present/absent, critical clause not-captured / not-retrieved / vacuous / non-empty / not-satisfied,
+  ceiling pair with and without a live sizing). New tests `TC-ArgusAgent-DOGFOOD-001-45`..`-48` pin the
+  `__all__` import surface (fails on removal as well as on a broken import), the re-export IDENTITY
+  (`proof_run.X is proof_types.X` — `==` would not catch a fork), the three line counts, the structural
+  purity of both new modules, and the externalization-guard text.
+  **One deliberate content change, disclosed rather than folded into "pure move":** the artifact's
+  provenance banner now reads ``AUTO-GENERATED by `argus/dogfood/proof_render.py`
+  (`render_proof_markdown`, re-exported from `argus/dogfood/proof_run.py`, which orchestrates the run)``.
+  Leaving it naming only `proof_run.py` would still have resolved — and would still have pointed a reader
+  at a file that no longer contains the generator. This is the ONLY difference between the pre- and
+  post-extraction renders; it was made after the byte-identity proof was captured, not before.
+  **Second disclosed move:** `DOGFOOD_EXTERNALIZATION_GUARD` moved from `proof_run.py` to
+  `proof_render.py` because the renderer is its only consumer and leaving it behind would have forced
+  `proof_render → proof_run`, i.e. the cycle the shim exists to avoid. Its text is byte-identical and is
+  now pinned by an equality assertion (`TC-ArgusAgent-DOGFOOD-001-48`), so Story 9.2 / AC12's "unchanged"
+  is verified rather than asserted.
+  - id: DF-8-5-D
+  - closed_by: 9-2-ship-distribution-another-repo-can-actually-resolve
+  - closed_on: 2026-08-08
+  - status: CLOSED
+
+- **DF-8-4-A — CLOSED.** `action.yml`'s exit-code map is now explicit over the complete space
+  `{0, 2, 3, 1, anything else}`. Exit `1` has its own arm and renders `verdict=AUDIT_FAILED`, and the
+  catch-all renders the same failure token rather than a verdict token, so an unmapped future exit code
+  can never surface as an assessment. **Vocabulary decision and why:** `AUDIT_FAILED` was chosen over
+  failing the step outright because a composite action that dies takes the consumer's ability to branch
+  with it — a caller that wants to tolerate a tooling failure and a caller that wants to block on one need
+  different behaviour, and only the caller knows which they are. A new `assessed` output (`true` for
+  0/2/3, `false` otherwise) gives them the boolean without string-matching, and the `1`/unmapped arms emit
+  a GitHub `::error::` annotation so the failure is visible even when the step is tolerated.
+  `outputs.verdict` and `outputs.exit-code` descriptions were rewritten; they had documented only three
+  codes and never mentioned `1`. `strict` stays `"false"` (see the fenced note below).
+  - id: DF-8-4-A
+  - closed_by: 9-2-ship-distribution-another-repo-can-actually-resolve
+  - closed_on: 2026-08-08
+  - status: CLOSED
+
+- **RS-4b — CLOSED.** All nine remaining `minions_core` references under `argus/**` were swept:
+  `audit/deep_audit.py:21`, `audit/ports.py:4`, `cost/budget_governor.py:15`, `dogfood/proof_run.py:52`,
+  `:53`, `:666` (the operator-visible `DogfoodProofError` message), `governance/escalation.py:35`,
+  `store/envelope.py:25`, `verdict/prosecutor.py:36`. **The stale line reference in this register's own
+  RS-4b entry (`proof_run.py:632`, corrected to `:666` by AI-E8-7) is closed out by the sweep rather than
+  re-filed with a fourth line number** — the reference no longer exists at any line.
+  **One of the nine was not merely stale but FALSE:** `cost/budget_governor.py:15` claimed
+  "AR7 (reuse ``minions_core.cost.budget_guardrails`` BY IMPORT)" while the module actually imports
+  `argus.shared.budget_guardrails` (vendored by the repo separation). It now names the real module.
+  A tenth, identical false claim in `tests/test_no_web_imports.py:89` was corrected in the same pass and
+  is disclosed here because it is outside RS-4b's stated `argus/**` scope.
+  **The two decoys were left standing** — `argus/audit/minions_llm_adapter.py:5` and `:29` are Story 9.1's
+  TRUE NEGATIVE statements about a dependency that no longer exists, and deleting them would delete the
+  documentation of RS-1/IN-2.
+  **Closing evidence:** `grep -rn "minions_core" argus/ --include=*.py` (excluding `__pycache__`) now
+  returns exactly those two lines and nothing else. Two new guards make it an enumerated space:
+  `TC-ArgusAgent-STORE-001-109` walks all 71 modules and fails on any occurrence outside an allowlist that
+  contains exactly `argus/audit/minions_llm_adapter.py` (and fails if the allowlisted count changes, so
+  the negative statements cannot be silently deleted either), and `TC-ArgusAgent-STORE-001-110` requires
+  every surviving occurrence to sit in a line that DENIES the dependency — so the allowlist cannot be
+  repurposed into a smuggling route for a real provenance claim.
+  **Bare-word "Minions" (NOT `minions_core`, and NOT RS-4b):** bounded to `argus/dogfood/**` per the
+  story's D10 and swept there — measured per file, `proof_run.py` 13 → 1, `partition_plan.py` 6 → 0,
+  `dogfood/__init__.py` 2 → 0 (20 removed). Historical statements that are TRUE were kept (the superseded Story-7.2 run over
+  the Minions platform really did happen, and `proof_render.py` still cites it). The remaining
+  occurrences elsewhere under `argus/**` are explicitly OUT OF SCOPE and are filed as `DF-9-2-B` below.
+  - id: RS-4b
+  - closed_by: 9-2-ship-distribution-another-repo-can-actually-resolve
+  - closed_on: 2026-08-08
+  - status: CLOSED
+
+- **DF-8-4-B — PARTIALLY CLOSED (heading half closed; bytes-example half explicitly left OPEN).**
+  Its `target_story` reads "the first story after 8.5 that edits `tests/test_release_note.py` (or Epic-9
+  `9-2`, whichever fires first)"; **both clauses fired**, because AC6 had to update
+  `TC-ArgusAgent-DOCS-001-01`'s `"## Unreleased"` pin. **Closed:** `TC-ArgusAgent-DOCS-001-16` registers
+  every `###` section of `CHANGELOG.md` as an enumerated, ORDERED space — a removed section fails, an
+  unregistered added section fails, and a reordering fails. **Deliberately NOT closed:** the suggested
+  bytes-example equality check. The note already carries byte-for-byte equality assertions over the
+  surfaces that matter — the FR16 decision table, the ship-readiness headlines, the `final-verdict.md`
+  callouts and the persisted assurance sentences, via `TC-ArgusAgent-DOCS-001-03`..`-06` — so a second
+  generic bytes check would add duplication rather than coverage. **This half now has no owner** (see
+  below).
+  - id: DF-8-4-B
+  - closed_by: 9-2-ship-distribution-another-repo-can-actually-resolve (heading half only)
+  - closed_on: 2026-08-08
+  - status: PARTIALLY CLOSED — bytes-example half OPEN and UNOWNED
+
+### Opened by this story
+
+- **DF-9-2-A** — 🟠 **Five shipped module files cannot be imported from the built distribution.**
+  MEASURED, not inferred: `python -m build` produced `argus_agent-0.1.0.tar.gz` (75 files) and
+  `argus_agent-0.1.0-py3-none-any.whl` (76 entries = **71** `argus/**` modules + 5 `dist-info`). Each of
+  those 71 modules was imported in its own clean subprocess with the wheel's contents on `sys.path` and
+  this repository **removed** from it: **66 of the 71 import. Five do not:**
+  `argus/precision/__init__.py`, `argus/precision/replay_harness.py`, `argus/dogfood/proof_types.py`,
+  `argus/dogfood/proof_render.py`, `argus/dogfood/proof_run.py` — all with
+  `ModuleNotFoundError: No module named '_registry'`. **Single cause:**
+  `argus/precision/replay_harness.py:87-90` inserts `<repo>/tests/cartridges` onto `sys.path` and
+  unconditionally imports `_registry` from it; `tests/` is not in the distribution and should not be.
+  Everything else is that one import reached transitively (`argus/precision/__init__.py` re-exports it,
+  and the dogfood modules import `MatchKey` from it).
+  ⚠️ **Figure corrected at code-review iteration 1 (2026-08-09), stated rather than quietly swapped.**
+  This entry first read *"65 of the 69 shipped modules import"* and named only four broken modules. `69`
+  was the **pre-split** module count — the tree has been 71 since this same story's AC8 landed — and the
+  four-module list omitted `argus/precision/replay_harness.py`, the module that actually contains the
+  offending import, while the committed pin `_NOT_IMPORTABLE_FROM_DISTRIBUTION` correctly listed five.
+  The replacement figures above were **re-measured from scratch**, not re-derived from the old sentence.
+  The disposition below is unchanged: only the numbers were wrong.
+  **Pre-existing, verified not assumed:** the identical import exists at HEAD `7be90f7`
+  (`git show 7be90f7:argus/precision/replay_harness.py`), and the pre-split `proof_run.py` imported
+  `argus.precision.replay_harness` at its line 127. The Story-9.2 split did not create the defect and did
+  not widen the consumer surface — the two new modules fail only because they re-export what already
+  failed. **Nothing that imported before imports less now.**
+  **Not fixed here, deliberately:** `argus/precision/**` is FENCED by Story 9.2 / AC15, and the fix is a
+  behavioural change to the precision substrate inside a release story with no mandate over it.
+  **Impact is bounded and stated:** IN-1/IN-3 need `argus audit`, and the whole CLI path imports and RUNS
+  from the wheel (`argus --help` exit `0`; `argus audit <fixture>` → `RELEASE_READY`, exit `0`, executed
+  from a working directory that is not this repository). What a consumer cannot do from the distribution
+  alone is re-run Argus's own dogfood proof generator, which is a self-audit tool, not a consumer feature.
+  README.md and CHANGELOG.md both state this split explicitly rather than leaving it to be discovered.
+  **Close =** make the registry import lazy or optional in `replay_harness.py` (import inside the function
+  that needs it, or degrade to an explicit "no labelled corpus available" state), then re-measure the
+  importable count from a freshly built wheel and update `_NOT_IMPORTABLE_FROM_DISTRIBUTION` in
+  `tests/test_release_preflight.py` — which is pinned in BOTH directions, so a fix that leaves the record
+  stale goes RED.
+  - id: DF-9-2-A
+  - origin_story: 9-2-ship-distribution-another-repo-can-actually-resolve
+  - owner: Engineering
+  - target_story: **NONE — no story exists after 9.2.** This needs a named human to schedule it.
+  - category: packaging-correctness
+  - severity: 🟠
+
+- **DF-9-2-B** — 🟢 **Bare-word "Minions" subject claims outside `argus/dogfood/**`.** Story 9.2's D10
+  bounded the subject-claim sweep to `argus/dogfood/**` (where the modules were being rewritten anyway).
+  **Measured:** the bare word ran 45 times across 17 `argus/**` modules at HEAD `7be90f7` and runs **25
+  times across 15** now — 20 removed, all inside `argus/dogfood/**` (`proof_run.py` 13 → 1,
+  `partition_plan.py` 6 → 0, `dogfood/__init__.py` 2 → 0), with 2 kept there deliberately because they
+  are TRUE historical statements about the superseded Story-7.2 run (`proof_run.py:5`,
+  `proof_render.py:71`). ⚠️ The story context stated 44 across 17; re-measured in place it is 45. Of the
+  25 that remain, 2 are those deliberate keeps and **23 are elsewhere under `argus/**`** — historical
+  narration in
+  modules Story 9.2 did not touch (e.g. `cost/budget_governor.py`'s "the Minions `BudgetPolicy` fields are
+  `float`", which is a true statement about the vendored guardrail's shape). They are not falsehoods of the
+  RS-4b class and none of them names a package that no longer exists; they are simply subject language
+  inherited from the monorepo. Sweeping them is an unbounded prose pass, which is why RS-4b was scoped away
+  from them in the first place. **Close =** a bounded prose pass that reads each one and decides whether it
+  is a true historical statement (keep) or a false subject claim (rewrite) — never a blanket replace.
+  - id: DF-9-2-B
+  - origin_story: 9-2-ship-distribution-another-repo-can-actually-resolve
+  - owner: Engineering
+  - target_story: **NONE — no story exists after 9.2.**
+  - category: documentation-accuracy
+  - severity: 🟢
+
+- **DF-9-2-C** — 🟢 **`argus/dogfood/__pycache__/*.pyc` are tracked in git.** Measured with
+  `git ls-files argus/dogfood/`: three compiled `.cpython-312.pyc` files are committed even though
+  `.gitignore:2` lists `__pycache__/` (the ignore rule cannot affect already-tracked paths). They do not
+  reach the partition plan — `enumerate_tracked_sources` filters by `_SOURCE_SUFFIXES`, which is why
+  `source_file_count` is 71 and not 74 — and they were not added or touched by Story 9.2. Filed rather
+  than fixed because `git rm --cached` on tracked paths is a repository-hygiene change outside this
+  story's scope, and because a silent deletion of tracked files during a release story is precisely the
+  kind of unannounced side effect Epic 8 exists to prevent. **Close =** `git rm --cached` the three paths
+  in a change that says so.
+  - id: DF-9-2-C
+  - origin_story: 9-2-ship-distribution-another-repo-can-actually-resolve
+  - owner: Engineering
+  - target_story: **NONE — no story exists after 9.2.**
+  - category: repository-hygiene
+  - severity: 🟢
+
+### Re-recorded as OPEN and, after this story closes, UNOWNED
+
+> Each of the following keeps its original entry text, unedited. What is recorded here is that its
+> `target_story` no longer resolves to anything. This is the honest outcome of ending a plan with items in
+> the register, and it is materially better than performing a large risky refactor inside a release story
+> to avoid writing an uncomfortable sentence (Story 9.2 / D11).
+
+- **DF-8-5-C — OPEN, and knowingly REPUBLISHED unchanged by this story.** `proof_run.py`'s
+  `precision_gate_status_for(precision=Fraction(0, 1), n=0, provisional=True, ...)` literals were
+  re-rendered verbatim into the regenerated `minions-dogfood-proof.md`, which again publishes
+  "N=0 labeled cartridges populated, floor N=5" while the shipped registry measures
+  `distinct_rule_class_count() == 5` and `populated_planted_defect_count() == 7`. **It UNDERSTATES**, so it
+  makes the provisional gate look FURTHER from its floor than it is and can never make a gate look
+  cleared. Not fixed here because its `target_story` names the 6.5/6.6 precision surface **after the human
+  `DF-7-2-A` adjudication**, which has not occurred, and because `argus/precision/**` is fenced by AC15.
+  **Reprinting it while naming it is the honest act; reprinting it silently was the failure mode.**
+  Owner after 9.2: **none.**
+- **DF-8-5-B — OPEN.** Its `target_story` reads "the first story **after Epic 9**", so it was never
+  Story 9.2's to close — but 9.2 hit exactly the pain it describes: `TC-ArgusAgent-DOGFOOD-001-03` and
+  `-06` were verified RED against the committed artifacts before regeneration (all three live
+  `partition_id`s absent from the committed plan; `443` absent from the committed budget plan) and green
+  after. **Whether 9.2 made the remedy discoverable: NO, and deliberately so.** The entry asks for a named
+  regeneration entry point in the failure message of all three assertions, or a CI regenerate-and-diff
+  step. Neither was added: the first edits assertion text in tests this story must not weaken, and the
+  second adds a CI job with a ~2-minute dogfood run to a release story. What 9.2 DID add is a documented
+  regeneration sequence in its story record (source edits → tests → stage → regenerate → re-run), which is
+  a story artifact and not the discoverable-from-red-output remedy the entry asks for. Owner after 9.2:
+  **none.**
+- **DF-8-4-C** and **DF-8-4-D** — OPEN. Their targets (`reports/generator.py`'s critical-subsystems
+  section; `cli.py::main`'s exception handling) are inside Story 9.2's AC15 fence and were not opened.
+  Owner after 9.2: **none.**
+- **DF-8-2-A**, **DF-8-3-A**, **DF-8-3-C** — OPEN, and all three gate on the `argus/pipeline.py`
+  extraction. Measured today: `pipeline.py` is **1199 / 1200 lines**, one line from the NFR-M1 ceiling.
+  Story 9.2 FENCED it (D11) — the extraction is a second unrelated restructure inside a release story, it
+  touches the module that produces every verdict, and nothing in IN-0 requires it. **Consequence, stated
+  plainly: the next edit of any size to `pipeline.py` breaches NFR-M1, and there is no story queued to
+  perform the extraction.** Owner after 9.2: **none.**
+- **DF-6-6-A**, **DF-6-6-A-P1**, **DF-6-6-A-P2**, **DF-7-2-A** — OPEN and NOT rewritten by this story.
+  `DF-7-2-A` is the human Eng-Lead + QA-Lead TP/FP adjudication that is the only thing that can clear the
+  ≥80%-precision gate. It has not happened. Owner: a named human, as it always was.
+- **DF-6-7-A** — OPEN (HITL wiring), untouched.
+
+### The register as a whole, after Story 9.2 closes
+
+**Nobody is looking after this.** Epic 9 is the last epic; there is no Epic 10, no next sprint in this
+tracker, and no story whose `target_story` clause will fire. Twelve entries remain OPEN
+(`DF-6-6-A`, `-P1`, `-P2`, `DF-6-7-A`, `DF-7-2-A`, `DF-8-2-A`, `DF-8-3-A`, `DF-8-3-C`, `DF-8-4-C`,
+`DF-8-4-D`, `DF-8-5-B`, `DF-8-5-C`), plus the bytes-example half of `DF-8-4-B` and the three items this
+story opened (`DF-9-2-A`, `DF-9-2-B`, `DF-9-2-C`). **Each needs a named human to schedule it or an
+explicit decision to abandon it.** Neither is a thing an autonomous story can do, and pretending
+otherwise by re-targeting them at a hypothetical future story would be the evaporation §5 of the Epic-8
+retrospective described.
+
+**H0 is NOT in this register and was NOT filed by this story.** `epics.md:1693-1699` records that no story
+in this breakdown owns filing the Minions-repo handoff H1–H4, that H0 is **UNOWNED**, and that "a handoff
+nobody files is a handoff that does not exist". It was escalated as readiness-report **F5 (LIVE)** on
+2026-08-03 and re-raised as **AI-E8-10** on 2026-08-08. Story 9.2 did not create it, claim it, or close
+it. Two related facts are restated once so they are not lost when this repository's plan closes:
+assumption **A5** is ⚠️ **Unsupported** — after the FR16/FR4 amendment the Minions repository is expected
+to land on row 4 → exit `3`, which still fails an unconfigured blocking CI gate, so **H3** needs a policy
+decision before that gate can be made blocking — and **IN-1** must be an optional extra
+(`minions[argus]`-shaped), never a base dependency, because Minions declares `dependencies = []`.
+
+---
+
+## Deferred from: code review of story 9-2-ship-distribution-another-repo-can-actually-resolve (2026-08-09)
+
+Appended by the code-review gate, iteration 1. Append-only: nothing above this heading was edited,
+reordered or deleted. One item only — every other review finding is an actionable `[Review][Patch]`
+item inside the story file and is being fixed in this story, not deferred.
+
+- **DF-9-2-D** — 🟢 **`action.yml` interpolates a consumer-supplied action input into shell source.**
+  `action.yml:127` runs `if [ "${{ inputs.strict }}" = "true" ]`, expanding the composite action's
+  `strict` input into the `run:` body before `bash` parses it. A consumer who sets `strict` to a crafted
+  value executes shell in the calling workflow's job. **Pre-existing and out of the 9.2 delta, verified
+  not assumed:** the line is byte-identical to HEAD `7be90f7`; Story 9.2 rewrote the exit-code `case`
+  arm immediately above it (DF-8-4-A / AC10) and did not touch this line. Deferring it was the correct
+  scoping call — widening a release story into an unrelated hardening pass on the consumer-facing action
+  is the scope creep AC15's fences exist to prevent.
+  **Close =** bind the input through `env:` (`env:\n  STRICT: ${{ inputs.strict }}`) and compare
+  `"$STRICT"`; do the same sweep over every other `${{ inputs.* }}` occurrence in `action.yml` in one
+  pass, and add a guard test that fails on any `${{ inputs.` appearing inside a `run:` block.
+  - id: DF-9-2-D
+  - origin_story: 9-2-ship-distribution-another-repo-can-actually-resolve (code review, iteration 1)
+  - owner: Engineering
+  - target_story: **NONE — no story exists after 9.2.** Needs a named human to schedule it, exactly as
+    DF-9-2-A/B/C do.
+  - category: security-hardening
+  - severity: 🟢

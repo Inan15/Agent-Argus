@@ -18,7 +18,7 @@
    - **Prosecutor Cut-Edge Pass**: Adversarial second pass ensuring seam-spanning defects across partitions move the verdict to $\color{red}{\text{NOT READY}}$.
    - **Defect Cartridges & Self-Audit Harness**: CI-blocking true-negative clean control cartridges and hidden holdouts.
 
-2. **RAM Workflow Framework (`audit/`, `phases/`, `adapters/`, `templates/`)**:
+2. **RAM Workflow Framework (`audit/`, `phases/`, `adapters/`, `templates/`)** — *repository-only; these directories are not part of the `argus-agent` distribution, see [Quickstart](#-quickstart--installation)*:
    - **Vendor & Agent Adapters**: Native slash commands and skills for **Claude Code**, **Cursor**, **Cline**, **RooCode**, **Codex CLI**, **Gemini CLI**, and **Windsurf**.
    - **12 Audit Phases**: Guided markdown workflows from Orientation (`00`) to Verdict (`11`).
    - **12 Developer Report Templates**: Rich, human-readable markdown reporting for Architecture, Security, Performance, Requirements, and Risk.
@@ -27,7 +27,97 @@
 
 ## 🚀 Quickstart & Installation
 
-### Single Command Installation
+### Install as a dependency (no clone required)
+
+`argus-agent` is **not on PyPI or any other package index**, and this repository has
+published no release yet. What it does have is a release workflow
+(`.github/workflows/release.yml`) — **committed, and never executed** — that builds an
+sdist and a wheel for a `v*.*.*` tag and attaches both to a GitHub Release. The dependency
+string a consumer will use is therefore a tag-pinned VCS reference:
+
+```bash
+# INTERIM — resolve straight from this repository at a tag.
+pip install "argus-agent @ git+https://github.com/Inan15/Agent-Argus.git@v0.1.0"
+```
+
+> ⚠️ **This command does not resolve today.** Tag `v0.1.0` has **not been created or
+> pushed** — `git tag -l` is empty at this commit — so `pip` cannot find the ref and the
+> install fails. It begins working once an operator performs the prepared-but-not-executed
+> steps recorded in the story record (create and push the tag; the workflow does the rest).
+> Nobody has run this command against a real tag: treat it as the documented shape, not as
+> an exercised capability.
+
+In a `pyproject.toml` — same caveat, the tag must exist before this resolves:
+
+```toml
+dependencies = [
+    "argus-agent @ git+https://github.com/Inan15/Agent-Argus.git@v0.1.0",
+]
+```
+
+> ⚠️ Unresolvable until `v0.1.0` exists, for the same reason as above.
+
+**Authentication.** No credential is required **if and only if**
+`github.com/Inan15/Agent-Argus` is a public repository. If it is private, a consumer's CI
+needs a token with read access to it and must rewrite the URL to carry that token (for
+example `git+https://${TOKEN}@github.com/...`). ⚠️ **This repository's visibility was not
+measured when this line was written** — no network call was made from the working tree —
+so treat "public" as the thing to CHECK, not as a stated fact. Open the URL above: if it
+loads while signed out, no credential is needed.
+
+**This pin is INTERIM.** It resolves a git ref rather than an immutable index artifact,
+which means it depends on the repository staying reachable and the tag staying put (the
+release workflow refuses a tag move for exactly this reason). It moves to a package index
+under one named condition:
+
+> when `argus-agent` is claimed on PyPI **and** a PyPI Trusted Publisher (OIDC) is
+> configured for this repository — at which point the publish step is added to
+> `.github/workflows/release.yml` directly (trusted publishing cannot be used from inside
+> a *reusable* workflow) with `permissions: id-token: write` and **no** stored token, and
+> the pin above is replaced by a plain index install of the distribution name.
+
+Publishing to PyPI is deliberately **not** attempted by the current workflow: a released
+name+version on an index can never be replaced, which makes it an operator decision taken
+with credentials in hand.
+
+### What the distribution contains, and what needs the git repository
+
+MEASURED from the built wheel (`argus_agent-0.1.0-py3-none-any.whl`, 76 entries) and sdist
+(`argus_agent-0.1.0.tar.gz`, 75 files), not inferred: `[tool.flit.module] name = "argus"`
+packages **the `argus` Python package and nothing else**. The sdist additionally carries
+`pyproject.toml`, `README.md`, `LICENSE` and `PKG-INFO`.
+
+| Capability | From the installed distribution | Needs the git repository |
+|---|---|---|
+| `argus` / `argus-agent` / `repo-audit` console scripts | ✅ | |
+| `argus audit <repo>` — the full deterministic audit, verdict and exit-code contract | ✅ | |
+| Report generation (`--report-dir`) | ✅ | |
+| The RAM workflow framework — `audit/`, `phases/`, `adapters/`, `templates/` | ❌ **not packaged** — these are sibling top-level directories, not part of the `argus` module | ✅ |
+| `install.sh` / `install.ps1` (which copy the adapters into your assistant) | ❌ not packaged | ✅ |
+| The test suite and the defect cartridges under `tests/` | ❌ not packaged | ✅ |
+| Argus's own dogfood proof generator (`argus.dogfood.*`, `argus.precision.*`) | ❌ **imports, but does not load** — see the note below | ✅ |
+
+> **Measured limitation, stated rather than discovered later.** Measured on the built
+> wheel with this repository removed from `sys.path` and one clean subprocess per module:
+> **66 of the 71 shipped modules import**. **Five module files do not:**
+>
+> - `argus/precision/__init__.py`
+> - `argus/precision/replay_harness.py`
+> - `argus/dogfood/proof_types.py`
+> - `argus/dogfood/proof_render.py`
+> - `argus/dogfood/proof_run.py`
+>
+> All five fail with `ModuleNotFoundError: No module named '_registry'`, because
+> `argus/precision/replay_harness.py` imports the labelled-cartridge registry from
+> `tests/cartridges/`, which the distribution does not (and should not) contain — the other
+> four reach that one import transitively. These are Argus's *self-audit and
+> precision-measurement* tools, not consumer features; the entire `argus audit` path is
+> unaffected and was executed from the installed wheel. The same five files are pinned in
+> both directions by `TC-ArgusAgent-RELEASE-001-11`, so this list cannot drift from the
+> code. Tracked as `DF-9-2-A` in
+> `_bmad-output/design-artifacts/ArgusAgent/deferred-work.md`.
+
+### Clone-based installation (for the RAM framework and development)
 
 ```bash
 # Unix / macOS
@@ -37,7 +127,7 @@
 .\install.ps1
 ```
 
-Or via Python pip:
+Or, for an editable development install:
 
 ```bash
 pip install -e .

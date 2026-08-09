@@ -4,22 +4,22 @@
 
 ## Provenance
 
-- Commit descriptor (HEAD at generation): `be9d7449cf564bd8cc1e9a9000c04d78f7e0021c`
-- Source files (tracked `argus/`): **69**
-- Total physical LOC (build-cost proxy): **18276**
+- Commit descriptor (HEAD at generation): `7be90f7788c66d040a887b6b68f1358856961d4c`
+- Source files (tracked `argus/`): **71**
+- Total physical LOC (build-cost proxy): **18418**
 - NFR-SC1 scale envelope: soft ≤40 files / ≤15000 LOC; hard ≤60 / ≤25000.
 - Reused planner: `partition_repository` (Story 2.4) — no fork (AR7).
 
 ## Partition map (OI2 — full-repo, MULTIPLE bounded units)
 
 - **Unit count: 3**
-- **Recorded cut edges (recorded-NOT-analyzed, the 6.4 seam): 51**
+- **Recorded cut edges (recorded-NOT-analyzed, the 6.4 seam): 49**
 
 | # | partition_id (sha256, 12ch) | files | LOC | context_pressure | ≤hard ceiling |
 |---|---|---|---|---|---|
-| 1 | `2c0f52f60457` | 9 | 2871 | True | True |
-| 2 | `681c496d09ed` | 40 | 14529 | True | True |
-| 3 | `973f3f199d1c` | 20 | 876 | False | True |
+| 1 | `085854c90586` | 10 | 2993 | True | True |
+| 2 | `477ef77d7b65` | 21 | 1325 | False | True |
+| 3 | `bde14bbf3bcf` | 40 | 14100 | True | True |
 
 ## AC2 — every TARGETED unit clears the 20%-deep coverage floor
 
@@ -30,4 +30,3 @@ The 3.3 coverage floor is 1/5 (20% deep). Every unit above is a TARGETED audit u
 **Subject honesty (Story 8.5 / AC2).** The tree planned above is **this repository's own package** — Argus planning over Argus. It is a SELF-scoped plan, materially weaker evidence than a plan derived over an independent repository, and it is reportable only as such — never as independent corroboration. The `minions-dogfood-` filename prefix is a retained HISTORICAL identifier (an evidence path that moves is an evidence path that gets lost); the subject is whatever this section names, not what the filename suggests. The independent Story-7.2 run this generator once described is preserved verbatim at `minions-dogfood-proof-story-7-2-superseded.md`.
 
 **Honest V1 limitation — NO cross-partition SEAM analysis.** V1 does MULTI-UNIT auditing, NOT cross-partition SEAM analysis. A defect spanning a partition cut (caller in unit A, callee in unit B) is NOT analyzed by any seam auditor in V1. The ONLY V1 mitigation is the Story 6.4 `cross_partition` Prosecutor cut-edge pass (re-reads the recorded cut edges); the full seam auditor is reserved V2. So the proof's scope statement is honest about what cut-spanning defects it could and could not see (mirrors the 2.4 `PartitionPlan.seam_analysis = "v2-deferred"` provenance).
-

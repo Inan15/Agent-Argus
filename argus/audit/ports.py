@@ -1,7 +1,8 @@
 """THE single injectable LLM-dispatch seam — port Protocol + frozen DTOs (PURE).
 
 Drivers: ArgusAgent-AR7 (the LLM is reached ONLY via this ArgusAgent-owned port; never via
-``minions_core.api.* / services.api_app / app_factory / api_server``),
+a host product's api / app-factory / api-server modules — ArgusAgent imports no host
+package at all, RS-1/IN-2),
 ArgusAgent-NFR-D2 (the deep path is zero-token-testable — a ``FakeDispatch`` yields 0
 LLM tokens; importing this module pulls NO provider code, NO FastAPI),
 ArgusAgent-NFR-P2 (stack-agnostic claim interface — the port is the seam the

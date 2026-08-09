@@ -63,6 +63,7 @@ sys.path.insert(0, str(Path(__file__).resolve().parent / "cartridges"))
 from _cartridge import stage_cartridge  # noqa: E402
 from _registry import precision_gate_status  # noqa: E402
 
+import argus  # noqa: E402
 from argus.dogfood import proof_run as proof_run_module  # noqa: E402
 from argus.dogfood.partition_plan import build_full_repo_plan  # noqa: E402
 from argus.dogfood.proof_run import (  # noqa: E402
@@ -551,13 +552,22 @@ def test_red_first_gate_not_silently_flipped(dogfood_proof: DogfoodProofRun) -> 
     # Split on the EARLY marker: the affirmative-claim region is before it.
     head = status.split("EARLY")[0]
     assert "cleared" not in head, "the gate status must not affirmatively claim 'cleared'"
-    # The source module never passes protocol_cleared=True (a grep-style guard).
-    src = (_REPO_ROOT / "argus" / "dogfood" / "proof_run.py").read_text(
-        encoding="utf-8"
+    # No source module in the dogfood generator ever passes protocol_cleared=True (a
+    # grep-style guard). Story 9.2 / DF-8-5-D split the generator into three modules;
+    # scanning only proof_run.py would have left the renderer and the type contract
+    # outside the guard the moment the split landed — the blind-spot class AI-E8-2
+    # names. The enumeration is the whole dogfood package, so a NEW module is covered
+    # the moment it is added rather than when someone remembers to register it.
+    dogfood_modules = sorted(
+        p for p in (_REPO_ROOT / "argus" / "dogfood").glob("*.py")
     )
-    assert "protocol_cleared=True" not in src, (
-        "OI1: proof_run.py must NEVER pass protocol_cleared=True (no fabricated cleared gate)"
-    )
+    assert len(dogfood_modules) >= 4, f"only {len(dogfood_modules)} dogfood modules found"
+    for module in dogfood_modules:
+        src = module.read_text(encoding="utf-8")
+        assert "protocol_cleared=True" not in src, (
+            f"OI1: {module.name} must NEVER pass protocol_cleared=True "
+            "(no fabricated cleared gate)"
+        )
 
 
 def test_df_6_6_a_progress_note_and_human_adjudication_defer(dogfood_proof: DogfoodProofRun) -> None:
@@ -625,6 +635,13 @@ def test_declared_set_enumeration_and_file_size() -> None:
     generator = _REPO_ROOT / "argus" / "dogfood" / "proof_run.py"
     gen_src = generator.read_text(encoding="utf-8")
     this_src = Path(__file__).read_text(encoding="utf-8")
+    # Story 9.2 / DF-8-5-D: the generator is now three modules. Check EVERY module in
+    # the package against the ceiling, not just the one this test was written around —
+    # otherwise an extraction that relieves one file silently removes its siblings from
+    # the NFR-M1 guard.
+    for module in sorted((_REPO_ROOT / "argus" / "dogfood").glob("*.py")):
+        n_lines = len(module.read_text(encoding="utf-8").splitlines())
+        assert n_lines <= 1200, f"{module.name} is {n_lines} lines, over the 1200 limit"
     assert len(gen_src.splitlines()) <= 1200, "proof_run.py exceeds the 1200-line limit"
     assert len(this_src.splitlines()) <= 1200, "this test file exceeds the 1200-line limit"
     for driver in ("ArgusAgent-FR-29", "ArgusAgent-FR-17", "ArgusAgent-FR-30", "ArgusAgent-FR-21", "ArgusAgent-NFR-D1", "ArgusAgent-NFR-S1", "ArgusAgent-AR4"):
@@ -645,8 +662,13 @@ def test_dogfood_proof_result_is_typed(dogfood_proof: DogfoodProofRun) -> None:
     assert proof.commit_descriptor
     assert proof.grade == "demo-heuristic-only"
     assert proof.bundle_content_hash
-    # argus_version provenance is the pyproject version token.
-    assert DOGFOOD_ArgusAgent_VERSION == "1.43.0"
+    # argus_version provenance is the SINGLE ArgusAgent-owned constant `argus.__version__`
+    # (Story 9.2 / DF-8-5-A) — never a module literal. The pre-9.2 wording of this comment
+    # claimed "the pyproject version token" while the assertion pinned "1.43.0" against a
+    # pyproject that reads 0.1.0, so the comment documented a provenance the code did not
+    # have. Assert AGREEMENT with the constant rather than a second copy of its value: a
+    # literal here would re-introduce exactly the drift the fix removed.
+    assert DOGFOOD_ArgusAgent_VERSION == argus.__version__
 
 
 # ─────────────────────────────────────────────────────────────────────────────

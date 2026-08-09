@@ -33,7 +33,7 @@ the candidate ``AuditVerdict`` + the ``CoverageLedger`` + the findings + the 2.4
 ``ProsecutionResult``. It dispatches NO LLM. A richer LLM-driven adversarial challenge
 (an LLM prosecuting the verdict) is the documented FORWARD seam behind the 6.1
 ``LLMDispatchPort`` (a ``FakeDispatch`` for zero-token tests if any seam is wired) —
-NEVER a direct ``minions_core.providers`` import, NEVER the V1 default. This module
+NEVER a direct provider import of any kind, NEVER the V1 default. This module
 imports NO providers and NO FastAPI (the no-web-imports + no-LLM gates stay green).
 
 DN-PROMOTE — the advisory→verdict-eligible promotion authority (the central deliverable)

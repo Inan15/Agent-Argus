@@ -1,8 +1,9 @@
-"""Reproducible FULL-REPO Minions partition + budget-sizing plan generator (Story 7.1).
+"""Reproducible FULL-REPO partition + budget-sizing plan generator (Story 7.1).
 
 Verification area ArgusAgent-DOGFOOD (``TC-ArgusAgent-DOGFOOD-001-NN`` — this is the FIRST module
 in that area; the index starts at 01, locked here). Drivers: ArgusAgent-FR-3 (partition the
-repository into bounded audit units — the full-repo Minions map, OI2 multi-partition),
+repository into bounded audit units — the full-repo map of the scoped tree, OI2
+multi-partition),
 ArgusAgent-FR-21 (an operator budget ceiling — the empirically-sized ``$X`` sized to cover
 the full-repo plan, OI3 "no numeric default"), ArgusAgent-NFR-SC1 (V1 audit units ≤40 files/
 15k LOC soft; hard ceiling ≤60/25k), ArgusAgent-NFR-C1 (a baseline full audit costs a
@@ -223,14 +224,14 @@ def enumerate_minions_source_files(
     scope_prefix: str = "argus/",
     exclude_prefixes: tuple[str, ...] = ("argus/tests/",),
 ) -> tuple[str, ...]:
-    """Enumerate git-TRACKED Minions source files under *scope_prefix* (the impure read).
+    """Enumerate git-TRACKED source files under *scope_prefix* (the impure read).
 
     REUSES the 1.4 ``_SOURCE_SUFFIXES`` filter (the SAME filter
     ``load_repo_at_commit`` uses — no fork) over ``git ls-files -z`` (committed
     content, NUL-separated + unquoted so a non-ASCII path round-trips — the 1.4
-    precedent), scoped to *scope_prefix* and excluding *exclude_prefixes* (the ArgusAgent
-    sub-tree is untracked / self-audited elsewhere, so the dogfood plan targets the
-    Minions PLATFORM tree). Deterministic: the returned tuple is SORTED. A git failure
+    precedent), scoped to *scope_prefix* and excluding *exclude_prefixes*, so the planned
+    population is exactly the tree those two arguments name and never a wider one.
+    Deterministic: the returned tuple is SORTED. A git failure
     raises :class:`DogfoodPlanError` (AR10), never a bare ``CalledProcessError``.
     """
     root = Path(repo_root)
@@ -310,7 +311,7 @@ def derive_partition_plan(index: AstIndex, loc_by_file: dict[str, int]) -> Parti
     """REUSE the 2.4 planner over the in-memory index + LOC map (no fork; PURE).
 
     A thin, explicit reuse seam: the full-repo map is the 2.4 ``partition_repository``
-    over the WHOLE Minions platform index — NOT a forked partitioner, NOT a directory
+    over the WHOLE index of the scoped tree — NOT a forked partitioner, NOT a directory
     splitter, NOT a hand-typed map. Deterministic + byte-stable for the same content.
     """
     return partition_repository(index, loc_by_file=loc_by_file)
@@ -457,7 +458,7 @@ def build_full_repo_plan(
 ) -> FullRepoPlan:
     """Enumerate + read + derive the full-repo partition + budget plan (the impure shell).
 
-    Orchestrates: enumerate the tracked Minions source files → read them → build the 1.4
+    Orchestrates: enumerate the tracked source files under the scope → read them → build the 1.4
     AST index + the LOC map → REUSE the 2.4 planner → SIZE ``$X`` via the 3.1 accountant.
     Deterministic for the same tracked content (byte-stable — NFR-D1/P1). The AI-E4-2
     no-crash leg: an empty repo yields a plan with zero partitions + a total-safe
