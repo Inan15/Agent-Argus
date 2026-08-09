@@ -19,17 +19,39 @@ inputs:
     required: false
     default: "./argus-reports"
   strict:
-    description: "If 'true', fails the workflow if release readiness is NOT_READY_FOR_RELEASE or INSUFFICIENT_COVERAGE."
+    # DELIBERATELY advisory by default (Story 9.2 / AC10). Assumption A5 is UNSUPPORTED:
+    # after the FR16/FR4 amendment a first-time consumer is expected to land on exit `3`
+    # (INSUFFICIENT_COVERAGE), which already fails any gate configured to block. Flipping
+    # this default to "true" here would pre-empt a policy decision that belongs to the
+    # downstream integration (handoff H3), not to the action's author.
+    description: "If 'true', fails the workflow if the audit did not return exit 0 (i.e. NOT_READY_FOR_RELEASE, INSUFFICIENT_COVERAGE, or a typed audit failure)."
     required: false
     default: "false"
 
 outputs:
   verdict:
-    description: "Audit release readiness verdict token (RELEASE_READY, NOT_READY_FOR_RELEASE, INSUFFICIENT_COVERAGE)."
+    # The verdict tokens are ASSESSMENTS. AUDIT_FAILED is deliberately NOT one of them:
+    # it means no verdict was produced at all, which is a different kind of statement.
+    description: >-
+      Audit outcome token. One of the three verdict values the audit can assess —
+      RELEASE_READY (exit 0), NOT_READY_FOR_RELEASE (exit 2), INSUFFICIENT_COVERAGE
+      (exit 3) — or AUDIT_FAILED, which is NOT a verdict: it means the audit did not
+      complete and no assessment exists (exit 1, the AR10 typed-failure code, or any
+      future/unmapped exit code). A consumer must never read AUDIT_FAILED as a
+      ran-and-under-covered result.
     value: ${{ steps.run_audit.outputs.verdict }}
   exit-code:
-    description: "Exit code of the Argus audit (0=Pass, 2=Fail, 3=Insufficient Coverage)."
+    description: >-
+      Exit code of the Argus audit. The complete wire contract is
+      0=RELEASE_READY, 2=NOT_READY_FOR_RELEASE, 3=INSUFFICIENT_COVERAGE,
+      1=typed audit failure (no verdict produced — AR10). Any other value is
+      unmapped and is reported as AUDIT_FAILED, never as a verdict.
     value: ${{ steps.run_audit.outputs.exit_code }}
+  assessed:
+    # The single boolean a blocking gate should key on when it wants "did the tool
+    # actually assess this repository?" — separable from "what did it assess?".
+    description: "'true' if the audit produced a verdict (exit 0/2/3); 'false' if it did not (AUDIT_FAILED)."
+    value: ${{ steps.run_audit.outputs.assessed }}
 
 runs:
   using: "composite"
@@ -60,15 +82,47 @@ runs:
         set -e
         
         echo "exit_code=$EXIT_CODE" >> $GITHUB_OUTPUT
-        
-        if [ "$EXIT_CODE" -eq 0 ]; then
-          echo "verdict=RELEASE_READY" >> $GITHUB_OUTPUT
-        elif [ "$EXIT_CODE" -eq 2 ]; then
-          echo "verdict=NOT_READY_FOR_RELEASE" >> $GITHUB_OUTPUT
-        else
-          echo "verdict=INSUFFICIENT_COVERAGE" >> $GITHUB_OUTPUT
-        fi
-        
+
+        # ── THE COMPLETE EXIT-CODE MAP (Story 9.2 / AC10, ledger item DF-8-4-A) ──
+        # The wire contract is {0, 2, 3, 1, anything else}. Every arm is explicit and the
+        # catch-all maps to a FAILURE token, never to a verdict token.
+        #
+        # Before this change the map was `0 -> RELEASE_READY / 2 -> NOT_READY_FOR_RELEASE
+        # / else -> INSUFFICIENT_COVERAGE`, so exit 1 — the AR10 typed-failure code, which
+        # means NO VERDICT WAS PRODUCED — was republished as INSUFFICIENT_COVERAGE, a
+        # ran-and-under-covered ASSESSMENT. Under the amended canonical vocabulary
+        # INSUFFICIENT_COVERAGE is a not-assessed state, so a crash read to a consumer as
+        # a completed audit: an over-claim in exactly the direction Epic 8 exists to
+        # remove. An unmapped FUTURE exit code hit the same `else` and would have done
+        # the same thing, which is why the catch-all is a failure token and not a guess.
+        #
+        # `assessed` is published separately so a consuming workflow can distinguish
+        # "the audit ran and says X" from "the audit did not run" without string-matching.
+        case "$EXIT_CODE" in
+          0)
+            echo "verdict=RELEASE_READY" >> $GITHUB_OUTPUT
+            echo "assessed=true" >> $GITHUB_OUTPUT
+            ;;
+          2)
+            echo "verdict=NOT_READY_FOR_RELEASE" >> $GITHUB_OUTPUT
+            echo "assessed=true" >> $GITHUB_OUTPUT
+            ;;
+          3)
+            echo "verdict=INSUFFICIENT_COVERAGE" >> $GITHUB_OUTPUT
+            echo "assessed=true" >> $GITHUB_OUTPUT
+            ;;
+          1)
+            echo "verdict=AUDIT_FAILED" >> $GITHUB_OUTPUT
+            echo "assessed=false" >> $GITHUB_OUTPUT
+            echo "::error::Argus exited 1 (AR10 typed failure): the audit did not complete and NO verdict was produced. This is not an assessment of this repository."
+            ;;
+          *)
+            echo "verdict=AUDIT_FAILED" >> $GITHUB_OUTPUT
+            echo "assessed=false" >> $GITHUB_OUTPUT
+            echo "::error::Argus exited with the unmapped code $EXIT_CODE. No verdict is claimed for this run."
+            ;;
+        esac
+
         if [ "${{ inputs.strict }}" = "true" ] && [ "$EXIT_CODE" -ne 0 ]; then
           echo "❌ Argus Release Gate failed with exit code $EXIT_CODE"
           exit $EXIT_CODE

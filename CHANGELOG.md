@@ -5,19 +5,135 @@ are recorded here. Format follows [Keep a Changelog](https://keepachangelog.com/
 versioning intent is [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
 > **Honesty preamble — read this before you read a version number.**
-> `pyproject.toml` declares `version = "0.1.0"`, but `argus-agent` is **not tagged and not published to
-> any package index**, and there is no release workflow. **"Unreleased" below means exactly one thing:
-> *present on the default branch of the Agent-Argus repository*.** Nothing in this file may be read as
-> a claim that a distribution is installable from an index. Packaging and distribution are tracked
-> separately and are not part of the changes recorded here.
+> `argus-agent` is **still not published to any package index**, and no PyPI publication was attempted.
+> What changed with `0.1.0` is that a **release workflow now exists** (`.github/workflows/release.yml`):
+> on a `v*.*.*` tag it builds an sdist and a wheel and attaches both to a GitHub Release. The
+> distribution **will be resolvable by the VCS pin below — and by nothing else — once that tag is
+> created and pushed**:
+>
+> ```
+> pip install "argus-agent @ git+https://github.com/Inan15/Agent-Argus.git@v0.1.0"
+> ```
+>
+> ⚠️ **That command does not resolve today.** Tag `v0.1.0` has **not been created or pushed**
+> (`git tag -l` is empty at this commit), so `pip` cannot find the ref. The capability is *prepared*,
+> not *exercised* — nobody has run this install against a real tag. Creating and pushing the tag is
+> an operator step this repository deliberately did not take.
+>
+> **What is proven and what is not, stated separately.** The build was proven **locally**: `python -m
+> build` produced `argus_agent-0.1.0.tar.gz` and `argus_agent-0.1.0-py3-none-any.whl`, the wheel was
+> installed into a fresh virtualenv with the repository absent from `sys.path`, and `argus --help` and
+> `argus audit <fixture-repo>` both ran to completion there. The **workflow itself is committed and has
+> never executed** — it was added on a feature branch and no tag exists in this repository yet — so
+> there is no Actions run id and no release URL to cite. Nothing in this file states or implies that a
+> release has been published; when one is, this paragraph gets a URL.
+>
+> **The VCS pin is INTERIM.** Its exit condition is named in
+> [Resolving `argus-agent`](#resolving-argus-agent) below, so "interim" has an end rather than becoming
+> permanent by silence.
 >
 > This is an assurance tool. If it published a release note asserting a release that did not happen, it
 > would be committing — about itself — the class of unsupported claim it exists to detect in other
-> people's repositories. Hence the heading below.
+> people's repositories. That is why the two sentences above are separate ones.
 
 ---
 
 ## Unreleased
+
+*(Nothing yet since `0.1.0`.)*
+
+---
+
+## 0.1.0 — 2026-08-08
+
+**Version note.** `0.1.0` is shipped **un-bumped**: the version this repository has always declared is
+the version being released, so `pyproject.toml`, `argus.__version__` and every in-package reference now
+state one value reachable from one source (see [Version](#version-one-value-one-source) below). The
+maturity marker stays `__status__ = "experimental"`: the public **Python API** is not stable across
+versions. The **CLI wire contract** — exit codes and the stdout summary line — is separately frozen and
+is unchanged by this release.
+
+### Resolving `argus-agent`
+
+| | |
+|---|---|
+| **Dependency string** | `argus-agent @ git+https://github.com/Inan15/Agent-Argus.git@v0.1.0` — ⚠️ **does not resolve yet: tag `v0.1.0` has not been created or pushed** (`git tag -l` is empty at this commit). Prepared, not exercised. |
+| **Index** | none — `argus-agent` is on no package index |
+| **Authentication** | **none required if and only if the repository is public.** ⚠️ Visibility was NOT measured when this line was written; open the URL signed out to check. If it is private, the consuming CI needs a read token and must carry it in the URL. |
+| **Status** | **INTERIM.** A git ref is not an immutable index artifact: it depends on the repository staying reachable and the tag staying put. |
+| **Exit condition** | When `argus-agent` is claimed on PyPI **and** a PyPI Trusted Publisher (OIDC) is configured for this repository, the publish step is added directly to `.github/workflows/release.yml` — trusted publishing cannot be used from inside a *reusable* workflow — with `permissions: id-token: write` and **no stored token**, and the pin above is replaced by a plain index install of the distribution name. |
+
+PyPI publication is deliberately **not** attempted here: a released name+version on an index can never
+be replaced, which makes it an operator decision taken with credentials in hand, not a change a release
+automation may make on its own.
+
+**Downstream shape (stated, not executed here).** A consumer that wants Argus as an optional capability
+should declare it as an **extra**, never as a base dependency — e.g. `yourpkg[argus]` resolving to the
+string above. Making that change in a consumer's repository is out of scope for this repository.
+
+### Version: one value, one source
+
+Before this release the package stated its own version **three times and the three did not agree**:
+`pyproject.toml` said `0.1.0`, `argus.__version__` said `0.1.0`, and
+`argus.dogfood.proof_run.DOGFOOD_ArgusAgent_VERSION` said `1.43.0` — and the third one was written into
+the **signed, content-hashed evidence bundle**, so one persisted `.argus/state/<hash>.json` asserted two
+different versions of the same package on its two levels (envelope `0.1.0`, payload `1.43.0`).
+
+`DOGFOOD_ArgusAgent_VERSION` is now sourced from `argus.__version__`. **Consumer impact: the content
+hash of the evidence bundle changes**, because `argus_version` is part of the bundle's hashed payload
+and the bundle is content-addressed by that hash. This affects the evidence bundle only: for every other
+artifact `argus_version` is an *envelope* field and the content hash covers the *payload* alone, so those
+files' bytes change but their hashes and filenames do not.
+
+### Behaviour: the composite action distinguishes a crash from an assessment
+
+`action.yml` mapped exit `0 → RELEASE_READY`, `2 → NOT_READY_FOR_RELEASE`, and **everything else** to
+`INSUFFICIENT_COVERAGE`. Exit `1` is the typed-failure code meaning *no verdict was produced at all*, so
+a crashed audit was being republished as a *ran-and-under-covered* result — an assessment the tool never
+made. The map is now explicit over the complete space:
+
+| exit code | `verdict` output | `assessed` output |
+|---|---|---|
+| `0` | `RELEASE_READY` | `true` |
+| `2` | `NOT_READY_FOR_RELEASE` | `true` |
+| `3` | `INSUFFICIENT_COVERAGE` | `true` |
+| `1` | `AUDIT_FAILED` *(not a verdict)* | `false` |
+| anything else | `AUDIT_FAILED` *(not a verdict)* | `false` |
+
+A new `assessed` output lets a gate ask *"did the tool assess this repository at all?"* without
+string-matching. **The exit-code wire contract itself is unchanged** — no `0`/`2`/`3`/`1` value moved;
+what changed is how the action *labels* them. `strict` remains `"false"` by default: after the FR16/FR4
+amendment a first-time consumer is expected to land on exit `3`, which already fails any gate configured
+to block, and flipping the default here would pre-empt a policy decision that belongs downstream.
+
+### Packaging: what the distribution contains
+
+`[tool.flit.module] name = "argus"` packages the `argus` Python package and nothing else. Measured on the
+built artifacts: the wheel holds 71 modules plus metadata; the sdist adds `pyproject.toml`, `README.md`,
+`LICENSE` and `PKG-INFO`. The RAM workflow directories (`audit/`, `phases/`, `adapters/`, `templates/`)
+and the installer scripts are **repository-only** — see README.md for the full capability split.
+
+Measured on the built wheel with this repository removed from `sys.path`, one clean subprocess per module:
+**66 of the 71 shipped modules import.** Five module files do not — `argus/precision/__init__.py`,
+`argus/precision/replay_harness.py`, `argus/dogfood/proof_types.py`, `argus/dogfood/proof_render.py` and
+`argus/dogfood/proof_run.py` — because the precision harness imports its labelled-cartridge registry from
+`tests/`, which is not shipped, and the other four reach that import transitively. Those are Argus's own
+self-audit tools; the entire `argus audit` path is unaffected and was executed from the installed wheel.
+Tracked as `DF-9-2-A`.
+
+### No assurance claim is made by this release
+
+Argus's flagship dogfood run is a **self-audit** — Argus auditing Argus. It is materially weaker evidence
+than an independent-repository run and is **never** independent corroboration of the tool's detection
+ability. The ≥80%-precision externalization gate remains **PROVISIONAL** and is **not** cleared; clearing
+it requires a human TP/FP adjudication that has not taken place. No statement in this release — here, in
+the README, in `action.yml` or in the release workflow — should be read as a claim that Argus has been
+externally validated.
+
+### The FR16/FR4 verdict-contract amendment
+
+The sections from here to the end are the consumer contract for this release. They are the substance of
+`0.1.0`; everything above states how to resolve it and what the packaging does and does not contain.
 
 The FR16/FR4 **verdict-contract amendment**: *no block without a finding.* Before this change ArgusAgent
 could report a repository as `NOT_READY_FOR_RELEASE` when it had found **nothing wrong** — the coverage

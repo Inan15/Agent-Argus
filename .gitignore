@@ -19,6 +19,12 @@ ENV/
 .argus/
 _bmad-output/reports/
 
+# Build artifacts (Story 9.2 — the release workflow builds these into ./dist and the
+# GitHub Release is where they are published; they are never committed).
+dist/
+build/
+*.egg-info/
+
 # IDE / Tooling
 .agent/
 .claude/

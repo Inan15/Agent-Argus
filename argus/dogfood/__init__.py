@@ -1,12 +1,13 @@
 """ArgusAgent dogfood-preparation tooling (Story 7.1 — Epic-7 capstone PLAN/sizing).
 
-This sub-package holds the REPRODUCIBLE generators that PREPARE the Minions dogfood
-proof run (Story 7.2 EXECUTES it). Story 7.1 delivers the PLAN + the sizing only —
+This sub-package holds the REPRODUCIBLE generators that PREPARE the dogfood
+proof run (Story 7.2 EXECUTES it; the tree it plans and audits is whatever the
+caller's ``scope_prefix`` names — today, by default, this package itself). Story 7.1 delivers the PLAN + the sizing only —
 it does NOT run the whole-repo audit, build the evidence bundle, or reproduce the
 signature demo (those are 7.2).
 
 Drivers: ArgusAgent-FR-3 (partition the repo into bounded audit units — the full-repo
-Minions map), ArgusAgent-FR-21 (operator budget ceiling — the empirically-sized ``$X``),
+map of the scoped tree), ArgusAgent-FR-21 (operator budget ceiling — the empirically-sized ``$X``),
 ArgusAgent-NFR-SC1 (≤40-file/15k-LOC scale envelope), ArgusAgent-NFR-C1 (baseline-cost report),
 ArgusAgent-NFR-D1/P1 (the plan is deterministic + byte-reproducible), ArgusAgent-NFR-S1 (no
 source/secret bytes in the plan — only paths + counts + credits), ArgusAgent-AR4 (int

@@ -21,8 +21,8 @@ Chain contract (NFR-A1)
 -----------------------
 Each envelope's ``prev_hash`` is the prior envelope's ``content_hash``; the chain
 head uses the fixed genesis sentinel :data:`GENESIS_PREV_HASH` (``"0" * 64``).
-This mirrors the Minions hash-chained ledger conceptually, but the ArgusAgent envelope
-is self-contained — it does NOT import or fork ``minions_core.governance.ledger``.
+This mirrors a hash-chained governance ledger conceptually, but the ArgusAgent envelope
+is self-contained — it imports and forks no external ledger implementation.
 
 Additive-only contract (NFR-M2)
 -------------------------------
