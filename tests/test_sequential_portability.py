@@ -740,3 +740,66 @@ def test_no_argus_module_uses_the_host_normalizing_fnmatch() -> None:
         "host-case-normalizing path matching reintroduced (NFR-P1) — use "
         "fnmatch.fnmatchcase: " + "; ".join(offenders)
     )
+
+
+# ─────────────────────────────────────────────────────────────────────────────
+# NFR-P1 — a non-UTF-8 host locale must not change the recorded bytes (F-21)
+# ─────────────────────────────────────────────────────────────────────────────
+#
+# On POSIX under LC_ALL=C with PYTHONUTF8=0, Python decodes filenames with the ASCII
+# codec plus surrogateescape, so `café` arrives as 'caf\udcc3\udca9'. Those strings reach
+# every Recording locator, and `str.encode("utf-8")` refuses lone surrogates — so the
+# audit CRASHED (PipelineError -> exit 1 -> AUDIT_FAILED) on any repository containing a
+# non-ASCII filename, on exactly those hosts. AR10 forbids a crash; NFR-P1 requires the
+# same bytes everywhere.
+#
+# The cross-locale legs above already catch this end-to-end, but only on a POSIX runner —
+# Windows takes filenames from the wide APIs and never produces surrogates, so a
+# developer machine stays green while CI is red. That asymmetry is why this went unseen.
+# These tests assert the property directly from simulated inputs, so the guard fires on
+# EVERY host.
+
+
+def _as_c_locale(text: str) -> str:
+    """The str a C-locale POSIX host yields for *text*'s UTF-8 bytes on disk."""
+    return text.encode("utf-8").decode("ascii", "surrogateescape")
+
+
+def test_surrogate_path_serializes_identically_to_utf8_host() -> None:
+    """The two host views of one filename must produce identical canonical bytes."""
+    from argus.store import canonical
+
+    for name in ("café/x.py", "тесты/test_a.py", "ünïcode/mixed_日本.py"):
+        native = _as_c_locale(name)
+        assert native != name, "precondition: the C-locale view must carry surrogates"
+        assert canonical.dumps_bytes({"file_path": native}) == canonical.dumps_bytes(
+            {"file_path": name}
+        ), f"host locale changed the recorded bytes for {name!r} (NFR-P1)"
+
+
+def test_surrogate_path_does_not_raise_on_encode() -> None:
+    """A surrogate-bearing path must serialize, not crash (AR10)."""
+    from argus.store import canonical
+
+    payload = {"locators": [{"file_path": _as_c_locale("café/x.py"), "start_line": 1}]}
+    canonical.dumps_bytes(payload)  # must not raise UnicodeEncodeError
+
+
+def test_undecodable_byte_degrades_deterministically() -> None:
+    """A byte that is not valid UTF-8 becomes U+FFFD, not an exception (errors=replace)."""
+    from argus.store import canonical
+
+    undecodable = b"x\xff.py".decode("ascii", "surrogateescape")
+    assert canonical.dumps_bytes({"p": undecodable}) == b'{"p":"x\xef\xbf\xbd.py"}\n'
+
+
+def test_payloads_without_surrogates_are_untouched() -> None:
+    """The repair must be a no-op for every string without surrogates (byte-identity)."""
+    import json
+
+    from argus.store import canonical
+
+    for value in ("plain.py", "café/x.py", "тесты/y.py", ""):
+        assert canonical.dumps({"v": value}) == (
+            '{"v":' + json.dumps(value, ensure_ascii=False) + "}\n"
+        )
