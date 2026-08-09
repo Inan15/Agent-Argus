@@ -130,6 +130,7 @@ pass runs over the ASSESSED entries only (consistent with ``_detect_per_file``).
 from __future__ import annotations
 
 from pathlib import Path
+from typing import Any
 
 from pydantic import ValidationError
 
@@ -164,7 +165,12 @@ from argus.index.partitioner import (
     compute_loc_by_file,
     partition_repository,
 )
-from argus.intake.repo_loader import RepoIntake, RepoIntakeError, load_repo_at_commit
+from argus.intake.repo_loader import (
+    RepoIntake,
+    RepoIntakeError,
+    load_repo_at_commit,
+    to_native_fs_path,
+)
 from argus.intake.source_state import (
     SourceState,
     SourceStateError,
@@ -998,6 +1004,41 @@ def _list_locators(reader: ApaaStoreReader, subdir: str) -> tuple[str, ...]:
     )
 
 
+def _to_native_payload(payload: Any) -> Any:
+    """Re-express a payload read back from ``.argus/`` in the host's NATIVE string form.
+
+    THE RESUME HALF of the host-locale boundary, and the exact mirror of the repair
+    ``store.canonical.canonicalize`` applies to every string on the way OUT.
+
+    The in-memory convention everywhere else in this module is the OS-NATIVE path
+    string: a fresh run gets its file set from ``resolve_source_state`` (an ``os.walk``,
+    which inherits the host's filename decoding) and ``load_repo_at_commit`` now matches
+    it. Only the serializer converts to the portable recorded form, so ``.argus/`` bytes
+    are identical on every host (NFR-P1).
+
+    Resume is the ONE place that flow runs backwards: prior paths re-enter memory in
+    their RECORDED form. On POSIX under ``LC_ALL=C`` those two forms differ — the ledger
+    holds ``'src/caf\\xe9_calc.py'`` while the current index holds
+    ``'src/caf\\udcc3\\udca9_calc.py'`` — so ``build_resume_plan`` found every
+    carried-forward path "absent from the current index" and refused the resume as a
+    diverged tree (a plausible-looking, entirely wrong diagnosis: nothing had diverged).
+
+    Converting the whole payload tree rather than named path fields is deliberate. It
+    mirrors ``canonicalize``'s own blanket walk, so the two cannot drift apart as models
+    gain fields, and it cannot silently miss a nested locator. Non-path strings round
+    trip exactly (the serializer restores them on write), so the persisted bytes are
+    unchanged and the AC2 byte-identity keystone holds. On a UTF-8 host every conversion
+    is an identity.
+    """
+    if isinstance(payload, str):
+        return to_native_fs_path(payload)
+    if isinstance(payload, dict):
+        return {key: _to_native_payload(value) for key, value in payload.items()}
+    if isinstance(payload, list):
+        return [_to_native_payload(item) for item in payload]
+    return payload
+
+
 def _read_prior_state(
     reader: ApaaStoreReader,
 ) -> tuple[CoverageLedger, HaltReport, list[Recording]]:
@@ -1029,12 +1070,12 @@ def _read_prior_state(
         producer = envelope.producer
         payload = envelope.payload
         if producer == _STATE_PRODUCER and isinstance(payload.get("ledger"), dict):
-            candidate = CoverageLedger.model_validate(payload["ledger"])
+            candidate = CoverageLedger.model_validate(_to_native_payload(payload["ledger"]))
             if candidate.deep_count() > best_deep:
                 best_deep = candidate.deep_count()
                 prior_ledger = candidate
         elif producer == _HALT_REPORT_PRODUCER:
-            candidate_report = HaltReport.model_validate(payload)
+            candidate_report = HaltReport.model_validate(_to_native_payload(payload))
             if candidate_report.assessed_count > best_assessed:
                 best_assessed = candidate_report.assessed_count
                 prior_halt_report = candidate_report
@@ -1049,7 +1090,7 @@ def _read_prior_state(
     for locator in _list_locators(reader, "findings"):
         envelope = reader.read_envelope(locator)  # re-verifies content_hash
         if envelope.producer == _FINDING_PRODUCER:
-            findings.append(Recording.model_validate(envelope.payload))
+            findings.append(Recording.model_validate(_to_native_payload(envelope.payload)))
     return prior_ledger, prior_halt_report, findings
 
 
