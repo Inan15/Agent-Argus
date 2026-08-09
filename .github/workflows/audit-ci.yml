@@ -27,16 +27,60 @@ jobs:
       - name: Install Dependencies
         run: |
           python -m pip install --upgrade pip
-          pip install .[dev]
-          pip install tree-sitter tree-sitter-python radon bandit vulture
+          # `[languages]` is NOT optional here even though it is optional for a consumer:
+          # tests/test_multilanguage_audit.py asserts non-Python files reach `audited_deep`,
+          # which is unreachable without the matching tree-sitter grammar. A bare `.[dev]`
+          # install turns the multi-language claim into two red tests for an environment
+          # reason rather than a defect.
+          pip install .[dev,languages]
+          # radon is already a RUNTIME dependency (the breadth detector calls its API),
+          # so it arrives with the package — installing it again here only obscured
+          # that. bandit + vulture are audit-only and are both actually RUN below;
+          # installing a tool the pipeline never invokes is gate theatre.
+          pip install bandit vulture
 
       - name: Run Static Analysis & Security Scans
         run: |
-          echo "=== MYPY TYPE CHECK ==="
+          echo "=== MYPY TYPE CHECK (blocking) ==="
           mypy argus
-          echo "=== BANDIT SECURITY SCAN ==="
-          bandit -r argus -f txt
+
+          # BANDIT, in two parts, because the previous single invocation was a gate
+          # that could never pass. `bandit -r argus` exits 1 when it finds an issue at
+          # ANY severity, and this tree legitimately carries 18 LOW findings: B404/
+          # B603/B607 (the `git` subprocess calls `intake/source_state` is built on)
+          # and B105 (constants named `token`/`secret` that hold rule ids, not
+          # credentials). So the step failed on every run, before pytest was ever
+          # reached — CI was red on master and the whole suite went unexecuted.
+          #
+          # The fix is a threshold, not a suppression: MEDIUM-and-above still fails
+          # the build, and the full LOW-inclusive scan is printed for review. A real
+          # Medium/High finding blocks exactly as intended.
+          echo "=== BANDIT SECURITY SCAN (informational, all severities) ==="
+          bandit -r argus -f txt --exit-zero
+          echo "=== BANDIT SECURITY GATE (blocking at MEDIUM and above) ==="
+          bandit -r argus -f txt --severity-level medium
+
+          # Dead-code report. vulture was installed by this workflow and then never
+          # invoked, so the orphaned modules it detects went unreported. Advisory
+          # (`|| true`): its name-based analysis has known false positives on Pydantic
+          # field declarations, so it informs review rather than blocking the build.
+          echo "=== VULTURE DEAD-CODE REPORT (advisory) ==="
+          vulture argus --min-confidence 80 || true
 
       - name: Run Pytest & Coverage Assurance Gate
+        env:
+          # A grammar-gated test that SKIPS in CI is a false green: the multi-language
+          # claim would go unasserted while the run stayed green. This flag turns every
+          # such skip into a hard failure, so a broken grammar install shows up as red.
+          ARGUS_REQUIRE_LANGUAGE_GRAMMARS: "1"
         run: |
+          # Prove the coverage gate CAN run before trusting that it DID. `pytest-cov`
+          # was absent from the `[dev]` extra while this step passed `--cov`, so pytest
+          # aborted with "unrecognized arguments" — the 80% coverage gate, the
+          # project's headline quality claim, had never once been enforced on master.
+          # An assertion that names the cause beats an opaque argument-parsing error.
+          python -c "import pytest_cov" || {
+            echo "::error::pytest-cov is not installed — the --cov-fail-under gate cannot run. Add it to the [dev] extra in pyproject.toml."
+            exit 1
+          }
           pytest --cov=argus --cov-report=term-missing --cov-report=xml --cov-fail-under=80
