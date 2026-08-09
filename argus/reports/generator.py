@@ -38,6 +38,78 @@ __all__ = [
 _MAX_LISTED_CRITICAL_BLOCKERS = 20
 
 
+# ── The finding-shape adapter (the ONE place a finding row is read) ───────────
+#
+# The pipeline hands these reports ``Recording.model_dump()`` rows. That shape has
+# ``rule_id`` + a ``locators`` LIST — it has NO ``detector_id``, no top-level
+# ``file_path``/``line_number`` and no ``snippet``. Reading those absent keys is not
+# a cosmetic slip: ``render_security_review_report`` filtered on ``detector_id``,
+# which no real row carries, so EVERY secret finding was dropped and the report
+# affirmatively stated "no hardcoded credentials detected" on a repository where the
+# scanner had just written a ``hardcoded_secret`` row to ``.argus/findings/``. A
+# false negative on the exact claim this tool exists to make.
+#
+# The legacy FLAT shape is still accepted, because callers and fixtures construct it
+# directly. Both shapes now go through these three readers, so a future divergence
+# has one place to be fixed rather than four call sites to be kept in sync.
+
+
+def _finding_rule_id(finding: dict[str, object]) -> str:
+    """The rule/detector provenance id, from either finding shape."""
+    return str(finding.get("rule_id") or finding.get("detector_id") or "")
+
+
+def _finding_location(finding: dict[str, object]) -> tuple[str, int | None]:
+    """The (file_path, line) of a finding, from either shape.
+
+    Prefers the real ``locators[0]`` (FR13 guarantees at least one locator on a
+    minted ``Recording``); falls back to the flat ``file_path``/``line_number``.
+    """
+    locators = finding.get("locators")
+    if isinstance(locators, (list, tuple)) and locators:
+        first = locators[0]
+        if isinstance(first, dict):
+            path = str(first.get("file_path", ""))
+            start = first.get("start_line")
+            return path, start if isinstance(start, int) and start > 0 else None
+    path = str(finding.get("file_path", ""))
+    raw_line = finding.get("line_number")
+    line = (
+        int(raw_line)
+        if isinstance(raw_line, (int, str)) and str(raw_line).isdigit()
+        else None
+    )
+    return path, line
+
+
+def _finding_ast_span(finding: dict[str, object]) -> str:
+    """The first locator's ``ast_span`` (the self-describing detail), or ``""``."""
+    locators = finding.get("locators")
+    if isinstance(locators, (list, tuple)) and locators:
+        first = locators[0]
+        if isinstance(first, dict):
+            span = first.get("ast_span")
+            if isinstance(span, str) and span:
+                return span
+    return ""
+
+
+def _finding_masked_value(finding: dict[str, object]) -> str:
+    """A display cell for the matched value that NEVER reconstructs a secret.
+
+    A real ``Recording`` carries NO value at all: ``SecretScanDetector`` discards it
+    in the same pure step that computes the mask (NFR-S2 — the field does not exist,
+    which is the structural redaction guarantee). So the honest cell for a real row
+    is a fixed mask plus a statement that the value was never retained — NOT a
+    guess like "High Entropy Token", which implies the tool is holding something it
+    deliberately threw away. A legacy row that DOES carry a snippet is masked.
+    """
+    snippet = finding.get("snippet") or finding.get("matched_string")
+    if isinstance(snippet, str) and snippet:
+        return mask_secret(snippet)
+    return "**** (value discarded at detection — NFR-S2)"
+
+
 def _render_test_dilution_hint(
     verdict: AuditVerdict, ledger: CoverageLedger, ast_index: object | None = None
 ) -> list[str]:
@@ -479,8 +551,11 @@ def render_security_review_report(
     findings: list[dict[str, object]],
 ) -> str:
     """Render the `security-review.md` end-user security report."""
-    secret_findings = [f for f in findings if str(f.get("detector_id", "")) in ("secret_scan", "hardcoded_secret")]
-    
+    secret_findings = [
+        f for f in findings
+        if _finding_rule_id(f) in ("secret_scan", "hardcoded_secret")
+    ]
+
     lines: list[str] = []
     lines.append("# 🛡️ Security Review Report")
     lines.append("")
@@ -499,16 +574,12 @@ def render_security_review_report(
     headers = ["Rule ID", "Location", "Masked Pattern / Context", "Severity"]
     rows: list[list[str]] = []
     for f in secret_findings[:100]:  # Cap table view at 100 entries for readability
-        rule_id = str(f.get("rule_id", "hardcoded_secret"))
-        file_path = str(f.get("file_path", ""))
-        line_no_val = f.get("line_number")
-        line_no_int = int(line_no_val) if isinstance(line_no_val, (int, str)) and str(line_no_val).isdigit() else None
+        rule_id = _finding_rule_id(f) or "hardcoded_secret"
+        file_path, line_no_int = _finding_location(f)
         locator = format_locator_link(file_path, line_no_int)
-        
-        snippet = str(f.get("snippet", f.get("matched_string", "")))
-        masked_snippet = mask_secret(snippet) if snippet else "High Entropy Token"
+        masked_snippet = _finding_masked_value(f)
         severity = "BLOCKING" if f.get("depth_supported") is not None else "Advisory"
-        
+
         rows.append([f"`{rule_id}`", locator, f"`{masked_snippet}`", severity])
 
     lines.append(render_markdown_table(headers, rows))
@@ -530,9 +601,9 @@ def render_architecture_review_report(
     """Render the `architecture-review.md` end-user architecture & modularity report."""
     arch_findings = [
         f for f in findings
-        if str(f.get("detector_id", "")) in ("orphan_code", "cross_partition") or str(f.get("rule_id", "")) in ("orphan_code", "cross_partition")
+        if _finding_rule_id(f) in ("orphan_code", "cross_partition")
     ]
-    
+
     lines: list[str] = []
     lines.append("# Architecture & Modularity Review Report")
     lines.append("")
@@ -549,12 +620,13 @@ def render_architecture_review_report(
     headers = ["Finding Class", "Location", "Details"]
     rows: list[list[str]] = []
     for f in arch_findings[:100]:
-        rule_id = str(f.get("rule_id", f.get("detector_id", "architecture_finding")))
-        file_path = str(f.get("file_path", ""))
-        line_no_val = f.get("line_number")
-        line_no_int = int(line_no_val) if isinstance(line_no_val, (int, str)) and str(line_no_val).isdigit() else None
+        rule_id = _finding_rule_id(f) or "architecture_finding"
+        file_path, line_no_int = _finding_location(f)
         locator = format_locator_link(file_path, line_no_int)
-        details = str(f.get("message", "Architectural boundary/reference finding"))
+        # A real Recording carries no free-text `message`; its self-describing detail
+        # is the locator's `ast_span` (the orphaned symbol, or the cross-partition
+        # seam descriptor). Fall back to the legacy `message`, then to a fixed label.
+        details = str(f.get("message") or _finding_ast_span(f) or "Architectural boundary/reference finding")
         rows.append([f"`{rule_id}`", locator, details])
 
     lines.append(render_markdown_table(headers, rows))

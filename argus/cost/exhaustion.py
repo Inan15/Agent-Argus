@@ -43,10 +43,16 @@ folding into the SAME ``_coerce_breach`` decision — NO new authority.
 Reuse BY IMPORT, never fork (AR7 / §3.3)
 ----------------------------------------
 The breach decision is the 3-1 ``budget_governor._coerce_breach`` (which itself
-reuses the Minions ``BudgetGuardrails`` ``>=``-is-a-breach semantic — the exact
+delegates to the VENDORED ``BudgetGuardrails`` ``>=``-is-a-breach semantic — the exact
 at-ceiling boundary ``total == ceiling`` is a BREACH). This module maps a
 *projected cumulative total* onto the SAME comparison — no second budget authority,
 no parallel re-derived comparison.
+
+The "never fork" claim in this heading applies WITHIN ArgusAgent and still holds: this
+module does not re-derive the comparison, it calls ``_coerce_breach``. It no longer
+holds ACROSS products — the guardrails module was vendored into ``argus/shared/`` by
+the repo separation, so the shared-upstream premise is gone. See
+``budget_governor._coerce_breach`` for the full status correction.
 
 Story 3.3 — INSUFFICIENT_COVERAGE floor SEMANTICS under exhaustion (FR16/FR22)
 -----------------------------------------------------------------------------

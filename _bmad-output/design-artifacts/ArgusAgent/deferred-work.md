@@ -1322,3 +1322,79 @@ item inside the story file and is being fixed in this story, not deferred.
     DF-9-2-A/B/C do.
   - category: security-hardening
   - severity: 🟢
+
+## Deferred from: repository audit (2026-08-09)
+
+- **DF-AUD-APAA-C** — A release status was asserted over a gate that had never executed.
+  `sprint-change-proposal-2026-07-28.md:63` records *"Upgraded from NEEDS TARGETED REWORK to
+  READY FOR RELEASE!"*, evidenced by a LOCAL pytest run (`:55`, "916 PASSED"). Item 6 of that
+  same proposal CREATED `.github/workflows/audit-ci.yml`; its only run on `master`
+  (`30774175196`) is `failure`, dying at the `bandit` step in 40s — before pytest was ever
+  reached — because `bandit -r argus` exits 1 on any severity and this tree carries 18 benign
+  Low findings. A second, independent break: `pytest --cov` was invoked while `pytest-cov` was
+  absent from the `[dev]` extra, so the `--cov-fail-under=80` gate could not run either. Both
+  were repaired 2026-08-09 and a clean-venv reproduction of every step passes on 3.12; the
+  repair is NOT the deferred item. Close = adopt the Story 10.1 evidence standard: a release
+  status cites an executed gate (CI run id) or is recorded NOT ESTABLISHED, and the 2026-07-28
+  record is corrected in place, dated and reasoned (§3.4 evidence immutability — never a
+  silent rewrite).
+  - id: DF-AUD-APAA-C
+  - owner: Delivery Orchestrator
+  - target_story: 10-1-release-status-must-cite-evidence
+  - category: process
+  - severity: 🟠
+
+- **DF-AUD-APAA-D** — Multi-language AST grounding shipped in V1 while every specification
+  still designates it V2, and its determinism provenance is wrong for non-Python repos. The
+  capability entered via `sprint-change-proposal-2026-07-28.md:18` (*"user intent requested…
+  multi-language auditing capability"*) with no story and no PRD/architecture amendment; PRD
+  L23/L180 and architecture L220/L237 were never updated. Consequences: (a) the V2 roadmap
+  double-counts delivered work; (b) `index/ast_index.py:311` records ONE `grammar_version`
+  resolved from `tree-sitter-python` for a 10-language index, so a Go/Rust/JS grammar change
+  would not move the R3 cache key — the identical silent-cache-staleness failure mode
+  DF-5-1-A already flags for `prompt_template_version`, and the architecture's R3 key
+  (L77-78, L201) was DESIGNED for a single grammar, making this a design change not a defect
+  fix; (c) the `[languages]` extra is documented in neither README nor CHANGELOG, so a
+  consumer cannot discover it. Drift direction is an UNDERSELL — no false capability claim
+  reached a consumer. Close = Story 10.2: amend PRD + architecture (incl. R3), make
+  provenance per-grammar BEFORE the Epic-5 store is wired (free now, needs a
+  `CACHE_KEY_SCHEMA_VERSION` bump and migration later), and document the extra.
+  - id: DF-AUD-APAA-D
+  - owner: Engineering Lead
+  - target_story: 10-2-multi-language-grounding-is-v1-in-the-specs
+  - category: process
+  - severity: 🟡
+
+- **DF-AUD-APAA-E** — Four CLI flags are accepted by the shipped parser and specified
+  nowhere. `--passes`, `--skip-pass`, `--ignore-path`, `--ignore-pattern` have ZERO occurrences
+  across epics, stories, PRD, addendum, both prior change proposals, CHANGELOG and README,
+  while FR30 and architecture L226 specify four parameters and Story 1.7 declares the flag
+  names LOCKED. They entered in the root commit `084c6a7` (the 426-file separation seed) and
+  `b05fa4c`, so no gate ever saw them. They were also entirely INERT until 2026-08-09 — every
+  production call site dropped the `request` argument — so no consumer can depend on their
+  behaviour and neither blessing nor removal is a behavioural break. Two of them
+  (`--ignore-path`, `--ignore-pattern`) suppress SECURITY findings with no threat model. Close
+  = Story 10.3: rule on each flag (bless with ACs + CHANGELOG entry, or remove), require a
+  threat model before blessing either suppression flag, and pin parser-vs-contract equality
+  with a test so the two cannot diverge again.
+  - id: DF-AUD-APAA-E
+  - owner: Governance Owner
+  - target_story: 10-3-invocation-contract-says-what-the-cli-accepts
+  - category: governance
+  - severity: 🟡
+
+- **DF-AUD-APAA-F** — A grammar that fails to LOAD is reported as a grammar that is MISSING.
+  `index/ast_index.py:266` catches `(ImportError, Exception)` and returns `None`, so an
+  uninstalled grammar and an installed-but-broken one (ABI mismatch, corrupt build) both
+  surface as `grammar_missing_<lang>` — and the remedy the report gives an operator ("install
+  the package") is wrong in the second case. The tuple is redundant (`Exception` subsumes
+  `ImportError`), which hides that the catch is total; it is the only bare `except: …pass` in
+  `argus/`, a shape AR10 and Story 4.3 explicitly forbid. Degradation itself is correct — the
+  file is recorded `ast_eligible=False`, never a false deep claim — so this is a
+  diagnosis-quality defect, not a correctness one. Close = Story 10.4: split the arms, add a
+  distinct broken-grammar reason token, and pin both tokens with a test.
+  - id: DF-AUD-APAA-F
+  - owner: Engineering Lead
+  - target_story: 10-4-a-grammar-that-fails-to-load-names-why
+  - category: process
+  - severity: 🟢

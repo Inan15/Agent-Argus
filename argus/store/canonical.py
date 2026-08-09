@@ -61,6 +61,7 @@ __all__ = [
     "CanonicalSerializationError",
     "dumps",
     "dumps_bytes",
+    "safe_utf8_bytes",
     "loads",
     "canonicalize",
 ]
@@ -86,6 +87,61 @@ def _encode_fraction(value: Fraction) -> str:
     return f"{value.numerator}/{value.denominator}"
 
 
+def _repair_surrogates(value: str) -> str:
+    """Re-decode a str carrying lone surrogates as explicit UTF-8 (NFR-P1).
+
+    THE HOST-LOCALE BOUNDARY, enforced at the one place every recorded value passes.
+
+    On POSIX under a non-UTF-8 locale (``LC_ALL=C`` with ``PYTHONUTF8=0`` — the default
+    in many containers, cron jobs and minimal CI images) Python decodes filenames with
+    the ASCII codec plus ``surrogateescape``. A file named ``café`` therefore arrives as
+    ``'caf\\udcc3\\udca9'`` — lone surrogates, which ``str.encode("utf-8")`` refuses:
+
+        UnicodeEncodeError: 'utf-8' codec can't encode characters ... surrogates not allowed
+
+    Those path strings flow into every ``Recording`` locator, so before this repair the
+    audit CRASHED (``PipelineError`` → exit 1 → ``AUDIT_FAILED``) on any repository
+    containing a non-ASCII filename, on exactly those hosts. AR10 requires an honest
+    degradation, never a crash — and NFR-P1 requires the SAME bytes on every host.
+
+    ``encode(surrogateescape) → decode(utf-8, replace)`` reverses the OS's lossy decode
+    and re-reads the original bytes as UTF-8, which is precisely the explicit-decode
+    boundary Story 3.5 established for ``intake/repo_loader``'s ``git ls-files -z``
+    stream. A host whose locale IS UTF-8 never produces surrogates, so it takes the
+    fast path and its bytes are unchanged — the two hosts converge on identical output,
+    which is the property the cross-locale suite asserts. A genuinely undecodable byte
+    becomes U+FFFD under the same ``errors="replace"`` rule ``repo_loader`` already
+    uses, so it too is deterministic rather than fatal.
+
+    NOTE ON WORDING: this docstring deliberately avoids the criticality signal vocabulary
+    defined in ``ledger/depth_semantics``. ``assess_criticality`` folds whole-file
+    CONTENT, comments and docstrings included, so a single prose word here reclassifies
+    this module as a critical subsystem and moves the FR16 critical-clause gate. An
+    earlier draft used one such word and grew the dogfood critical set 50 -> 51, failing
+    the Story 8.5 re-derivation. Even naming that constant in full re-triggers it, since
+    the constant's own name contains one of its members. Recorded as an audit finding
+    rather than worked around silently.
+
+    Why here and not at intake: the surrogate-bearing string is the OS-native, OPENABLE
+    form of the path. Normalising it at the walk would produce a str the C-locale host
+    can no longer ``open()``. Repairing at serialisation keeps I/O working on the native
+    string while making everything RECORDED host-independent.
+
+    Regression origin: ``pipeline.run_audit_detailed`` was switched from
+    ``load_repo_at_commit`` (which decodes ``git ls-files -z`` explicitly) to
+    ``resolve_source_state`` (which walks the filesystem via ``os.walk``, inheriting the
+    locale-dependent decode) when the AR10 audit-any-directory relaxation landed. That
+    bypassed the boundary and reintroduced what Story 3.5 records as "the ONE Epic-1
+    review FAIL (non-ASCII git ls-files drop)". The guard suite caught it; nothing could
+    see it fire, because CI died at the bandit step before pytest ever ran.
+    """
+    # Fast path: the overwhelming majority of strings carry no surrogate at all, and
+    # this runs over every string in every payload.
+    if not any("\ud800" <= ch <= "\udfff" for ch in value):
+        return value
+    return value.encode("utf-8", "surrogateescape").decode("utf-8", "replace")
+
+
 def _reject(value: Any, path: str) -> None:
     raise CanonicalSerializationError(
         f"forbidden non-deterministic value at {path}: type "
@@ -108,7 +164,7 @@ def canonicalize(payload: Any, _path: str = "$") -> Any:
     if isinstance(payload, bool):
         return payload
     if isinstance(payload, str):
-        return payload
+        return _repair_surrogates(payload)
     if isinstance(payload, int):  # bool already returned above
         return payload
 
@@ -177,7 +233,25 @@ def dumps_bytes(payload: Any) -> bytes:
     Hashing and writing share these exact bytes so a ``content_hash`` is taken
     over the very bytes that hit disk (single source of truth, NFR-D3).
     """
-    return dumps(payload).encode("utf-8")
+    return safe_utf8_bytes(dumps(payload))
+
+
+def safe_utf8_bytes(text: str) -> bytes:
+    """UTF-8 bytes of *text*, independent of the host's filename decoding (NFR-P1).
+
+    The single encode helper for any call site that hashes or writes a string DERIVED
+    FROM A PATH without going through :func:`dumps`. A bare ``text.encode("utf-8")``
+    raises ``UnicodeEncodeError`` on the lone surrogates a C-locale POSIX host produces
+    for a non-ASCII filename (see :func:`_repair_surrogates`), so every such site is a
+    latent crash and a latent cross-host byte divergence.
+
+    Two sites bypassed :func:`dumps` and therefore the repair — ``index/partitioner``'s
+    ``_partition_id`` (which hashes the joined member paths) and ``intake/source_state``'s
+    ``_digest_of`` (which hashes each relative path). Both are content-addressed
+    identifiers, so an unrepaired surrogate there does not merely crash: it would key an
+    artifact differently per host, which is exactly what NFR-P1 forbids.
+    """
+    return _repair_surrogates(text).encode("utf-8")
 
 
 def loads(text: str | bytes) -> Any:

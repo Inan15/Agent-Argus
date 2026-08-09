@@ -77,6 +77,7 @@ from pathlib import Path
 from pydantic import BaseModel, ConfigDict, Field
 
 from argus.index.ast_index import AstIndex
+from argus.store import canonical
 
 __all__ = [
     "PARTITION_SCHEMA_VERSION",
@@ -393,7 +394,10 @@ def _connected_components(
 
 def _partition_id(files: tuple[str, ...]) -> str:
     """sha256 over the sorted member paths (AR11 — the ``assignments/<id>.json`` name)."""
-    joined = "\n".join(sorted(files)).encode("utf-8")
+    # safe_utf8_bytes, not a bare .encode: a C-locale POSIX host yields lone surrogates
+    # for a non-ASCII filename, which would crash here AND would key this
+    # content-addressed id differently per host (NFR-P1).
+    joined = canonical.safe_utf8_bytes("\n".join(sorted(files)))
     return hashlib.sha256(joined).hexdigest()
 
 

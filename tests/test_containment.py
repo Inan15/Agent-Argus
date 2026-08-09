@@ -164,3 +164,47 @@ def _snapshot(root: Path) -> set[str]:
         return set()
     return {p.relative_to(root).as_posix() for p in root.rglob("*")}
 
+
+
+# ─────────────────────────────────────────────────────────────────────────────
+# NFR-S5 + NFR-P1 — containment must be decided identically on every host (F-22)
+# ─────────────────────────────────────────────────────────────────────────────
+#
+# `resolve` used the host-native `Path`, which answers differently per OS: on Windows
+# `C:\evil` is absolute and `..\..\x` is a traversal; on POSIX both are ordinary single
+# filenames — legal, contained, silently accepted. So two of the vectors above only ever
+# raised on Windows, while the docstring claimed both were rejected everywhere.
+#
+# This is not just test portability. `.argus/` state travels between hosts (NFR-P1
+# byte-identity; resume reads a store that may have been written elsewhere), so a locator
+# written on Linux as the legal filename `..\..\escape.json` becomes a REAL traversal the
+# moment that store is resolved on Windows.
+#
+# The parametrized suite above proves the vectors raise on THIS host. These tests prove
+# the DECISION is host-independent, so they fail on Linux and Windows alike if the
+# string-level guard is removed.
+
+_HOST_DEPENDENT_VECTORS = [
+    pytest.param(r"C:\Windows\system32\evil.json", id="drive-letter-absolute"),
+    pytest.param("c:/lowercase/drive.json", id="drive-letter-lowercase-forward"),
+    pytest.param(r"..\..\escape.json", id="windows-backslash-traversal"),
+    pytest.param(r"state\..\..\escape.json", id="mixed-backslash-traversal"),
+]
+
+
+@pytest.mark.parametrize("relative_path", _HOST_DEPENDENT_VECTORS)
+def test_escape_vector_rejected_independently_of_host_path_flavour(
+    tmp_path: Path, relative_path: str
+) -> None:
+    """A vector must be refused on POSIX and Windows alike (NFR-S5 / NFR-P1)."""
+    paths = ApaaStorePaths(tmp_path)
+    with pytest.raises(WorkspaceContainmentError):
+        paths.resolve(relative_path)
+
+
+def test_legitimate_locators_are_still_accepted(tmp_path: Path) -> None:
+    """The host-independent guard must not reject the locators the store actually writes."""
+    paths = ApaaStorePaths(tmp_path)
+    for locator in ("state/a.json", "findings/b.json", "assignments/c.json", "cache/d.json"):
+        resolved = paths.resolve(locator)
+        assert resolved.is_relative_to(tmp_path / ".argus")

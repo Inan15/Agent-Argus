@@ -649,3 +649,197 @@ def test_ledger_verdict_core_has_no_host_or_stack_specific_branch() -> None:
         "the ledger/verdict core carries a host-/stack-specific branch (NFR-P2): "
         + "; ".join(offenders)
     )
+
+
+# ─────────────────────────────────────────────────────────────────────────────
+# NFR-P1 — path matching must not depend on the HOST's filename case rules
+# ─────────────────────────────────────────────────────────────────────────────
+#
+# `fnmatch.fnmatch` compares through `os.path.normcase`: identity on POSIX,
+# lower-casing on Windows. Two modules used it on repo-relative paths, so the same
+# repository at the same commit answered differently by operating system:
+#
+#   * `intake/ignore_rules` decides which files are ENUMERATED, moving the coverage
+#     ledger's denominator, the deep-%, the verdict and the exit code;
+#   * `detectors/secret_suppression` decides whether a DETECTED SECRET is suppressed,
+#     so a credential reported on Linux was hidden on Windows.
+#
+# The suite already pinned byte-identity across environment and locale, but nothing
+# pinned it across filename-case semantics — which is exactly why the divergence
+# survived. These tests assert the property directly (a case-varied path must not
+# match a lower-case pattern) and structurally (no module may reach for the
+# host-normalizing spelling again).
+
+
+def test_gitignore_matching_is_case_sensitive_on_every_host() -> None:
+    """A case-varied path must NOT match a lower-case gitignore pattern (NFR-P1)."""
+    from argus.intake.ignore_rules import gitignore_matches, parse_gitignore
+
+    patterns = parse_gitignore("build/\nvendor\n*.log\n")
+
+    # Exact case matches on every host.
+    assert gitignore_matches("build/out.py", patterns)
+    assert gitignore_matches("vendor/lib.py", patterns)
+    assert gitignore_matches("debug.log", patterns)
+
+    # Case-varied paths must NOT match — on Windows `fnmatch` would say they do,
+    # silently removing these files from the audited population.
+    assert not gitignore_matches("Build/out.py", patterns)
+    assert not gitignore_matches("Vendor/lib.py", patterns)
+    assert not gitignore_matches("debug.LOG", patterns)
+
+
+def test_secret_suppression_path_globs_are_case_sensitive_on_every_host() -> None:
+    """A case-varied path must NOT be treated as a test fixture (NFR-P1 + security)."""
+    from argus.detectors.secret_suppression import SecretSuppressionEngine as Engine
+
+    # Exact case is a fixture path on every host.
+    assert Engine.is_test_fixture_path("tests/conftest.py")
+    assert Engine.is_test_fixture_path("pkg/test_auth.py")
+
+    # Case-varied paths must NOT be — on Windows `fnmatch` would suppress a real
+    # secret found in any of these files.
+    assert not Engine.is_test_fixture_path("Tests/Config.py")
+    assert not Engine.is_test_fixture_path("SRC/Test_Auth.py")
+    assert not Engine.is_test_fixture_path("Lib/Fixtures/keys.py")
+    assert not Engine.is_test_fixture_path("app/Mock_Db.py")
+
+
+def test_a_real_secret_in_a_case_varied_path_is_not_suppressed() -> None:
+    """The end-to-end consequence: the credential is reported, on any host."""
+    from argus.detectors.secret_suppression import SecretSuppressionEngine as Engine
+
+    suppressed, reason = Engine.evaluate_suppression(
+        file_path="Tests/Config.py",
+        snippet="ghp_aB3dEfGh1JkLmN0pQrStUvWxYz456789012",
+        line_content='API_TOKEN = "ghp_aB3dEfGh1JkLmN0pQrStUvWxYz456789012"',
+    )
+    assert suppressed is False, f"a live token was suppressed by host case rules ({reason})"
+
+
+def test_no_argus_module_uses_the_host_normalizing_fnmatch() -> None:
+    """Structural guard: `fnmatch.fnmatch` / `os.path.normcase` are banned (NFR-P1).
+
+    `fnmatchcase` is the only permitted spelling. This fails on reintroduction rather
+    than waiting for a cross-host verdict divergence to be noticed in the field.
+    """
+    root = Path(__file__).resolve().parents[1] / "argus"
+    offenders: list[str] = []
+    for src in sorted(root.rglob("*.py")):
+        tree = ast.parse(src.read_text(encoding="utf-8"), str(src))
+        for node in ast.walk(tree):
+            if not isinstance(node, ast.Call) or not isinstance(node.func, ast.Attribute):
+                continue
+            attr = node.func.attr
+            base = getattr(node.func.value, "id", "")
+            if attr == "fnmatch" and base == "fnmatch":
+                offenders.append(f"{src.relative_to(root).as_posix()}:{node.lineno} fnmatch.fnmatch")
+            elif attr == "normcase":
+                offenders.append(f"{src.relative_to(root).as_posix()}:{node.lineno} normcase")
+    assert not offenders, (
+        "host-case-normalizing path matching reintroduced (NFR-P1) — use "
+        "fnmatch.fnmatchcase: " + "; ".join(offenders)
+    )
+
+
+# ─────────────────────────────────────────────────────────────────────────────
+# NFR-P1 — a non-UTF-8 host locale must not change the recorded bytes (F-21)
+# ─────────────────────────────────────────────────────────────────────────────
+#
+# On POSIX under LC_ALL=C with PYTHONUTF8=0, Python decodes filenames with the ASCII
+# codec plus surrogateescape, so `café` arrives as 'caf\udcc3\udca9'. Those strings reach
+# every Recording locator, and `str.encode("utf-8")` refuses lone surrogates — so the
+# audit CRASHED (PipelineError -> exit 1 -> AUDIT_FAILED) on any repository containing a
+# non-ASCII filename, on exactly those hosts. AR10 forbids a crash; NFR-P1 requires the
+# same bytes everywhere.
+#
+# The cross-locale legs above already catch this end-to-end, but only on a POSIX runner —
+# Windows takes filenames from the wide APIs and never produces surrogates, so a
+# developer machine stays green while CI is red. That asymmetry is why this went unseen.
+# These tests assert the property directly from simulated inputs, so the guard fires on
+# EVERY host.
+
+
+def _as_c_locale(text: str) -> str:
+    """The str a C-locale POSIX host yields for *text*'s UTF-8 bytes on disk."""
+    return text.encode("utf-8").decode("ascii", "surrogateescape")
+
+
+def test_surrogate_path_serializes_identically_to_utf8_host() -> None:
+    """The two host views of one filename must produce identical canonical bytes."""
+    from argus.store import canonical
+
+    for name in ("café/x.py", "тесты/test_a.py", "ünïcode/mixed_日本.py"):
+        native = _as_c_locale(name)
+        assert native != name, "precondition: the C-locale view must carry surrogates"
+        assert canonical.dumps_bytes({"file_path": native}) == canonical.dumps_bytes(
+            {"file_path": name}
+        ), f"host locale changed the recorded bytes for {name!r} (NFR-P1)"
+
+
+def test_surrogate_path_does_not_raise_on_encode() -> None:
+    """A surrogate-bearing path must serialize, not crash (AR10)."""
+    from argus.store import canonical
+
+    payload = {"locators": [{"file_path": _as_c_locale("café/x.py"), "start_line": 1}]}
+    canonical.dumps_bytes(payload)  # must not raise UnicodeEncodeError
+
+
+def test_undecodable_byte_degrades_deterministically() -> None:
+    """A byte that is not valid UTF-8 becomes U+FFFD, not an exception (errors=replace)."""
+    from argus.store import canonical
+
+    undecodable = b"x\xff.py".decode("ascii", "surrogateescape")
+    assert canonical.dumps_bytes({"p": undecodable}) == b'{"p":"x\xef\xbf\xbd.py"}\n'
+
+
+def test_payloads_without_surrogates_are_untouched() -> None:
+    """The repair must be a no-op for every string without surrogates (byte-identity)."""
+    import json
+
+    from argus.store import canonical
+
+    for value in ("plain.py", "café/x.py", "тесты/y.py", ""):
+        assert canonical.dumps({"v": value}) == (
+            '{"v":' + json.dumps(value, ensure_ascii=False) + "}\n"
+        )
+
+
+# ── The OTHER half of the same boundary: a recorded path must stay OPENABLE ──
+#
+# `_repair_surrogates` makes the RECORDED form host-independent. Its inverse,
+# `repo_loader.to_native_fs_path`, makes the I/O form host-openable. They are needed
+# together because the two intake producers start from opposite ends: `source_state`
+# walks the filesystem (native, surrogate-bearing), while `repo_loader` decodes git's
+# UTF-8 bytes (true text). Without the inverse, the resume path — the remaining
+# `load_repo_at_commit` caller — handed true-text paths to `open()` and a C-locale host
+# raised "'ascii' codec can't encode character", a DIFFERENT crash from the surrogate
+# one above and invisible to every other test.
+
+
+def test_git_path_round_trips_through_the_host_filename_rule() -> None:
+    """to_native_fs_path -> _repair_surrogates is the identity, on EVERY host (NFR-P1).
+
+    The composition is what guarantees the persisted bytes match across locales: I/O
+    uses the native form, the serializer restores the recorded form. On a UTF-8 host
+    both halves are identities; on a C-locale host they are exact inverses.
+    """
+    from argus.intake.repo_loader import to_native_fs_path
+    from argus.store.canonical import _repair_surrogates
+
+    for name in ("café/x.py", "тесты/test_a.py", "ünïcode/mixed_日本.py", "plain.py"):
+        assert _repair_surrogates(to_native_fs_path(name)) == name
+
+
+def test_c_locale_native_form_repairs_back_to_the_git_form() -> None:
+    """The inverse holds for the exact host view the cross-locale CI leg exercises.
+
+    Asserted from a SIMULATED C-locale string so the guard fires on Windows too, where
+    ``os.fsdecode`` never produces a surrogate and the real defect is unobservable.
+    """
+    from argus.store.canonical import _repair_surrogates
+
+    for name in ("café/x.py", "тесты/test_a.py", "ünïcode/mixed_日本.py"):
+        native = _as_c_locale(name)
+        assert native != name, "precondition: the C-locale view must carry surrogates"
+        assert _repair_surrogates(native) == name

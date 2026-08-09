@@ -885,9 +885,9 @@ def test_e2e_resume_reuses_prior_coverage_and_audits_only_remainder(
     detected_paths: list[str] = []
     real_detect = pipeline_mod._detect_per_file
 
-    def _spy(repo_root, index_entries):
+    def _spy(repo_root, index_entries, request):
         detected_paths.extend(e.file_path for e in index_entries)
-        return real_detect(repo_root, index_entries)
+        return real_detect(repo_root, index_entries, request)
 
     monkeypatch.setattr(pipeline_mod, "_detect_per_file", _spy)
     resumed = resume_audit_detailed(
