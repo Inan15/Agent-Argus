@@ -309,6 +309,26 @@ def _assurance_statement(verdict: AuditVerdict, scope: ScopeStatement) -> str:
         f"did not cover {scope.not_covered_inferred + scope.not_covered_skipped} "
         f"of {scope.total_count}"
     )
+    # DISCLOSE THE NARROWING, or do not say "the assessed scope".
+    #
+    # Every sentence below says "within the assessed scope", but the counts above are
+    # WHOLE-LEDGER counts. When the gate decided on a NARROWED population — the
+    # `application` scope holds out test files — those two things are different
+    # populations, and this is the artifact a reader cites as the formal assurance
+    # statement. The verdict artifact already carries the full `coverage_scope`
+    # disclosure; this one silently omitted it, so a scoped RELEASE_READY read as
+    # though it had been earned over the whole repository. Naming the narrowed ratio
+    # and the held-out count here makes the sentence true for the population it was
+    # actually decided on, and keeps the whole-repository numbers visible beside it.
+    coverage_scope = verdict.coverage_scope
+    if coverage_scope is not None:
+        scope_clause += (
+            f"; assessed {coverage_scope.assessed_deep_count} of "
+            f"{coverage_scope.assessed_total_count} deeply "
+            f"({coverage_scope.assessed_deep_ratio}) under scope "
+            f"'{coverage_scope.scope_id}', holding out {coverage_scope.excluded_count} "
+            f"({coverage_scope.excluded_reason})"
+        )
     if verdict.verdict is Verdict.RELEASE_READY:
         return (
             f"No blocking findings were detected within the assessed scope "

@@ -47,9 +47,11 @@ percentage points; over-excluding costs the truth.
 
 from __future__ import annotations
 
-import fnmatch
 import posixpath
 from dataclasses import dataclass
+# `fnmatchcase`, never the module-level `fnmatch`: the latter normalizes case per host
+# OS and would make path matching host-dependent (NFR-P1). See `_pattern_hits`.
+from fnmatch import fnmatchcase
 
 __all__ = [
     "IgnoreReason",
@@ -274,20 +276,37 @@ def parse_gitignore(text: str) -> tuple[GitignorePattern, ...]:
 
 
 def _pattern_hits(pattern: GitignorePattern, rel_path: str, is_dir: bool) -> bool:
-    if pattern.dir_only and not is_dir:
-        # A dir-only rule still covers everything BENEATH the directory; the walker
-        # applies it by pruning, and here we accept a path under a matching prefix.
-        pass
+    """Whether *pattern* matches *rel_path* — CASE-SENSITIVELY on every host.
+
+    ``fnmatchcase``, never ``fnmatch``. ``fnmatch`` routes the comparison through
+    ``os.path.normcase``, which lower-cases on Windows and is identity on POSIX. This
+    function decides which files are ENUMERATED INTO THE AUDIT AT ALL, so a
+    host-dependent answer here moves the coverage-ledger denominator, hence the
+    deep-%, hence the verdict and the exit code: the same repository at the same
+    commit could be RELEASE_READY on one operating system and INSUFFICIENT_COVERAGE
+    on another. That directly contradicts NFR-P1 (byte-identical across hosts), the
+    guarantee ``ledger/critical_subsystems._matches_exclusion`` already documents and
+    honours. A gitignore is a case-sensitive matcher in git itself, so case-sensitive
+    is also the semantically correct reading — and it errs toward auditing MORE files,
+    never fewer, which is the safe direction for an assurance tool.
+
+    The ``dir_only`` guard that used to head this function was a bare ``pass``: it
+    computed a condition and did nothing with it, while its comment described
+    prefix-acceptance behaviour the code never performed. Directory-only rules are
+    enforced by the walker's pruning (``source_state._walk_sources`` passes
+    ``is_dir=True`` for directories), so the correct fix is to state that and drop the
+    dead branch rather than leave a no-op that reads as if it were load-bearing.
+    """
     if pattern.anchored:
-        if fnmatch.fnmatch(rel_path, pattern.pattern):
+        if fnmatchcase(rel_path, pattern.pattern):
             return True
         # `build/` should also match `build/x/y.py`
-        return fnmatch.fnmatch(rel_path, pattern.pattern.rstrip("/") + "/*")
+        return fnmatchcase(rel_path, pattern.pattern.rstrip("/") + "/*")
     # Unanchored: match against any single component, or any trailing sub-path.
     components = rel_path.split("/")
-    if any(fnmatch.fnmatch(component, pattern.pattern) for component in components):
+    if any(fnmatchcase(component, pattern.pattern) for component in components):
         return True
-    return fnmatch.fnmatch(rel_path, "*/" + pattern.pattern)
+    return fnmatchcase(rel_path, "*/" + pattern.pattern)
 
 
 def gitignore_matches(

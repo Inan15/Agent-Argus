@@ -10,10 +10,19 @@ Implements industry-standard multi-layer secret suppression:
 
 from __future__ import annotations
 
-import fnmatch
 import re
 from pathlib import Path
 from typing import Sequence
+
+# `fnmatchcase`, never the module-level `fnmatch`. `fnmatch` compares through
+# `os.path.normcase`, which lower-cases on Windows and is identity on POSIX. Every
+# match here decides whether a detected secret is SUPPRESSED, so a host-dependent
+# answer means the same repository at the same commit reports a credential on Linux
+# and hides it on Windows — a security false negative produced by the operating
+# system the audit happened to run on. NFR-P1 (byte-identical across hosts) forbids
+# it, and `ledger/critical_subsystems._matches_exclusion` already documents the rule.
+# Case-sensitive also errs toward REPORTING a secret rather than suppressing it.
+from fnmatch import fnmatchcase
 
 # Known public documentation / test sentinels (RFC 2606 & Cloud provider docs)
 KNOWN_PUBLIC_SENTINELS: tuple[str, ...] = (
@@ -94,7 +103,7 @@ class SecretSuppressionEngine:
         patterns = list(DEFAULT_TEST_PATH_PATTERNS) + list(custom_ignore_paths)
         for pat in patterns:
             pat_posix = pat.replace("\\", "/")
-            if fnmatch.fnmatch(posix_path, pat_posix) or fnmatch.fnmatch(
+            if fnmatchcase(posix_path, pat_posix) or fnmatchcase(
                 Path(posix_path).name, pat_posix
             ):
                 return True
@@ -124,7 +133,7 @@ class SecretSuppressionEngine:
 
         # 3. Custom pattern match check
         for pat in ignore_patterns:
-            if pat in snippet or fnmatch.fnmatch(snippet, pat):
+            if pat in snippet or fnmatchcase(snippet, pat):
                 return True, "custom_ignore_pattern"
 
         # 4. Live production key check (bypasses path-glob exemptions)

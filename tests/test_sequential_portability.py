@@ -649,3 +649,94 @@ def test_ledger_verdict_core_has_no_host_or_stack_specific_branch() -> None:
         "the ledger/verdict core carries a host-/stack-specific branch (NFR-P2): "
         + "; ".join(offenders)
     )
+
+
+# ─────────────────────────────────────────────────────────────────────────────
+# NFR-P1 — path matching must not depend on the HOST's filename case rules
+# ─────────────────────────────────────────────────────────────────────────────
+#
+# `fnmatch.fnmatch` compares through `os.path.normcase`: identity on POSIX,
+# lower-casing on Windows. Two modules used it on repo-relative paths, so the same
+# repository at the same commit answered differently by operating system:
+#
+#   * `intake/ignore_rules` decides which files are ENUMERATED, moving the coverage
+#     ledger's denominator, the deep-%, the verdict and the exit code;
+#   * `detectors/secret_suppression` decides whether a DETECTED SECRET is suppressed,
+#     so a credential reported on Linux was hidden on Windows.
+#
+# The suite already pinned byte-identity across environment and locale, but nothing
+# pinned it across filename-case semantics — which is exactly why the divergence
+# survived. These tests assert the property directly (a case-varied path must not
+# match a lower-case pattern) and structurally (no module may reach for the
+# host-normalizing spelling again).
+
+
+def test_gitignore_matching_is_case_sensitive_on_every_host() -> None:
+    """A case-varied path must NOT match a lower-case gitignore pattern (NFR-P1)."""
+    from argus.intake.ignore_rules import gitignore_matches, parse_gitignore
+
+    patterns = parse_gitignore("build/\nvendor\n*.log\n")
+
+    # Exact case matches on every host.
+    assert gitignore_matches("build/out.py", patterns)
+    assert gitignore_matches("vendor/lib.py", patterns)
+    assert gitignore_matches("debug.log", patterns)
+
+    # Case-varied paths must NOT match — on Windows `fnmatch` would say they do,
+    # silently removing these files from the audited population.
+    assert not gitignore_matches("Build/out.py", patterns)
+    assert not gitignore_matches("Vendor/lib.py", patterns)
+    assert not gitignore_matches("debug.LOG", patterns)
+
+
+def test_secret_suppression_path_globs_are_case_sensitive_on_every_host() -> None:
+    """A case-varied path must NOT be treated as a test fixture (NFR-P1 + security)."""
+    from argus.detectors.secret_suppression import SecretSuppressionEngine as Engine
+
+    # Exact case is a fixture path on every host.
+    assert Engine.is_test_fixture_path("tests/conftest.py")
+    assert Engine.is_test_fixture_path("pkg/test_auth.py")
+
+    # Case-varied paths must NOT be — on Windows `fnmatch` would suppress a real
+    # secret found in any of these files.
+    assert not Engine.is_test_fixture_path("Tests/Config.py")
+    assert not Engine.is_test_fixture_path("SRC/Test_Auth.py")
+    assert not Engine.is_test_fixture_path("Lib/Fixtures/keys.py")
+    assert not Engine.is_test_fixture_path("app/Mock_Db.py")
+
+
+def test_a_real_secret_in_a_case_varied_path_is_not_suppressed() -> None:
+    """The end-to-end consequence: the credential is reported, on any host."""
+    from argus.detectors.secret_suppression import SecretSuppressionEngine as Engine
+
+    suppressed, reason = Engine.evaluate_suppression(
+        file_path="Tests/Config.py",
+        snippet="ghp_aB3dEfGh1JkLmN0pQrStUvWxYz456789012",
+        line_content='API_TOKEN = "ghp_aB3dEfGh1JkLmN0pQrStUvWxYz456789012"',
+    )
+    assert suppressed is False, f"a live token was suppressed by host case rules ({reason})"
+
+
+def test_no_argus_module_uses_the_host_normalizing_fnmatch() -> None:
+    """Structural guard: `fnmatch.fnmatch` / `os.path.normcase` are banned (NFR-P1).
+
+    `fnmatchcase` is the only permitted spelling. This fails on reintroduction rather
+    than waiting for a cross-host verdict divergence to be noticed in the field.
+    """
+    root = Path(__file__).resolve().parents[1] / "argus"
+    offenders: list[str] = []
+    for src in sorted(root.rglob("*.py")):
+        tree = ast.parse(src.read_text(encoding="utf-8"), str(src))
+        for node in ast.walk(tree):
+            if not isinstance(node, ast.Call) or not isinstance(node.func, ast.Attribute):
+                continue
+            attr = node.func.attr
+            base = getattr(node.func.value, "id", "")
+            if attr == "fnmatch" and base == "fnmatch":
+                offenders.append(f"{src.relative_to(root).as_posix()}:{node.lineno} fnmatch.fnmatch")
+            elif attr == "normcase":
+                offenders.append(f"{src.relative_to(root).as_posix()}:{node.lineno} normcase")
+    assert not offenders, (
+        "host-case-normalizing path matching reintroduced (NFR-P1) — use "
+        "fnmatch.fnmatchcase: " + "; ".join(offenders)
+    )

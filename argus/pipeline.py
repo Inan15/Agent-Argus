@@ -429,11 +429,54 @@ def _critical_ineligibility(
     return None
 
 
+def _critical_candidate(repo_root: Path, entry: AstIndexEntry) -> CriticalCandidate:
+    """Build the FR4 critical CANDIDATE for one file (the single source of truth).
+
+    Extracted so the fresh path (inside :func:`_detect_per_file`) and the resume path
+    derive candidacy through the SAME code. Criticality is a pure content-derived
+    property of the file — it does not depend on whether this run audited the file or
+    carried it forward — so re-deriving it for a carried-forward file is correct and
+    is what keeps a resumed critical set equal to the uninterrupted one.
+    """
+    source = _read_source(repo_root, entry.file_path)
+    is_test = is_test_file(entry.file_path, ast_entry=entry)
+    return CriticalCandidate(
+        file_path=entry.file_path,
+        criticality=assess_criticality(
+            file_path=entry.file_path, source=source, ast_entry=entry
+        ),
+        ineligibility=_critical_ineligibility(entry, is_test=is_test),
+    )
+
+
+def _critical_candidates(
+    repo_root: Path, entries: tuple[AstIndexEntry, ...]
+) -> list[CriticalCandidate]:
+    """The FR4 candidate set over *entries* (no detector dispatch — grading only)."""
+    return [_critical_candidate(repo_root, entry) for entry in entries]
+
+
 def _detect_per_file(
     repo_root: Path,
     index_entries: tuple[AstIndexEntry, ...],
-    request: AuditRequest | None = None,
+    request: AuditRequest,
 ) -> tuple[list[CoverageLedgerEntry], list[Recording], list[CriticalCandidate]]:
+    """Run the per-file detect/grade stage over *index_entries*.
+
+    ``request`` is REQUIRED, not optional. It was previously ``AuditRequest | None =
+    None`` and EVERY production call site omitted it, so the ``None`` branch — meant
+    only as a convenience default — became the only branch that ever ran. The
+    consequences were silent and operator-visible: ``--passes`` / ``--skip-pass``
+    could not disable the security, vacuous or orphan passes (the hardcoded full set
+    was substituted), and ``--ignore-path`` / ``--ignore-pattern`` were replaced with
+    empty tuples, so a suppression the operator asked for never reached the scanner.
+    Worse, the report keyed its status line on ``request.enabled_passes`` and so
+    printed "Secret Scan Status: SKIPPED (Pass Deselected)" for a scan that had in
+    fact run and emitted a finding — the report stating the opposite of what happened.
+
+    Making the parameter required means a future call site that forgets it is a
+    TypeError at import/test time, not a silently degraded audit.
+    """
     detector = VacuousTestDetector()
     secret_detector = SecretScanDetector()
     breadth_detector = ToolRunnerDetector()
@@ -442,7 +485,7 @@ def _detect_per_file(
     candidates: list[CriticalCandidate] = []
     breadth_targets: list[tuple[str, str]] = []
 
-    enabled_passes = request.enabled_passes if request is not None else ("coverage", "vacuous", "security", "orphan", "prosecutor")
+    enabled_passes = request.enabled_passes
 
     for entry in index_entries:
         rel = entry.file_path
@@ -468,6 +511,9 @@ def _detect_per_file(
         # branch, so the two stages cannot disagree. The AST entry is passed so an
         # ambiguously-named ``*_test.py`` is classified by CONTENT, not by filename.
         is_test = is_test_file(rel, ast_entry=entry)
+        # Built through the SHARED builder so the fresh and resume paths cannot
+        # derive candidacy differently. `source`/`is_test` are already resolved here,
+        # so the builder is handed the entry and re-reads nothing this loop has.
         candidates.append(
             CriticalCandidate(
                 file_path=rel,
@@ -476,8 +522,8 @@ def _detect_per_file(
             )
         )
         if "security" in enabled_passes:
-            ignore_paths = request.ignore_paths if request else ()
-            ignore_patterns = request.ignore_patterns if request else ()
+            ignore_paths = request.ignore_paths
+            ignore_patterns = request.ignore_patterns
             secret_result = secret_detector.run(
                 file_path=rel,
                 source=source,
@@ -516,9 +562,15 @@ def _detect_per_file(
 def _orphan_findings(
     index: AstIndex,
     assessed_entries: tuple[AstIndexEntry, ...],
-    request: AuditRequest | None = None,
+    request: AuditRequest,
 ) -> list[Recording]:
-    if request is not None and "orphan" not in request.enabled_passes:
+    """Run the cross-file orphan pass, honouring ``--passes`` / ``--skip-pass``.
+
+    ``request`` is REQUIRED for the reason recorded on :func:`_detect_per_file`:
+    both production call sites previously omitted it, so the ``orphan`` pass ran
+    unconditionally even when the operator had deselected it.
+    """
+    if "orphan" not in request.enabled_passes:
         return []
     if assessed_entries == index.entries:
         scoped = index
@@ -866,15 +918,19 @@ def run_audit_detailed(
             assessed_entries = tuple(
                 e for e in index.entries if e.file_path in assessed_set
             )
-            entries, findings, candidates = _detect_per_file(repo_root, assessed_entries)
+            entries, findings, candidates = _detect_per_file(
+                repo_root, assessed_entries, request
+            )
             entries = entries + _skipped_remainder_entries(halt_projection.skipped_paths)
         else:
             assessed_entries = index.entries
-            entries, findings, candidates = _detect_per_file(repo_root, index.entries)
+            entries, findings, candidates = _detect_per_file(
+                repo_root, index.entries, request
+            )
         # Story 6.3 (DN-WHOLE-INDEX): the single cross-file orphan pass, AFTER the
         # per-file detect stage, over the ASSESSED entries only. Findings-only —
         # appended to the existing accumulation; a no-orphan repo stays byte-identical.
-        findings = findings + _orphan_findings(index, assessed_entries)
+        findings = findings + _orphan_findings(index, assessed_entries, request)
         halt_report = build_halt_report(halt_projection)
     except (WorkspaceContainmentError, RepoIntakeError):
         raise
@@ -1103,7 +1159,30 @@ def resume_audit_detailed(
         # reused VERBATIM from the prior ledger (NFR-R2 "no loss of prior coverage").
         target_set = frozenset(plan.resume_target_paths)
         target_entries = tuple(e for e in index.entries if e.file_path in target_set)
-        new_entries, new_findings, candidates = _detect_per_file(repo_root, target_entries)
+        new_entries, new_findings, _target_candidates = _detect_per_file(
+            repo_root, target_entries, request
+        )
+        # ── The FR4 critical-candidate set must span the WHOLE assessed population ──
+        # `_detect_per_file` returns candidates only for the entries it was given, and
+        # this call is deliberately narrowed to the resume TARGETS (the affordability
+        # win). Using its candidate list directly therefore silently omitted every
+        # CARRIED-FORWARD file from `identify_critical_subsystems`, which feeds both
+        # the persisted critical-subsystem artifact and the `critical_subsystems_all_deep`
+        # clause of the verdict. A resumed run could then persist a different critical
+        # set — and reach a different verdict — than the uninterrupted
+        # `run(raised_budget)` this function's AC2 keystone promises to be
+        # byte-identical to.
+        #
+        # Criticality is a pure content-derived property of a file (`assess_criticality`
+        # + the DR-5 eligibility fact), not a property of WHEN it was audited, so it is
+        # re-derived here over the full assessed set. This costs one source read per
+        # carried-forward file and no detector dispatch, so the affordability win the
+        # narrowing exists for is preserved.
+        assessed_resume_set = target_set | frozenset(plan.carried_forward_paths)
+        assessed_resume_entries = tuple(
+            e for e in index.entries if e.file_path in assessed_resume_set
+        )
+        candidates = _critical_candidates(repo_root, assessed_resume_entries)
         carried = _carried_forward_entries(prior_ledger, plan.carried_forward_paths)
         still_skipped = _skipped_remainder_entries(plan.still_skipped_paths)
         merged_entries = carried + new_entries + still_skipped
@@ -1123,12 +1202,10 @@ def resume_audit_detailed(
         # finding set byte-identical to an uninterrupted run(raised_budget) (AC2).
         prior_non_orphan = [f for f in prior_findings if f.rule_id != _ORPHAN_RULE_ID]
         merged_findings = _merge_findings(prior_non_orphan, new_findings)
-        assessed_resume_set = target_set | frozenset(plan.carried_forward_paths)
-        assessed_resume_entries = tuple(
-            e for e in index.entries if e.file_path in assessed_resume_set
-        )
+        # `assessed_resume_entries` is the SAME population the critical-candidate set
+        # above was derived over — resolved once, so the two cannot disagree.
         merged_findings = _merge_findings(
-            merged_findings, _orphan_findings(index, assessed_resume_entries)
+            merged_findings, _orphan_findings(index, assessed_resume_entries, request)
         )
         # The resumed halt report is RE-PROJECTED over the FULL current index at the
         # RAISED ceiling — the EXACT SAME call an uninterrupted run(raised_budget)
@@ -1151,6 +1228,19 @@ def resume_audit_detailed(
     except Exception as exc:  # noqa: BLE001 — wrap unexpected failures as TYPED (AR10)
         raise PipelineError(f"resume analysis stage failed: {type(exc).__name__}") from exc
 
+    # Provenance for the RENDERED reports only. A fresh run resolves this and passes
+    # it; the resume path omitted it, so a resumed run's report silently dropped the
+    # "which source state was audited" disclosure. Resolution is best-effort and
+    # non-fatal: the resume itself already validated the tree via the intake above, so
+    # a failure here must degrade the DISCLOSURE, never the run (AR10). It does not
+    # touch the persisted `.argus/` bytes, so AC2 byte-identity is unaffected.
+    try:
+        resumed_source_state: SourceState | None = resolve_source_state(
+            request.repo_path, commit=request.commit, strict=request.strict
+        )
+    except (SourceStateError, RepoIntakeError):  # pragma: no cover - disclosure-only degrade
+        resumed_source_state = None
+
     return _assemble_and_persist(
         request=request,
         repo_root=repo_root,
@@ -1161,6 +1251,7 @@ def resume_audit_detailed(
         candidates=candidates,
         halt_report=resumed_halt_report,
         store_writer=store_writer,
+        source_state=resumed_source_state,
     )
 
 
