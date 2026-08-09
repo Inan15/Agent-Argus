@@ -22,12 +22,21 @@
 # platform path does NOT exist in this repo: ArgusAgent has since been extracted
 # from the Minions monorepo and stands alone. The Minions sprint-status-integrity
 # gate (scripts/check_sprint_status_integrity.py) targeted the Minions file only.
-# Source epics: _bmad-output/design-artifacts/ArgusAgent/epics.md (9 epics / 41 stories).
+# Source epics: _bmad-output/design-artifacts/ArgusAgent/epics.md (10 epics / 45 stories).
 #
 # DELTA NOTE (2026-08-03): Epics 8-9 were added by the FR16/FR4 verdict-contract
 # amendment + the Agent-Argus repo separation. Epics 1-7 are delivered and are NOT
 # regenerated. The Minions-repo handoff (H0-H4) is deliberately NOT tracked here:
 # it executes in the Minions repository and this repo's CI cannot verify it.
+#
+# DELTA NOTE (2026-08-09): Epic 10 was added by the repository audit of 2026-08-09
+# (sprint-change-proposal-2026-08-09.md), which found work that entered the shipped
+# contract through the separation seed commit (084c6a7) without passing a story gate.
+# Epics 1-9 are delivered and are NOT regenerated or reopened — their retrospectives are
+# signed, and editing their scope now would falsify the record. Epic 10 carries the
+# corrective work as a delta, following the Epic 8/9 precedent. Ledger: DF-AUD-APAA-C..F.
+# NOTE ON PLAN CLOSURE: the epic-9 retro declared the plan FINAL. Epic 10 re-opens it,
+# which is the honest consequence of a plan closed over unspecified work.
 # H0 (who FILES that handoff) is still UNOWNED — see epics.md frontmatter.
 
 # STATUS DEFINITIONS:
@@ -204,3 +213,15 @@ development_status:
   # H0 IS EXPLICITLY NOT ABSORBED (AC16). It remains UNOWNED — epics.md:1693, readiness F5 (LIVE, 2026-08-03), AI-E8-10 — and is deliberately outside this tracker per the DELTA NOTE above, because it executes in the Minions repo and this repo's CI cannot verify it. The story must state that it did NOT file H1-H4, and must restate that assumption A5 stays UNSUPPORTED (post-amendment Minions lands on exit 3, which still fails an unconfigured blocking gate, so H3 needs a policy decision) and that IN-1 must be an optional extra because Minions declares dependencies = [].
   # NOTE for the dev: AI-E8-6 is applied as a story-authoring rule — AC5 (release edge cases E1-E6), AC11, AC12 and AC15 are written as ENUMERATED SPACES that must FAIL on an unenumerated member; discharging one with a single sample is a breach, not a pass. New test ids continue TC-ArgusAgent-DOGFOOD-001 at -37 (-36 taken) and TC-ArgusAgent-DOCS-001 at -14 (-13 taken). TWO THINGS THE SM COULD NOT MEASURE and did not assert, each with an AC forcing the dev to measure them: the contents of a built sdist/wheel (flit_core is NOT installed here) and whether the GitHub remote is public / whether any PyPI credential exists.
   epic-9-retrospective: done  # retrospective complete 2026-08-09 (epic-9-retro-2026-08-09.md) — FINAL epic and FINAL retro of the plan; 2/2 stories done (9.1 PASS iter-1; 9.2 FAIL iter-1 on 4 Med -> 1 fix round -> PASS iter-2). Epic-8 follow-through 3 done / 4 partial / 3 not-addressed — every item that became an AC landed (AI-E8-4's SD-1 re-scope closed DF-8-5-A, DF-8-5-D, DF-8-4-A, RS-4b), every governance-only item did not (AI-E8-8/-9/-10, H0 still UNOWNED). SD-1: the release is PREPARED, NOT EXECUTED — git tag -l empty, release.yml committed and never run, so epics.md:1620's "another repository can depend on" clause and the Minions handoff's "published argus-agent" prerequisite are both unmet by one operator action. SD-2: DF-9-2-A ships 5 of 71 wheel modules unimportable (consumer `argus audit` path proven clean), owned by nobody. SD-3: the repo gained CI/CD supply-chain surface this epic with no gate for the class; injection fixed in release.yml, DF-9-2-D still open in action.yml. Register closes with 16 entries reading target_story: NONE; pipeline.py ends at 1199/1200 with no story queued. 10 action items (AI-E9-1..-10), each targeted at the operator runbook, a named human on a ledger entry, an explicit follow-up story, or retire-with-rationale — none parked in a nonexistent Epic 10.
+
+  # ── Epic 10: Specification Debt from the Separation — close the gate that let it through (delta, Argus repo) ──
+  # Covers DF-AUD-APAA-C (10.1), -D (10.2), -E (10.3), -F (10.4) · Depends on Epic 9 (a released artifact worth correcting)
+  # Sequence is GATE-FIRST: 10.1 is the control that would have caught 10.2-10.4; correcting artifacts
+  # while the gate still accepts self-attestation invites recurrence. 10.4 is independent and may land anytime.
+  # Source: sprint-change-proposal-2026-08-09.md. Contract edits (PRD FR30, PRD V1/V2, architecture R3,
+  # README/CHANGELOG) remain PROPOSED pending PO/PM + Architect approval — mirroring how 2026-08-03 handled CR-1/CR-3.
+  epic-10: backlog  # added 2026-08-09 by sprint-change-proposal-2026-08-09.md; 0/4 stories
+  10-1-release-status-must-cite-evidence: backlog  # DF-AUD-APAA-C · 🟠 · Delivery Orchestrator. A release status must cite an executed gate (CI run id) or be recorded NOT ESTABLISHED. The 2026-07-28 proposal declared READY FOR RELEASE on a local pytest run while introducing audit-ci.yml, whose only master run (30774175196) is `failure`. Both CI breaks were repaired 2026-08-09 and a clean-venv 3.12 reproduction passes end-to-end; the REPAIR is not the deferred item — the EVIDENCE STANDARD is. Correction to the 2026-07-28 record is made in place, dated and reasoned (§3.4), never silently.
+  10-2-multi-language-grounding-is-v1-in-the-specs: backlog  # DF-AUD-APAA-D · 🟡 · Engineering Lead. Amend PRD (L23/L116/L174/L180) + architecture (L77-78/L200-202/L220/L237) to record multi-language grounding as delivered in V1; remove it from the V2 roadmap so V2 cannot re-scope delivered work; make grammar provenance PER-GRAMMAR (R3 design change — the key was specified for one grammar) BEFORE the Epic-5 store is wired, while it is still free; document the [languages] extra in README + CHANGELOG. Sibling of DF-5-1-A (same silent-cache-staleness class). Does NOT close DF-AUD-APAA-A.
+  10-3-invocation-contract-says-what-the-cli-accepts: backlog  # DF-AUD-APAA-E · 🟡 · Governance Owner. Rule on --passes / --skip-pass / --ignore-path / --ignore-pattern: bless with ACs + a CHANGELOG entry, or remove. A threat model is REQUIRED before blessing either --ignore-* flag (they suppress security findings). Bind FR30 + architecture L226 + Story 1.7's LOCKED list to the parser and pin equality with a test. Flags were inert from 084c6a7 until 2026-08-09, so neither outcome is a behavioural break.
+  10-4-a-grammar-that-fails-to-load-names-why: backlog  # DF-AUD-APAA-F · 🟢 · Engineering Lead. Split ast_index.py:266 `except (ImportError, Exception)` so a MISSING grammar and a BROKEN one report distinct reason tokens; the current shape gives an operator a remedy that cannot work. Only bare except:pass in argus/ — AR10 / Story 4.3 forbid it. Degradation is already correct (ast_eligible=False, never a false deep claim), so this is diagnosis quality, not correctness. Independent — may land at any point.

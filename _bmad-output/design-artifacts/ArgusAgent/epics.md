@@ -1679,6 +1679,133 @@ So that I can depend on it instead of vendoring a copy that drifts.
 
 ---
 
+## Epic 10: Specification Debt from the Separation — close the gate that let it through · *Argus repo*
+
+Every capability ArgusAgent ships is specified, and the release gate refuses a verdict it
+cannot evidence. This epic closes the debt the repo separation carried in: work that
+entered the shipped contract without passing the story gate, and a release status that was
+self-attested rather than proven.
+
+**Covers:** DF-AUD-APAA-C (10.1), -D (10.2), -E (10.3), -F (10.4) · **Depends on Epic 9**
+(a released artifact whose contract is worth correcting)
+**Dependency flow:** 10.1 FIRST — it is the control that would have caught 10.2-10.4, and
+fixing artifacts while the gate still accepts self-attestation invites recurrence. 10.2
+before 10.3 (larger artifact blast radius). 10.4 is independent and may land at any point.
+
+**Source:** [sprint-change-proposal-2026-08-09.md](sprint-change-proposal-2026-08-09.md)
+
+### Story 10.1: A release status must cite evidence, not assert it
+
+As the ArgusAgent maintainer,
+I want a release-readiness statement to be refused unless it cites an executed gate,
+So that ArgusAgent never publishes about itself the kind of unevidenced green it exists to
+catch in other repositories.
+
+**Acceptance Criteria:**
+
+**Given** `sprint-change-proposal-2026-07-28.md` records *"Upgraded from NEEDS TARGETED
+REWORK to READY FOR RELEASE!"* on the evidence of a local `pytest` run, while the same
+proposal introduced `audit-ci.yml`
+**When** that CI workflow's run history is inspected
+**Then** its only run on `master` is `failure`, so the status was asserted over a gate that
+had never passed — and the record is corrected in place with the correction dated and
+reasoned, never silently rewritten (§3.4 evidence immutability).
+
+**Given** any future change proposal or retrospective that states a release status
+**When** it is written
+**Then** it cites the CI run id (or an equivalent executed gate) that supports the claim, and
+a status with no citable run is recorded as **NOT ESTABLISHED** rather than as a verdict —
+mirroring the `AUDIT_FAILED`-is-not-a-verdict rule the action already publishes.
+
+**Given** the repaired `audit-ci.yml`
+**When** it runs on `master`
+**Then** it passes on every matrix leg, and that run id is the evidence 10.2-10.4 cite.
+
+### Story 10.2: Multi-language grounding is V1 in the specs, and its provenance is honest
+
+As a downstream integrator auditing a non-Python repository,
+I want the specs to state the languages ArgusAgent actually grounds and the provenance it
+records to name the grammar that actually parsed,
+So that a capability I depend on is specified, and a cached or replayed result cannot be
+keyed on the wrong grammar.
+
+**Acceptance Criteria:**
+
+**Given** PRD L23 (`[Python V1, multi-language V2]`), PRD L180 (V2 roadmap), architecture
+L220 ("Deferred (post-V1): multi-language AST") and L237 ("V1 deep = Python only")
+**When** this story completes
+**Then** each is amended to record multi-language grounding as **delivered in V1**, with the
+amendment dated and attributed to the 2026-07-28 change proposal — and the V2 roadmap no
+longer lists it, so V2 cannot re-scope delivered work.
+
+**Given** `argus/index/ast_index.py` records one `grammar_version` resolved from
+`tree-sitter-python` only, while the index parses 10 languages
+**When** a repository in any supported language is indexed
+**Then** the recorded provenance names the grammar that actually parsed each file, and the
+architecture's R3 cache-key contract (L77-78, L201 — written for a single grammar) is
+amended to match, since this is a design change and not a defect fix.
+
+**Given** the Epic-5 memoization store is not wired into the pipeline
+**Then** this story does **not** wire it; it makes the key correct **before** anything
+depends on it, and records that ordering as deliberate.
+
+**Given** `pyproject.toml` ships a `[languages]` extra and `audit-ci.yml` sets
+`ARGUS_REQUIRE_LANGUAGE_GRAMMARS=1`
+**When** a consumer reads README or CHANGELOG
+**Then** both name the extra, the languages it enables, and what a missing grammar does to a
+file's coverage grade — a capability a consumer cannot discover is a capability they cannot use.
+
+### Story 10.3: The invocation contract says what the CLI accepts
+
+As a downstream integrator,
+I want every accepted CLI flag to appear in the invocation contract,
+So that the contract Story 1.7 declares LOCKED is the contract the tool actually honours.
+
+**Acceptance Criteria:**
+
+**Given** FR30 and architecture L226 specify `repo + commit + budget + materiality_bar`, and
+Story 1.7 declares the flag names LOCKED, while the parser accepts 13 flags
+**When** `--passes`, `--skip-pass`, `--ignore-path` and `--ignore-pattern` are traced
+**Then** each is found in no epic, PRD, addendum, change proposal, CHANGELOG or README — and
+this story **decides** each one: blessed with acceptance criteria and a CHANGELOG entry, or
+removed from the parser. Both outcomes are acceptable; leaving them unspecified is not.
+
+**Given** `--ignore-path` and `--ignore-pattern` suppress **security** findings and were
+inert until 2026-08-09
+**When** a bless decision is considered
+**Then** it is accompanied by a threat model stating who may suppress a secret finding and
+what is recorded when they do; absent that model, the flags are removed rather than blessed.
+
+**Given** whichever decision is taken
+**Then** FR30, architecture L226 and Story 1.7's LOCKED list are updated to match the parser
+exactly, and a test asserts parser-vs-contract equality so the two cannot diverge again.
+
+### Story 10.4: A grammar that fails to load names why
+
+As an operator auditing a polyglot repository,
+I want a grammar failure to say whether the package is missing or broken,
+So that the remedy the report gives me is the remedy that works.
+
+**Acceptance Criteria:**
+
+**Given** `argus/index/ast_index.py::_get_parser_for_lang` catches
+`(ImportError, Exception)` and returns `None`, so a **missing** grammar and an **installed
+but broken** one both report `grammar_missing_<lang>`
+**When** a grammar package is installed but fails to load (ABI mismatch, corrupt build)
+**Then** the recorded reason distinguishes the two — a missing package keeps
+`grammar_missing_<lang>`; a load failure records a distinct token — so the report never tells
+an operator to install a package they already have.
+
+**Given** AR10 and Story 4.3's rule against a bare `except: pass` in library code
+**Then** the redundant `(ImportError, Exception)` tuple is replaced by explicit arms, and the
+degradation itself is unchanged: a file whose grammar cannot load is still recorded
+`ast_eligible=False`, never a false deep claim.
+
+**Given** the coverage denominator moves when a grammar fails
+**Then** a test pins both reason tokens, so a silent regression to a single token fails CI.
+
+---
+
 ## Minions-Repo Handoff — not epics in this breakdown
 
 > **Operator scope decision, 2026-08-03.** RS-2, RS-3, IN-1, IN-3 and IN-4 execute in the **Minions
