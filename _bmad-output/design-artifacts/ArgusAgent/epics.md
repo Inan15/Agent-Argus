@@ -19,7 +19,7 @@ deltaRuns:
     scope: 'FR16 / FR4 verdict-contract amendment + APAA repo separation (Agent-Argus) — delta only; Epics 1–7 are NOT regenerated'
     supersedes: _bmad-output/planning-artifacts/decisions/2026-06-18-apaa-placement-under-minions-core.md
     signal: _bmad-output/design-artifacts/ArgusAgent/sprint-change-proposal-2026-08-03.md
-    approvedBy: Varin
+    approvedBy: XAgent007
     stepsCompleted:
       - step-01-validate-prerequisites
       - step-02-design-epics
@@ -27,7 +27,7 @@ deltaRuns:
       - step-04-final-validation
     status: 'complete'
     openDecisions:
-      - 'H0 — who files the Minions-Repo Handoff (H1-H4) against the Minions backlog. UNOWNED.'
+      - 'H0 — who files the Minions-Repo Handoff (H1-H4) against the Minions backlog. CLOSED 2026-08-10b via the pre-authorised option (b): the operator (XAgent007) records filing as their own step, taken outside this workflow. No longer unowned; still not yet filed.'
     resolvedDecisions:
       - date: 2026-08-03
         id: 'Story 8.1 — decision-row disclosure channel'
@@ -35,7 +35,7 @@ deltaRuns:
         rationale: 'The row is already fully derivable from the existing summary line (verdict token + assessed ratio): INSUFFICIENT_COVERAGE with ratio <1/5 => row 1; NOT_READY => row 2; RELEASE_READY => row 3; INSUFFICIENT_COVERAGE with ratio >=1/5 => row 4. Adding a stdout field would be a SECOND wire-contract change stacked on the exit-code shift, for information already present. Matches the addendum precedent that rejected COVERAGE_GATE_UNMET because the distinction was recoverable from the disclosed ratio and assessed population.'
         residualRisk: 'A consumer deriving the row reimplements a slice of the decision table. Mitigated: the artifact carries it authoritatively.'
         correction: 'An earlier AC draft claimed a stdout-parsing consumer could not distinguish row 1 from row 4. It can, from the ratio the line already prints.'
-        approvedBy: Varin
+        approvedBy: XAgent007
     decisions:
       - 'IN-4 depth LOCKED: descriptor-only capability registration (out-of-process CLI); full Flow-Orchestrator wiring deferred'
       - 'Epics 11/12 kept SPLIT: destructive de-vendoring separated from additive integration design'
@@ -49,7 +49,12 @@ project_name: 'APAA (AI Project Assurance Audit)'
 author: 'XAgent007'
 date: '2026-06-18'
 scope: 'V1 (Tier-A demo-grade spine → Tier-B validation-grade per PRD cut-order); headless; placed at minions_core/apaa/'
-driver_namespace: 'APAA-FR-* / APAA-NFR-* (1:1 onto PRD FR1–33 / NFR clusters)'
+driver_namespace: 'APAA-FR-* / APAA-NFR-* (1:1 onto PRD FR1–37 / NFR clusters)'
+# CORRECTED 2026-08-10 (implementation-readiness-report-2026-08-10.md, Step 3 CRITICAL): read
+# 'FR1–33' until now. The 2026-08-10b amendment added FR34–FR37 + NFR-S6/NFR-P3 to the PRD and
+# wrote Epics 11/12/13 in full, but its edit manifest did not include this file's index layer —
+# frontmatter, Requirements Inventory, FR Coverage Map, or Final Validation Summary. All four are
+# corrected in this pass. `architecture.md` L467 was already correct at FR1–37; its L40/L48 were not.
 ---
 
 # APAA (AI Project Assurance Audit) — Epic Breakdown
@@ -59,7 +64,8 @@ driver_namespace: 'APAA-FR-* / APAA-NFR-* (1:1 onto PRD FR1–33 / NFR clusters)
 > platform epics (`_bmad-output/planning-artifacts/epics.md`). APAA reuses Minions infra **by import**
 > but ships its own `APAA-FR-*` / `APAA-NFR-*` driver namespace, defined in the architecture document.
 
-Date: 2026-06-18 · Primary sources: `E-PRD/prd.md` (33 FRs / 21 NFRs) + `architecture.md` (READY FOR IMPLEMENTATION)
+Date: 2026-06-18 · Primary sources: `E-PRD/prd.md` (**37 FRs / 23 NFRs**) + `architecture.md` (READY FOR IMPLEMENTATION)
+*(Count corrected 2026-08-10 — read "33 FRs / 21 NFRs" from 2026-06-18 until the 2026-08-10b amendment's additions were reconciled into this document's index layer.)*
 Per-story spec packs (created later by `/bmad-create-story`): `_bmad-output/design-artifacts/ArgusAgent/stories/`
 
 ## Overview
@@ -84,7 +90,11 @@ bundle.
 ### Functional Requirements
 
 > **Capability contract (V1, from the PRD).** A capability not listed here will not exist in V1.
-> **[Tier B]** = validation-grade additions over the demo-grade core (FR7, FR12, FR19, FR24, FR26).
+> **[Tier B]** = validation-grade additions over the demo-grade core (FR7, FR12, FR19, FR24, FR26, **FR36**).
+>
+> ⚠️ **FR34–FR37 and NFR-S6/NFR-P3 were added 2026-08-10b** by the V1.5 public-release amendment and are
+> stated below in their **binding** form. They were absent from this inventory until 2026-08-10; the
+> amendment wrote Epics 11/12/13 in full but did not reconcile this index layer.
 >
 > ⚠️ **FR4 and FR16 were amended 2026-08-03** and are stated below in their **amended** form. Epics 1–7
 > were authored against the pre-amendment text and are **not** regenerated; the work closing the gap is
@@ -101,8 +111,10 @@ bundle.
 - **FR5:** APAA can record every file's audit depth in a fixed-enum coverage ledger (`audited_deep` / `audited_shallow` / `tool_scanned_only` / `inferred` / `skipped`).
 - **FR6:** APAA can require an emitted claim before grading a file `audited_deep` (silence downgrades to `audited_shallow`).
 - **FR7:** APAA can validate a deep claim against source structure (Python AST in V1) and downgrade an unverifiable claim. **[Tier B]**
+- **FR36 (added 2026-08-10b):** An operator can enable an **LLM-backed deep-audit pass** that produces grounded claims beyond the zero-token path. **[Tier B]** **Off by default, always** — the default run is zero-token, offline, key-free and transmits nothing; enabling requires explicit operator action per invocation. **Egress is disclosed before it occurs** (what is transmitted, to which provider, before the first byte leaves). Spend flows through the **existing** FR21/FR22 ceiling — no new cost-governance mechanism. Determinism preserved via the FR27/NFR-D1 memoization path. Degradation is honest: an unavailable, erroring or budget-halted provider downgrades coverage and records a finding (NFR-R1) — never a false deep claim, never a crash. → source of truth `E-PRD/prd.md` FR36.
 - **FR8:** APAA can exclude `inferred` (narrative/doc) evidence from satisfying any verdict gate.
 - **FR9:** An operator can read exactly which files were examined deeply, shallowly, tool-scanned, inferred, or skipped.
+- **FR37 (added 2026-08-10b):** APAA can state, on every terminal outcome, **why that outcome was reached and the next action that changes it**. Enumerated over the full verdict vocabulary — `RELEASE_READY`, `NOT_READY_FOR_RELEASE`, `INSUFFICIENT_COVERAGE` and the `AUDIT_FAILED` non-verdict — **pinned by a test that fails on an unenumerated outcome**. `INSUFFICIENT_COVERAGE` is the load-bearing case: it must name the specific unmet gate (floor, ratio, or critical subsystem) and the action that would change it. **Self-contained** — the next action is in the tool's own output. **Names what was never examined, not only what scored low:** every verdict states which file classes were **not ingested**, distinguishing *never ingested* / *ingested but held out* / *assessed*; this extends FR17's scope statement to include the ingestion boundary. **Governs explanation, never classification** — FR16's decision table is untouched. → source of truth `E-PRD/prd.md` FR37.
 
 **Defect Detection (cartridge-validated)**
 - **FR10:** APAA can detect tests that appear vacuous (low assertion-density / high mock-ratio) and report them as **advisory** findings carrying their evidence counts.
@@ -118,6 +130,7 @@ bundle.
 - **FR17:** APAA can express every verdict in negative-assurance terms with a scope statement, materiality bar, disclaimer, and point-in-time stamp.
 - **FR18:** An integrator can consume the verdict as a deterministic exit code and a machine-readable artifact.
 - **FR33:** APAA can order findings by verdict impact — surfacing verdict-blocking findings before non-blocking ones (alarm-fatigue defense).
+- **FR34 (added 2026-08-10b):** APAA can disclose its own validation status on **every** user-facing verdict surface, and **cannot emit a verdict on a surface that omits it**. *Content:* the tool's finding-precision validation state (validated / **not independently validated**) and the corpus it rests on. **Mechanical enforcement, not editorial discipline** — the surface set is **enumerated in a committed test that fails on an unenumerated member**. **Distinct from FR17, and both apply:** FR17 bounds the scope of *this audit*; FR34 bounds the credibility of *the tool itself*. **Removable only on measurement, and replaced rather than deleted** — when the ≥80% gate clears, the disclosure is replaced by a statement of the cleared status and the clearing corpus; the enforcing test never becomes vacuous. **Not a permanent state:** coupled to a committed programme to clear the gate (**Epic 13**); if that programme is abandoned, the free public tier is **withdrawn** rather than the disclosure. → source of truth `E-PRD/prd.md` FR34.
 
 **Self-Audit & Trust**
 - **FR19:** APAA can run an adversarial Prosecutor pass that challenges whether the ledger justifies the verdict and downgrades an unearned verdict. **[Tier B]**
@@ -140,6 +153,7 @@ bundle.
 - **FR30:** An integrator can invoke APAA headlessly with `repo + commit + budget + materiality_bar` and receive a verdict artifact + exit code.
 - **FR31:** APAA can resume an interrupted audit from its on-disk `.apaa/` state.
 - **FR32:** APAA can run to completion on a sequential (least-capable) host, producing byte-identical on-disk state to a parallel run.
+- **FR35 (added 2026-08-10b):** A coding agent can invoke an audit and consume the verdict through a **local agent-integration surface**, without a human relaying it. **Two shipped forms:** an **MCP server** (stdio transport) and **packaged assistant command assets** the installer places in the host's configuration. **Bounded by the four §Project Classification constraints:** stdio only — no network listener opened, no port bound; **no HTTP stack**, preserving the `argus.* ⊬ fastapi` import-isolation gate and ADR #20 verbatim; **no new authority** — the same pure `AuditRequest → AuditVerdict` path as the CLI under the same work-manifest permission boundary (NFR-S4); **no credential handling**. **Verdict parity is asserted, not assumed:** the same repository at the same commit produces the same verdict through either surface, pinned by test. → source of truth `E-PRD/prd.md` FR35.
 
 ### NonFunctional Requirements
 
@@ -154,6 +168,7 @@ bundle.
 - **NFR-S3:** On the operated-service path, customer source is never retained after an audit completes.
 - **NFR-S4:** An auditor agent reads **only** the files in its work-manifest (permission boundary); off-scope reads impossible.
 - **NFR-S5:** All filesystem writes are containment-checked (`is_relative_to`, no traversal/symlink/sibling-prefix escape), reusing Minions workspace-containment.
+- **NFR-S6 (added 2026-08-10b):** **No source code, prompt, or repository content leaves the machine on the default path.** Third-party transmission occurs **only** through the explicitly enabled FR36 deep pass, is **disclosed before the first byte is transmitted**, and names the receiving provider. The FR35 agent-integration surface opens **no network listener and binds no port**. Both properties are enforced by committed gates in the shape of the existing import-isolation tests — **an egress path reachable without opt-in fails CI**.
 
 **Cost Efficiency**
 - **NFR-C1:** A baseline full audit costs a bounded fraction of the audited repo's build cost (target ≤ 10–20%); V1 measures and reports the baseline.
@@ -167,6 +182,7 @@ bundle.
 **Portability**
 - **NFR-P1:** APAA runs to completion on the least-capable host (Cline, sequential), producing byte-identical on-disk state to a parallel host; parallel is a pure speedup.
 - **NFR-P2:** The audit is stack-agnostic by construction (deep AST = Python in V1; `claim_emitted` proxy elsewhere); no host-/stack-specific logic in the ledger/verdict core.
+- **NFR-P3 (added 2026-08-10b):** **The default public installation grounds the languages the tool claims to support.** A user who installs through the primary public channel and audits a repository in a documented supported language receives that language's grounding **without discovering an optional extra**. Coverage degraded by a grammar absent from the default install is a **packaging defect** — not a user error and not an honest limitation — and is reported as such. Where a language is deliberately not in the default install, its absence and the reason are stated **in the tool's own output at the point the file is downgraded**. ⚠️ Architecture L446 records this as an **open packaging decision owned by Story 12.5**: the 9 non-Python grammars are currently an optional extra, so the default install grounds Python only — the exact state this NFR classifies as a defect.
 
 **Auditability & Evidence Integrity**
 - **NFR-A1:** Every artifact is wrapped in a schema-versioned, content-hashed, prev-hash-chained envelope; schemas evolve additive-only.
@@ -226,22 +242,40 @@ files, 12-Factor config + secret-masking, ADR #18 ledger / budget-guardrails / w
 
 **Open delivery inputs — LOCKED 2026-06-18 (operator decision; the architecture flagged these as
 epic-planning gaps, not architecture-blocking):**
-- **OI1 — Validation-set `N` → LOCKED `N = 5` (V1 gate floor), Minions first.** The precision replay
-  harness (Story 6.6) is **designed for N = 5** (ground-truth schema/corpus shape), but **populated
-  phased**: 3 labeled repos front-loaded in M1 for early precision signal (PRD risk-forward intent), then
-  grown to 5 before the ≥80%-precision gate is declared cleared. Precision is measured over **findings**,
-  not repos, so 5 repos with sufficient findings support a defensible 80% number; the gate stays
-  **provisional below N = 5**. (PRD floor is the chosen value; ceiling 10 deferred to post-V1 if the
-  finding-count denominator proves thin.)
+- **OI1 — Validation-set `N` → ⚠️ REOPENED 2026-08-10b; NOW OWNED BY STORY 13.1. The text below is the
+  superseded 2026-06-18 lock, retained per §3.4 and marked, not deleted.**
+  **What changed:** the PRD's §Open inputs block records `N` as **assigned, not answered** — PRD
+  §Validation Approach (`N ≈ 5–10` **real repositories**) and `precision-validation-protocol.md` §5
+  (`N ≥ 5` **labeled planted-defect cartridges**) specify **different corpora and were never reconciled**.
+  They measure different quantities: cartridges measure **recall against known plants** (FR20, already
+  delivered and CI-asserted); precision measures **how often a blocking finding on unplanted code is real**,
+  and only the second gates externalization. **Story 13.1 decides which governs and amends the loser**;
+  its recommendation of record is that **the PRD governs**.
+  **"Minions first" is now false.** Story 8.5 re-derived the dogfood as a **self-audit of `argus/`**; the
+  independent Minions run survives only at `minions-dogfood-proof-story-7-2-superseded.md` and *"can never
+  be re-derived in this repository."* The corpus is **N=1 and self-referential**, and Story 13.1 is required
+  to **exclude the self-audit from N** and rebuild from repositories Argus did not author.
+  > ~~**LOCKED `N = 5` (V1 gate floor), Minions first.** The precision replay harness (Story 6.6) is
+  > **designed for N = 5** (ground-truth schema/corpus shape), but **populated phased**: 3 labeled repos
+  > front-loaded in M1 for early precision signal (PRD risk-forward intent), then grown to 5 before the
+  > ≥80%-precision gate is declared cleared. Precision is measured over **findings**, not repos, so 5 repos
+  > with sufficient findings support a defensible 80% number; the gate stays **provisional below N = 5**.
+  > (PRD floor is the chosen value; ceiling 10 deferred to post-V1 if the finding-count denominator proves
+  > thin.)~~ — *superseded 2026-08-10b; do not use this value for story context.*
 - **OI2 — Minions-dogfood scope → LOCKED "full-repo multi-partition".** Story 7.1 partitions **all ~70
   Minions modules** into bounded ≤40-file/15k-LOC audit units and audits each (most complete proof
   artifact). **V1 limitation preserved:** this is multi-**unit** auditing, NOT the V2 cross-partition
   **seam auditor** — no seam analysis spans cut edges in V1 (the `cross_partition` Prosecutor pass,
   Story 6.4, re-reads cut edges as the V1 mitigation; full seam analysis is V2).
-- **OI3 — Budget-ceiling `$X` → DEFERRED to empirical Story 7.1 sizing.** No fixed default is locked now;
-  `$X` is set once the full-repo partition plan (OI2) exists, sized to cover it. The budget-ceiling
-  *mechanism* (Story 3.1) and *halt behaviour* (Story 3.2) are unaffected — only the numeric default for the
-  dogfood is deferred.
+- **OI3 — Budget-ceiling `$X` → ✅ CLOSED / LOCKED (PRD §Open inputs, 2026-08-10b). The resolution is
+  "there is no default."** `ceiling_credits: int | None`, **no numeric default**, `None` = no ceiling
+  configured, `0 → None`. The operator sets it per target; sizing is **empirical per audited repository**
+  (Story 7.1). A numeric default was **deliberately refused**: a wrong default silently truncates an audit —
+  the failure NFR-C2 exists to prevent. Verified shipped: Story 3.1's code review confirms
+  `BudgetConfig().ceiling_credits is None` with `0 → None` first-class.
+  *(Corrected 2026-08-10 — this entry read "DEFERRED to empirical Story 7.1 sizing" after the PRD had
+  locked it, which would tell a budget story the input was still open.)* The budget-ceiling *mechanism*
+  (Story 3.1) and *halt behaviour* (Story 3.2) were never affected.
 
 ### UX Design Requirements
 
@@ -287,9 +321,22 @@ and the evidence bundle — all covered by the FRs above.
 | FR31 | Epic 3 | Resume from `.apaa/` state |
 | FR32 | Epic 3 | Sequential byte-identical execution |
 | FR33 | Epic 1 | Verdict-impact finding ordering |
+| **FR34** | **Epic 11** (11.1) | **Self-disclosure of validation status on every verdict surface** — re-asserted in 12.6 (MCP surface) and 12.9 (both listings); removal path is Epic 13 (13.3) |
+| **FR35** | **Epic 12** (12.6, 12.7) | **Local agent-integration surface** — MCP stdio server + packaged command assets |
+| **FR36** | **Epic 12** (12.2) | **Opt-in LLM-backed deep-audit pass** **[Tier B]** |
+| **FR37** | **Epic 12** (12.4) | **Every terminal outcome names its next action** + the ingestion boundary |
 
-**All 33 FRs mapped. All 21 NFRs land in ≥1 epic** (D1→E5; D2/D3/A1/M1/M2/S5→E1; S2/S4/C3/R1/SC1→E2;
-C1/C2/R2/P1/P2→E3; S1/S3/A2/A3→E4; P2→E6).
+**All 37 FRs mapped. All 23 NFRs land in ≥1 epic** (D1→E5, delivered E12/12.3; D2/D3/A1/M1/M2/S5→E1,
+M1 enforced repo-wide E12/12.1; S2/S4/C3/R1/SC1→E2; C1/C2/R2/P1/P2→E3; S1/S3/A2/A3→E4; P2→E6;
+**S6→E12/12.2; P3→E12/12.5**).
+
+> **Correction, 2026-08-10** *(implementation-readiness-report-2026-08-10.md, Step 3 CRITICAL)*. This map
+> read **"All 33 FRs mapped. All 21 NFRs…"** from 2026-06-18 until now, and FR34–FR37 / NFR-S6 / NFR-P3
+> appeared in **neither** this map nor the Requirements Inventory above — they existed only in the per-epic
+> inline `**Covers:**` lines of Epics 11 and 12. Root cause: the 2026-08-10b amendment's own edit manifest
+> (`sprint-status.yaml`) lists *"epics.md (Story 10.2 AC1 → 10 sites + closing grep test; Story 10.5 added;
+> Epics 11/12/13 written in full)"* — the index layer of this document was never in scope. Recorded as a
+> dated correction rather than a silent rewrite (§3.4 evidence immutability).
 
 ## Epic List
 
@@ -1061,10 +1108,19 @@ So that the strategic question is answered and the path to the ≥80%-precision 
 
 ## Final Validation Summary
 
-- **FR coverage:** all 33 FRs map to a story (see FR Coverage Map + per-epic story ACs). FR16 spans Epic 1
-  (gate+floor core) and Epic 2 (critical-subsystem clause); FR28 spans Epic 2 (producer redaction) and
-  Epic 4 (containment enforcement) — both deliberate, both fully delivered.
-- **NFR coverage:** all 21 NFRs land in ≥1 epic and are asserted by at least one story AC.
+> ⚠️ **SCOPE OF THIS SUMMARY, clarified 2026-08-10.** This block was written on **2026-06-18** and validates
+> the **7-epic base plan only**. It is **not** a validation of Epics 8–13 or of the FR34–FR37 / NFR-S6 /
+> NFR-P3 additions. Until 2026-08-10 it asserted *"all 33 FRs"* / *"all 21 NFRs"* without that qualifier,
+> which read as a current certification of a superseded contract — the defect class Story 10.1 exists to
+> delete. Counts corrected and scope stated below; the base-plan findings themselves are unchanged.
+
+- **FR coverage (base plan, Epics 1–7):** the 33 FRs then in force map to a story (see FR Coverage Map +
+  per-epic story ACs). FR16 spans Epic 1 (gate+floor core) and Epic 2 (critical-subsystem clause); FR28
+  spans Epic 2 (producer redaction) and Epic 4 (containment enforcement) — both deliberate, both fully
+  delivered. **Post-amendment total: 37 FRs**, all mapped — FR4/FR16 amended by Epic 8, and FR34→Epic 11,
+  FR35/FR36/FR37→Epic 12 (see the corrected FR Coverage Map above).
+- **NFR coverage (base plan):** the 21 NFRs then in force land in ≥1 epic and are asserted by at least one
+  story AC. **Post-amendment total: 23 NFRs** — NFR-S6→Epic 12 (12.2), NFR-P3→Epic 12 (12.5).
 - **Tier mapping:** Tier-A demo-grade = Epics 1–3 (+ cartridges #1/#2 in 6.5); Tier-B validation-grade =
   Epics 4–7 (FR7, FR12, FR19, FR24, FR26 + reproducibility + dogfood). The PRD cut-order is honored:
   Epic 6 is the explicit slip boundary; Epic 1's spine never slips.
@@ -1093,7 +1149,7 @@ So that the strategic question is answered and the path to the ≥80%-precision 
 
 > **Delta scope.** Epics 1–7 above are **delivered and are NOT regenerated or restated**. This section
 > covers only the work created by the **2026-08-03 PRD amendment** to FR16 (verdict decision table) and
-> FR4 (critical-subsystem eligibility), approved by Varin at the contract gate — step 4 of the
+> FR4 (critical-subsystem eligibility), approved by XAgent007 at the contract gate — step 4 of the
 > [sprint change proposal](sprint-change-proposal-2026-08-03.md)'s recommended sequence. Step 5
 > (CR-1 + CR-3 + the schema bump) was **blocked on that gate and is now unblocked**; it is the work
 > decomposed here.
@@ -1686,13 +1742,52 @@ cannot evidence. This epic closes the debt the repo separation carried in: work 
 entered the shipped contract without passing the story gate, and a release status that was
 self-attested rather than proven.
 
-**Covers:** DF-AUD-APAA-C (10.1), -D (10.2), -E (10.3), -F (10.4) · **Depends on Epic 9**
+**Covers:** DF-AUD-APAA-C (10.1), -D (10.2), -E (10.3), -F (10.4), the `standards_refs` V1/FR conflict
+(10.5, added 2026-08-10b) · **Depends on Epic 9**
 (a released artifact whose contract is worth correcting)
 **Dependency flow:** 10.1 FIRST — it is the control that would have caught 10.2-10.4, and
 fixing artifacts while the gate still accepts self-attestation invites recurrence. 10.2
 before 10.3 (larger artifact blast radius). 10.4 is independent and may land at any point.
 
+**What 10.1 hands to 10.2-10.4 is the STANDARD, not a number** *(amended 2026-08-10 by Story
+10.1; see the amendment note under Story 10.1's third AC below)*. A GitHub Actions run id is
+**sha-scoped**: run `31341363300` evidences sha `00c8d1b` and nothing else, so it cannot
+evidence any tree that contains 10.2's, 10.3's or 10.4's own commits. Each of those stories
+therefore cites **the `audit-ci.yml` run covering its OWN HEAD**, in the citation format 10.1
+fixes — *run id **plus** the sha it covers* — or records the status as **NOT ESTABLISHED** and
+names the command a human runs to establish it. Reusing 10.1's run id to evidence a later tree
+would be the same defect this epic exists to close, one level up.
+
 **Source:** [sprint-change-proposal-2026-08-09.md](sprint-change-proposal-2026-08-09.md)
+
+> ### 📍 Citation audit — Epics 10–13, measured 2026-08-10
+>
+> Every `file:line` citation in the Epic 10–13 ACs was resolved against the working tree before story
+> creation, because these ACs are drafted-not-yet-executed and `bmad-create-story` will carry their
+> coordinates into the story files. **12 of 14 were exact; 2 had drifted and are corrected.**
+>
+> | Citation | Verified | Points at |
+> |---|---|---|
+> | `argus/audit/deep_audit.py:91` | ✅ exact | `class DeepAuditSeam:` |
+> | `argus/detectors/base.py:63-87` | ✅ exact | `class FindingDraft(BaseModel):` |
+> | `argus/detectors/vacuous_test.py:198` | ✅ exact | the `"test.java", "spec.rb"` tuple line |
+> | `argus/precision/replay_harness.py:87-90` | ✅ exact | the `sys.path` insert |
+> | `argus/precision/replay_harness.py:223` | ✅ exact | `protocol_cleared: bool = False,` |
+> | `argus/shared/source_languages.py:80` | ✅ exact | `AUDITABLE_SUFFIXES` |
+> | `action.yml:74` (+`:78,79,80,126`) | ✅ exact | all five `run:` interpolation sites |
+> | `pyproject.toml:59-62` | ✅ exact | `[project.scripts]` + the three aliases |
+> | `README.md:138-150` | ✅ exact | the slash-command claim |
+> | `tests/test_cache_invalidation.py:690` | ✅ exact | `test_invalidation_module_is_under_1200_lines` |
+> | `tests/test_cartridge_selfaudit.py:472` | ✅ exact | `test_this_harness_is_under_1200_lines` |
+> | `minions-dogfood-proof.md:87` | ✅ exact | the `N=0 … floor N=5` gate-status line |
+> | ~~`argus/cli.py:295-299`~~ → **`:368-372`** | ❌ **corrected** | the base-`ValueError` arm (Story 12.8). ⚠️ **A second `except ValueError` exists at `:337`** (ship-readiness rendering) which no AC names — the split must decide both sites or state why one is exempt |
+> | ~~`argus/dogfood/proof_run.py:764-765`~~ → **`:643-644`** | ❌ **corrected** | `precision=Fraction(0, 1), n=0` (Story 13.1) |
+>
+> **Also verified: none of Epics 11–13 is implemented.** `argus/mcp/` absent · `DeepAuditSeam` and
+> `memo_store` still unreferenced by `pipeline.py` · `pipeline.py` at **1331 lines**, the only file over the
+> NFR-M1 cap · FR34 tokens confined to `argus/dogfood/*`, absent from `cli.py` and `reports/` · `languages`
+> still an optional extra · `git tag -l` empty and `release.yml` documenting its own abstention from index
+> publish · `protocol_cleared` never passed `True`. Every story's stated precondition reproduces today.
 
 ### Story 10.1: A release status must cite evidence, not assert it
 
@@ -1719,7 +1814,18 @@ mirroring the `AUDIT_FAILED`-is-not-a-verdict rule the action already publishes.
 
 **Given** the repaired `audit-ci.yml`
 **When** it runs on `master`
-**Then** it passes on every matrix leg, and that run id is the evidence 10.2-10.4 cite.
+**Then** it passes on every matrix leg, and ~~that run id is the evidence 10.2-10.4 cite~~
+**the citation STANDARD that run establishes is what 10.2-10.4 apply, each citing the run that
+covers its own HEAD**.
+
+> **Amended 2026-08-10 by Story 10.1 (§A.5).** The struck wording invited 10.2-10.4 to cite a
+> number that predates their own code. Run ids are **sha-scoped**: run `31341363300` is
+> `success` with 3/3 legs green over sha `00c8d1b` and evidences that tree only, so a story
+> whose commits are not in `00c8d1b` cannot be evidenced by it. What 10.1 delivers and 10.2-10.4
+> inherit is the **format and the rule** — *run id plus the sha it covers*, or **NOT
+> ESTABLISHED** — recorded in `architecture.md` §H and enforced by
+> `tests/test_evidence_citation.py`. Original wording struck rather than deleted (§3.4 evidence
+> immutability).
 
 ### Story 10.2: Multi-language grounding is V1 in the specs, and its provenance is honest
 
@@ -1731,12 +1837,21 @@ keyed on the wrong grammar.
 
 **Acceptance Criteria:**
 
-**Given** PRD L23 (`[Python V1, multi-language V2]`), PRD L180 (V2 roadmap), architecture
-L220 ("Deferred (post-V1): multi-language AST") and L237 ("V1 deep = Python only")
+**Given** the **complete measured site list** — PRD **L23** (`[Python V1, multi-language V2]`),
+**L116** (durable-moat claim), **L174** (design invariant, "V2 multi-language is additive"), **L180**
+(V2 roadmap), **L317** (project-type overview, "V1 deep AST-grounding = Python"), **L375**
+(risk-mitigation, "V2 multi-language additive"), **L398** (**FR7 — the binding capability contract**),
+**L476** (**NFR-P2**); and architecture **L220** ("Deferred (post-V1): multi-language AST") and **L237**
+("V1 deep = Python only") — **10 sites, enumerated by measurement on 2026-08-10b**
 **When** this story completes
 **Then** each is amended to record multi-language grounding as **delivered in V1**, with the
 amendment dated and attributed to the 2026-07-28 change proposal — and the V2 roadmap no
 longer lists it, so V2 cannot re-scope delivered work.
+
+**Given** this enumeration has now been wrong twice — the original AC named 4 sites, the 2026-08-10
+correction named 7, and measurement finds 10
+**Then** the story closes with a **committed test that greps for the unamended claim shape** and fails if
+any site survives, so the count is asserted rather than counted by hand a fourth time.
 
 **Given** `argus/index/ast_index.py` records one `grammar_version` resolved from
 `tree-sitter-python` only, while the index parses 10 languages
@@ -1804,6 +1919,675 @@ degradation itself is unchanged: a file whose grammar cannot load is still recor
 **Given** the coverage denominator moves when a grammar fails
 **Then** a test pins both reason tokens, so a silent regression to a single token fails CI.
 
+### Story 10.5: A V1 commitment is delivered, or it is explicitly not V1
+
+*Added 2026-08-10b by [sprint-change-proposal-2026-08-10b.md](sprint-change-proposal-2026-08-10b.md).*
+
+As the ArgusAgent governance owner,
+I want a capability the PRD commits to V1 either shipped or explicitly reclassified,
+So that the specification and the product stop describing different tools.
+
+**Acceptance Criteria:**
+
+**Given** PRD §Product Scope L168 commits `standards_refs[]` + CWE-required-on-security-findings to
+**V1 Core** as *"day-one additive"*, while **no FR in the binding capability contract lists it**, and
+**zero occurrences** of `standards_ref` / `cwe` / `asvs` / `owasp` exist in `argus/**/*.py`
+(`FindingDraft` at `argus/detectors/base.py:63-87` carries no standards field of any kind)
+**When** the conflict is adjudicated
+**Then** it is **decided**: either an FR is added and the field ships, or §Product Scope is amended to
+move it to V2 with the amendment dated and reasoned. **Leaving the two sections in disagreement is not
+an acceptable outcome.**
+
+**Given** FR11 (secret detection) is the security detector this would annotate, and Journey 4 depends on
+findings being citable as compliance evidence
+**Then** whichever way it is decided, the consequence for Journey 4 is recorded — a security finding with
+no standards reference is weaker evidence, and that should be a known trade rather than an accident.
+
+**Given** this conflict arose because a capability lived in §Product Scope and **not** in the FR contract —
+the exact inverse of DF-AUD-APAA-D, which was a capability shipping with no spec
+**Then** a **sweep** confirms whether any other §Product Scope V1 Core item is missing from FR1–37, and
+each result is recorded. One instance found by accident implies the class was never checked.
+
+**Given** the **opposite direction is also unswept** — an FR that *is* in the binding contract but that
+**no code path reaches** — and one instance is already known: **FR23** (human STOP/PROCEED escalation,
+default-STOP) is delivered as a **library seam** (`governance/escalation.py`,
+`governance/decision_record.py`, proven by `tests/apaa/test_hitl_escalation.py`) that **nothing in
+`pipeline.py` or `cli.py` invokes** (DF-6-7-A)
+**Then** this story sweeps **FR1–37 for requirements with no reachable production call site**, and each
+hit takes a **dated disposition**: wired, or explicitly recorded as a library seam for V1.5 with the
+call site deferred and a reason. **FR23 is decided by name, not left to the sweep's summary.**
+*(Added 2026-08-10b. The precedent is already set in this plan: FR27/NFR-D1 had exactly this shape — a
+built, unwired memoization store — and became Story 12.3. FR23 was not listed, which is the
+inconsistency this AC closes. Note the sweep may find more: FR7's validator and the FR36 deep pass were
+both reachable only from `argus/audit/*` until Epic 12 wires them.)*
+
+---
+
+## Epic 11: Release Integrity — nothing unsafe or untrue can be published · *Argus repo*
+
+Every defect that becomes *worse* by being published is closed, and the tool states its own
+validation status wherever it states a verdict. This epic does not make Argus more useful —
+that is Epic 12. It makes Argus **safe to hand to someone outside XAgents**.
+
+**Covers:** FR34 (11.1), DF-8-2-B (11.2), DF-9-2-D (11.3), the `tree-sitter` runtime bound (11.4),
+DF-9-2-A + DF-9-2-B (11.5) · **Depends on Epic 10 — all five stories**
+**Dependency flow:** 11.1 FIRST (no verdict surface ships without disclosure); 11.2-11.4 independent;
+11.5 last, because it re-measures a built artifact.
+**No story in this epic publishes anything.** The publish is Epic 12's final story, by design —
+publishing at the end of this epic would ship a safe tool that is not yet worth installing.
+
+**Source:** [sprint-change-proposal-2026-08-10b.md](sprint-change-proposal-2026-08-10b.md), superseding
+the unsigned 2026-08-10 proposal.
+
+**Renumbering from that superseded draft** (recorded so the `sprint-status.yaml` entries can be traced):
+old 11.1 -> **11.1** (scope changed) · old 11.3 -> **11.2** · old 11.4 -> **11.3** · old 11.5 -> **11.4**
+· old 11.6 -> **11.5** · old 11.7 -> **Epic 12's final story** · **old 11.2 is absorbed** into Epic 12's
+deep-audit story, which measures the same question as a precondition of the work rather than as a
+standalone spike.
+
+### Story 11.1: The tool discloses its own status, and the disclosure has an expiry
+
+As an independent developer installing Argus,
+I want the tool to tell me the validation state of its own findings wherever it gives me a verdict,
+So that I can weigh its output correctly — and so that its status cannot quietly become permanent.
+
+**Acceptance Criteria:**
+
+**Given** `demo-heuristic-only` and the `provisional` gate string exist **only** in
+`argus/dogfood/proof_run.py` and `argus/dogfood/proof_render.py` — an internal artifact, not a user surface
+**When** this story completes
+**Then** the disclosure reaches the CLI summary, every generated report, the MCP surface, and the
+distribution listing, satisfying FR34.
+
+**Given** AR7 / §3.3 forbid a second mechanism where one exists
+**Then** the existing two-sided `DOGFOOD_EXTERNALIZATION_GUARD` test is **extended** (presence AND
+over-claim-phrase absence), never duplicated.
+
+**Given** FR34 requires mechanical enforcement
+**Then** the surface set is **enumerated in a test that fails on an unenumerated member** — a new verdict
+surface either carries the disclosure or fails CI.
+
+**Given** the operator's explicit direction that no permanent provisional state ships
+**Then** the disclosure records **what would remove it** (the >=80% gate, cleared per Epic 13) and is
+written to be **replaced by the cleared status, never deleted** — and a test asserts the enforcing guard
+cannot pass vacuously once the token changes.
+
+**Given** FR37 governs explanation and FR16 governs classification
+**Then** no verdict is reworded, upgraded or hedged by this story. The decision table is untouched.
+
+### Story 11.2: A polyglot repository is classified correctly
+
+As a developer auditing a repository that is not Python,
+I want file classification to use real word boundaries,
+So that an ordinary source file is never mistaken for a test.
+
+**Acceptance Criteria:**
+
+**Given** `"test.java"` and `"spec.rb"` at `argus/detectors/vacuous_test.py:198` carry **no word
+separator**, so `latest.java` and `myspec.rb` classify as tests **by name**, with no content check
+available to correct it
+**When** the separators are added
+**Then** a pinned **near-miss corpus** (`latest.java`, `myspec.rb`, `contest.py`, `respec.rb` and their
+true-positive counterparts) asserts both directions.
+
+**Given** the exposure is **zero-instance in this repository** — the ledger called it *"latent, lands only
+on a polyglot target repo"*
+**Then** the story records that **the public audience is that polyglot target**, which is what moves it
+from a latent internal item to release-blocking.
+
+**Given** the AC7 two-stages-cannot-disagree invariant
+**Then** it is **re-proven**, not assumed to survive the change.
+
+> ⚠️ **THE SURROUNDING CODE HAS CHANGED SINCE THIS STORY WAS DRAFTED.** *(Measured 2026-08-10.)*
+> `vacuous_test.py` now splits filename classification into **two** constants, which this story's framing
+> predates:
+> - **`_UNAMBIGUOUS_TEST_SUFFIXES`** — where `"test.java"` and `"spec.rb"` live. **The defect is here and is
+>   untouched**: the citation at `:198` is still exact, the separator is still missing, and this tuple has
+>   **no content check by design** (*"the convention is reserved for tests and no production module adopts
+>   it"*) — so the AC's *"with no content check available to correct it"* remains true **for these suffixes**.
+> - **`_AMBIGUOUS_PYTHON_TEST_SUFFIXES`** (`_test.py`, `test.py`) — **new**: genuinely ambiguous Python
+>   suffixes **resolved by CONTENT when an AST entry is available**, added because
+>   `argus/detectors/vacuous_test.py` — the detector itself — was being classified as a test file and
+>   dropped to `tool_scanned_only`.
+>
+> **Binding consequences for the story:** (a) the fix belongs in `_UNAMBIGUOUS_TEST_SUFFIXES` **only** —
+> do not route Java/Ruby through the Python content-resolution path, which is AST-backed and
+> language-specific; (b) the **AC7 re-proof is now the load-bearing AC, not a formality** — the invariant
+> must be re-proven across **both** constants and their interaction, since a second classification stage
+> now exists that did not when AC7 was written; (c) the near-miss corpus must include a Python case
+> (`contest.py`) that exercises the ambiguous path, so the two constants are shown not to disagree.
+
+### Story 11.3: The published action cannot execute a consumer's input
+
+As a developer running the Argus action in my own repository,
+I want my workflow inputs to be data, never shell source,
+So that using Argus cannot execute code in my CI job.
+
+**Acceptance Criteria:**
+
+**Given** **five** action-input sites are interpolated into `run:` bodies
+(`action.yml:74,78,79,80,126`) — **the ledger named only `:127`**
+**When** the sweep runs
+**Then** all five are bound through `env:` and compared as quoted shell variables, in **one pass**, with
+the corrected site count recorded.
+
+**Given** publishing converts a latent finding into a live one in **every consuming repository**
+**Then** a guard test fails on **any** action-input interpolation appearing inside a `run:` block.
+
+**Given** the marketplace channel
+**Then** this story is a **hard precondition** on it — Epic 12's publish story may ship the index channel
+without it, and may not ship the marketplace channel.
+
+### Story 11.4: A wrong grammar version cannot silently produce a false green
+
+As an operator on a machine whose environment I did not build,
+I want an unvalidated parser to withhold a verdict rather than compute one,
+So that an assurance tool never emits a false green from a dependency it did not check.
+
+**Acceptance Criteria:**
+
+**Given** the `tree-sitter <0.26` bound is **load-bearing**: on `0.26.0` the cartridge self-audit flips
+`NOT_READY_FOR_RELEASE` -> `RELEASE_READY` because AST corroboration stops firing — a **false negative
+from an assurance tool**, the PRD-fatal direction (inversion F1)
+**When** an out-of-bound version is present at runtime
+**Then** the assertion fires **at runtime**, not only at resolve time — a metadata bound constrains a
+resolver, never an already-installed environment.
+
+**Given** the degradation must not itself be a crash (NFR-R1)
+**Then** it produces a **typed finding and a non-vouching verdict**; `RELEASE_READY` is **never** computed
+under an unvalidated parser.
+
+**Given** the failure is silent today
+**Then** a test pins the flip — a regression to silence fails CI.
+
+### Story 11.5: The published artifact is complete and says only true things
+
+As a developer installing from a public index,
+I want every shipped module to import and every claim in the docs to be true,
+So that what I install is what the documentation describes.
+
+**Acceptance Criteria:**
+
+**Given** **5 of 71** wheel modules fail to import (`No module named '_registry'`, from
+`argus/precision/replay_harness.py:87-90` inserting `<repo>/tests/cartridges` onto `sys.path`)
+**When** the import is made lazy/optional
+**Then** the count is **re-measured from a freshly built wheel**, and `_NOT_IMPORTABLE_FROM_DISTRIBUTION`
+is pinned **in both directions** so a stale record goes RED.
+
+**Given** **22 bare-word "Minions" subject claims across 14 `argus/**` modules**
+**Then** each is read and classified **true-historical (keep)** or **false-subject-claim (rewrite)** —
+never a blanket replace.
+
+**Given** README's *"INTERIM — resolve straight from this repository at a tag"* is false (`git tag -l` is
+**empty**), and README additionally claims **slash-command registration that does not ship** while its CLI
+example omits the `audit` subcommand and the required repo positional
+**Then** every false claim is corrected or removed. **The slash-command claim is not deleted** — Epic 12
+delivers it (FR35); it is marked as forthcoming with its story reference, so the docs never describe a
+capability the artifact lacks.
+
+---
+
+## Epic 12: The Useful Tool — what a developer gets on the first run · *Argus repo*
+
+Argus becomes worth installing. Two capabilities that are **built and unwired** are connected, the
+output stops being a dead end, the tool becomes reachable from the agent that wrote the code, and
+the result is published. This epic adds **no new assurance capability** (PRD §V1.5) — it delivers
+requirements already in the contract and reach the contract now admits.
+
+**Covers:** FR36 (12.2), FR27/NFR-D1 delivery (12.3), FR37 (12.4), NFR-P3 (12.5), FR35 (12.6, 12.7)
+· **Depends on Epic 10 (all five) and Epic 11 (all five)**
+**Dependency flow:** **12.1 FIRST** — it is a hard enabler; 12.2 and 12.3 both land in
+`argus/pipeline.py`, which is already 131 lines over the NFR-M1 cap. **12.2 EARLY** — it carries the
+absorbed reachability measurement, which can change what 12.4 must say. 12.3 **depends on Story 10.2**
+(the grammar cache key must be correct *before* anything reads it). 12.5 independent. 12.4 -> 12.6 ->
+12.7. **12.9 LAST — the only story that publishes anything.**
+
+**Source:** [sprint-change-proposal-2026-08-10b.md](sprint-change-proposal-2026-08-10b.md)
+
+### Story 12.1: The file everything lands in stops breaching its own limit
+
+As the Argus maintainer,
+I want `pipeline.py` under the NFR-M1 ceiling and the ceiling enforced repo-wide,
+So that the two wirings this epic depends on are not built on a file that already fails the rule.
+
+**Acceptance Criteria:**
+
+**Given** DF-8-2-A recorded `pipeline.py` at **1199/1200** and warned *"the next edit of any size breaches
+NFR-M1"*, and it is now **1331 lines**
+**When** the extraction completes
+**Then** every `argus/**` file is at or under 1200 lines, measured and recorded.
+
+**Given** NFR-M1 is enforced **per-module and ad hoc** (`tests/test_cache_invalidation.py:690`,
+`tests/test_cartridge_selfaudit.py:472`) with **no repo-wide sweep and no assertion covering
+`pipeline.py`** — which is why 131 lines of drift went uncaught
+**Then** a repo-wide sweep test asserts the ceiling over **every** source file, so no file can breach it
+silently again.
+
+**Given** DF-8-2-A, DF-8-3-A and DF-8-3-C **all gate on this extraction**
+**Then** each is closed or its remaining scope re-recorded with a reason — none is left pointing at work
+that has now happened.
+
+**Given** the extraction is pure restructuring
+**Then** the full suite passes unchanged and a dogfood re-run produces an **identical verdict** —
+behaviour is proven untouched, not assumed.
+
+**Given** DF-8-5-B — three committed-artifact rot checks (`TC-ArgusAgent-DOGFOOD-001-03`, `-06`, `-20`)
+compare a committed `.md` against a **live derivation over the working tree**, so any change to
+`argus/**` composition re-breaks them with no warning; `-03` and `-06` were **RED across four
+consecutive commits** and Story 8.5 had to re-derive its artifacts **three times**
+**When** this story restructures `pipeline.py` — and before 12.2, 12.3 and 12.6 change `argus/**` further
+**Then** DF-8-5-B is closed here: either a **documented regeneration entry point named in the failure
+message of all three assertions**, or a CI step that regenerates and fails on drift.
+*(Absorbed 2026-08-10b. Rationale: this epic changes `argus/**` more than any epic since Epic 6, so the
+structural two-step lands repeatedly. Invisible to users; a tax on every remaining Epic-12 story.)*
+
+### Story 12.2: The deep audit is wired, opt-in, and honest about what it costs and sends
+
+As a developer who wants a real answer on the code that matters,
+I want to enable a deeper pass on demand, with its cost and its egress stated up front,
+So that I can get depth when I want it without paying for it or leaking source when I don't.
+
+**Acceptance Criteria:**
+
+**Given** `DeepAuditSeam` at `argus/audit/deep_audit.py:91` is referenced only from `argus/audit/*` and
+`argus/dogfood/proof_run.py` — **never from `argus/pipeline.py`**
+**When** this story completes
+**Then** the seam is reachable from the audit pipeline through an explicit opt-in, satisfying FR36.
+
+**Given** FR36 and NFR-S6
+**Then** the pass is **off by default**; the default run remains zero-token, offline, key-free and
+transmits nothing; and enabling it **discloses the provider and what will be transmitted before the first
+byte leaves**. A committed gate fails if any egress path is reachable without opt-in.
+
+**Given** Story 6.1's determinism quarantine — a subprocess gate proving the pure seam does not import
+providers
+**Then** that gate **still passes**. Wiring the seam must not move provider imports into the pure path.
+
+**Given** FR21/FR22 already govern spend
+**Then** the pass flows through the **existing** ceiling — halt, mark `skipped`, downgrade, report — with
+**no new cost-governance mechanism** (AR7/§3.3: reuse, never fork).
+
+**Given** architecture §E justified omitting fallback, circuit-breaking and cost attribution because they
+came *"for free"* from the Minions orchestrator, and **Story 9.1 removed that orchestrator**
+**Then** those behaviours are supplied here as NFR-R1 acceptance criteria: an unavailable, erroring, or
+budget-halted provider downgrades coverage and records a finding. No false deep claim, no crash, no
+`RELEASE_READY` computed over a failed pass.
+
+**Given** the absorbed question from the superseded Story 11.2 — `DOGFOOD_EXTERNALIZATION_GUARD` states
+every dogfood finding is advisory (`depth_supported is None`), while the epics frontmatter records the
+vacuous cartridge emitting a verdict-**blocking** finding, and **both may be true if the paths supply
+depth differently — not verified**
+**Then** this story **measures**, on the **default** invocation (no LLM, no cartridge harness), whether
+`NOT_READY_FOR_RELEASE` is reachable, and **records the result as a yes or a no**.
+**And** a measured **"no"** is reported and **escalated** — it is never a licence to loosen a gate and
+never grounds for softening Journey 6. If the answer is "no", Story 12.4's output must say so plainly
+rather than implying a blocking verdict is available for free.
+
+### Story 12.3: A re-run returns the recorded result
+
+As a developer iterating on my code,
+I want a re-audit to reuse what has not changed,
+So that running Argus repeatedly is fast enough to be part of my loop.
+
+**Acceptance Criteria:**
+
+**Given** `argus/cache/memo_store.py` exists and `argus/pipeline.py` **never imports it**, while FR27
+requires verdict reproduction and NFR-D1 names local content-addressed memoization as the mechanism
+**When** the store is wired
+**Then** an existing requirement is **delivered** — this story adds no capability to the contract, and
+says so.
+
+**Given** **Story 10.2 makes the grammar provenance per-grammar** and explicitly declines to wire this
+store, recording that ordering as deliberate — *"it makes the key correct before anything depends on it"*
+**Then** this story **depends on 10.2** and consumes the corrected key. Wiring first would bake a wrong
+key into a persisted cache and require a `CACHE_KEY_SCHEMA_VERSION` bump plus migration to undo.
+
+**Given** a cache is a correctness surface in an assurance tool
+**Then** a hit and a cold run produce **byte-identical** verdicts, pinned by test, and the DF-5-1-A
+invalidation contract holds over the wired path.
+
+### Story 12.4: Every outcome names its next action
+
+As a developer with no colleague to ask,
+I want the tool's own output to tell me why I got this result and what changes it,
+So that a verdict is a step forward rather than a dead end.
+
+**Acceptance Criteria:**
+
+**Given** FR37
+**Then** every terminal outcome — `RELEASE_READY`, `NOT_READY_FOR_RELEASE`, `INSUFFICIENT_COVERAGE`, and
+the `AUDIT_FAILED` non-verdict — names why it was reached and the next action that changes it,
+**enumerated in a test that fails on an unenumerated outcome**.
+
+> ⚠️ **THIS STORY EXTENDS AN EXISTING MECHANISM — IT DOES NOT CREATE ONE.** *(Measured 2026-08-10.)*
+> A next-action surface **already ships**: `argus/reports/plain_english.py:205` renders a `Next:` line and
+> states its own rationale — *"a red light with no next action trains an [operator to ignore it]"* — and
+> `argus/reports/generator.py:236` reasons about the same gap (*"is unmet but not by what, so there is no
+> next action"*). The ACs below read as greenfield because they were drafted from FR37's text rather than
+> from the tree.
+> **Binding consequence for the story:** the first task is to **measure what the existing `Next:` surface
+> already covers**, per outcome, and the story delivers the **difference** — not a second mechanism
+> (AR7 / §3.3: reuse, never fork). A parallel next-action renderer beside the shipped one is a defect, not
+> a delivery. The **enumerating test is genuinely new** and remains required regardless of what the audit
+> of existing coverage finds.
+> **What is measurably absent** (grep, 2026-08-10): the **ingestion-boundary disclosure**. Zero matches in
+> `argus/**` for the not-ingested populations. The three-population statement — *never ingested* /
+> *ingested but held out* / *assessed* — is unimplemented in any form, and it is the load-bearing AC added
+> after the `RELEASE_READY` incident below.
+
+**Given** `INSUFFICIENT_COVERAGE` is the load-bearing case
+**Then** it names the **specific** unmet gate — floor, ratio, or critical subsystem — with the measured
+figures, and the action that would change it.
+
+**Given** FR16 governs classification and FR37 governs explanation
+**Then** **no verdict is reworded, upgraded, or hedged.** The decision table is untouched, and a test
+asserts the verdict enum is unchanged by this story.
+
+**Given** Story 12.2's measurement
+**Then** the output reflects **what it actually found** — if a blocking verdict is not reachable on a
+default run, the output does not imply otherwise.
+
+**Given** the measured incident that motivates this AC: `argus audit .` on this repository returned
+`verdict=RELEASE_READY deep_ratio=57/149 blocking_findings=0 held_out=76, exit 0` **while the repository
+contained a shell injection in `action.yml`, five non-importable wheel modules, and a README describing a
+capability that does not ship** — none of which was a defect the audit missed, because
+`AUDITABLE_SUFFIXES` (`argus/shared/source_languages.py:80`) ingests only the 10 supported **source**
+languages, so `.yml`, `.md` and `.toml` were **never opened**
+**When** any verdict is emitted
+**Then** it names the **ingestion boundary**, distinguishing three populations by construction:
+**never ingested** (suffix outside `AUDITABLE_SUFFIXES`), **ingested but held out**, and **assessed**.
+`deep_ratio` and `held_out` describe only the second and third — **no ratio can disclose the first**,
+because a file that never entered is absent from every denominator.
+
+**Given** the boundary must not drift as languages are added or removed
+**Then** the disclosure is **derived from `AUDITABLE_SUFFIXES`, never hand-listed**, and a test fails if a
+suffix class present in the repository is absent from the statement.
+
+**Given** `RELEASE_READY` is the direction where an undisclosed boundary is most dangerous — the
+false-green direction the 2026-08-03 inversion analysis (F1) flagged as unguarded
+**Then** the boundary statement is asserted on `RELEASE_READY` **specifically**, not only on the
+not-assessed outcomes where a reader is already cautious.
+*(Added 2026-08-10b after the operator asked why the self-audit returned `RELEASE_READY` while 22 stories
+of release-blocking work were outstanding. The answer — everything outstanding sat outside the audited
+envelope — is correct by contract and was **not legible in the output**. This AC makes it legible.)*
+
+### Story 12.5: The default install grounds the languages it claims
+
+As a developer whose project is not Python,
+I want the public install to work on my stack,
+So that I am not silently given a worse result because of a packaging choice.
+
+**Acceptance Criteria:**
+
+**Given** NFR-P3 classifies coverage degraded by a grammar absent from the default install as a
+**packaging defect**, not a user error
+**When** the public distribution is installed by its documented primary command
+**Then** every language the tool claims to support is grounded, **without the user discovering an optional
+extra**.
+
+**Given** a language deliberately outside the default install
+**Then** its absence and the reason appear **in the tool's own output at the point the file is
+downgraded** — not only in the README.
+
+**Given** Story 10.2 documents the `[languages]` extra and `audit-ci.yml` sets
+`ARGUS_REQUIRE_LANGUAGE_GRAMMARS=1`
+**Then** this story reconciles the default install with that documentation so the two cannot describe
+different products.
+
+### Story 12.6: A coding agent can run the audit and read the verdict
+
+As a developer building with a coding agent,
+I want the agent to run the audit and act on the result itself,
+So that the loop that wrote the code contains something that checks it.
+
+**Acceptance Criteria:**
+
+**Given** FR35 and the four §Project Classification constraints
+**Then** an **MCP server over stdio** ships in the existing distribution as an entry point — **no network
+listener, no bound port, no HTTP stack, no credentials accepted or stored**.
+
+**Given** the `argus.* ⊬ fastapi` import-isolation gate and ADR #20
+**Then** both still pass, asserted by the existing committed gates rather than a new mechanism.
+
+**Given** FR35's parity requirement
+**Then** the same repository at the same commit yields the **same verdict** through the MCP surface and
+the CLI, pinned by test.
+
+**Given** FR34
+**Then** the disclosure is present on this surface — it is a user-facing verdict surface and the Story
+11.1 enumeration must already cover it.
+
+### Story 12.7: The commands the README promises actually exist
+
+As a developer following the README,
+I want the documented commands to be real,
+So that the first thing I try is not the first thing that fails.
+
+**Acceptance Criteria:**
+
+**Given** `README.md:138-150` claims *"ArgusAgent registers slash commands in your AI coding assistant"*
+and lists seven, while `pyproject.toml:59-62` ships **only** three console aliases to the same
+`argus.cli:main` — **no registration mechanism exists**
+**When** this story completes
+**Then** packaged command assets are placed in the host's configuration by a documented step, and each
+documented command resolves to a real invocation.
+
+**Given** Story 11.5 marked the claim as forthcoming rather than deleting it
+**Then** that marker is removed and the README describes what ships — the commands, the install step, and
+the hosts covered.
+
+**Given** a documented command that is **not** delivered
+**Then** it is removed from the README in the same change. The set that ships and the set that is
+documented are asserted equal by test.
+
+### Story 12.8: The tool explains itself
+
+As a developer with the tool's output and nothing else,
+I want `--help`, error messages, and the docs to answer what I need,
+So that I am never sent to a wiki that does not exist.
+
+**Acceptance Criteria:**
+
+**Given** `docs/` contains **one integrator-shaped README** and no first-run surface
+**When** this story completes
+**Then** a lean first-run page exists covering install, first audit, reading the ledger, and what each
+verdict means — **no tutorial prose beyond that**; this persona is a developer, not a novice (PRD §User
+Success, tertiary).
+
+**Given** every CLI flag Story 10.3 blessed
+**Then** `--help` states what it does and its default, and a test asserts parser-vs-help parity alongside
+10.3's parser-vs-contract test.
+
+**Given** an operator error (bad path, unreadable repo, missing grammar, absent key under the deep pass)
+**Then** the message names the cause and the fix. NFR-R1's no-crash rule already covers the degradation;
+this covers the **diagnosis**, extending Story 10.4's principle to the user-facing surface.
+
+**Given** DF-8-4-D — `argus/cli.py:368-372` catches the **base** `ValueError` while its own comment
+enumerates the typed subclasses, and Pydantic's `ValidationError` **is** a `ValueError` subclass, so
+*"a genuine internal validation bug is reported as an expected, typed 'audit failed' degradation instead
+of surfacing"*
+**When** an internal defect occurs on the public entry point
+**Then** it is **distinguishable from an expected degradation** — the arms are split to the typed
+subclasses the comment already names, and a genuine bug surfaces as a defect the user can report rather
+than as a normal outcome. A test pins both directions so the two cannot re-merge.
+*(Absorbed 2026-08-10b. Filed 🟢 when every user could read a stack trace; it is not 🟢 for a public CLI
+— a masked bug costs the user a next action, which FR37 forbids, and costs the maintainer a bug report.)*
+
+### Story 12.9: The release is published, and its status cites the gate that published it
+
+As a developer installing Argus,
+I want a real published artifact whose release status is evidenced,
+So that what I install exists and its claims are backed by an executed gate.
+
+**Acceptance Criteria:**
+
+**Given** Story 10.1's evidence standard
+**Then** the release status cites the **CI run id on the released commit**, or is recorded **NOT
+ESTABLISHED** — never asserted.
+
+**Given** `release.yml` **deliberately abstains from index publish** (its own header) and has **never
+executed** — `git tag -l` is empty
+**Then** adding publish is a **reviewed, deliberate scope change** to a workflow that documents its own
+abstention, recorded as such.
+
+**Given** Story 11.3 is a hard precondition on the marketplace channel
+**Then** if 11.3 has not landed the **marketplace channel does not ship**; the index channel may ship
+independently.
+
+**Given** FR34
+**Then** **both listings carry the disclosure**, and the artifact installs clean in a fresh environment
+with `argus --help`, a fixture audit, and an MCP invocation all succeeding — proven, not built.
+
+**Given** this is the first public artifact
+**Then** the release edge cases Story 9.2 pinned (dirty tree, existing tag, re-tag, silent overwrite) are
+**re-proven against the index channel**, which 9.2 could not exercise.
+
+---
+
+## Epic 13: Earn the Gate — remove the disclosure by measuring, not by deleting · *Argus repo*
+
+The >=80% finding-precision gate is cleared on evidence, or it is recorded as **not cleared** and
+the disclosure stays. This epic is the reason FR34 is temporary rather than permanent. **It is the
+only work in this plan that can remove the tool's provisional status, and it is not a build task.**
+
+**Covers:** DF-7-2-A, DF-6-6-A / -P1 / -P2 · the architecture's OPEN validation-set input (L152-154)
+**Depends on Epic 12** (a published tool whose findings are worth adjudicating)
+**Dependency flow:** 13.1 -> 13.2 -> 13.3, strictly sequential. No parallelism — each story's output is
+the next one's input.
+
+> ✅ **Start condition MET — adjudicator named 2026-08-10b.** This epic required a named human because no
+> agent can adjudicate a finding as genuinely real; that is the whole point of the measurement.
+> **`sprint-status.yaml` names one: XAgent007**, filling the Engineering Lead role in
+> `precision-validation-protocol.md` §2 (primary adjudicator). The QA Lead second and external tie-break
+> stay unfilled until a borderline finding requires them (§4). **The item is NOT closed** — an owner is
+> named, the measurement has not run. DF-6-6-A/-P1/-P2 follow the same owner by inheritance.
+>
+> *Corrected 2026-08-10 (readiness report, M-7). This header read* "**This epic cannot start without a
+> named human** — DF-7-2-A has been open and **unowned** since Epic 7… Story 13.2 does not begin until an
+> adjudicator is named in `sprint-status.yaml`" *— a condition the tracker had already recorded as met.
+> The two governing documents disagreed on the single condition gating the public release, and FR34's
+> second condition (a programme to clear the gate,* **committed and in flight***) reads as unsatisfied
+> from this document alone.*
+
+**Source:** [sprint-change-proposal-2026-08-10b.md](sprint-change-proposal-2026-08-10b.md)
+
+### Story 13.1: Decide what the validation set is, then build it
+
+As the Argus maintainer,
+I want one definition of the validation set and a corpus that satisfies it,
+So that the gate is cleared against the thing the PRD actually specified.
+
+**Acceptance Criteria:**
+
+**Given** PRD L161 specifies *"N ≈ 5-10 **real** XAgents repos"* and L156 requires findings *"judged
+genuinely real by an independent senior engineer"*, while `precision-validation-protocol.md` §5 specifies
+*"N >= 5 distinct labeled **planted-defect cartridges**"* with `VALIDATION_SET_FLOOR_N = 5` — **two
+different corpora, never reconciled**
+**When** this story completes
+**Then** one definition governs, the other is amended to match, and the decision is dated and reasoned.
+**And** the recommendation of record is that **the PRD governs**: cartridges measure **recall against
+known plants** (FR20, already delivered and CI-asserted); precision measures **how often a blocking
+finding on unplanted code is real**. These are different quantities and only the second gates
+externalization.
+
+**Given** the architecture records at L152-154 that the validation-set input is **OPEN** and *"the one open
+input that gates an ARCHITECTURE choice"*
+**Then** this story **closes it**, and the architecture is amended from OPEN to resolved with the decision
+recorded.
+
+**Given** the corpus went **backwards**: Story 8.5 re-derived the dogfood as a self-audit of `argus/`, the
+independent Minions run survives only at `minions-dogfood-proof-story-7-2-superseded.md` and *"can never
+be re-derived in this repository"*, and the ledger calls the replacement *"a materially weaker evidence
+class … not independent corroboration of anything"*
+**Then** the corpus is rebuilt from **repositories Argus did not author**, and the self-audit is
+**excluded from N** with that exclusion recorded.
+
+**Given** the PRD's *"usage is not evidence"* guard
+**Then** repositories may be **sourced** from anywhere including public users, but **only adjudicated
+findings count** toward the measurement. Install counts, run counts and stars are never evidence.
+
+**Given** DF-8-5-C — `argus/dogfood/proof_run.py:643-644` passes `precision=Fraction(0, 1), n=0` as
+**literals, not a measurement**, rendering *"N=0 labeled cartridges populated, floor N=5"* into
+`minions-dogfood-proof.md:87`, while the shipped registry measures **5 distinct rule classes across 7
+populated rows**
+**When** this story establishes what the corpus actually is
+**Then** the published figure is **derived from the registry, not written by hand**, and the artifact is
+regenerated so the corpus it reports is the corpus that exists.
+**And** the correction is recorded as a correction: the figure **understated**, so it never made a gate
+look cleared — but a hand-written number in a proof artifact about the very gate this epic measures is
+the defect class Epic 8 exists to delete.
+*(Absorbed 2026-08-10b.)*
+
+### Story 13.2: Adjudicate every finding, by a named human
+
+As the accountable adjudicator,
+I want to judge each emitted finding true or false against the recorded protocol,
+So that the precision figure is a measurement rather than an estimate.
+
+**Acceptance Criteria:**
+
+**Given** DF-7-2-A is *"the ONLY step that can clear the attested gate"* and has been **open and unowned**
+since Epic 7, restated as unowned by Story 9.2 and by the 2026-08-10 proposal
+**When** this story starts
+**Then** the adjudicator is **named in `sprint-status.yaml`**, and the story does not begin otherwise.
+
+**Given** the protocol's §2 roles (Engineering Lead primary, QA Lead, external tie-break) and §4 method
+(**full-corpus exhaustive, not sampled**; borderline -> locator re-examination -> golden-key correction ->
+external tie-break)
+**Then** the run follows the **committed protocol as written**. Where the corpus definition changed under
+13.1, the protocol is amended **before** the run, never reinterpreted during it.
+
+**Given** §3 budgets <=4 expert-hours for a full gate-flip adjudication at N>=5
+**Then** actual expert-hours are **recorded**, so the next run can be scheduled on evidence rather than on
+the estimate.
+
+**Given** DF-6-6-A, DF-6-6-A-P1 and DF-6-6-A-P2 are open and describe the human half of this same
+adjudication
+**Then** each is closed here or its remaining scope re-recorded with a reason — none is left pointing at a
+run that has now happened.
+
+**Given** §3.4 evidence immutability
+**Then** the adjudication record is **append-only**: a finding's disposition is never rewritten, and a
+corrected judgement is recorded as a correction with its date and reason.
+
+### Story 13.3: Record the result, and let it decide
+
+As a developer relying on Argus,
+I want its stated status to match its measured status,
+So that the disclosure disappears only when it has stopped being true.
+
+**Acceptance Criteria:**
+
+**Given** the protocol's §5 thresholds — **>=80% precision (exact Fraction)**, **0 clean-repo blocking
+false positives**, **N >= 5**, recall as diagnostic only
+**When** the measured figures are in
+**Then** the outcome is computed against those thresholds **as written**, with no post-hoc adjustment.
+§7's OI1 honesty invariants are **not softened**.
+
+**Given** the gate **clears**
+**Then** `protocol_cleared=True` is passed by the harness caller (`argus/precision/replay_harness.py:223`,
+`False` and never set `True` to date); PRD L118/L130/L141/L302 are updated from **NOT CLEARED** to cleared
+**with the corpus and run that cleared it**; and per FR34 the disclosure is **replaced by the cleared
+status, never deleted** — with a test asserting the enforcing guard has not become vacuous.
+
+**Given** the gate **does not clear**
+**Then** that is **recorded as the result**, the disclosure **stays**, and the shortfall is reported with
+what would close it. **A failed measurement is not a reason to amend the threshold** — it is the
+measurement working.
+
+**Given** the attested tier
+**Then** clearing this gate authorises **attested externalization** and nothing else; it does not by
+itself authorise commercial, enterprise, regulated or operated-service use, each of which carries its own
+preconditions.
+
+**Given** the epic-9 retrospective declared the plan FINAL once already, and Epic 10 had to reopen it
+**Then** this epic's retrospective states plainly what remains open, rather than letting a cleared gate
+read as plan closure. **As of 2026-08-10b that list is: H0 is owned but H1–H4 are still NOT FILED;
+assumption A5 remains UNSUPPORTED and H3's blocking-vs-advisory policy decision is unmade; and the
+deferred-work entries DF-6-7-A, DF-8-4-B (bytes-example half), DF-8-4-C, DF-8-4-D, DF-8-5-B, DF-8-5-C
+and DF-9-2-C are open with no named human.** The retrospective re-derives this list at the time it is
+written rather than copying it — the point is that it is measured, not that it matches this sentence.
+
 ---
 
 ## Minions-Repo Handoff — not epics in this breakdown
@@ -1824,6 +2608,16 @@ cycle-free, published `argus-agent`).
 > **(a)** a named owner files H1–H4 against the Minions backlog with a link back to this section, or
 > **(b)** it is explicitly recorded that filing is the operator's own step, taken outside this workflow.
 > Silence is not an option — it is how this becomes a document nobody actions.
+>
+> ✅ **CLOSED 2026-08-10b via option (b).** The operator (**XAgent007**) records that **filing H1–H4 against
+> the Minions backlog is their own step, taken outside this workflow.** H0 is **no longer UNOWNED**.
+>
+> **What this closure does and does not mean.** It ends the *ownership* gap — the failure mode where a
+> handoff exists in a document and in no backlog. It does **not** mean H1–H4 have been filed. Until they
+> are, the integration remains planned-and-relocated, and this repository's CI still cannot verify any
+> of it. The prerequisites are unchanged: Epic 8 (correct verdict contract) and Epic 9 (a cycle-free,
+> published `argus-agent`) are done; **assumption A5 remains ⚠️ UNSUPPORTED** and H3's blocking-vs-advisory
+> policy decision is still required before that CI gate can be made blocking.
 
 ### H1 — Swap the vendored fork for the package *(RS-2 + IN-1, one change)*
 
