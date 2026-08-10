@@ -4,22 +4,22 @@
 
 ## Provenance
 
-- Commit descriptor (HEAD at generation): `7be90f7788c66d040a887b6b68f1358856961d4c`
-- Source files (tracked `argus/`): **71**
-- Total physical LOC (build-cost proxy): **18418**
+- Commit descriptor (HEAD at generation): `a9cc93398c1b1937d981e8f22108aa72cad157ba`
+- Source files (tracked `argus/`): **72**
+- Total physical LOC (build-cost proxy): **19783**
 - NFR-SC1 scale envelope: soft ≤40 files / ≤15000 LOC; hard ≤60 / ≤25000.
 - Reused planner: `partition_repository` (Story 2.4) — no fork (AR7).
 
 ## Partition map (OI2 — full-repo, MULTIPLE bounded units)
 
 - **Unit count: 3**
-- **Recorded cut edges (recorded-NOT-analyzed, the 6.4 seam): 49**
+- **Recorded cut edges (recorded-NOT-analyzed, the 6.4 seam): 57**
 
 | # | partition_id (sha256, 12ch) | files | LOC | context_pressure | ≤hard ceiling |
 |---|---|---|---|---|---|
-| 1 | `085854c90586` | 10 | 2993 | True | True |
-| 2 | `477ef77d7b65` | 21 | 1325 | False | True |
-| 3 | `bde14bbf3bcf` | 40 | 14100 | True | True |
+| 1 | `477ef77d7b65` | 21 | 1330 | False | True |
+| 2 | `82a3d605e61e` | 39 | 14793 | True | True |
+| 3 | `ed6d08f25ce3` | 12 | 3660 | True | True |
 
 ## AC2 — every TARGETED unit clears the 20%-deep coverage floor
 

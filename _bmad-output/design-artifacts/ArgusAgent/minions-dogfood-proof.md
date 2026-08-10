@@ -10,52 +10,52 @@ The frozen `pipeline.run_audit_detailed` (REUSED — no fork) was run over the g
 
 **This is a SELF-audit — Argus auditing Argus (Story 8.5 / AC2).** The subject is this repository's own package, not an independent codebase. A self-audit is MATERIALLY WEAKER evidence than the independent-repository run it supersedes: the tool and the tree share authorship, so the run cannot demonstrate that the tool finds defects it was not written alongside. It is reportable as a reproducibility and no-source-retention demonstration; it is NEVER independent corroboration of the tool's detection ability. The independent Story-7.2 run over the Minions platform repository is preserved verbatim at `minions-dogfood-proof-story-7-2-superseded.md` and cannot be re-executed here, because that source is not in this repository. The filename `minions-dogfood-proof.md` is a retained HISTORICAL identifier (an evidence path that moves is an evidence path that gets lost); the subject is what this section names, not what the filename suggests.
 
-- Commit descriptor (HEAD at generation): `7be90f7788c66d040a887b6b68f1358856961d4c`
-- Source files audited: **71**
-- Total physical LOC (build-cost proxy): **18418**
+- Commit descriptor (HEAD at generation): `a9cc93398c1b1937d981e8f22108aa72cad157ba`
+- Source files audited: **72**
+- Total physical LOC (build-cost proxy): **19783**
 - Partition units (7.1 plan, CONSUMED): **3**
 - **Verdict: `RELEASE_READY` (exit `0`)**
 - **Decision row (FR16 / DR-3), as DISCLOSED by the gate: `row_3_gates_met`**
-- Coverage-ledger deep-%: **`55/71`** (exact `Fraction`, never a float — AR4)
-- Coverage-ledger deep count / total entries: **55 / 71**
+- Coverage-ledger deep-%: **`7/9`** (exact `Fraction`, never a float — AR4)
+- Coverage-ledger deep count / total entries: **56 / 72**
 - Blocking (verdict-eligible) findings: **0**
-- Total findings emitted: **101**
+- Total findings emitted: **108**
 
 ### 1a. The assessed population the row was computed from (DR-3)
 
-**No narrowing occurred.** The verdict carries no `coverage_scope`, so the gate keyed on the WHOLE coverage ledger: **55 `audited_deep` of 71 entries** (`55/71`, exact `Fraction`). No entry was held out of the assessment and no scope identifier was applied.
+**No narrowing occurred.** The verdict carries no `coverage_scope`, so the gate keyed on the WHOLE coverage ledger: **56 `audited_deep` of 72 entries** (`7/9`, exact `Fraction`). No entry was held out of the assessment and no scope identifier was applied.
 
 ### 1b. The critical-subsystem clause (FR4 / DR-5 / boundary B3)
 
 **Satisfied over a NON-EMPTY set.** Every path in the critical set is `audited_deep`; the gate is not vacuous.
 
 - Clause satisfied (`critical_subsystems_all_deep`): **True**
-- Critical-set size (`CriticalSubsystemSet.paths`): **50**
+- Critical-set size (`CriticalSubsystemSet.paths`): **51**
 - Paths the DR-5 eligibility filter removed from the HEURISTIC term as ineligible: **10**
 - `designated_but_unmatched` operator paths: **0**
 - Critical paths NOT `audited_deep`: **0**
 
 ## 2. Within the `$X` = 843 ceiling (AC-EXECUTE / FR21 / OI3) + the 3.2 halt
 
-The run's V1 deterministic zero-token cost total is **355 credits** (folded via the 3.1 `account_spend` — no fork).
+The run's V1 deterministic zero-token cost total is **360 credits** (folded via the 3.1 `account_spend` — no fork).
 
 **The ceiling honesty pair (Story 8.5 / AC1).** Two different numbers are in play and this artifact states both rather than letting them be confused:
 
 - **Frozen historical execution parameter** `$X` = `DOGFOOD_BUDGET_CEILING` = **843** credits — the ceiling this run was actually EXECUTED under. It is a pinned constant recording a past sizing, NOT a live measurement.
-- **Live 7.1 sizing** — the `sized_ceiling` derived from the CURRENT tree by the same `build_full_repo_plan` call this generator already makes (REUSED — no second accountant): **443** credits. This is the number `minions-dogfood-budget-plan.md` publishes.
-- Fits under the frozen `$X` = 843: **True** · Fits under the live 7.1 sizing = 443: **True**
+- **Live 7.1 sizing** — the `sized_ceiling` derived from the CURRENT tree by the same `build_full_repo_plan` call this generator already makes (REUSED — no second accountant): **450** credits. This is the number `minions-dogfood-budget-plan.md` publishes.
+- Fits under the frozen `$X` = 843: **True** · Fits under the live 7.1 sizing = 450: **True**
 
 - Under `BudgetConfig(ceiling_credits=843)` the run FITS (`ceiling_reached is False`): **True**
 - Under a ceiling ONE credit below the total the run BREACHES (the >=-is-a-breach REUSE — the 3.2 halt->skip->downgrade->report path fires): **True**
-- NFR-C1 baseline ratio (audit-cost / build-cost proxy): `355/18418` (`Fraction`/marker — never a float)
+- NFR-C1 baseline ratio (audit-cost / build-cost proxy): `360/19783` (`Fraction`/marker — never a float)
 
 ## 3. The SIGNED, source-free evidence bundle (AC-BUNDLE / FR29 / NFR-A1 / NFR-S1)
 
 Exported via the done 4.3 `build_evidence_bundle` + persisted via `persist_evidence_bundle` (REUSED — no forked bundle model / serializer), serialized THROUGH the single 1.1 `canonical.dumps_bytes` and stamped by the 1.1 content-addressed, **prev-hash-chained** envelope (the ArgusAgent "signature"; the point-in-time stamp is the envelope `created_at`, EXCLUDED from the hash — NFR-A1/D3).
 
-- Persisted bundle locator: `state/da17b0fe19d121a4414ea542e8b9061abc73eca549aadb45b178cfc1fced89fc.json`
-- Bundle content hash (the signature): `da17b0fe19d121a4414ea542e8b9061abc73eca549aadb45b178cfc1fced89fc`
-- Canonical bundle byte length: **52231**
+- Persisted bundle locator: `state/3e1daba31c859f3e00e20ad4f41b6a831837a51fdd0f5f564d239efb744c2c51.json`
+- Bundle content hash (the signature): `3e1daba31c859f3e00e20ad4f41b6a831837a51fdd0f5f564d239efb744c2c51`
+- Canonical bundle byte length: **55259**
 - Referential-integrity report consistent (4.2 lint): **True**
 - **No-source-retention MOAT (NFR-S1 / NFR-S3):** the bundle retains NO source byte and NO secret value — the moat is STRUCTURAL (no bundle field holds a source/secret value; only locations + redacted indicators). Proven over the REAL audited tree by `tests/test_secret_containment.py` (`TC-ArgusAgent-SECURITY-001-23`) and `tests/test_dogfood_proof.py` (`TC-ArgusAgent-DOGFOOD-001-22`).
 - **100% reproducibility (AC-REPRODUCIBLE / NFR-D1 / P1):** two dogfood runs on the same tracked content yield a BYTE-IDENTICAL verdict + bundle canonical bytes (the builder sorts/order-fixes every collection; no clock/float/set-order in the hashed payload). Demonstrated (RED against injected non-determinism, then green) in `tests/test_dogfood_proof.py` (`TC-ArgusAgent-DOGFOOD-001-24`).
@@ -77,8 +77,8 @@ The REAL dogfood findings are laid out below by the 6.6 `finding_match_key` iden
 | rule_id | verdict-eligible (blocking) | advisory | count | sample locators | TP/FP (human) |
 |---|---|---|---|---|---|
 | `cross_partition` | False | True | 2 | `argus/cache/invalidation.py:1`; `argus/verdict/prosecutor.py:1` | &nbsp; |
-| `hardcoded_secret` | False | True | 22 | `argus/audit/open_llm_adapter.py:165`; `argus/cache/key.py:109`; `argus/cache/key.py:150`; `argus/cache/key.py:159`; `argus/cache/key.py:76` | &nbsp; |
-| `orphan_code` | False | True | 77 | `argus/audit/deep_audit.py:54`; `argus/audit/deep_audit.py:91`; `argus/audit/minions_llm_adapter.py:25`; `argus/audit/ports.py:163`; `argus/audit/ports.py:92` | &nbsp; |
+| `hardcoded_secret` | False | True | 25 | `argus/audit/open_llm_adapter.py:170`; `argus/cache/key.py:122`; `argus/cache/key.py:163`; `argus/cache/key.py:172`; `argus/cache/key.py:80` | &nbsp; |
+| `orphan_code` | False | True | 81 | `argus/audit/deep_audit.py:54`; `argus/audit/deep_audit.py:98`; `argus/audit/minions_llm_adapter.py:25`; `argus/audit/ports.py:163`; `argus/audit/ports.py:92` | &nbsp; |
 
 ## 7. The ≥80%-precision gate STAYS PROVISIONAL (AC-PROVISIONAL / OI1 keystone)
 
