@@ -40,7 +40,149 @@ versioning intent is [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
 ## Unreleased
 
-*(Nothing yet since `0.1.0`.)*
+### Specified — six CLI flags that shipped in `0.1.0` accepted and specified nowhere
+
+`argus audit` has always accepted more than its published invocation contract described. Measured on
+2026-08-10 against the full binding corpus — the PRD, the architecture, the epics, this file and the
+README — **six accepted flags had zero occurrences in any of them**: `--passes`, `--skip-pass`,
+`--reports`, `--strict`, `--ignore-path` and `--ignore-pattern`. An integrator could not discover
+them, and could not rely on them, because nothing said what they did.
+
+**These are not new flags.** Every one of them shipped in `0.1.0`; four entered in the repository's
+root commit and were inert until 2026-08-09. **No default changed and no verdict moved**, with the
+single deliberate exception recorded under *Fixed* below. What this release adds is the
+specification, and a test that keeps the specification and the parser equal: the accepted surface is
+now derived from `argus/cli.py::build_parser` at test time and compared against a declared contract
+registry in **both** directions, so a flag can no longer reach a user unspecified, and a document can
+no longer name a flag the tool rejects.
+
+The per-flag statement of record is the *"The LOCKED CLI contract"* block in
+[`argus/cli.py`](argus/cli.py), which now carries every accepted argument with its default and its
+owning story. The sections below state what a consumer needs.
+
+#### Specified: `--passes` and `--skip-pass`
+
+- **`--passes <csv>`** selects exactly the audit passes named (`coverage`, `vacuous`, `security`,
+  `orphan`, `prosecutor`). Omitted, every pass runs. A trailing comma is not a selection, and an
+  explicit `--passes` that selects **nothing stays empty** rather than reverting to the default —
+  narrowing to zero is an operator statement, not a missing one.
+- **`--skip-pass <pass>`** is repeatable and **subtracts only**. It removes passes from whatever
+  `--passes` selected; it can never re-add one the operator excluded. Two narrowing flags that could
+  widen each other would let a typo silently broaden an audit that was meant to be bounded.
+- The narrowing is already disclosed to the operator: the enabled pass set is printed with the
+  ship-readiness block, so a partial audit never reads as a full one.
+
+#### Specified: `--reports` and `--report-dir`
+
+- **`--reports <csv>`** selects which report types are rendered. Default:
+  `final-verdict,coverage-ledger`.
+- ⚠️ **`--reports` is conditionally inert.** Reports are only rendered when **`--report-dir`** is
+  set, so `--reports` on its own renders nothing. This is stated rather than left to be discovered:
+  blessing a flag while concealing that it does nothing half the time would be the same defect this
+  entry exists to close.
+- **`--report-dir <path>`** is the output directory for the generated Markdown reports and the
+  switch that makes `--reports` do anything. It was thinly documented (one README table row and one
+  `action.yml` input) and is now specified alongside the rest.
+
+#### Specified: `--strict`
+
+- **`--strict`** is release-gate mode: it requires a git repository, a clean working tree, and
+  `HEAD == --commit`, and refuses otherwise with a typed error. It is the enforcement of the FR1
+  determinism pin — without it there is no lever that refuses a drifted tree.
+- **Off by default, and that is deliberate.** A first run must work on any directory, including one
+  with no git metadata at all; such a run is audited as-is and **recorded** as non-reproducible
+  rather than refused. Use `--strict` in CI, where commit-pinned evidence is the contract.
+
+#### Specified: `--ignore-path` and `--ignore-pattern`
+
+Both suppress findings from the secret scan, and both are now bounded, recorded and disclosed. The
+reasoning is written up as the **[Suppression threat model](_bmad-output/design-artifacts/ArgusAgent/architecture.md)**
+in architecture §G — read it before using either flag in a pipeline.
+
+- **`--ignore-path <glob>`** (repeatable) extends the built-in test/fixture path patterns. Matched
+  case-sensitively so the same repository cannot hide a credential on one host and report it on
+  another.
+- **`--ignore-pattern <substr>`** (repeatable) suppresses a secret finding whose value contains the
+  pattern. It matches by **bare substring**, so a short pattern is a wide net; that residual risk is
+  stated in the threat model rather than engineered away here.
+- **Neither flag can suppress a high-confidence live production key** — an AWS access key, a GitHub
+  PAT, a Slack token or a PEM private-key header. Only an explicit inline `# argus:ignore`
+  annotation, which lands in a diff where a reviewer sees it, still can.
+- **A suppression you caused is now recorded and disclosed.** Every run prints one stderr line
+  saying how many security findings your `--ignore-*` rules suppressed — including when the answer
+  is none — and each one is recorded as a non-blocking `operator_suppressed_secret:<reason>` finding
+  carrying its reason token and its locator and nothing else: never the secret, never source bytes,
+  never your pattern, never an absolute path. **The record can never block a release on its own.**
+
+### Fixed — `--ignore-pattern` could defeat the live-key safeguard it was documented to sit under
+
+The secret-suppression engine's own design states that *"high-confidence live production key
+signatures override folder glob exemptions unless annotated with an explicit inline line comment."*
+It evaluated the CLI-supplied `--ignore-pattern` rules **above** that safeguard instead of below it.
+
+- **Measured before:** `--ignore-pattern "A"` — one character — suppressed every live AWS key,
+  GitHub PAT, Slack token and `BEGIN RSA PRIVATE KEY` block in the audited repository, and nothing
+  was recorded anywhere: the reason token was discarded on the spot. `--ignore-path 'argus/**'`
+  suppressed none of them, so the two flags were never the same risk. **After:** neither flag can
+  reach a live key, and any suppression either one causes is recorded and disclosed.
+- **This is the one behavioural change in this entry**, and it only ever *reports more*. An
+  invocation that passed no `--ignore-pattern` is unaffected. An invocation that used one to hide a
+  live production key will now report it — which is the point.
+- Inline `# argus:ignore` annotations keep their top precedence, deliberately: they are reviewable
+  where they are written.
+
+### Known divergence — `--coverage-scope`'s default differs between the CLI and the library
+
+Stated because it is real, not because it changed. **`--coverage-scope` defaults to `application` at
+the CLI**, as announced under *Defaults* below; **`AuditRequest.coverage_scope` defaults to
+`repository`** for a consumer constructing the request directly in Python. The same audit therefore
+assesses a different population depending on which door you came through. Both are shipped,
+announced surfaces, so neither is changed here; the divergence is now pinned in both directions by
+test so it cannot drift silently, and aligning them — a behavioural change to two published defaults
+— is deliberately left to its own release with a migration note.
+
+### Documented — the `[languages]` extra, which shipped undocumented
+
+Multi-language AST grounding has been in the product since before `0.1.0` and appeared in neither this
+file nor the README. A consumer auditing a Go or TypeScript repository had no way to discover that the
+capability existed, or that an optional install unlocked it. It is documented now, in
+[README §the `[languages]` extra](README.md#auditing-a-non-python-repository-the-languages-extra).
+
+- **`pip install ".[languages]"`** adds nine tree-sitter grammars — JavaScript, TypeScript, Go, Rust,
+  Java, C, C++, Ruby, PHP — on top of the Python grammar in the base dependencies. The languages Argus
+  reads are the suffixes in `argus/shared/source_languages.py`; that module is the source of truth.
+- **Without it, the default install grounds Python only.** A file in another language is still enumerated
+  and still graded; it is capped at shallow, reported as `ast_eligible=False` with a named reason token
+  (e.g. `grammar_missing_go`). Never a silent drop, and never a deep claim Argus could not verify —
+  enumerable is not the same as deeply auditable.
+- **No default changed and no verdict moved.** This release documents an existing capability; where the
+  grammars live is an open packaging decision, not settled here.
+
+### Fixed — TypeScript and PHP were reported as missing grammars they already had
+
+`ast_index` resolved every grammar through `tree_sitter_<lang>.language()`. Two of the ten packages do
+not export it — `tree_sitter_typescript` exports `language_typescript`/`language_tsx`, `tree_sitter_php`
+exports `language_php`/`language_php_only` — so both returned `ast_eligible=False` with
+`grammar_missing_typescript` / `grammar_missing_php` **while installed**, telling an operator to install
+a package they already had. Grammar loading now resolves a per-language entry point, with a suffix-level
+override so `.tsx` gets the JSX-aware grammar rather than a syntax error.
+
+- **Measured before:** 8 of 10 languages grounded. **After:** 10 of 10, plus the `.tsx` dialect.
+- **No verdict on this repository changed** — it tracks no `.ts/.tsx/.mts/.cts/.php` files, and the
+  dogfood verdict is byte-identical either side of the change. A polyglot repository will see *more*
+  files reach `audited_deep`, never fewer, and never a file that did not genuinely parse.
+- **Known limit, stated rather than left to be found:** C, C++, Ruby and Rust ground but extract no
+  definitions yet, so files in those four cannot reach `audited_deep`. Tracked as `DF-10-2-A`.
+
+### Changed — the memoization cache key now names the grammar that actually parsed
+
+Internal (no memoization store is wired into the pipeline yet, so no cached result exists to invalidate).
+The recording-producing closure folded **one** grammar version, resolved from `tree-sitter-python`, while
+the index parsed ten languages at versions spanning 0.23.1 → 0.25.0 — so upgrading the Go, Rust, Java, C,
+C++ or Ruby grammar did not move the key. Provenance is now per-grammar and records only the grammars
+that **participated** in the audited build, so the key stays a function of the audit rather than of the
+host's installed packages. `CACHE_KEY_SCHEMA_VERSION` is bumped `"2"` → `"3"`; `AstIndex.schema_version`
+`"1"` → `"2"`. Both changes are additive — `grammar_version` is retained.
 
 ---
 

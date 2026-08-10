@@ -20,7 +20,7 @@ visionInsights:
   northStar: 'Coverage-grounded assurance becomes the default expectation for AI-built software (the way "did your tests pass?" is today). [explicitly long-term]'
   differentiator:
     wedge: 'coverage ledger + vacuous-test detection + signature demo: GitHub green · Sonar green · APAA 🔴 tests appear vacuous'
-    durableMoat: 'proven-not-asserted depth (self-audit: AST-grounded depth [Python V1, multi-language V2] + Prosecutor + cartridges) makes audited_deep TRUE → compounds into proprietary concordance/precision/cartridge corpus (credibility flywheel)'
+    durableMoat: 'proven-not-asserted depth (self-audit: AST-grounded depth [~~Python V1, multi-language V2~~ **AST grounding delivered in V1 for every language in `argus/shared/source_languages.py`** — *amended 2026-08-10, Story 10.2; capability delivered by `sprint-change-proposal-2026-07-28.md`*] + Prosecutor + cartridges) makes audited_deep TRUE → compounds into proprietary concordance/precision/cartridge corpus (credibility flywheel)'
     selfAuditFraming: 'co-load-bearing in moat story; translated to outcomes in value prop ("coverage % you can defend" + "🔴 that does not cry wolf"); near-zero-token determinism story (NOT an LLM-spend multiplier)'
   coreInsight: 'every other tool silently implies "I looked at everything" (unfalsifiable); APAA makes audit confidence falsifiable + negative assurance ("no blocking findings within audited envelope", never "correct")'
   whyNow: 'generation commoditizing → value moved to verification; measurable AI-code-quality crisis (~1.7x issues, 110k+ surviving issues); EU AI Act high-risk bites 2026-08-02; "AI release-readiness assurance" category still unclaimed'
@@ -85,8 +85,13 @@ amendments:
   - date: 2026-08-03
     scope: 'FR16 + FR4 (contract change) — verdict decision table reordered so findings are evaluated before coverage; INSUFFICIENT_COVERAGE widened to cover a zero-findings unmet gate; critical-set eligibility predicate added'
     signal: _bmad-output/design-artifacts/ArgusAgent/sprint-change-proposal-2026-08-03.md
-    approvedBy: Varin
+    approvedBy: XAgent007
     sections: ['Technical Success (coverage gates enforced)', 'Verdict vocabulary (canonical)', 'FR16', 'FR4']
+  - date: 2026-08-10
+    scope: 'V1.5 public release — the ≥80%% precision gate becomes absolute for ATTESTED externalization and DEFERRED for a free public release under two binding FR34 conditions (enforced disclosure + a committed programme to clear it, Epic 13); tertiary independent-developer persona added; local agent-integration surface admitted (stdio MCP + command assets), hosted network surfaces still V4; V1.5 phase defined; FR34/FR35/FR36/FR37 and NFR-S6/NFR-P3 added. The gate remains NOT CLEARED and this amendment does not clear it.'
+    signal: _bmad-output/design-artifacts/ArgusAgent/sprint-change-proposal-2026-08-10b.md
+    approvedBy: XAgent007
+    sections: ['What Makes This Special', 'Success Criteria', 'Project Classification', 'Product Scope (V1.5)', 'User Journeys (J6)', 'Developer Tool (distribution, skips)', 'FR34', 'FR35', 'FR36', 'FR37', 'NFR-S6', 'NFR-P3']
 ---
 
 # Product Requirements Document - APAA (AI Project Assurance Audit)
@@ -104,7 +109,7 @@ That one line is the product. AI agents now write software faster than any team 
 
 **The problem it solves.** Three things are simultaneously true about AI-generated code: the defects are real and measurable (~1.7× more issues than human-written; 110,000+ surviving AI-introduced issues counted in production repos, Feb 2026); the tools that should catch them are either trusted blindly or so noisy they're ignored (SAST at 40–60% false positives, a passing AI-written test taken at face value); and **no one can say how much was actually checked**. The result is a credibility gap — a green check mark that means "some tool ran," not "this is safe to ship" — exactly when regulated buyers increasingly need *defensible evidence* that AI-built code was genuinely examined.
 
-**Who it serves.** Primary (V1): the internal XAgents platform owner — Engineering Lead / Delivery Orchestrator running audits on XAgents-built repos, with the first dogfood target being **Minions itself**. Secondary (standalone path): the regulated enterprise (banks, healthcare, telecom, automotive, aerospace) needing defensible AI-code sign-off evidence for its EU AI Act / ISO 42001 / SOC 2 readiness story.
+**Who it serves.** Primary (V1): the internal XAgents platform owner — Engineering Lead / Delivery Orchestrator running audits on XAgents-built repos, with the first dogfood target being **Minions itself**. Secondary (standalone path): the regulated enterprise (banks, healthcare, telecom, automotive, aerospace) needing defensible AI-code sign-off evidence for its EU AI Act / ISO 42001 / SOC 2 readiness story. **Tertiary (V1.5, free public tier): the independent developer** — students, solo builders, OSS maintainers, and small teams — building with a coding agent and needing to know whether the code that agent just wrote is actually tested. This persona is defined by **context, not skill level**: no procurement, no compliance mandate, no internal champion, and no colleague who already knows the tool. Scoped **exclusively to the unattested free tier** — verdicts are decision-support for their own work, never assurance evidence, and **their usage does not advance the precision gate**. *(Amended 2026-08-10b.)*
 
 **Why now.** Generation is commoditizing and value has moved downstream to *verification* ("verification is the new bottleneck"); the AI-code-quality crisis is measurable and publicized; **EU AI Act high-risk obligations bite August 2, 2026**; and the "AI release-readiness assurance" category is **still unclaimed** — incumbents sort into find-more-bugs, find-vulns, check-my-tests, or govern-my-models, and none ships a coverage-grounded release verdict.
 
@@ -113,13 +118,21 @@ That one line is the product. AI agents now write software faster than any team 
 APAA is an **assurance** tool, not an AI code reviewer or a security scanner — categories it deliberately avoids. Its differentiation is a two-layer claim:
 
 - **The wedge (what wins the first look):** a **machine-verifiable coverage ledger** plus **AI-specific defect detection led by vacuous-test detection**. Every file lands in a fixed-enum ledger (`audited_deep` / `audited_shallow` / `tool_scanned_only` / `inferred` / `skipped`), and the verdict is a **pure function** of that ledger — it literally cannot be minted without enough `audited_deep` evidence. The vacuous-test detector catches what AI agents *specifically* produce: passing tests that assert nothing. *Honesty is mechanical, not promised.*
-- **The durable moat (why a fast-follower can't copy it):** *proven, not asserted, depth.* `audited_deep` requires a **grounded claim validated against the repo's AST** (Python in V1; multi-language in V2) — silence auto-downgrades to shallow. An adversarial **Prosecutor** is paid to prove the verdict unearned, and **defect cartridges** (minimal repos with one planted defect + a golden key, CI-asserted) empirically measure what the detectors catch. Run on real repos, this discipline compounds into a proprietary **concordance / precision / cartridge corpus** no competitor can replicate from the demo. This self-audit is near-zero-token determinism work — *not* an LLM-spend multiplier.
+- **The durable moat (why a fast-follower can't copy it):** *proven, not asserted, depth.* `audited_deep` requires a **grounded claim validated against the repo's AST** (~~Python in V1; multi-language in V2~~ **delivered in V1 for every language enumerated in `argus/shared/source_languages.py`** — *amended 2026-08-10, Story 10.2; the capability shipped via `sprint-change-proposal-2026-07-28.md` with no story and no amendment, `DF-AUD-APAA-D`*) — silence auto-downgrades to shallow. An adversarial **Prosecutor** is paid to prove the verdict unearned, and **defect cartridges** (minimal repos with one planted defect + a golden key, CI-asserted) empirically measure what the detectors catch. Run on real repos, this discipline compounds into a proprietary **concordance / precision / cartridge corpus** no competitor can replicate from the demo. This self-audit is near-zero-token determinism work — *not* an LLM-spend multiplier.
 
-**The core insight:** every other AI-review tool silently implies *"I looked at everything."* It didn't — and that unfalsifiable claim is the gap. APAA makes audit confidence **falsifiable**, and adopts **negative assurance** ("no blocking findings *within the audited envelope*," never "correct") — the same humility that makes financial audits credible and the correct legal/commercial posture. To the user, the self-audit is invisible; what they buy is its output — *a coverage % you can defend to your VP* and *a 🔴 that doesn't cry wolf*. The honesty keystone is explicit: **APAA must hit ≥80% finding-precision before any externalization conversation.** (The coverage-ledger schema is versioned, content-hashed, and additive-only from day one, keeping a V4 "open attestation standard" ambition alive at zero V1 cost — seeded, not foregrounded.)
+**The core insight:** every other AI-review tool silently implies *"I looked at everything."* It didn't — and that unfalsifiable claim is the gap. APAA makes audit confidence **falsifiable**, and adopts **negative assurance** ("no blocking findings *within the audited envelope*," never "correct") — the same humility that makes financial audits credible and the correct legal/commercial posture. To the user, the self-audit is invisible; what they buy is its output — *a coverage % you can defend to your VP* and *a 🔴 that doesn't cry wolf*. The honesty keystone is explicit: **APAA must hit ≥80% finding-precision before any *attested* externalization** — any use in which a verdict is presented as assurance evidence (commercial, enterprise, regulated, or operated-service). **Status: NOT CLEARED.** A *free public distribution* may precede the gate only under the two binding conditions of FR34: the tool's own unvalidated status is mechanically disclosed on every user-facing verdict surface, **and** a scheduled programme to clear the gate is committed and in flight. Absent either condition the bar is absolute. *(Amended 2026-08-10b.)* (The coverage-ledger schema is versioned, content-hashed, and additive-only from day one, keeping a V4 "open attestation standard" ambition alive at zero V1 cost — seeded, not foregrounded.)
 
 ## Project Classification
 
-- **Project Type:** Headless **developer-tool / CLI Skill** (a Claude Code Skill + committed `.apaa/` filesystem convention, with a sequential Cline fallback) — primary; **contract-producer** (frozen JSON schemas + deterministic exit-codes) — elevated secondary. **Headless-only** — verdicts and evidence are artifacts and API surfaces, never screens (no UI/UX). Hosted-runner / API surface (endpoints, auth, rate-limits, SDK, versioning) is explicitly **out of V1**.
+- **Project Type:** Headless **developer-tool / CLI Skill** (a CLI + committed `.apaa/` filesystem convention, a local agent-integration surface, and a sequential fallback host) — primary; **contract-producer** (frozen JSON schemas + deterministic exit-codes) — elevated secondary. **Headless-only** — verdicts and evidence are artifacts and machine surfaces, never screens (no UI/UX).
+  **Excluded from V1/V1.5 — *hosted network* surfaces:** a hosted repo-URL runner and any HTTP API (endpoints, auth, rate-limits, published SDK, API versioning) remain **V4**.
+  **Admitted in V1.5 — the *local* agent-integration surface** *(added 2026-08-10b)*: an MCP server and packaged assistant command assets, so a coding agent can invoke an audit and read the verdict. This is **not** a relaxation of the exclusion above; it is bounded by four binding constraints:
+  1. **Local transport only** — stdio. No network listener is opened, no port is bound.
+  2. **No HTTP stack.** The `argus.* ⊬ fastapi` import-isolation gate holds unchanged, and ADR #20's *"downstream of the HTTP/A2A boundary — takes no A2A token, registers no route"* classification is preserved verbatim.
+  3. **No new authority.** The surface invokes the same pure `AuditRequest → AuditVerdict` path as the CLI, under the same work-manifest permission boundary (NFR-S4). It grants no capability the CLI does not already have.
+  4. **No credential handling.** It accepts and stores no keys, tokens, or accounts.
+
+  The distinction is *local process* versus *hosted service*: the excluded surface is one that runs somebody else's audit on somebody else's machine. This one runs the user's audit on the user's machine and speaks a protocol instead of a shell.
 - **Domain:** AI software assurance / DevTools, compliance-adjacent. Compliance (EU AI Act / ISO 42001 / SOC 2) is a **secondary/roadmap** driver in V1, not the headline.
 - **Complexity:** **High** — driven by determinism-as-a-requirement, self-auditing, and liability posture (not merely regulated buyers).
 - **Project Context:** **Greenfield** product, **brownfield-adjacent** in engineering — it reuses proven Minions infrastructure (hash-chained ledger ADR #18, permission tiers, budget guardrails, `adapter_portability`, deterministic orchestration) and dogfoods on the Minions repo.
@@ -127,18 +140,24 @@ APAA is an **assurance** tool, not an AI code reviewer or a security scanner —
 
 ## Success Criteria
 
-The V1 bar is deliberately an **evidence bar, not a usage bar** — success is whether a designated senior engineer independently trusts APAA's verdicts, not user counts or revenue. **The one bar that gates externalization: ≥80% finding-precision. Everything commercial waits behind it.**
+The V1 bar is deliberately an **evidence bar, not a usage bar** — success is whether a designated senior engineer independently trusts APAA's verdicts, not user counts or revenue. **The one bar that gates attested externalization: ≥80% finding-precision. Everything commercial waits behind it — without exception.** A free public release is permitted ahead of the bar under FR34's two conditions (enforced disclosure + a committed programme to clear it); it confers no attested status, and **usage is not evidence** — adoption cannot advance the precision gate, only adjudicated findings can. *(Amended 2026-08-10b.)*
 
 ### User Success
-*(User = the Engineering Lead / Delivery Orchestrator running APAA on an XAgents repo.)*
+*(Primary user = the Engineering Lead / Delivery Orchestrator running APAA on an XAgents repo.)*
 - **Repeatable "aha":** on a repo with hidden defects, APAA surfaces ≥1 real issue every other tool called green — and **shows its evidence** (`APAA 🔴`, repeatable).
 - **Actionable, not a hedge:** a plain-English line (*"BLOCKED — 3 vacuous tests, coverage 62% deep"*) the user acts on while retaining the decision (decision-support, not decision-maker).
 - **Answers the VP question** — *"how much did it actually look at?"* — from the coverage ledger.
 - **No cry-wolf:** a 🔴 is credible enough to forward to the team, not mute.
 
+**Tertiary user success (independent developer, free tier).** *Added 2026-08-10b.* The bar is **unassisted first-run utility** — not because the user is inexperienced, but because **there is no one to ask.** An internal user has a colleague who knows the tool; a public user has the tool's own output and nothing else.
+- **No dead ends.** Every terminal outcome — including `INSUFFICIENT_COVERAGE` — names why it was reached and the next action that changes it, **in the tool's own output**. A developer with no internal support cannot be sent to a wiki. A verdict the user cannot act on from what's on screen is a product failure, not an honest result.
+- **Reachable from the agent.** The audit is invocable from inside the coding assistant that wrote the code, and the verdict is machine-readable enough for that agent to act on without a human relaying it.
+- **Works on their stack out of the box.** The default public install grounds the languages a developer actually uses; degraded coverage caused by a missing optional grammar is a packaging defect, not a user error.
+- **Free and private by default.** The default run costs nothing, requires no account or key, and sends no source code anywhere. Any run that would transmit source is opt-in and says so before it runs.
+
 ### Business Success
 *(V1 = readiness-to-externalize, not revenue.)*
-- **Externalization gate cleared:** ≥80% finding-precision on the validation set.
+- **Attested-externalization gate:** ≥80% finding-precision on the validation set. **Current status (2026-08-10): NOT CLEARED** — `protocol_cleared` is `False` and has never been set `True`; the corpus stands at N=1 and is a self-audit, not an independent run. Clearing it is scoped as **Epic 13**. *(Amended 2026-08-10b.)*
 - **Credibility flywheel turning (measurable):** each dogfood run emits ≥1 reusable asset — audit report, concordance label, calibration datum, or (on a miss) a new defect cartridge.
 - **Strategic question answered:** APAA auditing Minions resolves *"does Minions have an audit agent?"* with a real artifact.
 
@@ -171,13 +190,30 @@ Two layers, both required (trustworthy **and** demoable). Sequential-canonical, 
 
 ### V1 Design Invariants (forward-compatibility — constraints, not added scope)
 - **Envelope determinism** is golden-tested + human-gated before any consumer (a bug here cascades to V1 reproducibility, the G4 cache, and the G1 substrate).
-- **Grounded-claim validation is a stack-agnostic interface** (`claim → validated?`), Python = impl #1 — so V2 multi-language is additive, not a core rewrite.
+- **Grounded-claim validation is a stack-agnostic interface** (`claim → validated?`), Python = impl #1 — ~~so V2 multi-language is additive, not a core rewrite.~~ **and the additive multi-language implementations are delivered in V1, exactly as the interface predicted; the enumerated set is `argus/shared/source_languages.py`.** *(Amended 2026-08-10, Story 10.2; delivered by `sprint-change-proposal-2026-07-28.md`.)*
 - **Reserve `partition_id`** in the coverage ledger (always `"root"` in V1) for the V2 seam auditor.
 - **Frozen invariant declared now:** curated memory (G3, ships V4) **never touches the verdict/decision path**.
 - **APAA specifies the cost/memory consumption-contracts** it will need from Minions (a)/(d)/(e).
 
+### V1.5 — The Public Release *(added 2026-08-10b)*
+
+**The cut-order's V1.5 (§Cut-Order) is vacant** — Tier B shipped complete and nothing slid. V1.5 is therefore defined here as the **first public distribution**, not as a catch-up phase.
+
+V1.5 adds **no new assurance capability.** The verdict, the ledger, the detectors, and the determinism spine are V1 as delivered. What it adds is **reach and usability**: the tool becomes installable by someone outside XAgents, invocable from the agent that wrote the code, and honest about its own status while its precision is unvalidated.
+
+- **Reach:** public index distribution · marketplace action · local agent-integration surface (FR35).
+- **Usability:** actionable terminal output (FR37) · a default install that grounds the languages users actually write · reproducible re-runs via the already-specified memoization path (FR27 / NFR-D1).
+- **Depth on request:** the opt-in LLM-backed deep pass (FR36), off by default.
+- **Honesty about the instrument:** mandatory self-disclosure (FR34) while the ≥80% gate remains uncleared.
+
+**V1.5 does not clear the attested-externalization gate and does not attempt to.** Clearing it is a separate, committed programme (§Success Criteria; Epic 13) resting on an independent corpus and human adjudication — neither of which is a build task, and neither of which V1.5 delivers.
+
+**Unchanged by V1.5:** V2 growth features, V3 cost intelligence, and V4 assurance-platform / hosted-runner scope are exactly as recorded. V1.5 borrows nothing from them.
+
 ### Growth Features (V2)
-Bidirectional traceability (orphan code + silent req gaps) · Production-Readiness-Review checklist · standards mapping (CWE/ASVS/ISO 25010/SLSA) · **multi-language** AST grounding · **mutation-grade** vacuous-test detection · **seam / interface auditor** (+ honest V1 limitation: *no cross-partition seam analysis in V1*) · **holdout-cartridge rotation** + promote-a-miss · **multi-perspective adversarial panel** (Blind Hunter / Edge-Case Hunter / Acceptance Auditor — V1's single-auditor + lightweight Prosecutor is the deliberate cheap version) · **host-capability manifest** (`adapter_portability`, enables the parallel speedup) · **governance hardening** (proof-of-read / paste-back on high-stakes gates — anti-rubber-stamp, risk H1; matters at externalization scale, not for V1's single senior operator) · **consume the Minions Cost-Optimization layer (d)** for scaled audits (*APAA does not build L1–L4 — it calls them*).
+Bidirectional traceability (orphan code + silent req gaps) · Production-Readiness-Review checklist · standards mapping (CWE/ASVS/ISO 25010/SLSA) · ~~**multi-language** AST grounding ·~~ **mutation-grade** vacuous-test detection · **seam / interface auditor** (+ honest V1 limitation: *no cross-partition seam analysis in V1*) · **holdout-cartridge rotation** + promote-a-miss · **multi-perspective adversarial panel** (Blind Hunter / Edge-Case Hunter / Acceptance Auditor — V1's single-auditor + lightweight Prosecutor is the deliberate cheap version) · **host-capability manifest** (`adapter_portability`, enables the parallel speedup) · **governance hardening** (proof-of-read / paste-back on high-stakes gates — anti-rubber-stamp, risk H1; matters at externalization scale, not for V1's single senior operator) · **consume the Minions Cost-Optimization layer (d)** for scaled audits (*APAA does not build L1–L4 — it calls them*).
+
+> *(Amended 2026-08-10, Story 10.2 / AC1.2 — `DF-AUD-APAA-D`.)* **multi-language AST grounding is struck from this V2 list because it is delivered in V1**, by `sprint-change-proposal-2026-07-28.md`, which shipped the capability with no story and no specification amendment. Struck, not deleted (§3.4 evidence immutability). The set delivered in V1 is not restated here as a hand-typed list — it is `argus/shared/source_languages.py`, pinned by `tests/test_multilanguage_audit.py`. **Every other item on this line is untouched and remains V2.** A delivered capability left on the growth roadmap double-counts the work; `tests/test_spec_claim_scope.py` now fails if one reappears.
 
 ### Vision (V3–V4)
 - **V3 — Cost Intelligence (consume, don't own):** integrate the Minions **Cost-Estimation Primitive (a)** in retro mode (audit-cost estimation + per-auditor admission control); APAA owns only its audit-spend policy. **Mechanism-independent of V2; estimation targets scale with shipped audit modes.**
@@ -235,6 +271,16 @@ APAA is **headless** — these are operator and system-to-system workflows. The 
 **Resolution.** The release pipeline now carries a coverage-grounded gate another system can act on. New reality: assurance becomes a pipeline primitive, not a manual review.
 *Reveals:* headless invocation contract (repo + commit + budget + materiality → verdict artifact + exit code) · machine-readable `.apaa/` artifacts · deterministic exit-code semantics · human-STOP escalation on the non-deterministic case · commit-pinned reproducibility.
 
+### Journey 6 — Sam, independent developer (tertiary · free tier): "is what my agent just wrote actually tested?"
+**Situation.** Sam is building a project largely with a coding agent. It generates quickly and it generates tests, and the suite is green. Sam has no reason to trust the green — the agent wrote the code *and* the tests, and nothing external has checked whether those tests examine anything. There is no CI team, no staff engineer, and no budget. Whatever Sam learns has to come from a tool Sam can run alone.
+**Opening scene.** Sam installs from the public index and invokes the audit from inside the coding assistant — the same session that wrote the code. No account, no key, no configuration. The default run is free, offline, and sends no source anywhere.
+**Rising action.** The audit grounds what it can against the repo's AST and records the rest honestly. The output is not a score: it is a ledger stating which files were examined deeply, which were tool-scanned, and which were skipped — plus findings against the tests themselves. The tool also discloses its own status: its finding-precision has not yet been independently validated, and it says so without being asked.
+**Climax.** Several of the agent-written tests are reported as appearing vacuous, each carrying its evidence — assertion counts, mock ratios, and whether the test body reaches the code under test at all. This is the thing Sam's green suite could never have surfaced, and it arrives on a free run.
+**Resolution.** The verdict names the coverage it did *not* achieve and the single next action that changes it — an opt-in deeper pass, scoped and budget-capped, which Sam runs against the one subsystem that matters. Sam fixes the tests, re-runs, and the result is reproducible. The agent that wrote the code reads the verdict and acts on it directly. **New reality:** the loop that generated the code now contains something that checks it, and Sam can say what was examined and what was not.
+*Reveals:* public-index install · agent-integration surface (MCP + command assets) · free, offline, zero-key default run · vacuous-test findings with evidence on the default path · coverage ledger as the honest remainder · **actionable terminal output — every outcome names its next action** · opt-in budget-governed deep pass · mandatory self-disclosure of unvalidated precision (FR34) · reproducibility.
+
+> ⚠️ **Measured dependency, recorded rather than assumed.** Whether a default-path vacuous finding is **verdict-blocking** or **advisory-only** is a measurement, not a design choice: heuristic-only findings are advisory by contract, and verdict-eligibility requires AST grounding. This journey deliberately does **not** presume the answer — it holds either way, because the value Sam receives is the evidence-bearing finding plus the honest remainder, not the enum. **Epic 12's deep-audit story owns the measurement and must record it as a yes or a no. A "no" escalates; it does not soften this journey.**
+
 ### Journey Requirements Summary
 | Capability area | Forced by |
 |---|---|
@@ -250,6 +296,9 @@ APAA is **headless** — these are operator and system-to-system workflows. The 
 | **Evidence bundle + secret-redacted excerpts + source-retention** (operated-service) | J4 |
 | **Resumability from on-disk `.apaa/` state** | J2 |
 | **Defect cartridges / self-audit** (the trust substrate behind every verdict) | all |
+| **Agent-integration surface** (MCP + packaged command assets; local stdio, no network listener) | **J6** |
+| **Actionable terminal output** (every outcome names why it was reached and the next action that changes it) | **J6** |
+| **Mandatory self-disclosure of unvalidated precision** (FR34, mechanically enforced, removable only on measurement) | **J6** |
 
 ## Domain-Specific Requirements
 
@@ -299,7 +348,7 @@ The assurance category is **unclaimed**. Incumbents sort cleanly into four bucke
 ### Validation Approach
 The innovation is validated **empirically, not asserted** — fitting for a tool whose thesis is "evidence over trust":
 - **Defect cartridges + holdout rotation** measure what the detectors actually catch (the auditor's own mutation score), CI-asserted; real-world misses become new cartridges.
-- **The ≥80% finding-precision bar** on **N ≈ 5–10 real XAgents repos** (starting with the **Minions dogfood**) is the gate before any externalization.
+- **The ≥80% finding-precision bar** on **N ≈ 5–10 real repositories** is the gate before any **attested** externalization. ⚠️ **The Minions dogfood no longer counts toward N** — Story 8.5 re-derived it as a self-audit of `argus/`, and the record states the independent run *"can never be re-derived in this repository."* The corpus is therefore **N=1 and self-referential**; Epic 13 rebuilds it from independent repositories. *(Amended 2026-08-10b.)*
 - **Verdict concordance** (asymmetric: zero false-`RELEASE_READY`) against an independent senior engineer's release decision.
 - **The moat demo as a success criterion**, not just a demo: `GitHub green · Sonar green · APAA 🔴 tests appear vacuous`, made repeatable.
 
@@ -314,7 +363,21 @@ The innovation is validated **empirically, not asserted** — fitting for a tool
 ## Developer Tool (Headless Skill) — Specific Requirements
 
 ### Project-Type Overview
-APAA ships as a **headless Claude Code Skill** (Cline sequential fallback) that cold-reads a repository and emits a coverage-grounded verdict. It is simultaneously a **contract-producer**: its durable output is a set of **frozen JSON artifacts** under `.apaa/` plus a **deterministic exit code**. There is no UI, IDE plugin, or visual surface (headless-only); integrators consume artifacts and exit codes. **Stack-agnostic** by construction (V1 deep AST-grounding = Python, `claim_emitted` proxy elsewhere); hosts = Claude Code (parallel) + Cline (sequential-canonical). Distribution in V1 = the Skill + a committed (git-ignorable) `.apaa/` convention, plus the operated-service evidence-bundle path; a hosted repo-URL runner is V4.
+APAA ships as a **headless Claude Code Skill** (Cline sequential fallback) that cold-reads a repository and emits a coverage-grounded verdict. It is simultaneously a **contract-producer**: its durable output is a set of **frozen JSON artifacts** under `.apaa/` plus a **deterministic exit code**. There is **no UI and no visual surface** (headless-only); integrators consume artifacts, exit codes, and the local agent-integration surface. **Stack-agnostic** by construction (~~V1 deep AST-grounding = Python, `claim_emitted` proxy elsewhere~~ **deep AST-grounding is delivered in V1 for every language enumerated in `argus/shared/source_languages.py`; the `claim_emitted` proxy carries anything outside that set, or any file whose grammar is absent** — *amended 2026-08-10, Story 10.2; delivered by `sprint-change-proposal-2026-07-28.md`*); hosts = Claude Code (parallel) + Cline (sequential-canonical). **Distribution.** *(Amended 2026-08-10b.)*
+
+| Phase | Channel | Status |
+|---|---|---|
+| V1 | The committed (git-ignorable) `.apaa/` convention | Delivered |
+| V1 | Operated-service evidence-bundle path | Delivered |
+| **V1.5** | **PyPI** — `pip install argus-agent`, the primary public channel | **In scope** |
+| **V1.5** | **GitHub Marketplace** — the composite action | **In scope, gated** on the `action.yml` input-interpolation fix |
+| **V1.5** | **MCP server** — shipped in the same distribution as an entry point, no separate channel | **In scope** |
+| **V1.5** | **Assistant command assets** — packaged files an installer places in the host's config | **In scope** |
+| Deferred | Desktop application stores (Microsoft Store et al.) | **Deferred, not rejected** — requires MSIX/equivalent, a bundled runtime, a store identity, a published privacy-policy URL, and an age rating. **None exists.** Reopening requires un-skipping `store_compliance` first |
+| Deferred | OS package managers (Winget / Chocolatey / Homebrew / Snap) | **Deferred** — each adds an independent packaging and update contract with no current owner |
+| **V4** | Hosted repo-URL runner | Unchanged |
+
+**"No IDE plugin" is retained in substance and restated precisely:** APAA ships no editor extension, no language server, and no rendered surface. The command assets are *configuration files* that teach an assistant to invoke the CLI; the MCP server is a *local stdio process*. Neither renders anything, and both are bounded by the four constraints in §Project Classification.
 
 ### Technical Architecture Considerations
 - **Filesystem-as-contract substrate.** All state lives under `.apaa/` (`state/ · assignments/ · findings/ · decisions/`); stateless auditor agents coordinate **only through files** — making runs resumable, portable, and host-agnostic.
@@ -337,7 +400,9 @@ APAA ships as a **headless Claude Code Skill** (Cline sequential fallback) that 
 - **Reuse Minions infra** (brownfield-adjacent): ADR #18 hash-chained ledger patterns, permission tiers, budget guardrails, `adapter_portability`.
 - **Secret-safe by construction:** redact excerpts before storage; never let source/secret bytes reach the ledger, evidence, logs, or traces.
 
-**Skipped (headless):** `visual_design`, `store_compliance`.
+**Skipped (headless):** `visual_design`, `store_compliance`. *(Both **re-validated 2026-08-10b** against the V1.5 channel set and both **remain correctly skipped**.)*
+- `visual_design` — no rendered surface is introduced. The agent-integration surface is a protocol and a set of config files.
+- `store_compliance` — **conditionally skipped, with the reopening condition pre-committed:** it covers desktop-application-store obligations (store identity, age rating, content policy, bundled-runtime licensing, update channel). PyPI and GitHub Marketplace impose none of these. **This skip must be un-skipped, and its requirements scoped, before any desktop-store channel enters a sprint** — the condition is recorded here so the decision cannot be made implicitly by a packaging story.
 
 ## Project Scoping & Phased Development
 
@@ -348,7 +413,7 @@ APAA ships as a **headless Claude Code Skill** (Cline sequential fallback) that 
 
 ### V1 has two grades — name which one you mean
 - **Tier A — demo-grade (signature-demo core):** envelope + `finding`/`coverage_ledger`/`verdict` + pure-function verdict gate + heuristic vacuous-test detector + **cartridges #1 (vacuous) & #2 (secret)** + cost-governance ceiling + secret redaction. Proves the *concept*.
-- **Tier B — validation-grade (externalization-ready):** Tier A **+** cartridge #3 (orphan) + Python AST-grounding + lightweight Prosecutor + `decision_record` (minimal) + integrity lint + the **Minions dogfood** + reproducibility + honest degradation. **Tier B is what clears the ≥80%-precision externalization gate.**
+- **Tier B — validation-grade (externalization-ready):** Tier A **+** cartridge #3 (orphan) + Python AST-grounding + lightweight Prosecutor + `decision_record` (minimal) + integrity lint + the **Minions dogfood** + reproducibility + honest degradation. **Tier B is the engineering precondition for clearing the ≥80%-precision gate — necessary, not sufficient.** Tier B is delivered; the gate is not cleared. Clearing it additionally requires an independent corpus and human adjudication (Epic 13), neither of which is a build task. *(Amended 2026-08-10b.)*
 - *(`severity.rubric` is a V1 **config constant**, not a frozen schema, until severities need to vary.)*
 
 ### MVP Must-Have (full V1 = Tier B) and Journeys
@@ -372,12 +437,20 @@ The cut-order trades **Tier B → Tier A**, and is honest that **the ≥80%-prec
 Phases V2–V4 are defined in **§Product Scope** (Growth Features / Vision) and its **§Dependencies / Cross-product Boundary** — not duplicated here.
 
 ### Risk Mitigation Strategy
-- **Technical:** envelope-determinism cascade → golden-test + human gate (highest-leverage item); vacuous precision too low → advisory framing + precision-tuning + "review these N" fallback; Python-only AST → stack-agnostic validator interface (V2 multi-language additive). **Riskiest assumption:** that the heuristics clear ≥80% precision — de-risked by front-loading the cartridge precision harness in M1.
+- **Technical:** envelope-determinism cascade → golden-test + human gate (highest-leverage item); vacuous precision too low → advisory framing + precision-tuning + "review these N" fallback; ~~Python-only AST → stack-agnostic validator interface (V2 multi-language additive)~~ **Python-only AST → stack-agnostic validator interface; the additive multi-language implementations are delivered in V1 (`argus/shared/source_languages.py`), so this mitigation is discharged rather than pending** *(amended 2026-08-10, Story 10.2; delivered by `sprint-change-proposal-2026-07-28.md`)*. **Riskiest assumption:** that the heuristics clear ≥80% precision — de-risked by front-loading the cartridge precision harness in M1.
 - **Market:** category-creation cost → ride the vacuous-test wedge (no category education); incumbent encroachment → the compounding corpus is the moat, not the framing.
 - **Resource:** the cut-order is the contingency; **precision-non-convergence fallback** → tighten to higher-precision advisory OR pull mutation-testing forward from V2, **accepting the timeline may extend** if precision research runs long.
 
 ### Open inputs (flagged, not blockers)
-Exact **team headcount**, the **budget-ceiling `$X`**, and **N** for the validation set (5–10) — resolved in the delivery/functional detail, not the scope decision.
+~~Exact **team headcount**, the **budget-ceiling `$X`**, and **N** for the validation set (5–10) — resolved in the delivery/functional detail, not the scope decision.~~
+
+✅ **All three closed 2026-08-10b.**
+
+| Input | Resolution |
+|---|---|
+| **Team headcount** | **Moot.** Delivery is agent-driven through the SM → Dev → Review cycle with named human gates at adjudication (Epic 13) and release status (Story 10.1). Headcount was never the scheduling unit; expert-hours at the gates are — budgeted at ≤4 per full adjudication run (`precision-validation-protocol.md` §3). |
+| **Budget-ceiling `$X`** | **Resolved as OI3, LOCKED — the resolution is "there is no default."** `ceiling_credits: int \| None`, no numeric default, `None` = no ceiling configured, `0 → None`. The operator sets it per target; sizing is empirical per audited repository (Story 7.1). A numeric default was **deliberately refused**: a wrong default silently truncates an audit, the failure NFR-C2 exists to prevent. |
+| **`N` for the validation set** | **Assigned, not answered — owned by Story 13.1.** The PRD (§Validation Approach, `N ≈ 5–10` real repositories) and `precision-validation-protocol.md` §5 (`N ≥ 5` labeled cartridges) specify **different corpora** and were never reconciled. 13.1 decides which governs and amends the loser. |
 
 ## Functional Requirements
 
@@ -395,9 +468,24 @@ Exact **team headcount**, the **budget-ceiling `$X`**, and **N** for the validat
 ### Coverage Ledger & Grounded Evidence
 - **FR5:** APAA can record every file's audit depth in a fixed-enum coverage ledger (`audited_deep` / `audited_shallow` / `tool_scanned_only` / `inferred` / `skipped`).
 - **FR6:** APAA can require an emitted claim before grading a file `audited_deep` (silence downgrades to `audited_shallow`).
-- **FR7:** APAA can validate a deep claim against source structure (Python AST in V1) and downgrade an unverifiable claim. **[Tier B]**
+- **FR7:** APAA can validate a deep claim against source structure ~~(Python AST in V1)~~ (**AST grounding is delivered in V1 for every language enumerated in `argus/shared/source_languages.py` — that module is the SOURCE OF TRUTH, deliberately not a hand-typed list here**) and downgrade an unverifiable claim. **[Tier B]** *(Amended 2026-08-10, Story 10.2 — `DF-AUD-APAA-D`. The capability shipped via `sprint-change-proposal-2026-07-28.md` with no story and no amendment; FR7 is the binding contract, so it is corrected to what the code does.)*
+  - **What "grounded" buys, stated at the boundary rather than implied.** A language is grounded when its tree-sitter grammar is installed and the file parses: the file becomes `ast_eligible` and its claims can be checked against a real AST. Pinned language-by-language by `tests/test_multilanguage_audit.py` (`TC-ArgusAgent-INTAKE-003-07`..`-09`), which fails if a language in the source-of-truth map has no grounding fixture — so language #11 cannot be added unpinned.
+  - **Enumerable ≠ deeply auditable**, the boundary `argus/shared/source_languages.py:27-32` already draws. A file whose grammar is absent is still read and graded; it simply cannot reach `audited_deep`. It degrades to `ast_eligible=False` with a named reason token — never a silent drop, never a false deep claim (AR10).
+  - **Measured shortfall, filed not omitted (`DF-10-2-A`):** C, C++, Ruby and Rust ground but currently extract **no definitions**, because the definition-node vocabulary was written against Python's. A file in those four therefore parses but has no function or class for the depth gate to stand on. Recorded here so this contract is not read as promising more than `TC-ArgusAgent-INTAKE-003-09` measures.
+- **FR36:** An operator can enable an **LLM-backed deep-audit pass** that produces grounded claims beyond the zero-token path. **[Tier B]** *(Added 2026-08-10b.)*
+  - **Off by default, always.** The default run is zero-token, offline, requires no key or account, and transmits nothing. Enabling requires explicit operator action per invocation.
+  - **Egress is disclosed before it occurs:** the invocation states what will be transmitted and to which provider, before the first byte leaves.
+  - **Governed by the existing ceiling.** Spend flows through FR21/FR22 — the ceiling halts, marks the remainder `skipped`, downgrades coverage, and reports honestly. No new cost-governance mechanism is introduced.
+  - **Determinism is preserved** by the FR27/NFR-D1 memoization path — a re-run returns the recorded result. Enabling this pass must not make the verdict irreproducible.
+  - **Degradation is honest:** an unavailable, erroring, or budget-halted provider downgrades coverage and records a finding (NFR-R1). It never produces a false deep claim and never crashes.
 - **FR8:** APAA can exclude `inferred` (narrative/doc) evidence from satisfying any verdict gate.
 - **FR9:** An operator can read exactly which files were examined deeply, shallowly, tool-scanned, inferred, or skipped.
+- **FR37:** APAA can state, on every terminal outcome, **why that outcome was reached and the next action that changes it**. *(Added 2026-08-10b.)*
+  - **Enumerated over the full verdict vocabulary** — `RELEASE_READY`, `NOT_READY_FOR_RELEASE`, `INSUFFICIENT_COVERAGE`, and the `AUDIT_FAILED` non-verdict — pinned by a test that **fails on an unenumerated outcome**.
+  - **`INSUFFICIENT_COVERAGE` is the load-bearing case:** it must name the specific gate that went unmet (floor, ratio, or critical subsystem) and the action that would change it. "Not assessed" without a remedy is honest and useless.
+  - **Self-contained.** The next action is present in the tool's own output. A user with no colleague and no internal wiki must not be sent elsewhere to interpret a verdict.
+  - **Names what was never examined, not only what scored low.** Coverage ratios describe the files that **entered** the audit. A file class excluded at ingestion never enters the denominator at all, so no ratio can disclose it. Every verdict states **which file classes were not ingested** — distinguishing three populations: **never ingested** (suffix outside the auditable set), **ingested but held out** of the assessed population, and **assessed**. This extends FR17's scope statement, which requires a scope but does not require the *ingestion boundary* to appear in it.
+  - **Does not soften a verdict.** This requirement governs *explanation*, never *classification*: no outcome may be reworded, upgraded, or hedged to seem more actionable. FR16's decision table is untouched.
 
 ### Defect Detection (cartridge-validated)
 - **FR10:** APAA can detect tests that appear vacuous (low assertion-density / high mock-ratio) and report them as **advisory** findings carrying their evidence counts.
@@ -425,6 +513,12 @@ Exact **team headcount**, the **budget-ceiling `$X`**, and **N** for the validat
 - **FR17:** APAA can express every verdict in negative-assurance terms with a scope statement, materiality bar, disclaimer, and point-in-time stamp.
 - **FR18:** An integrator can consume the verdict as a deterministic exit code and a machine-readable artifact.
 - **FR33:** APAA can order findings by verdict impact — surfacing verdict-blocking findings before non-blocking ones — so a blocking 🔴 is never buried beneath lower-severity noise (serves the "actionable / no cry-wolf" success criteria; alarm-fatigue defense, risk H2).
+- **FR34:** APAA can disclose its own validation status on **every** user-facing verdict surface, and cannot emit a verdict on a surface that omits it. *(Added 2026-08-10b.)*
+  - **Content:** the tool's finding-precision validation state (validated / **not independently validated**) and the corpus it rests on.
+  - **Mechanical enforcement, not editorial discipline:** the surface set is **enumerated in a committed test that fails on an unenumerated member** — a new verdict surface must either carry the disclosure or fail CI. A disclosure that depends on an author remembering is not a disclosure.
+  - **Distinct from FR17, and both apply.** FR17 bounds the scope of *this audit* ("no blocking findings within the audited envelope"). FR34 bounds the credibility of *the tool itself* ("its precision has not been independently validated"). An audit can be perfectly scoped and still be produced by an unvalidated instrument.
+  - **Removable only on measurement, and replaced rather than deleted:** when the ≥80% gate clears, the disclosure is **replaced** by a statement of the cleared status and the corpus that cleared it. The surface never becomes silent, and the enforcing test never becomes vacuous.
+  - **Not a permanent state.** FR34 exists because the gate is deferred, not waived. It is coupled to a committed programme to clear it (§Success Criteria, Epic 13); if that programme is abandoned, the free public tier is withdrawn rather than the disclosure.
 
 ### Self-Audit & Trust
 - **FR19:** APAA can run an adversarial Prosecutor pass that challenges whether the ledger justifies the verdict and downgrades an unearned verdict. **[Tier B]**
@@ -444,9 +538,17 @@ Exact **team headcount**, the **budget-ceiling `$X`**, and **N** for the validat
 - **FR29:** An operator can export an evidence bundle (coverage ledger, scope statement, findings, verdict); the operated-service path retains no source.
 
 ### Invocation & Resumability (headless)
-- **FR30:** An integrator can invoke APAA headlessly with `repo + commit + budget + materiality_bar` and receive a verdict artifact + exit code.
+- **FR30:** An integrator can invoke APAA headlessly with ~~`repo + commit + budget + materiality_bar`~~ **the accepted invocation surface** and receive a verdict artifact + exit code. *(Amended 2026-08-10, Story 10.3 — `DF-AUD-APAA-E`. The original four parameters described the surface as Story 1.7 LOCKED it; six further flags entered the shipped parser afterwards and were specified in no binding document, so the capability contract understated the capability. Original wording struck rather than deleted, §3.4.)*
+  - **The accepted surface is `argus/cli.py::build_parser` — that function is the SOURCE OF TRUTH, deliberately not a hand-typed list here.** The `source_languages.py` precedent FR7 set on 2026-08-10 applies for the same reason: a prose copy of an enumerable fact drifts, and a hand-typed count is the next instance of the AI-E9-7 class.
+  - **What this contract commits to are the CATEGORIES**, each of which must remain expressible through the headless invocation: the **determinism pin** and its **release-gate enforcement** (a run can be made to refuse a non-git, dirty or drifted tree); the **cost ceiling** (OI3 — no numeric default, `0`/omitted means no ceiling); the **materiality bar**; **operator designation** of the critical set, in both directions (FR4); **audit-pass selection** and **report selection**, both narrowing-only and both disclosed; **security-finding suppression**, bounded by the §G suppression threat model and never able to reach a live production key; and the **assessed-population scope** (FR33-support).
+  - **Equality between this contract and the parser is pinned by test**, in both directions, by `tests/test_invocation_contract.py` (`TC-ArgusAgent-CLI-001-35`..`-41`): a flag the parser accepts and no document specifies fails, and a flag a document names and the parser rejects fails. A capability not listed in this contract still will not exist in V1 (the §Capability contract preamble is unchanged) — what changed is that "listed" is now machine-checked rather than asserted.
 - **FR31:** APAA can resume an interrupted audit from its on-disk `.apaa/` state.
 - **FR32:** APAA can run to completion on a sequential (least-capable) host, producing byte-identical on-disk state to a parallel run.
+- **FR35:** A coding agent can invoke an audit and consume the verdict through a **local agent-integration surface**, without a human relaying it. *(Added 2026-08-10b.)*
+  - **Two shipped forms:** an **MCP server** (stdio transport) and **packaged assistant command assets** the installer places in the host's configuration.
+  - **Bounded by the §Project Classification constraints:** stdio only — no network listener is opened and no port is bound; no HTTP stack, preserving the `argus.* ⊬ fastapi` import-isolation gate and ADR #20; no credentials accepted or stored.
+  - **No new authority.** It invokes the same pure `AuditRequest → AuditVerdict` path as the CLI, under the same work-manifest permission boundary (NFR-S4). Any capability reachable through this surface is reachable through the CLI, and the converse is not required.
+  - **Verdict parity is asserted, not assumed:** the same repository at the same commit produces the same verdict through either surface, pinned by test.
 
 ## Non-Functional Requirements
 
@@ -461,6 +563,7 @@ Exact **team headcount**, the **budget-ceiling `$X`**, and **N** for the validat
 - **NFR-S3:** On the operated-service path, **customer source is never retained** after an audit completes.
 - **NFR-S4:** An auditor agent can read **only** the files in its work-manifest (permission boundary); off-scope reads are impossible.
 - **NFR-S5:** All filesystem writes are **containment-checked** (no path traversal, symlink, or sibling-prefix escape), reusing Minions workspace-containment patterns.
+- **NFR-S6:** **No source code, prompt, or repository content leaves the machine on the default path.** *(Added 2026-08-10b.)* Third-party transmission occurs **only** through the explicitly enabled FR36 deep pass, is **disclosed before the first byte is transmitted**, and names the provider that will receive it. The agent-integration surface (FR35) opens **no network listener and binds no port**. Both properties are enforced by committed gates in the shape of the existing import-isolation tests — an egress path reachable without opt-in fails CI.
 
 ### Cost Efficiency *(the scariest risk — token economics)*
 - **NFR-C1:** A baseline full audit costs a **bounded fraction of the audited repo's build cost** (tracked target ≤ 10–20% baseline; ~1% for V2 incremental diff-scoped runs). V1 measures and reports the baseline.
@@ -473,7 +576,8 @@ Exact **team headcount**, the **budget-ceiling `$X`**, and **N** for the validat
 
 ### Portability
 - **NFR-P1:** APAA runs to completion on the **least-capable host (Cline, sequential)**, producing **byte-identical on-disk state** to a parallel-capable host; parallel is a pure speedup.
-- **NFR-P2:** The audit is **stack-agnostic by construction** (deep AST-grounding = Python in V1; `claim_emitted` proxy elsewhere); no host- or stack-specific logic in the ledger/verdict core.
+- **NFR-P2:** The audit is **stack-agnostic by construction** (~~deep AST-grounding = Python in V1; `claim_emitted` proxy elsewhere~~ **deep AST-grounding is delivered in V1 for every language enumerated in `argus/shared/source_languages.py`, which is the source of truth; the `claim_emitted` proxy carries anything outside that set or any file whose grammar is absent** — *amended 2026-08-10, Story 10.2 / `DF-AUD-APAA-D`; delivered by `sprint-change-proposal-2026-07-28.md`*); no host- or stack-specific logic in the ledger/verdict core. **The language conditional remains confined to `argus/index/`** — widening the grounded set changed one map and one entry-point table, and touched neither `ledger/` nor `verdict/`, which is the property this NFR actually asserts.
+- **NFR-P3:** **The default public installation grounds the languages the tool claims to support.** *(Added 2026-08-10b.)* A user who installs through the primary public channel and audits a repository in a documented supported language receives that language's grounding **without discovering an optional extra**. Coverage degraded by a grammar absent from the default install is a **packaging defect**, not a user error or an honest limitation — and is reported as such. Where a language is deliberately not in the default install, its absence and the reason are stated in the tool's own output at the point the file is downgraded.
 
 ### Auditability & Evidence Integrity
 - **NFR-A1:** Every artifact is wrapped in a **schema-versioned, content-hashed, prev-hash-chained envelope**; schemas evolve **additive-only**.

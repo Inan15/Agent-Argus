@@ -55,6 +55,60 @@ The LOCKED CLI contract (frozen + documented per the story)
   wins on a tie). Both designation flags are ADDITIVE (NFR-M2) — a pre-2.3
   invocation without them is byte-identical.
 
+The rest of the accepted surface (added 2026-08-10 by Story 10.3 / ``DF-AUD-APAA-E``)
+-------------------------------------------------------------------------------------
+The block above stopped at SEVEN arguments and the parser accepts FOURTEEN. Six of
+the missing flags had ZERO occurrences anywhere in the binding contract corpus
+(``E-PRD/prd.md``, ``E-PRD/addendum.md``, ``architecture.md``, ``epics.md``,
+``CHANGELOG.md``, ``README.md``) — they were accepted by the shipped tool and
+specified nowhere. Commit ``230bf5c`` repaired the ``--commit`` paragraph above and
+left that omission untouched; this completes it. **This block is the contract
+statement closest to the code, and ``tests/test_invocation_contract.py``
+(``TC-ArgusAgent-CLI-001-38``) now fails if any accepted flag is missing from it.**
+
+- ``--strict`` — ``store_true``, DEFAULT ``False``. Release-gate mode: requires a git
+  repository, a clean working tree and ``HEAD == --commit``, refusing otherwise
+  (``intake/source_state.resolve_source_state``). This is the enforcement of the FR1
+  determinism pin described under ``--commit`` above. OFF by default so a first run
+  works on any directory. Entered in ``ae5f00c`` (Epic 8); specified by Story 10.3.
+- ``--passes <csv>`` — DEFAULT: every pass (``_ALL_PASSES``). An exact selection; a
+  trailing comma is not a selection, and an explicit flag selecting NOTHING stays
+  empty rather than reverting to the default. Entered in ``084c6a7``; Story 10.3.
+- ``--skip-pass <pass>`` — REPEATABLE, DEFAULT ``None``. Subtracts from whatever
+  ``--passes`` selected, so the two compose in ONE direction only: a skip can never
+  re-add a pass the operator excluded. Entered in ``084c6a7``; Story 10.3.
+- ``--reports <csv>`` — DEFAULT ``_DEFAULT_REPORTS`` (``final-verdict``,
+  ``coverage-ledger``). Selects the report types rendered. ⚠️ **CONDITIONALLY INERT:
+  reports are only rendered when ``--report-dir`` is set, so ``--reports`` alone
+  renders nothing.** Entered in ``084c6a7``; specified by Story 10.3, which also
+  records that ``.github/workflows/argus-student-audit.yml`` depends on it.
+- ``--report-dir <path>`` — DEFAULT ``""`` (render nothing). Output directory for the
+  generated Markdown reports; the switch that makes ``--reports`` do anything.
+- ``--ignore-path <glob>`` — REPEATABLE, DEFAULT ``[]``. Extends the built-in
+  ``detectors/secret_suppression.DEFAULT_TEST_PATH_PATTERNS`` for the secret scan.
+  Matched with ``fnmatchcase`` (NFR-P1 — never ``fnmatch``, which lower-cases on
+  Windows). **It cannot suppress a high-confidence live production key.**
+- ``--ignore-pattern <substr>`` — REPEATABLE, DEFAULT ``[]``. Suppresses a secret
+  finding whose value contains the pattern. Matched by BARE SUBSTRING, so a short
+  pattern is a wide net. **Since Story 10.3 it is evaluated BELOW the Live-Key
+  Safeguard** — before that, ``--ignore-pattern A`` silently suppressed every live
+  AWS key, GitHub PAT, Slack token and PEM private key in the repository. A
+  suppression either of the two ``--ignore-*`` flags causes is now RECORDED as a
+  non-blocking, redacted ``operator_suppressed_secret:<reason>`` finding and DISCLOSED
+  on stderr. Threat model: ``architecture.md`` §G *"Suppression threat model"*.
+- ``--coverage-scope {repository,application}`` — DEFAULT ``application``. The
+  population the deep-coverage gate assesses. ⚠️ **Deliberate, documented divergence
+  (Story 10.3 / DN-8): ``AuditRequest.coverage_scope`` defaults to ``repository``, so a
+  library consumer constructing the request directly gets a different assessed
+  population than a CLI consumer.** Both are shipped, announced defaults; neither is
+  changed here, and ``TC-ArgusAgent-CLI-001-37b`` pins the divergence in both
+  directions so it cannot drift or close by accident.
+
+**The accepted surface is DERIVED, never transcribed.** ``build_parser`` below is the
+source of truth; this prose is checked against it by ``TC-ArgusAgent-CLI-001-35``
+(equality, both directions) and ``-37`` (defaults and shapes). A flag added to the
+parser without a contract site turns those red — that is the guard working.
+
 The CLI is a developer-tool invocation contract (argv / stdout / exit-code), NOT a
 UI (CLAUDE.md §3.7) — no HTML/CSS/JS, no web surface. ArgusAgent is downstream of the
 HTTP/A2A boundary (it takes no token, registers no route — AR9).
@@ -65,6 +119,7 @@ from __future__ import annotations
 import argparse
 import sys
 
+from argus.detectors.secret_scan import RULE_OPERATOR_SUPPRESSED_SECRET
 from argus.models import AuditRequest
 from argus.pipeline import run_audit
 from argus.reports.plain_english import ShipReadinessError, render_ship_readiness
@@ -304,6 +359,40 @@ def _build_request(
     )
 
 
+def _emit_suppression_disclosure(verdict: AuditVerdict) -> None:
+    """Disclose how many security findings the OPERATOR's own rules suppressed (Story 10.3/AC4.3).
+
+    Printed on EVERY run, including when the answer is zero. A disclosure that only appears
+    when something was hidden is one an operator learns nothing from — silence would be
+    indistinguishable from "the feature is not wired".
+
+    This is the register the project already uses for a narrowing: `--coverage-scope` is the
+    precedent (`CHANGELOG.md` §Defaults) — a narrowing is PERMITTED, DISCLOSED, and never
+    allowed to lower a bar. Before this, `--ignore-path` / `--ignore-pattern` were permitted
+    and not disclosed: the operator's inputs were persisted into run-state provenance while
+    the effect — that a secret was found and suppressed — left no trace at all.
+
+    STDERR, like the human register and for the same reason: stdout is the wire contract a CI
+    step parses positionally (FR18/AR3) and appending to it would break that. Secret-safe by
+    construction (NFR-S1) — a count and a flag name, never a locator, a pattern or a value.
+    """
+    suppressed = sum(
+        1
+        for finding in verdict.ordered_findings
+        if finding.rule_id.startswith(RULE_OPERATOR_SUPPRESSED_SECRET)
+    )
+    detail = (
+        "none were"
+        if suppressed == 0
+        else f"{suppressed} were — they are recorded as `{RULE_OPERATOR_SUPPRESSED_SECRET}:*`"
+    )
+    print(
+        f"{_PROG}: security findings suppressed by your --ignore-path/--ignore-pattern "
+        f"rules: {detail}. A live production key is never suppressed by either flag.",
+        file=sys.stderr,
+    )
+
+
 def _emit_ship_readiness(
     verdict: AuditVerdict, enabled_passes: tuple[str, ...]
 ) -> int | None:
@@ -374,7 +463,14 @@ def main(argv: list[str] | None = None) -> int:
 
     readiness_failure = _emit_ship_readiness(verdict, enabled_passes)
     if readiness_failure is not None:
+        # A ShipReadinessError is a CONTRACT VIOLATION: the run is not trustworthy and exits
+        # `1`, meaning no verdict reached the consumer. Disclosing a suppression count beside
+        # a verdict we have just refused to vouch for would dress a non-result as a result.
         return readiness_failure
+
+    # AFTER the human register, deliberately: `Ship-readiness: …` is the headline and stays
+    # the first line an operator sees on stderr (pinned by tests/test_cli.py).
+    _emit_suppression_disclosure(verdict)
 
     return verdict.exit_code
 

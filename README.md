@@ -80,6 +80,46 @@ Publishing to PyPI is deliberately **not** attempted by the current workflow: a 
 name+version on an index can never be replaced, which makes it an operator decision taken
 with credentials in hand.
 
+### Auditing a non-Python repository: the `[languages]` extra
+
+The default install grounds **Python only**. Nine further tree-sitter grammars ship in an **optional
+extra**, and installing it is what lets Argus check claims against the real AST of a JavaScript,
+TypeScript, Go, Rust, Java, C, C++, Ruby or PHP file:
+
+```bash
+pip install "argus-agent[languages] @ git+https://github.com/Inan15/Agent-Argus.git@v0.1.0"
+# or, from a clone:
+pip install -e ".[languages]"
+```
+
+> ⚠️ Same interim caveat as above — the tag does not exist yet, so the first command does not resolve
+> today. The clone form works now.
+
+**What it changes, and what it does not.** The languages Argus reads are the suffixes in
+[`argus/shared/source_languages.py`](argus/shared/source_languages.py) — that module is the single
+source of truth, not this paragraph, and `tests/test_multilanguage_audit.py` fails if a language in it
+has no grounding fixture. The extra changes what happens *after* a file is read:
+
+| | Grammar installed | Grammar absent |
+|---|---|---|
+| The file is enumerated and graded | ✅ | ✅ |
+| It can reach `audited_deep` | ✅ | ❌ — capped at shallow |
+| What the report says | the deep grade it earned | `ast_eligible=False` with a named reason token, e.g. `grammar_missing_go` |
+
+**Enumerable is not the same as deeply auditable, and a missing grammar is never a silent drop.** A file
+whose grammar is absent is still counted, still graded, and still reported — it simply cannot reach
+`audited_deep`, so it lowers the coverage ratio instead of quietly disappearing from it. That is the
+point of enumerating it: an audit that cannot examine a file has to say so. Argus will not emit a deep
+claim it could not verify.
+
+**Measured limits, so you can plan around them rather than discover them.** All ten languages ground
+(`ast_eligible=True`), including `.tsx` via the JSX-aware grammar. But structure extraction is narrower
+than grounding: **C, C++, Ruby and Rust currently yield no function/class definitions**, because the
+definition vocabulary was written against Python's node names. A file in those four parses cleanly and is
+graded, but has no definition for the depth gate to stand on. Pinned language-by-language by
+`TC-ArgusAgent-INTAKE-003-09` and tracked as `DF-10-2-A` in
+`_bmad-output/design-artifacts/ArgusAgent/deferred-work.md`.
+
 ### What the distribution contains, and what needs the git repository
 
 MEASURED from the built wheel (`argus_agent-0.1.0-py3-none-any.whl`, 76 entries) and sdist
@@ -149,11 +189,26 @@ When installed, `ArgusAgent` registers slash commands in your AI coding assistan
 /audit resume           # Resume interrupted audit from on-disk state
 ```
 
-From terminal CLI:
+From terminal CLI — the `audit` sub-command is required, and every flag below is the real spelling:
 
 ```bash
-argus --budget 500 --materiality critical
+# The whole contract in one line: audit this repo at HEAD, no ceiling, default passes.
+argus audit .
+
+# Release-gate mode, as a CI step would run it.
+argus audit . --commit HEAD --strict --budget 500 --materiality-bar critical
+
+# Write the Markdown reports (--reports renders nothing unless --report-dir is set).
+argus audit . --report-dir ./argus-reports --reports final-verdict,coverage-ledger
 ```
+
+> *Corrected 2026-08-10 (Story 10.3 / `DF-AUD-APAA-E`).* This block previously read
+> ~~`argus --budget 500 --materiality critical`~~, which exits with an argparse usage error: the
+> `audit` sub-command was missing and `--materiality` is not a flag this parser has ever accepted
+> (it is `--materiality-bar`). Every `argus …` command line committed in this README, in
+> `action.yml` and in the workflows is now parsed by the real parser in CI
+> (`TC-ArgusAgent-DOCS-001-28`), so a documented invocation that would fail for a reader fails the
+> build first.
 
 ---
 

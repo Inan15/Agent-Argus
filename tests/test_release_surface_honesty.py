@@ -50,6 +50,25 @@ _ARTIFACT_DIR = _REPO_ROOT / "_bmad-output" / "design-artifacts" / "ArgusAgent"
 # too — so a future edit can neither quietly drop the exit-code contract nor bolt on an
 # unreviewed claim section.
 _NOTE_SECTIONS: tuple[str, ...] = (
+    # `## Unreleased` — added 2026-08-10 by Story 10.2 (DF-AUD-APAA-D). Registered deliberately,
+    # which is what this enumeration is for: each one is a consumer-visible claim someone signed
+    # off. "Documented" records the `[languages]` extra, which shipped with zero README/CHANGELOG
+    # coverage; "Fixed" records TypeScript/PHP being reported as missing grammars they already had;
+    # "Changed" records the per-grammar cache-key provenance (internal — no store is wired, so no
+    # cached result exists to invalidate).
+    # `## Unreleased` — added 2026-08-10 by Story 10.3 (DF-AUD-APAA-E). "Specified" records the six
+    # CLI flags that shipped in 0.1.0 accepted and specified in no binding document; "Fixed" records
+    # the one behavioural change under that bless — `--ignore-pattern` was evaluated ABOVE the
+    # Live-Key Safeguard its own module docstring promised, so `--ignore-pattern "A"` suppressed
+    # every live credential in the audited repository with nothing recorded; "Known divergence"
+    # states, rather than changes, the `--coverage-scope` CLI/library default split (DN-8). These
+    # precede 10.2's sections because they are what a consumer of THIS release hits first.
+    "### Specified — six CLI flags that shipped in `0.1.0` accepted and specified nowhere",
+    "### Fixed — `--ignore-pattern` could defeat the live-key safeguard it was documented to sit under",
+    "### Known divergence — `--coverage-scope`'s default differs between the CLI and the library",
+    "### Documented — the `[languages]` extra, which shipped undocumented",
+    "### Fixed — TypeScript and PHP were reported as missing grammars they already had",
+    "### Changed — the memoization cache key now names the grammar that actually parsed",
     "### Resolving `argus-agent`",
     "### Version: one value, one source",
     "### Behaviour: the composite action distinguishes a crash from an assessment",

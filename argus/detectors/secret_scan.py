@@ -119,24 +119,54 @@ from argus.detectors.base import (
     FindingDraft,
     build_recording,
 )
+from argus.detectors.secret_suppression import (
+    OPERATOR_ATTRIBUTABLE_REASONS,
+    SecretSuppressionEngine,
+)
 from argus.index.ast_index import AstIndexEntry, Definition
 from argus.ledger.coverage_ledger import CoverageDepth, grade_entry
 
 __all__ = [
     "SECRET_EVIDENCE_SCHEMA_VERSION",
     "RULE_HARDCODED_SECRET",
+    "RULE_OPERATOR_SUPPRESSED_SECRET",
     "MIN_ENTROPY_TOKEN_LENGTH",
     "ENTROPY_BITS_PER_CHAR_FLOOR",
     "MIN_GENERIC_SECRET_LENGTH",
     "SecretScanError",
     "SecretFindingEvidence",
     "SecretScanDetector",
+    "operator_suppression_rule_id",
 ]
 
 SECRET_EVIDENCE_SCHEMA_VERSION = "1"
 
 # The single rule-id vocabulary for this detector (frozen for 4.4 / 6.5).
 RULE_HARDCODED_SECRET = "hardcoded_secret"
+
+# Story 10.3 / AC4.2 — the rule-id PREFIX for a suppression an operator's own flag caused.
+# The full id is ``operator_suppressed_secret:<reason token>``; the reason travels in the
+# rule id because ``Recording`` is a frozen, ``extra="forbid"`` contract with no free-text
+# slot, and widening it would be a schema change this specification-correction story has no
+# licence to make (``prd.md`` additive-only policy).
+RULE_OPERATOR_SUPPRESSED_SECRET = "operator_suppressed_secret"
+
+
+def operator_suppression_rule_id(reason: str) -> str:
+    """The rule id recording a suppression the operator's own flag caused (PURE).
+
+    Raises:
+        SecretScanError: if *reason* is not an operator-attributable token. A built-in
+            suppression (public sentinel, inline annotation, ``DEFAULT_TEST_PATH_PATTERNS``)
+            is deliberately NOT recorded here — AC4.5 — and minting an id for one would
+            silently widen the disclosure onto runs that passed no flag at all.
+    """
+    if reason not in OPERATOR_ATTRIBUTABLE_REASONS:
+        raise SecretScanError(
+            f"'{reason}' is not an operator-attributable suppression reason; "
+            f"expected one of {OPERATOR_ATTRIBUTABLE_REASONS}"
+        )
+    return f"{RULE_OPERATOR_SUPPRESSED_SECRET}:{reason}"
 
 # Entropy candidate thresholds (LOCKED heuristics — documented as such).
 MIN_ENTROPY_TOKEN_LENGTH = 20
@@ -401,11 +431,10 @@ class SecretScanDetector:
                 degraded=(DegradedCondition(file_path=file_path, reason="secret_scan_failed"),)
             )
 
-        from argus.detectors.secret_suppression import SecretSuppressionEngine
-
         source_lines = source.splitlines()
         findings = []
         seen: set[tuple[int, int, str]] = set()
+        suppressed_ids: set[str] = set()
         for match in sorted(
             matches, key=lambda m: (m.start_line, m.end_line, m.pattern_id)
         ):
@@ -419,7 +448,7 @@ class SecretScanDetector:
                 if 1 <= match.start_line <= len(source_lines)
                 else None
             )
-            is_suppressed, _reason = SecretSuppressionEngine.evaluate_suppression(
+            is_suppressed, reason = SecretSuppressionEngine.evaluate_suppression(
                 file_path=file_path,
                 snippet=match.value,
                 line_content=line_text,
@@ -427,6 +456,49 @@ class SecretScanDetector:
                 ignore_patterns=ignore_patterns,
             )
             if is_suppressed:
+                # Story 10.3 / AC4.2. The reason token used to be bound to `_reason` and
+                # thrown away: the operator's INPUTS were persisted by
+                # `AuditRequest.to_provenance_payload()` while the EFFECT — that a secret
+                # was found and suppressed — left no trace anywhere. A suppression an
+                # operator's own flag caused is now RECORDED, so it can be disclosed.
+                #
+                # Design (a) of the story's AC4.4: the record travels on the `Recording`
+                # fold the pipeline already consumes, NOT on a new `DetectorResult` field.
+                # `argus/pipeline.py` is byte-fenced to Story 12.1 (1331 lines against the
+                # NFR-M1 cap of 1200) and already does `findings.extend(secret_result
+                # .findings)`, so this needs no line there; a new result field would have.
+                #
+                # It carries the REASON TOKEN and the LOCATOR and nothing else
+                # (NFR-S1/NFR-S2/AR8): not the secret, not the source line, and NOT the
+                # operator's `--ignore-pattern` text — that pattern is operator-supplied and
+                # may itself be secret bytes.
+                #
+                # `depth_supported=None` makes it NON-BLOCKING by construction
+                # (`verdict_gate.is_verdict_blocking`), so a disclosure can never move a
+                # verdict on its own. Built-in suppressions emit nothing (AC4.5).
+                #
+                # De-duplicated by content id: a single literal can match several scan
+                # patterns at the same span (a `TOKEN = "..."` line is both an assigned
+                # secret and a high-entropy string), and emitting the identical disclosure
+                # row twice would overstate how many suppressions the operator caused.
+                if reason is not None and reason in OPERATOR_ATTRIBUTABLE_REASONS:
+                    suppression_draft = FindingDraft(
+                        file_path=file_path,
+                        start_line=match.start_line,
+                        end_line=match.end_line,
+                        ast_span=_ast_span_for_line(
+                            ast_entry.definitions, match.start_line
+                        ),
+                        rule_id=operator_suppression_rule_id(reason),
+                        advisory=True,
+                        coverage_envelope_slice=coverage_envelope_slice,
+                    )
+                    suppression_record = build_recording(
+                        suppression_draft, depth_supported=None, claim_present=False
+                    )
+                    if suppression_record.recording_id not in suppressed_ids:
+                        suppressed_ids.add(suppression_record.recording_id)
+                        findings.append(suppression_record)
                 continue
 
             ast_span = _ast_span_for_line(ast_entry.definitions, match.start_line)

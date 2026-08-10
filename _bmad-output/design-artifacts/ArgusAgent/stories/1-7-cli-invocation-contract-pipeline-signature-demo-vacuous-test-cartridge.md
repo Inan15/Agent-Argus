@@ -181,6 +181,36 @@ RETURNS `AuditVerdict.exit_code` (the 1.6 mapping `0/2/3/1`); the console-script
 "minions_core.apaa.cli:main"`) — uncommenting the reserved block (now that `cli.py:main` exists), so the
 external `apaa` invocation resolves (FR30 / architecture §I).
 
+> **⚠️ AMENDMENT NOTE — added 2026-08-10 by Story 10.3 (`DF-AUD-APAA-E`). APPEND-ONLY: AC3's original
+> text above is unchanged and remains the signed record of what Story 1.7 delivered.**
+>
+> **The LOCKED surface has grown, and for a while it grew without being re-locked.** AC3 locks four
+> flags — `--commit`, `--budget`, `--materiality-bar` and the `audit <repo>` sub-command shape — and
+> that was an accurate description of the parser Story 1.7 shipped. It stopped being a complete one:
+>
+> - **Story 2.3 (FR4)** added `--critical-subsystem` and `--exclude-critical`, both specified.
+> - **Commit `084c6a7`** (the 426-file repository separation seed) carried in `--passes`,
+>   `--skip-pass`, `--reports` and `--report-dir`; **commit `b05fa4c`** added `--ignore-path` and
+>   `--ignore-pattern`; **commit `ae5f00c`** (Epic 8) added `--strict` and `--coverage-scope`, of
+>   which only `--coverage-scope` was announced.
+> - Measured on 2026-08-10 against the whole binding corpus, **six of those flags had zero
+>   occurrences in any specification**: `--passes`, `--skip-pass`, `--reports`, `--strict`,
+>   `--ignore-path`, `--ignore-pattern`. The parser accepted fourteen arguments; the contract
+>   described four; **`cli.py`'s own "LOCKED CLI contract" docstring described seven.**
+>
+> **Story 10.3 is the correction.** Each of the six took a recorded ruling (blessed with a
+> behavioural acceptance criterion and a CHANGELOG entry — none was removed), FR30 and architecture
+> §A were amended to name `argus/cli.py::build_parser` as the source of truth rather than a
+> four-parameter list, and **the word "LOCKED" is now backed by a test instead of by convention**:
+> `tests/test_invocation_contract.py` derives the accepted surface from the live parser and asserts
+> equality with the contract registry in both directions. AC3's original promise — *"the exact flag
+> names/sub-command shape are LOCKED + documented by the dev"* — is discharged mechanically from
+> this point on; a future flag that escapes documentation turns that test red.
+>
+> *(Two spellings in AC3 above are also stale for a reason recorded elsewhere and NOT corrected here:
+> the console script is `argus`/`argus-agent`/`repo-audit` and the module is `argus.cli`, following
+> the 2026-08-03 repository separation. RS-1 governs; this note does not rewrite a signed AC.)*
+
 **AC4 — The signature demo: `apaa audit` on the vacuous-test cartridge → 🔴 BLOCKED, exit `2` (PRD §Success-Criteria, the moat)**
 **Given** the **vacuous-test cartridge** (cartridge #1) — a minimal, self-contained git-pinned fixture repo
 under `tests/apaa/cartridges/<id>/` containing (a) a source-under-test module and (b) at least one **vacuous
