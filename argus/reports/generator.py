@@ -21,6 +21,18 @@ from argus.reports.formatter import (
 )
 from argus.reports.plain_english import render_depth_meaning, render_ship_readiness
 from argus.detectors.vacuous_test import is_test_file
+
+# The reason-token vocabulary is a PURE contract shared with the PRODUCER
+# (``argus/index/ast_index.py``). Importing it here — rather than importing the impure
+# ``index/`` layer for a constant, or re-parsing the token with a second ``startswith`` —
+# is what keeps the remedy this report prints tied to the cause the index actually recorded
+# (Story 10.4 / DN-3; the arrow stays impure-shell → pure-contract, AR8).
+from argus.shared.grammar_status import (
+    CORE_PACKAGE,
+    GrammarFailure,
+    classify_reason,
+    grammar_package_for,
+)
 from argus.verdict.verdict_gate import (
     RELEASE_READY_DEEP_THRESHOLD,
     AuditVerdict,
@@ -280,34 +292,77 @@ def _render_critical_blockers(
     return lines
 
 
-_GRAMMAR_PACKAGE_BY_LANGUAGE = {
-    "javascript": "tree-sitter-javascript",
-    "typescript": "tree-sitter-typescript",
-    "go": "tree-sitter-go",
-    "rust": "tree-sitter-rust",
-    "java": "tree-sitter-java",
-    "c": "tree-sitter-c",
-    "cpp": "tree-sitter-cpp",
-    "ruby": "tree-sitter-ruby",
-    "php": "tree-sitter-php",
-    "python": "tree-sitter-python",
-}
+def _render_grammar_remedy(failure: GrammarFailure, counts: Counter[str]) -> str:
+    """One line per failure CLASS, carrying the remedy that class actually needs.
+
+    Never a blended sentence. A polyglot repository can hit several of these at once, and a
+    merged ``pip install`` line is wrong for at least one of them by construction: cause 1's
+    package is absent, cause 3's is present and broken, and cause 2's is present and fine —
+    Argus is the one at fault.
+    """
+    languages = sorted(counts)
+    files = sum(counts.values())
+    where = ", ".join(f"{counts[lang]} {lang}" for lang in languages)
+    packages = " ".join(grammar_package_for(lang) for lang in languages)
+
+    if failure is GrammarFailure.PACKAGE_MISSING:
+        return (
+            f"- **Grammar package not installed** ({where}): run "
+            f"`pip install {packages}` and re-run."
+        )
+    if failure is GrammarFailure.ENTRY_POINT_MISSING:
+        return (
+            f"- **Argus does not recognise this grammar package's entry point** ({where}): the "
+            f"package IS installed, so there is nothing for you to install — this is an **Argus** "
+            f"defect. Please report it with the installed version of `{packages}`."
+        )
+    if failure is GrammarFailure.LOAD_FAILED:
+        return (
+            f"- **The installed grammar could not be loaded on this runtime** ({where}): "
+            f"reinstall or rebuild `{packages}` and check that its version pairs with the "
+            f"installed `{CORE_PACKAGE}` (an ABI mismatch or a corrupt build looks like this)."
+        )
+    # CORE_RUNTIME_MISSING — deliberately last, and deliberately not per-language: EVERY
+    # language is down, so naming one grammar package here would be the maximally wrong
+    # remedy. It is also why this token carries no `<lang>` suffix.
+    return (
+        f"- **The `{CORE_PACKAGE}` core runtime is not importable** ({files} file(s)): run "
+        f"`pip install {CORE_PACKAGE}` and re-run. **Every** language is affected by this — it is "
+        f"not a per-language problem, so installing individual grammar packages will not help."
+    )
 
 
 def _render_readability_warning(
     ledger: CoverageLedger, ast_index: object | None
 ) -> list[str]:
-    """Warn when Argus could not READ what it enumerated — loudly, and with a remedy.
+    """Warn when Argus could not READ what it enumerated — loudly, and with a remedy that works.
 
-    A repository whose language has no installed tree-sitter grammar produces a
-    perfectly ordinary-looking ``INSUFFICIENT_COVERAGE``. Technically true, and
-    badly misleading: it reads as "your repo needs more tests" when the actual
-    meaning is "I could not parse a single file". The operator's remedy is a pip
-    install, and nothing in the report previously pointed at it.
-
-    This is the ``no silent no-op`` rule. An audit that examined nothing must say so
-    in the loudest register the report has, never imply a coverage judgement it did
+    A repository whose language has no usable tree-sitter grammar produces a perfectly
+    ordinary-looking ``INSUFFICIENT_COVERAGE``. Technically true, and badly misleading: it
+    reads as "your repo needs more tests" when the actual meaning is "I could not parse a
+    single file". This is the ``no silent no-op`` rule — an audit that examined nothing must
+    say so in the loudest register the report has, never imply a coverage judgement it did
     not make.
+
+    **This is the ONLY place the reason token reaches an operator** (measured, whole-tree:
+    ``DetectorResult.degraded`` records it and no production code reads it back — filed as
+    ``DF-10-4-B`` for Story 10.5's reverse sweep). It also had never executed under test,
+    which is why Story 10.4 wrote ``tests/test_grammar_diagnosis.py`` ``…-26``/``-27`` RED
+    before touching it: splitting the reason token without covering this function would have
+    silently disabled the one message an operator ever sees, and nothing would have gone red.
+
+    Classification goes through ``argus.shared.grammar_status.classify_reason``, never through
+    prefix arithmetic. The removed version sliced the language out of the token with
+    ``reason[len(prefix):]`` against cause 1's prefix, which skips
+    ``grammar_entrypoint_missing_go`` outright (SILENT); widening that prefix to ``grammar_``
+    would have sliced the same token into the "language" ``entrypoint_missing_go`` and printed
+    ``pip install tree-sitter-entrypoint_missing_go`` (MISDIRECT). One shared definition,
+    imported by producer and consumer alike, is the only shape that cannot drift.
+
+    ⛔ The all-or-nothing trigger below (``if eligible: return []``) is Story 12.5's, not this
+    function's: a polyglot repository whose Python parses still learns nothing here about its
+    failed Go grammar. That blind spot is measured and FILED (``DF-10-4-A``), not fixed —
+    widening the trigger adds a per-file point-of-downgrade surface 12.5 owns by name.
     """
     if ast_index is None:
         return []
@@ -319,28 +374,31 @@ def _render_readability_warning(
     if eligible:
         return []  # something was parseable — this is a real coverage result
 
-    prefix = "grammar_missing_"
-    missing: Counter[str] = Counter()
+    # Failure class → language → file count. Deterministic ordering (AR4): classes in
+    # declaration order, languages sorted inside each.
+    by_class: dict[GrammarFailure, Counter[str]] = {}
     for entry in entries:
-        reason = getattr(entry, "parse_failure_reason", None) or ""
-        if reason.startswith(prefix):
-            missing[reason[len(prefix):]] += 1
+        diagnosis = classify_reason(getattr(entry, "parse_failure_reason", None))
+        if diagnosis is None:
+            continue  # syntax_error / read_error / non_python — not a grammar-LOAD failure
+        by_class.setdefault(diagnosis.failure, Counter())[diagnosis.language or ""] += 1
 
-    if not missing:
+    if not by_class:
         return []
 
-    packages = sorted(
-        {_GRAMMAR_PACKAGE_BY_LANGUAGE.get(lang, f"tree-sitter-{lang}") for lang in missing}
-    )
-    breakdown = ", ".join(f"{n} {lang}" for lang, n in sorted(missing.items()))
+    remedies = [
+        _render_grammar_remedy(failure, by_class[failure])
+        for failure in GrammarFailure
+        if failure in by_class
+    ]
     return [
         render_callout(
             "CAUTION",
             f"**No file could be parsed — this verdict reflects tooling, not code quality.** "
-            f"Argus enumerated {len(entries)} file(s) ({breakdown}) but has no installed "
-            f"grammar for them, so ZERO reached `audited_deep`. The coverage numbers below "
-            f"are therefore a floor imposed by a missing dependency. Install: "
-            f"`pip install {' '.join(packages)}` and re-run."
+            f"Argus enumerated {len(entries)} file(s) and ZERO reached `audited_deep`, so the "
+            f"coverage numbers below are a floor imposed by grammar loading rather than a "
+            f"judgement about this code. What failed, and what fixes each one:\n\n"
+            + "\n".join(remedies)
         ),
         "",
     ]

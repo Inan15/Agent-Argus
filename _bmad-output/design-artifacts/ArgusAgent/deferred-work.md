@@ -1343,6 +1343,53 @@ item inside the story file and is being fixed in this story, not deferred.
   - target_story: 10-1-release-status-must-cite-evidence
   - category: process
   - severity: 🟠
+  - **CLOSED 2026-08-10 by story 10-1-release-status-must-cite-evidence**
+    (append-only closure note — the original entry above is NOT rewritten, §3.4 evidence
+    immutability. That matters more than usual here: the entry contains a sentence the
+    executed gate contradicted, and quietly fixing it would be a third instance of the very
+    class this entry files. See (b).)
+    **(a) The executed gate the entry asked for now exists.** `audit-ci.yml` run
+    **`31341363300`** concluded **`success`** in 1m54s on 2026-08-09T23:13:27Z covering sha
+    **`00c8d1b`** (`00c8d1bea695dc2e210b1a8c83bd5c69fd019fe0`), with **3/3 matrix legs green**
+    — 3.10 ✅, 3.11 ✅, 3.12 ✅, each job conclusion read individually rather than inferred from
+    the run's top-level status. The record under correction is amended in place:
+    `sprint-change-proposal-2026-07-28.md:63` is now **struck** beside a dated §5 correction
+    block that names the failed run, the superseding run and the sha each one covers, and
+    records the release status itself as **NOT ESTABLISHED**.
+    **(b) 🚩 A NEW FINDING, recorded because it is this entry's own defect.** The sentence
+    above — *"Both were repaired 2026-08-09 and a clean-venv reproduction of every step passes
+    on 3.12; the repair is NOT the deferred item"* — **was contradicted by the executed gate at
+    the moment it was written.** The repair commit `cd60dbb`'s own CI run **`31322881580`**
+    (sha `cd60dbbe45d03b7bc647307a3b14a66a2bd019ff`) concluded **`failure`**: the **3.11 leg
+    failed at *"Run Pytest & Coverage Assurance Gate"*** and the **3.10 and 3.12 legs were
+    `cancelled`** by fail-fast — so *"passes on 3.12"* was never executed on 3.12 at all. A
+    clean-venv reproduction on a Windows workstation is a LOCAL run; it is necessary, not
+    sufficient, and it is exactly the substitution this entry was filed about. **The class
+    recurred inside the record of the class**, which is why it is recorded here rather than
+    silently repaired.
+    **(c) The measured cause — and it was not the workflow.**
+    `git diff cd60dbb 00c8d1b -- .github/workflows/audit-ci.yml pyproject.toml` is **empty**:
+    the workflow repair was correct and is byte-identical between the two shas. What was still
+    broken was **product code on POSIX**, visible in the failed log as
+    `Failed: DID NOT RAISE WorkspaceContainmentError`. Every one of these defects was invisible
+    on the Windows development host and fatal on the ubuntu runner — the structural reason a
+    local run can never discharge the rule.
+    **(d) What closed it:** the twelve commits `cd60dbb..00c8d1b`, of which six are the
+    POSIX/non-ASCII chain — `d0e0a5c` (non-ASCII filenames crashed under a C locale), `ebdca75`
+    (containment decided differently on POSIX than on Windows — the `DID NOT RAISE` failure),
+    `f7c666e`, `266bb28` (F-21 surrogate repair), `f85fe76`, `40c0727`.
+    **(e) The standard is now committed, both halves.** The rule is written in
+    `architecture.md` §H and named in §Enforcement (a rule that lives only in a test is not a
+    rule); the guard is `tests/test_evidence_citation.py`
+    (`TC-ArgusAgent-DOCS-001-20`..`-23`), which resolves `sprint-change-proposal-*.md` and
+    `epic-*-retro-*.md` by glob so a new proposal cannot escape by being new, and which was
+    demonstrated RED against the uncorrected documents before the corrections landed.
+    **(f) What remains OPEN and is NOT closed by this entry:** the ≥80% precision
+    externalization gate is **not cleared** (Epic 13 owns it); nothing is tagged, pushed or
+    published (operator step **AI-E9-1**, still unowned); and **no CI run covers any tree later
+    than `00c8d1b`**, including the commit carrying this note — run ids are sha-scoped, and the
+    run that evidences this commit does not exist until the operator pushes. Recorded as
+    NOT ESTABLISHED rather than assumed.
 
 - **DF-AUD-APAA-D** — Multi-language AST grounding shipped in V1 while every specification
   still designates it V2, and its determinism provenance is wrong for non-Python repos. The
@@ -1363,6 +1410,102 @@ item inside the story file and is being fixed in this story, not deferred.
   - owner: Engineering Lead
   - target_story: 10-2-multi-language-grounding-is-v1-in-the-specs
   - category: process
+  - severity: 🟡
+  - **CLOSED 2026-08-10 by Story 10.2 — append-only closure note. The entry above is left
+    byte-for-byte intact, INCLUDING the site enumeration ("PRD L23/L180 and architecture
+    L220/L237") that measurement has now shown to be incomplete. Correcting it in place would
+    destroy the evidence that the enumeration kept being wrong, which is the finding (§3.4,
+    DN-8).**
+    **(a) The enumeration was wrong a THIRD time, and that is the story's central finding.**
+    This entry names 4 sites; the epic later corrected it to 7, then to 10. Measured against the
+    working tree on 2026-08-10 the real figure is **12 to amend + 2 to exempt**: PRD `:23`,
+    `:121`, `:193`, `:214`, `:364`, `:438`, `:469` (FR7), `:571` (NFR-P2) and architecture
+    `:89`, `:267`, `:317`, `:800`. Architecture `:89` (*"AST = Python in V1"*) and `:800`
+    (*"Future enhancement: multi-language AST (V2)"*) were missed by **all three** prior
+    hand-counts. `:89` shows why: it scopes deep grounding to Python with **no `V2` marker
+    anywhere in the sentence**, so every keyword sweep for "V2" walked straight past it. The two
+    exempt sites — architecture `:471` and `:766` — are **true statements about the default
+    install** (the nine grammars are an optional extra, so `pip install argus-agent` really does
+    ground Python only); amending them would replace a true sentence with a false one, and they
+    belong to Story 12.5 / NFR-P3. They are exempted **by name with that reason recorded**, never
+    silently. **The remedy is therefore not a corrected list — a hand-counted list is what failed
+    three times — but a committed closure guard**, `tests/test_spec_claim_scope.py`
+    (`TC-ArgusAgent-DOCS-001-24`..`-27`), which resolves `E-PRD/*.md` + `architecture.md` by
+    **glob** so a new specification file cannot escape by being new, matches the claim as a
+    **pattern** over sentence units so a claim rewritten at a new line cannot escape by moving,
+    carries a positive control in both directions, and fails if it scans nothing or if an
+    exemption stops matching. It was demonstrated RED against the unamended specifications first
+    and named all 12 sites.
+    **(b) The specification was overselling in one direction and the CODE was underselling in the
+    other: only 8 of 10 languages actually grounded.** Measured by executing `build_ast_index`
+    over a ten-language fixture on this host: `a.ts` and `a.php` returned `ast_eligible=False`
+    with `grammar_missing_typescript` / `grammar_missing_php` **while both grammar packages were
+    installed and both were declared in the `[languages]` extra**. Cause: grammar loading resolved
+    only `getattr(mod, "language", None)`, and those two packages ship several dialects instead
+    (`language_typescript`/`language_tsx`, `language_php`/`language_php_only`). Nothing raised —
+    the code fell through to the "grammar missing" branch — so the reason token **told an operator
+    to install a package they already had**. That is the `DF-AUD-APAA-F` / Story 10.4 harm ("the
+    remedy the report gives an operator is wrong") from a **third** cause, and 10.4's fix does not
+    reach it: splitting `except (ImportError, Exception)` does nothing where nothing raises. Fixed
+    here with a declarative per-language entry-point map (plus a suffix-level override so `.tsx`
+    gets the JSX-aware grammar), because AC1 amends **FR7, the binding capability contract**, and
+    writing "delivered in V1" into FR7 while two of the ten returned `ast_eligible=False` would
+    have replaced one false spec claim with another — this time in the **oversell** direction,
+    which this entry correctly notes the original was not. Measured after: **10 of 10 ground**,
+    plus `.tsx`. Blast radius on this repository is zero (`git ls-files` matches 0
+    `.ts/.tsx/.mts/.cts/.php` files) and the dogfood verdict is byte-identical
+    (`RELEASE_READY deep_ratio=30/79 blocking_findings=0 assessed_deep_ratio=15/19`).
+    **(c) Provenance and the R3 key.** Measured: a ten-language index recorded
+    `grammar_version='0.25.0'` (tree-sitter-python's) for a build in which tree-sitter-rust 0.24.2,
+    tree-sitter-java 0.23.5 and tree-sitter-ruby 0.23.1 had each parsed — wrong for 7 of the 8
+    languages that then grounded. `AstIndex` and `RecordingProducingClosure` now carry per-grammar
+    provenance for exactly the grammars that **parsed**; folding every *installed* grammar was
+    rejected because it would key the cache on the host rather than the audit, and both directions
+    are pinned (`TC-ArgusAgent-CACHE-001-77`/`-78`). Additive per PRD §"Migration guide":
+    `grammar_version` is retained with its description corrected to say what it always actually was
+    (the `tree-sitter-python` package version, never the index's provenance);
+    `AstIndex.schema_version` `"1"`→`"2"` and `CACHE_KEY_SCHEMA_VERSION` `"2"`→`"3"`. The bump cost
+    one constant because the licensing measurement held: no production caller derives a key.
+    **The store was deliberately NOT wired** — that is Story 12.3, and the ordering is recorded in
+    architecture.md §C as load-bearing.
+    **(d) The extra is documented**, in README (install command, languages, and what a missing
+    grammar does to a file's grade) and in CHANGELOG under `## Unreleased`. Where the grammars
+    live is untouched: that is Story 12.5's open NFR-P3 decision.
+    **(e) What is NOT closed by this entry:** `DF-10-2-A` below — C, C++, Ruby and Rust ground but
+    extract no definitions, so a file in those four cannot reach `audited_deep`. It is a NEW
+    finding of this story, filed rather than folded in, because Story 10.2's AC3 is fenced to a
+    grammar-resolution fix. **Gate status: NOT ESTABLISHED.** Local gates were re-run and are
+    recorded as LOCAL in the story file; no CI run covers this tree, run ids are sha-scoped, and
+    the run that would evidence this commit does not exist until an operator pushes.
+
+- **DF-10-2-A** — Four languages GROUND but extract no structure, so no file in them can reach
+  `audited_deep`. Measured 2026-08-10 while closing `DF-AUD-APAA-D`, on the fixed loader: C, C++,
+  Ruby and Rust all parse cleanly (`ast_eligible=True`, no error) and return **zero
+  `Definition`s**. Cause is `argus/index/ast_index.py`'s definition vocabulary, written against
+  Python's node names: C/C++ carry a `function_definition`'s name under the `declarator` field
+  rather than `name`, so `_node_name` finds nothing; Ruby's method node is `method`, absent from
+  `_DEF_KIND_BY_NODE`; Rust's node is `function_item` while the map lists `fn_item`. Consequence:
+  a file in one of those four is read and graded but has **no function or class for the depth gate
+  to stand on**, so it is capped below `audited_deep` — a real limit on what "multi-language
+  grounding" buys a consumer, and the same gap-between-adjacent-capabilities shape as
+  `DF-AUD-APAA-D`(b), one level deeper. **Deliberately not fixed in Story 10.2:** AC3 is fenced to
+  a *grammar-resolution* fix, and widening the definition vocabulary changes which files reach
+  `audited_deep` in any polyglot repository — a capability change owing its own ACs and its own
+  cartridges, not a line squeezed into a specification-correction story. Blast radius on this
+  repository is zero (`git ls-files` matches 0 `.c/.h/.cpp/.hpp/.cc/.cxx/.hh/.rb/.rs` files).
+  **Pinned in BOTH directions meanwhile** by `TC-ArgusAgent-INTAKE-003-09`
+  (`tests/test_multilanguage_audit.py::_YIELDS_DEFINITIONS`), which fails if one of the four
+  starts extracting definitions as loudly as if one of the working six stopped — so the limit
+  cannot silently widen, and cannot silently close while the README and FR7 still describe it.
+  Close = extend `_DEF_KIND_BY_NODE` / `_node_name` per grammar with a fixture per language,
+  re-measure the dogfood verdict (more files reaching `audited_deep` moves ratios), and update
+  FR7's measured-shortfall bullet, the README limits paragraph and this entry together.
+  - id: DF-10-2-A
+  - owner: Engineering Lead
+  - target_story: NONE — unscheduled; **Engineering Lead to schedule.** Not folded into Story 10.4
+    (which owns grammar *diagnosis*, a different function) nor 11.4 (runtime version bounds);
+    naming a wrong owner-story is how a deferral becomes nobody's (AI-E9-8).
+  - category: capability
   - severity: 🟡
 
 - **DF-AUD-APAA-E** — Four CLI flags are accepted by the shipped parser and specified
@@ -1398,3 +1541,445 @@ item inside the story file and is being fixed in this story, not deferred.
   - target_story: 10-4-a-grammar-that-fails-to-load-names-why
   - category: process
   - severity: 🟢
+
+---
+
+## Ownership resolutions — 2026-08-10b
+
+Appended by `bmad-correct-course` after [sprint-change-proposal-2026-08-10b.md](sprint-change-proposal-2026-08-10b.md).
+**Append-only (§3.4): nothing above this heading was edited, reordered or deleted.** Every entry below
+resolves an OWNER, not a technical finding — the original entries keep their text and their severity.
+
+- **DF-7-2-A — OWNER NAMED. XAgent007.** *(Was: open and UNOWNED since Epic 7; restated as unowned by
+  Story 9.2 and by the superseded 2026-08-10 proposal.)* The human TP/FP adjudication is the **only**
+  step that can clear the ≥80%-precision attested-externalization gate. XAgent007 is recorded as the
+  **primary adjudicator**, filling the Engineering Lead role in `precision-validation-protocol.md` §2.
+  The QA Lead second and the external tie-break remain unfilled and are only required on a borderline
+  finding (§4). **Scheduled as Epic 13** (13.1 corpus → 13.2 adjudication → 13.3 record-and-decide);
+  Story 13.2's start condition — *"the adjudicator is named in `sprint-status.yaml`"* — is now **met**.
+  **The item is NOT closed:** an owner is named, the measurement has not been run, and
+  `protocol_cleared` remains `False` at `argus/precision/replay_harness.py:223`.
+  - id: DF-7-2-A
+  - owner: **XAgent007 (Engineering Lead role, protocol §2 primary adjudicator)** — was UNOWNED
+  - target_story: 13-2-adjudicate-every-finding-by-a-named-human
+  - status: OPEN, owned
+  - severity: unchanged
+
+- **DF-6-6-A / -P1 / -P2 — OWNER NAMED by inheritance. XAgent007.** These describe the human half of the
+  same adjudication and were re-recorded as UNOWNED when the plan closed after Story 9.2. They are
+  **absorbed into Story 13.2**, which closes each on the merits or re-records its remaining scope with a
+  reason. Owner follows DF-7-2-A. Entry text unchanged.
+  - target_story: 13-2-adjudicate-every-finding-by-a-named-human
+  - status: OPEN, owned
+
+- **H0 — CLOSED via the pre-authorised option (b).** `epics.md` recorded two acceptable closures for the
+  unowned handoff-filing action: **(a)** a named owner files H1–H4 against the Minions backlog, or
+  **(b)** it is explicitly recorded that filing is the operator's own step, taken outside this workflow.
+  **The operator (XAgent007) elects (b).** H0 is **no longer UNOWNED**.
+  **Scope of the closure, stated so it is not read as stronger than it is:** this ends the *ownership*
+  gap — the failure mode where a handoff exists in a document and in no backlog. **It does not mean
+  H1–H4 have been filed.** Until they are, the integration remains planned-and-relocated and this
+  repository's CI cannot verify any of it. Assumption **A5 remains ⚠️ UNSUPPORTED**, and H3's
+  blocking-vs-advisory policy decision is still required before that gate can be made blocking.
+  - id: H0
+  - owner: **XAgent007 (operator's own step, outside this workflow)** — was UNOWNED
+  - status: CLOSED (ownership) / NOT FILED (execution)
+
+**Ledger state after this append.** DF-7-2-A and DF-6-6-A/-P1/-P2 are owned but open. H0's ownership is
+closed. The ≥80% gate is **NOT CLEARED** and nothing in Epics 10–12 clears it. The remaining open ledger
+entries — DF-6-7-A (HITL wiring), DF-8-4-B (bytes-example half), DF-8-4-C, DF-8-4-D, DF-8-5-B, DF-8-5-C,
+DF-9-2-C — are **not** claimed by this append and still need a named human or an explicit decision to
+abandon. DF-8-2-A, DF-8-3-A and DF-8-3-C are now owned by Story 12.1 (the `pipeline.py` extraction they
+all gate on).
+
+---
+
+## Release triage of the remaining open entries — 2026-08-10b
+
+Operator asked whether the seven still-unowned entries are **required for the planned V1.5 public
+release**. Each was re-read and re-measured against Epics 10–13 and the independent-developer audience.
+**Append-only (§3.4): nothing above this heading was edited.** Original entries keep their text and
+severity; what is recorded here is a disposition.
+
+- **DF-9-2-C — CLOSED. Already fixed; the ledger was stale.** Re-measured with the entry's own
+  instrument: `git ls-files argus/dogfood/` returns **five `.py` files and no `.pyc`**, and
+  `git ls-files | grep -c '\.pyc$'` returns **0** — no compiled artifact is tracked anywhere in the
+  repository. The three `.cpython-312.pyc` files the entry describes were untracked at some point after
+  2026-08-09 and the closure was never recorded. Not release-relevant either way.
+  - status: **CLOSED 2026-08-10b — verified by re-measurement, not by report**
+
+- **DF-8-4-D — RELEASE-RELEVANT. Absorbed into Story 12.8.** `argus/cli.py:295-299` catches base
+  `ValueError`; Pydantic's `ValidationError` is a `ValueError` subclass, so an internal defect is
+  reported as an expected typed *"audit failed"* degradation. **Severity re-assessed for the new
+  audience, and the original 🟢 is not rewritten:** it was correct when every user could read a stack
+  trace. For a public CLI a masked bug costs the user a next action — which **FR37 forbids** — and costs
+  the maintainer the bug report. Sits on the **public entry point**.
+  - target_story: 12-8-the-tool-explains-itself · status: OPEN, owned
+
+- **DF-8-5-C — RELEASE-RELEVANT. Absorbed into Story 13.1.** `proof_run.py:764-765` passes
+  `precision=Fraction(0, 1), n=0` as **literals**, publishing *"N=0 labeled cartridges populated, floor
+  N=5"* into `minions-dogfood-proof.md:87` while the shipped registry measures **5 distinct rule classes
+  across 7 populated rows**. The figure **understates**, so it never made a gate look cleared — but
+  Epic 13 measures that corpus and Story 11.1 puts precision-gate status on every user surface.
+  - target_story: 13-1-decide-what-validation-set-is-then-build-it · status: OPEN, owned
+
+- **DF-8-5-B — NOT release-blocking; ENABLER. Absorbed into Story 12.1.** The three committed-artifact
+  rot checks re-break on any `argus/**` composition change with no warning (`-03`/`-06` were RED across
+  four consecutive commits; Story 8.5 re-derived three times). Invisible to users. **Epic 12 changes
+  `argus/**` more than any epic since Epic 6** — 12.1 restructures `pipeline.py`, 12.2/12.3 wire into it,
+  12.6 adds a module — so the structural two-step lands repeatedly. Same reasoning that promoted the
+  `pipeline.py` extraction from enabler to gate.
+  - target_story: 12-1-pipeline-stops-breaching-its-own-limit · status: OPEN, owned
+
+- **DF-6-7-A — PLAN INCONSISTENCY, now assigned. Absorbed into Story 10.5.** FR23 (human STOP/PROCEED
+  escalation, default-STOP) is **in the binding FR contract** and delivered only as a **library seam**;
+  nothing in `pipeline.py` or `cli.py` invokes it. **This is the identical defect class as FR27/NFR-D1 —
+  a built, unwired capability — which the 2026-08-10b proposal made Story 12.3 while leaving FR23
+  unlisted. The inconsistency was introduced by that proposal and is recorded rather than quietly
+  fixed.** Resolved by *not guessing*: Story 10.5 gains a **reverse sweep** — FR1–37 for requirements
+  with no reachable production call site — and **FR23 takes a dated disposition by name** (wired, or
+  recorded as a library seam for V1.5 with the call site deferred and a reason).
+  - target_story: 10-5-a-v1-commitment-is-delivered-or-explicitly-not-v1 · status: OPEN, owned
+
+- **DF-8-4-B (bytes-example half) — NOT release-required.** The entry itself already assessed the
+  suggested check as *"duplication rather than coverage"* — byte-equality over the surfaces that matter
+  is held by `TC-ArgusAgent-DOCS-001-03`..`-06`. Internal test hygiene.
+  - status: OPEN, UNOWNED — deliberately not scheduled
+
+- **DF-8-4-C — NOT release-required, and arguably moot.** A missing before/after quote in `CHANGELOG.md`
+  for an Epic-8 rendering change. Its purpose is to help **existing integrators** migrate; a **first**
+  public release has none. Revisit only if a second release changes the same surface.
+  - status: OPEN, UNOWNED — deliberately not scheduled
+
+**Triage result: 2 of 7 bear on the public release** (DF-8-4-D, DF-8-5-C), plus one enabler (DF-8-5-B)
+and one plan inconsistency (DF-6-7-A). **No new story was created** — all four are AC additions to
+stories that already own the surface. DF-8-4-B and DF-8-4-C remain open and unowned **by decision**,
+which is a disposition, not a drift.
+
+---
+
+## Story 10.3 closure + new filings — 2026-08-10
+
+Appended by Story 10.3 (`10-3-invocation-contract-says-what-the-cli-accepts`).
+**Append-only (§3.4): nothing above this heading was edited, reordered or deleted** — including
+`DF-AUD-APAA-E`'s original entry, which stays byte-intact above and is *annotated* here rather than
+rewritten. `git diff --numstat` on this file is `+n / -0`.
+
+### `DF-AUD-APAA-E` — CLOSED, and the entry it closes was WRONG IN THREE WAYS
+
+Closed by Story 10.3. The remedy the entry prescribed was carried out — every flag took a recorded
+ruling, a threat model was written before either suppression flag was blessed, and parser-vs-contract
+equality is pinned by test. But **re-measuring the entry before acting on it changed the story three
+times over, and the closure would be dishonest if it recorded only the remedy.**
+
+**1. The enumeration was FOUR. Measured, it is SIX.** The entry names `--passes`, `--skip-pass`,
+`--ignore-path`, `--ignore-pattern`. Differencing the LIVE parser (`argus/cli.py::build_parser` walked
+at run time: **15 actions on `audit` — `-h`, the `repo` positional and 13 optional flags**) against the
+binding contract corpus (`E-PRD/prd.md`, `E-PRD/addendum.md`, `architecture.md`, `epics.md`,
+`CHANGELOG.md`, `README.md`) found **two more with zero occurrences anywhere in it**:
+
+- **`--reports`** — entered in **`084c6a7`**, the *same* 426-file separation seed as the ledger's four,
+  so it is the identical defect class and was missed only because the list was hand-counted. **Worse in
+  one respect: a committed workflow depends on it** — `.github/workflows/argus-student-audit.yml:48`
+  runs `--reports "final-verdict,coverage-ledger,security-review,vacuous-tests"` — so removal was never
+  free for this one the way it was for the other five. It is also **conditionally inert**:
+  `pipeline.py` only renders when `--report-dir` is set, so `--reports` alone renders nothing.
+- **`--strict`** — entered in **`ae5f00c`** (Epic 8) alongside `--coverage-scope`, but only
+  `--coverage-scope` got a CHANGELOG entry. It is the **enforcement of the FR1 determinism pin** and
+  `argus/cli.py` names it as that pin's binding statement, so it was under-specified, not unwanted.
+
+Provenance measured with `git log -S"--<flag>" -- argus/cli.py`. `--report-dir` was assessed and
+deliberately **excluded** from the six: thin, but present and consumer-facing (`README.md`,
+`action.yml`). *A hand-counted list has now been the wrong instrument three stories running (10.2 drew
+the same lesson twice); the closure of this entry is therefore a **closure guard**, not a list.*
+
+**2. `--ignore-pattern` DEFEATED the Live-Key Safeguard, and nothing was recorded.** The entry says the
+two suppression flags "suppress SECURITY findings with no threat model" and treats them as a pair.
+Measurement separates them decisively. `argus/detectors/secret_suppression.py`'s own module docstring
+promises that *"high-confidence live production key signatures override folder glob exemptions unless
+annotated with an explicit inline line comment"* — and `evaluate_suppression` ran the CLI-supplied
+`ignore_patterns` arm **above** that safeguard, matching by **bare substring**. Executed on this tree
+2026-08-10 (`file_path="argus/prod.py"`, snippet `AKIAABCDEFGHIJKLMNOP`):
+
+| invocation | result |
+|---|---|
+| no flags | `(False, None)` — reported |
+| `--ignore-path 'argus/**'` | `(False, None)` — **safeguard HELD** |
+| `--ignore-pattern "AKIA"` | `(True, 'custom_ignore_pattern')` — **suppressed** |
+| `--ignore-pattern "A"` | `(True, 'custom_ignore_pattern')` — **one character, suppressed** |
+
+11 of 24 (live-key pattern × hostile pattern) combinations escaped. **And nothing was recorded at all**:
+`argus/detectors/secret_scan.py` bound the reason token to `_reason` and `continue`d, so the operator's
+*inputs* were persisted through `AuditRequest.to_provenance_payload()` while the *effect* — that a
+secret was found and suppressed — left no trace anywhere. That is unevidenced green on the security
+surface, in a tool whose own report recommends the flag.
+
+**3. The reverse direction existed and the entry never looked for it.** Parser-vs-contract equality has
+two directions. `README.md:195` documented `argus --budget 500 --materiality critical`, which executed
+gives `argus: error: argument command: invalid choice: '500'` and **`SystemExit 2`**: the required
+`audit` sub-command was missing and `--materiality` is not a flag this parser has ever accepted. **The
+first command a new user copied failed.**
+
+**Dispositions taken — none of the six was removed:**
+
+| flag | ruling | basis |
+|---|---|---|
+| `--passes`, `--skip-pass` | **BLESSED** | fully consumed, recorded in run-state provenance, and the narrowing was already disclosed to the operator |
+| `--reports` | **BLESSED**, with its conditional inertness stated | a committed workflow depends on it; concealing that it renders nothing without `--report-dir` would be this epic's own defect |
+| `--strict` | **BLESSED** | the only lever that refuses a drifted tree; removing it would delete the FR1 pin's enforcement |
+| `--ignore-path` | **BLESSED** | bounded by the Live-Key Safeguard *measurably*, and it is the remedy Argus's own report recommends |
+| `--ignore-pattern` | **BLESSED — the conditional branch, because the condition was MET** | the bless was conditional on the layering being fixed and the suppression being recorded. Both landed, so the parser-removal fallback was not taken. `AuditRequest.ignore_patterns` is untouched and `argus/models.py` is byte-unchanged, so the additive-only schema policy is not engaged. |
+
+Each blessed flag carries a behavioural acceptance criterion pinned by test — not a sentence — a
+CHANGELOG entry in the *documented-not-new* register, and an entry in the contract registry naming the
+document that specifies it.
+
+**Enforced by:** `tests/test_invocation_contract.py` (`TC-ArgusAgent-CLI-001-35`..`-41`,
+`TC-ArgusAgent-DOCS-001-28`), `tests/test_cli_flag_contract.py` (`-42`..`-49`),
+`tests/test_secret_suppression_recording.py` (`TC-ArgusAgent-SECRET-001-15`..`-22`); registered in
+`architecture.md` §Enforcement.
+
+- id: DF-AUD-APAA-E
+- owner: Governance Owner
+- target_story: 10-3-invocation-contract-says-what-the-cli-accepts
+- status: **CLOSED 2026-08-10** — remedy delivered, and the entry's own enumeration corrected from four
+  to six with the two new instances named and their provenance measured
+
+### New filings
+
+- **DF-10-3-A** — **argparse's usage exit code `2` collides with the BLOCKED verdict code.** An
+  argparse usage error (a mistyped flag, a missing `audit` sub-command) exits **`2`**, and the published
+  AR3/FR18 wire contract defines `0`=RELEASE_READY · **`2`=BLOCKED** · `3`=INSUFFICIENT_COVERAGE ·
+  `1`=crash. `CHANGELOG.md`'s decision table states *"`1` is not in this table because no verdict
+  produces it"*; **usage errors are named nowhere.** A CI step branching on exit `2` therefore reads a
+  typo in its own workflow as *"Argus found a blocking defect"* — a false blocking verdict, the failure
+  mode this project treats as lethal. Measured 2026-08-10 by executing `README.md:195`'s own documented
+  invocation. **Deliberately NOT fixed by Story 10.3:** changing a published exit code touches
+  `action.yml`, both workflows and every integrator already branching on it, which is irreversible for
+  consumers and exceeds a story-level ruling (10.3 / DN-11). Story 10.3 removed the *immediate* exposure
+  by making every committed invocation parse (`TC-ArgusAgent-DOCS-001-28`); the collision itself
+  remains. Candidate resolutions, none chosen here: map usage errors onto the reserved crash code `1`;
+  introduce a distinct usage code outside `{0,1,2,3}`; or document the collision in the wire contract
+  and require consumers to disambiguate on the stdout summary line's presence.
+  - id: DF-10-3-A
+  - owner: **Engineering Lead**
+  - target_story: **12-9-publishing-and-release-surface** — the release-surface story that already owns
+    `action.yml` and the published consumer contract; to be scheduled there or explicitly re-homed by
+    the Engineering Lead, never left unowned (AI-E9-8)
+  - category: contract
+  - severity: 🟡
+
+- **DF-10-3-B** — **built-in secret suppressions are not disclosed.** Story 10.3 records and discloses
+  suppressions an *operator's own flag* caused (`--ignore-path` / `--ignore-pattern`). It deliberately
+  does **not** disclose the pre-existing built-in layers — the public sentinels, the inline
+  `# argus:ignore` annotation and `DEFAULT_TEST_PATH_PATTERNS` — because no operator flag caused them
+  and folding them in would move the finding count on runs that pass no flags at all (10.3 / AC4.5). A
+  reader of a report still cannot tell how many candidate secrets the built-in layers absorbed. This is
+  a **reporting enhancement, not a correctness defect**: no live production key can be suppressed by any
+  of these paths except an explicit inline annotation, which is reviewable in the diff.
+  - id: DF-10-3-B
+  - owner: **Engineering Lead**
+  - target_story: **NONE — unscheduled; Engineering Lead to schedule** against the Epic-12 report-quality
+    surface once Epic 12's story list is fixed. Deliberately not asserted onto a story id that does not
+    yet exist (AI-E9-8: a wrong owner-story is how a deferral becomes nobody's).
+  - category: capability
+  - severity: 🟢
+
+- **DF-10-3-C** — **`--ignore-pattern` matches by bare substring, so a short pattern is a wide net.**
+  After Story 10.3 no `--ignore-pattern` can reach a high-confidence live production key, and any
+  suppression it causes is recorded and disclosed. Within everything the Live-Key Safeguard does not
+  cover — the generic assigned-secret and high-entropy classes, which are the majority of real findings
+  — `pat in snippet` is unchanged, and `--ignore-pattern "a"` still suppresses nearly all of them at
+  once. Bounding the *matching semantics* (anchoring, a minimum pattern length, requiring a path scope
+  alongside the pattern) is a **behavioural redesign of a shipped flag** and was explicitly out of
+  Story 10.3's scope (AC3.4 states the residual risk; architecture §G's suppression threat model
+  records it as accepted). Filed rather than silently redesigned.
+  - id: DF-10-3-C
+  - owner: **Engineering Lead**
+  - target_story: **NONE — unscheduled; Engineering Lead to schedule.** Deliberately not folded into an
+    Epic-12 report story (a different function) nor Epic 13 (precision measurement): naming a wrong
+    owner-story is how a deferral becomes nobody's (AI-E9-8). The owner is named, which is the part
+    that must never be missing.
+  - category: security
+  - severity: 🟡
+
+---
+
+## Story 10.4 closure + new filings — 2026-08-10
+
+Appended by Story 10.4 (`10-4-a-grammar-that-fails-to-load-names-why`).
+**Append-only (§3.4): nothing above this heading was edited, reordered or deleted** — including
+`DF-AUD-APAA-F`'s original entry, which stays byte-intact above and is *annotated* here rather than
+rewritten. `git diff --numstat` on this file is `+n / -0`.
+
+### `DF-AUD-APAA-F` — CLOSED, and the entry counted TWO causes where there are FOUR
+
+Closed by Story 10.4. The remedy the entry prescribed was carried out — the arms are split, the tokens
+are distinct, and both are pinned by test. But **re-measuring the entry before acting on it changed the
+story, and a closure that recorded only the remedy would repeat the defect the entry describes: a
+record that names a cause which is not the cause.**
+
+**1. The enumeration was TWO. Measured, it is FOUR — and all four emitted the SAME token.** The entry
+(and `epics.md:1906-1912`) describe two states: *missing* vs *installed-but-broken*. Executing
+`build_ast_index` against a `.go` fixture on this host on 2026-08-10, patching only the
+`importlib.import_module` seam inside `argus/index/ast_index.py`, measured four:
+
+| # | What the operator actually has | Recorded BEFORE | Records NOW | Remedy that works |
+|---|---|---|---|---|
+| 1 | the grammar package is not installed (`ModuleNotFoundError`) | `grammar_missing_go` | `grammar_missing_go` *(unchanged)* | `pip install tree-sitter-go` |
+| 2 | the package **is** installed; Argus does not know its entry point | `grammar_missing_go` | `grammar_entrypoint_missing_go` | **nothing the operator can do — an Argus defect** |
+| 3 | the package is installed and **broken** for this runtime | `grammar_missing_go` | `grammar_load_failed_go` | reinstall/rebuild; check the core–grammar version pair |
+| 4 | the `tree_sitter` **core** is not importable | `grammar_missing_go` | `tree_sitter_runtime_missing` | `pip install tree-sitter`; **every** language is down |
+
+**Three of the four implied a remedy that cannot work**, and cause 2's is the entry's own worst
+sentence — it tells an operator to install a package they already have.
+
+**Provenance of the two the entry did not have.** Cause 2 is **the cause the entry's own prescribed
+repair does not catch**: splitting the `except` changes nothing there, because *nothing raises* —
+`getattr(mod, entry_point, None)` simply returns `None` and the code falls through. Story 10.2
+measured this independently, fixed its two live instances (TypeScript and PHP, via
+`_ENTRY_POINT_BY_LANGUAGE`) and handed the **class** forward to this story by name
+(`10-2-…md:169-170`). Cause 4 appears in **no prior document** — ledger, epic or story — and produces
+the maximally wrong message: "install `tree-sitter-go`" while every language is down.
+
+**2. The only surface that shows the token was UNTESTED, and it is ALL-OR-NOTHING.**
+`parse_failure_reason` has three consumers; exactly one reaches an operator —
+`argus/reports/generator.py::_render_readability_warning`. Measured with
+`pytest --cov=argus.reports.generator` over **every** test file that imports the generator
+(`test_report_generator`, `test_report_honesty`, `test_report_surface_consistency`, `test_release_note`,
+`test_release_preflight`, `test_critical_eligibility_pipeline`, `test_secret_scan_precision`):
+**`Missing … 316, 322-336`** — the entire grammar-counting block, the package lookup and the callout
+body had **never executed in this suite**. Consequence, and the reason Story 10.4 grew a whole AC for
+it: *splitting the token without covering this file would have silently disabled the one message an
+operator ever sees, and nothing in the repository would have turned red.* Worse, the removed code
+recovered the language by string arithmetic against cause 1's prefix, so
+`grammar_entrypoint_missing_go` would have been **skipped outright** (silent) — and the obvious
+widening to `startswith("grammar_")` would have sliced it into the "language"
+`entrypoint_missing_go` and printed `pip install tree-sitter-entrypoint_missing_go` (misdirect).
+Classification now lives in ONE pure module both sides import.
+
+**3. Two coordinates in the entry are stale; the anchor is not.** The entry cites
+`index/ast_index.py:266`; Story 10.2's Dev Agent Record says `:294`; it was measured at **`:350`** on
+the tree this story started from. **Three coordinates for one clause in two days** — recorded here as
+the standing argument for locating by anchor text (`except (ImportError, Exception):`) rather than by
+line number.
+
+**4. What is NOT closed by this entry.** `DF-10-4-A`, `DF-10-4-B` and `DF-10-4-C` below — all three are
+NEW findings of this story, filed rather than folded in, because each belongs to a story that owns that
+surface by name. `DF-10-2-A` (C/C++/Ruby/Rust ground but extract zero definitions) is a **different**
+failure — those grammars load and parse — and is deliberately not conflated with this one.
+**Verdict impact: NONE, asserted.** `pipeline.py`, `audit/grounding.py` and `vacuous_test.py` branch on
+the `parse_failed` / `ast_eligible` booleans and never on the token; `TC-ArgusAgent-INDEX-001-114` runs
+a real audit under each of the four causes and requires the verdict, counts and findings to be
+identical across all four. `parse_failed` stays `False` (no parse was *attempted*), no field was added,
+`AstIndex.schema_version` stays `"2"` and `CACHE_KEY_SCHEMA_VERSION` stays `"3"`.
+**Gate status: NOT ESTABLISHED.** Local gates were re-run and are recorded as LOCAL in the story file;
+no CI run covers this tree, run ids are sha-scoped, and the run that would evidence this commit does
+not exist until an operator pushes.
+
+- status: **CLOSED 2026-08-10** — remedy delivered, and the entry's own enumeration corrected from two
+  causes to four, with the entry-point fall-through and the core-runtime arm named and their provenance
+  measured
+
+### New filings
+
+- **DF-10-4-A** — **the readability callout is ALL-OR-NOTHING, so a polyglot repository is told
+  nothing.** `_render_readability_warning` returns early at `if eligible: return []` — it fires only
+  when **zero** files parsed. In this story's own persona's repository — *"an operator auditing a
+  polyglot repository"* — the Python files parse, so `eligible > 0`, so a failed Go or Rust grammar is
+  **invisible in the report** no matter how precisely Story 10.4 now names its cause. Measured
+  2026-08-10; pinned in both directions by `TC-ArgusAgent-REPORT-002-29`, which fails if the trigger is
+  either widened or removed, so neither story can silently take the other's ground. **Deliberately NOT
+  fixed by Story 10.4** (DN-7): widening the trigger adds a *per-file point-of-downgrade* surface, and
+  Story 12.5 owns that surface by name (*"its absence and the reason appear in the tool's own output at
+  the point the file is downgraded"*, `epics.md:2328-2330`). Story 10.4's obligation was only that the
+  **already-existing** callout does not go silent or misdirect under the new token set. **This is the
+  residual Story 10.4 knowingly leaves open**: if 12.5 slips, a mixed Python/Go audit still says nothing
+  about its failed Go grammar.
+  - id: DF-10-4-A
+  - owner: **Engineering Lead**
+  - target_story: **12-5-default-install-grounds-languages-it-claims**
+  - category: capability
+  - severity: 🟡
+
+- **DF-10-4-B** — **`DetectorResult.degraded` has ZERO production readers: the reason is recorded and
+  then dropped.** Measured 2026-08-10, whole-tree: `grep -rn "\.degraded" argus/` (excluding
+  `degraded=` constructions) returns **0 hits**. Three detectors (`vacuous_test`, `orphan_code`,
+  `tool_runner`) build `DegradedCondition` tuples, `detectors/base.py` declares the field, **21 tests
+  assert on it — and no code in `argus/` ever reads it.** So `vacuous_test.py:400`'s careful
+  `ast_entry.parse_failure_reason or "not_ast_eligible"` writes a diagnosis into a structure nothing
+  consumes. This is `DF-6-7-A`'s class exactly — *a delivered seam with no reachable production call
+  site* — and it is the same shape as Story 10.3's central finding (*"the operator's INPUTS are
+  persisted while the EFFECT leaves no trace"*), one level down. **Deliberately NOT fixed by Story
+  10.4**: giving it a reader is either a new report surface (12.5's) or an outcome-names-its-next-action
+  change (12.4's), and Story 10.5's fourth AC is already the reverse-sweep for exactly this class
+  (`epics.md:1951-1958`). Recorded here so 10.5 inherits a **measurement** instead of a rediscovery —
+  the courtesy Story 10.2 paid Story 10.4.
+  - id: DF-10-4-B
+  - owner: **Governance Owner**
+  - target_story: **10-5-a-v1-commitment-is-delivered-or-explicitly-not-v1**
+  - category: capability
+  - severity: 🟡
+
+- **DF-10-4-C** — **the exception CLASS behind a broken grammar is diagnosed and then discarded.**
+  Story 10.4 classifies by arm position and records a token; it deliberately persists **no** exception
+  detail. An operator debugging `grammar_load_failed_rust` may still want to know whether the load died
+  with a `ValueError` (bad capsule), a `TypeError` (a missing `()` on the entry point) or an `OSError`
+  (the shared object would not open) — three quite different next actions. **Deliberately NOT fixed by
+  Story 10.4** (DN-5): a persisted free-text slot's only natural filler is `str(exc)`, which carries a
+  host filesystem path into a shareable artifact (NFR-S1, measured — the real message shape is
+  `/home/…/libfoo.so: cannot open shared object file`), and `argus/` has **no logging facility** to put
+  it anywhere else. It would also cost a second `AstIndex` schema bump inside one epic on a 🟢
+  diagnosis defect. The **type/class only — never the message** is the safe payload, and it belongs on
+  the surface that renders it: Story 12.8 already *"extends 10.4's diagnosis principle to the user
+  surface"* and names *"missing grammar"* among the errors it must make actionable (`epics.md:2405`).
+  - id: DF-10-4-C
+  - owner: **Engineering Lead**
+  - target_story: **12-8-the-tool-explains-itself**
+  - category: capability
+  - severity: 🟢
+
+- **DF-10-4-D** — **the committed-dogfood-artifact guards break on `git add` alone, so ANY story that
+  adds a module to `argus/` halts on five reds it did not cause.** Filed by operator decision
+  (XAgent007, 2026-08-10) after Story 10.4 halted on exactly this. **Measured mechanism, and it is
+  strictly stronger than `DF-8-5-B`'s:** `argus/dogfood/partition_plan.py::enumerate_minions_source_files`
+  enumerates via `git ls-files argus`, and `git ls-files` reports the **INDEX**, not `HEAD`. So the
+  planned population moves the instant a new `argus/**` module is **staged** — before any commit, and at
+  the exact moment `E.5` / `AI-E8-1` *requires* the `git add` (*"`git diff` cannot see an untracked
+  path"*, the defect that shipped Epic 8's own story file untracked). `DF-8-5-B` measured the trigger as
+  *"any commit that changes `argus/**` composition"*; the trigger is in fact *"any story that stages an
+  `argus/**` source file"*, which no story can avoid and which fires mid-implementation. **Measured blast
+  radius, Story 10.4, 2026-08-10:** one new module (`argus/shared/grammar_status.py`) moved the planned
+  population **71 → 72**, and with it total physical LOC (18418 → 19783), the sized ceiling `$X`
+  (443 → 450), the recorded cut edges (49 → 57) and the critical-set size — turning **five** tests red
+  across **three** committed artifacts: `TC-ArgusAgent-DOGFOOD-001-03`, `-06`, `-41`
+  (`minions-dogfood-partition-plan.md`, `minions-dogfood-budget-plan.md`) and the two proof assertions
+  over `minions-dogfood-proof.md`. A **second, independent** trigger fired in the same story: ~700 added
+  physical lines tipped an `NFR-SC1` bin-packing boundary (a unit of 40 files / 14100 LOC no longer fit
+  under the 15000-LOC soft target, so it became 39 / 14793), changing two of three `partition_id`
+  sha256 values on their own. Either trigger alone is sufficient; a story that adds a module hits both.
+  **Why this is now 🟡 rather than `DF-8-5-B`'s 🟢:** it has measurably **halted a story** rather than
+  merely surprised a developer, and the remaining roadmap walks into it repeatedly — **Story 12.1**
+  splits `pipeline.py` (1331 lines vs the 1200 cap) and therefore adds modules *by construction*,
+  **12.2** wires the deep-audit seam, **12.6** adds an MCP adapter module, **11.5** changes the wheel's
+  module set, and **12.3** wires `cache/memo_store.py`. There is also a **bootstrap ordering hazard**:
+  12.1 is the story that owns the remedy *and* the story most certain to trip the defect before the
+  remedy exists, so it must regenerate first and fix second, in that order. **The remedy is unchanged
+  from `DF-8-5-B` and must not be a loosened assertion:** either a documented regeneration entry point
+  **named in the failure message of every one of the five assertions**, or a CI step that regenerates and
+  fails on a diff. If a narrower fix is preferred, the honest one is to decide — and record — whether the
+  artifacts are meant to describe the **committed** tree (`git ls-files --with-tree=HEAD`, so staging is
+  inert) or the **working** tree (today's behaviour); they currently claim `HEAD` provenance in their own
+  Provenance block while enumerating the index, and those are two different trees. **Story 10.4 FILED
+  this and deliberately did NOT fix it:** the coupling lives in `argus/dogfood/`, which is outside 10.4's
+  AC7.6 write set, and changing what the dogfood enumerates is a verdict-adjacent change 10.4's `DN-9`
+  fences to Epic 11/12. What 10.4 *did* do, under operator authorisation, is regenerate the three
+  artifacts through their own renderers at a commit that genuinely contains the deltas they describe —
+  which restores truth for one story and closes nothing for the next one.
+  - id: DF-10-4-D
+  - origin_story: 10-4-a-grammar-that-fails-to-load-names-why
+  - owner: **Engineering Lead**
+  - target_story: **12-1-pipeline-stops-breaching-its-own-limit** (which already ABSORBS `DF-8-5-B`, the
+    same class measured one trigger short — supersede or close them together, never separately)
+  - category: developer-experience
+  - severity: 🟡

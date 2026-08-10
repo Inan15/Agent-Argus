@@ -37,19 +37,25 @@ Advanced-Elicitation pass (First-Principles · Pre-mortem · Red-Team). Provenan
 
 ### Requirements Overview
 
-**Functional Requirements (33):** Eight capability clusters — Repository Intake & Partitioning (FR1–4),
-Coverage Ledger & Grounded Evidence (FR5–9), Defect Detection (FR10–14), Release-Readiness Verdict
-(FR15–18, FR33), Self-Audit & Trust (FR19–20), Cost Governance (FR21–22), Governance/Escalation/Evidence
-Integrity (FR23–29), Invocation & Resumability (FR30–32). Architecturally they form one **deterministic
-dataflow** whose terminal stage (the verdict) is a pure function of a fixed-enum coverage ledger.
-Tier-B FRs (FR7, FR12, FR19, FR24, FR26) are the validation-grade layer over a demo-grade Tier-A spine
-(see the FR7 split decision below).
+**Functional Requirements (37):** Eight capability clusters — Repository Intake & Partitioning (FR1–4),
+Coverage Ledger & Grounded Evidence (FR5–9, **FR36, FR37**), Defect Detection (FR10–14),
+Release-Readiness Verdict (FR15–18, FR33, **FR34**), Self-Audit & Trust (FR19–20), Cost Governance
+(FR21–22), Governance/Escalation/Evidence Integrity (FR23–29), Invocation & Resumability (FR30–32,
+**FR35**). Architecturally they form one **deterministic dataflow** whose terminal stage (the verdict) is
+a pure function of a fixed-enum coverage ledger.
+Tier-B FRs (FR7, FR12, FR19, FR24, FR26, **FR36**) are the validation-grade layer over a demo-grade Tier-A
+spine (see the FR7 split decision below).
+*(Count corrected 2026-08-10 — read "(33)" and omitted FR34–FR37 until now. The 2026-08-10b amendment made
+10 substitutions in this document, including the §Component↔Driver line at L467 which was already updated
+to "PRD FR1–37", but did not reach this overview. See implementation-readiness-report-2026-08-10.md, Step 4.)*
 
-**Non-Functional Requirements (21):** Determinism/Reproducibility (NFR-D1–3, the keystone — stable-not-
-bit-identical via content-addressed memoization), Security/Containment (NFR-S1–5), Cost Efficiency
-(NFR-C1–3), Reliability/Honest-Degradation (NFR-R1–2), Portability (NFR-P1–2, sequential byte-identical
-to parallel), Auditability (NFR-A1–3, hash-chained additive-only envelope), Scale Envelope (NFR-SC1,
-≤40 files/15k LOC/unit), Maintainability (NFR-M1–2).
+**Non-Functional Requirements (23):** Determinism/Reproducibility (NFR-D1–3, the keystone — stable-not-
+bit-identical via content-addressed memoization), Security/Containment (NFR-S1–5, **NFR-S6 — no egress on
+the default path**), Cost Efficiency (NFR-C1–3), Reliability/Honest-Degradation (NFR-R1–2), Portability
+(NFR-P1–2, sequential byte-identical to parallel, **NFR-P3 — the default public install grounds the
+languages the tool claims**), Auditability (NFR-A1–3, hash-chained additive-only envelope), Scale Envelope
+(NFR-SC1, ≤40 files/15k LOC/unit), Maintainability (NFR-M1–2).
+*(Count corrected 2026-08-10 — read "(21)" and omitted NFR-S6/NFR-P3, both added 2026-08-10b.)*
 
 **Scale & Complexity:** High.
 - Primary domain: headless developer-tool / CLI audit engine + contract-producer (frozen artifacts +
@@ -74,14 +80,35 @@ to parallel), Auditability (NFR-A1–3, hash-chained additive-only envelope), Sc
   a pure fold over recordings; if a recording omits a field the verdict later needs, you are forced to
   re-run an LLM. Freeze the recording schema as aggressively as the verdict schema.
 - **Cache key = the full recording-producing closure, not just the model checkpoint** (Winston + Murat).
-  Key inputs: content-hash + model checkpoint + prompt-template version + tool versions (tree-sitter
-  grammar, radon) + budget/materiality config + work-manifest scope + **a content-hash of the enabled
+  Key inputs: content-hash + model checkpoint + prompt-template version + tool versions (~~tree-sitter
+  grammar~~ **per-grammar tree-sitter provenance**, radon) + budget/materiality config + work-manifest
+  scope + **a content-hash of the enabled
   detector SET (code+config), NOT a human-written APAA version string** (R3). The model checkpoint is
   captured from each **API response** (not config); a mid-run **checkpoint drift → `checkpoint_drift`
   finding → abort/re-audit** (R3). The key DERIVATION is itself a pure function to golden-test, with a CI
   canary that fails when key inputs change without a version bump.
-- **Stack:** Python 3.11+ (Minions baseline), Pydantic v2 + JSON Schema frozen contracts; AST = Python in
-  V1 (`claim_emitted` proxy elsewhere), via a stack-agnostic `claim → validated?` interface.
+
+  🔧 **R3 DESIGN CHANGE, not a defect fix — 2026-08-10, Story 10.2 (`DF-AUD-APAA-D`).** R3 was
+  *designed* for one grammar, and the singular wording above was faithful to that design. It stopped
+  being faithful to the product when the index began parsing ten languages: measured on this tree, the
+  key folded `tree-sitter-python` 0.25.0 while `tree-sitter-rust` 0.24.2, `tree-sitter-java` 0.23.5 and
+  `tree-sitter-ruby` 0.23.1 had each parsed a file, so a Go, Rust, Java, C, C++ or Ruby grammar upgrade
+  **did not move the key** — the silent-cache-staleness class `DF-5-1-A` files for
+  `prompt_template_version`. **The design is therefore changed, deliberately and with the words said out
+  loud: provenance is PER-GRAMMAR, and the key folds only the grammars that PARTICIPATED in the audited
+  build.** Both halves are load-bearing and both are pinned by test
+  (`TC-ArgusAgent-CACHE-001-77`/`-78`): folding a grammar that did not parse would key the cache on the
+  HOST's installed packages rather than on the audit, breaking NFR-P1 across environments — the inverse
+  defect, and the easier one to ship by accident. `CACHE_KEY_SCHEMA_VERSION` is bumped `"2"` → `"3"`;
+  see §C for why that is free at this commit and only at this commit.
+- **Stack:** Python 3.11+ (Minions baseline), Pydantic v2 + JSON Schema frozen contracts; ~~AST = Python in
+  V1 (`claim_emitted` proxy elsewhere)~~ **AST grounding is delivered in V1 for every language enumerated
+  in `argus/shared/source_languages.py` (the source of truth); the `claim_emitted` proxy carries anything
+  outside that set or any file whose grammar is absent**, via a stack-agnostic `claim → validated?`
+  interface. *(Amended 2026-08-10, Story 10.2 / `DF-AUD-APAA-D`; the capability was delivered by
+  `sprint-change-proposal-2026-07-28.md` with no story and no amendment. This site was missed by all three
+  prior enumerations of the drift — it states the scope with no `V2` marker anywhere in it, which is why a
+  keyword sweep for "V2" never found it and why the closure guard, not a list, is the remedy.)*
 - **Headless-only** (CLAUDE.md §3.7): artifacts + exit codes; no UI/HTTP-service surface in V1.
 - **Cross-product boundary:** APAA CONSUMES (never builds) Minions layers (a)/(d)/(e) [V2–V4]; V1 is
   self-contained (local memoization, local cost ceiling).
@@ -146,17 +173,58 @@ to parallel), Auditability (NFR-A1–3, hash-chained additive-only envelope), Sc
   **Decision: carve a minimal "vacuous-path AST subset" (test-body reachability + assertion-target
   provenance, test files only) into Tier-A; leave general multi-construct AST-grounding Tier-B.** This
   keeps the PRD cut-order coherent (the PRD is internally consistent: a cut V1 is explicitly demo-grade,
-  not externalization-ready) while honouring the panel's credibility concern. If FR7 is cut, the dogfood
-  verdict must carry a hard `grade: demo-heuristic-only` flag and never be presented as externalization
-  evidence (red-team).
+  not externalization-ready) while honouring the panel's credibility concern. 
+- **Grade flag — corrected trigger and scope.** *(Amended 2026-08-10b.)* The original condition read
+  *"if FR7 is cut, the dogfood verdict must carry a hard `grade: demo-heuristic-only` flag and never be
+  presented as externalization evidence (red-team)."* **FR7 was not cut** — Story 6.2 delivered its
+  validator, which is live. The flag is nonetheless correct, for a different reason now stated: it describes
+  the **configuration of the pipeline that produced a given run**, not a permanent property of the product.
+
+  **Two distinct disclosures, deliberately not merged:**
+
+  | | **Run grade** (`grade: demo-heuristic-only`) | **Instrument status** (FR34) |
+  |---|---|---|
+  | Describes | how *this run* was configured | how the *tool's findings* have been validated |
+  | True when | the deep-audit seam was not engaged for this run | the ≥80% precision gate is uncleared |
+  | Varies | **per run** — an FR36 `--deep` run is not heuristic-only and must not be labelled so | **per tool version** |
+  | Removed by | engaging the deep pass | Epic 13 clearing the gate — nothing else |
+
+  Merging them would produce two wrong outcomes: a `--deep` run mislabelled heuristic-only, and a
+  disclosure that appears to lift when a user enables a flag. **Enabling deep audit changes the run's
+  grade. It does not validate the instrument.**
+
+  **Unchanged and re-affirmed:** the **dogfood proof artifact is never externalization evidence**,
+  regardless of grade or gate state (red-team). Story 8.5's re-derivation made it a self-audit, which
+  weakens it further — see PRD §Validation Approach.
+
+  **FR34 extends the existing guard, never a second mechanism** (AR7 / §3.3): the two-sided
+  `DOGFOOD_EXTERNALIZATION_GUARD` (presence AND over-claim-phrase absence) is widened to the
+  user-facing surface set, enumerated so an unenumerated surface fails CI.
 - **Validation-set `N` must be resolved BEFORE precision-harness design** (John) — `N` + the labeling
   protocol define the harness ground-truth shape (schema, corpus, statistical floor for a defensible 80%).
-  This is the one open input that gates an ARCHITECTURE choice, not merely scope. ⚠️ OPEN.
+  This is the one open input that gates an ARCHITECTURE choice, not merely scope.
+  ✅ **CLOSED 2026-08-10b — assigned, not answered.** It was never resolved by decision: the harness
+  was built (Story 6.6) and `precision-validation-protocol.md` fixed `N` **implicitly** as `N ≥ 5`
+  **labeled cartridges**, while PRD L161 specifies `N ≈ 5–10` **real repositories** — two corpora,
+  never reconciled. **Story 13.1 owns the adjudication** and must amend whichever document loses.
+  *(This marker and the §Still OPEN entry are the SAME item at two sites; the 2026-08-10b proposal
+  amended only the latter — recorded here because a two-site claim fixed at one site is the exact
+  defect Story 10.2 exists to close.)*
 - 🆕 **Minions-dogfood scale risk** (R5, pre-mortem) — Minions is ~70 modules; V1 audit units are
   ≤40 files/15k LOC with a 20%-deep floor. The single proof artifact risks landing as
   `INSUFFICIENT_COVERAGE` ("not assessed"), leaving the strategic question ("does Minions have an audit
   agent?") unanswered. **Requires an explicit dogfood partition + budget-sizing plan as an architecture
-  concern.** ⚠️ OPEN.
+  concern.**
+  ✅ **CLOSED 2026-08-10b — the risk materialised and was handled, which is the honest outcome.**
+  Story 7.1 delivered the partition + budget-sizing plan
+  ([minions-dogfood-partition-plan.md](minions-dogfood-partition-plan.md),
+  [minions-dogfood-budget-plan.md](minions-dogfood-budget-plan.md)); Story 7.2 executed the run.
+  The proof **did** land as a non-vouching outcome for Minions (row 4 — zero findings, critical clause
+  unmet), exactly as R5 predicted. The strategic question was answered by the run existing, not by the
+  verdict being green. ⚠️ Note the later regression, recorded so this closure is not read as stronger
+  than it is: Story 8.5 re-derived the dogfood as a **self-audit of `argus/`**, and the independent
+  Minions run *"can never be re-derived in this repository"* — see PRD §Validation Approach and
+  Story 13.1.
 
 ## Starter Template Evaluation
 
@@ -198,8 +266,14 @@ pyproject.toml [project.optional-dependencies].apaa     # minions[apaa] extra
 
 **NEW external dependencies (the only genuine "starter" choices) — versions verified June 2026:**
 - `tree-sitter==0.25.2` (Python bindings, Sep 2025) + `tree-sitter-python==0.25.0` (grammar) — AST/
-  code-graph index. **The grammar version is pinned into the determinism cache key (R3).** Note the 0.25
-  API loads grammars via the per-language package.
+  code-graph index. ~~**The grammar version is pinned into the determinism cache key (R3).**~~ **Every
+  grammar that PARSED is pinned into the determinism cache key, at its own package version (R3) —
+  per-grammar, not one scalar.** *(Amended 2026-08-10, Story 10.2 / `DF-AUD-APAA-D` — a DESIGN CHANGE,
+  not a defect fix; see the R3 note in §Cache key above.)* Note the 0.25 API loads grammars via the
+  per-language package — and that **not every per-language package exports a bare `language()`**:
+  `tree_sitter_typescript` exports `language_typescript`/`language_tsx` and `tree_sitter_php` exports
+  `language_php`/`language_php_only`, so grammar loading resolves a per-language entry point
+  (`argus/index/ast_index.py::_ENTRY_POINT_BY_LANGUAGE`, with a suffix-level override for `.tsx`).
 - `radon==4.1.0` — zero-token breadth metrics (NFR-C3).
 - `jsonschema>=4` — additive-only schema validation.
 - **CLI framework — DEFERRED to architecture decisions (step-04):** lean stdlib `argparse` (thin
@@ -217,25 +291,78 @@ graph-partitioning (B); fixed-enum ledger + frozen recording schema + pure-funct
 cache-key closure + single canonical serializer (C); filesystem-as-contract `.apaa/` + containment reuse (F).
 **Important (shape architecture):** vacuous-test detector (heuristic + Tier-A AST subset) + finding shape
 (D); budget + LLM-dispatch-via-port reuse (E); CI cartridge/import-isolation/determinism gates (H).
-**Deferred (post-V1):** multi-language AST, seam auditor, mutation-grade vacuous, consume Minions layers
-(d)/(a)/(e), hosted runner + HTTP API/auth.
+**Deferred (post-V1):** ~~multi-language AST,~~ seam auditor, mutation-grade vacuous, consume Minions layers
+(d)/(a)/(e), hosted runner + HTTP API/auth. *(Amended 2026-08-10, Story 10.2 / `DF-AUD-APAA-D`:
+multi-language AST grounding is **delivered in V1** — `argus/shared/source_languages.py` is the source of
+truth — and is struck from this list rather than deleted, per §3.4. Every other item is untouched and
+remains deferred. Delivered by `sprint-change-proposal-2026-07-28.md`.)*
 
 ### A. Execution & Invocation
 - **CLI framework:** stdlib **`argparse`** (thin entrypoint, zero new dep, keeps `cli.py` pure wiring —
   NFR-M1). Typer/Click rejected (dep + parallel toolchain).
-- **Invocation contract:** `repo + commit + budget + materiality_bar → verdict artifact + exit code`
-  (FR30); pure `AuditRequest → AuditVerdict`.
+- **Invocation contract:** ~~`repo + commit + budget + materiality_bar → verdict artifact + exit code`
+  (FR30); pure `AuditRequest → AuditVerdict`.~~
+  **`accepted argv → verdict artifact + exit code` (FR30); pure `AuditRequest → AuditVerdict`. The
+  ACCEPTED SURFACE IS `argus/cli.py::build_parser` — that function is the source of truth and this
+  document deliberately does not restate it as a list.** The contract commits to these *categories*,
+  each of which must remain expressible: the determinism **pin** (`--commit`) and its enforcement
+  (`--strict`, the release-gate refusal); the cost **ceiling** (`--budget`); the **materiality bar**;
+  **operator designation** of the critical set (`--critical-subsystem` / `--exclude-critical`, FR4);
+  **pass and report selection** (`--passes` / `--skip-pass` / `--reports` / `--report-dir`);
+  **security-finding suppression** (`--ignore-path` / `--ignore-pattern`, bounded by §G's suppression
+  threat model); and **assessment scope** (`--coverage-scope`). *(Amended 2026-08-10, Story 10.3 /
+  `DF-AUD-APAA-E`: the original four-parameter wording described what the tool accepted in Story 1.7
+  and six flags had since entered the parser specified nowhere. Struck rather than deleted, §3.4. A
+  hand-typed flag list is deliberately refused here — that is the AI-E9-7 drift class, and the
+  `source_languages.py` precedent FR7 set on 2026-08-10 applies. Equality between this contract and
+  the parser is enforced by `tests/test_invocation_contract.py`; see §Enforcement.)*
 - **Exit-code wire contract:** `0`=RELEASE_READY · `2`=BLOCKED · `3`=INSUFFICIENT_COVERAGE · `1`=crash
   (mirrors Minions house style `0/1/2`, `3`=not-assessed). Machine-consumable CI gate (FR18).
 - **Execution model:** sequential-canonical; parallel = pure byte-identical speedup (NFR-P1).
+- **Entry points — two, converging on one core.** *(Added 2026-08-10b, FR35.)*
+
+  | Surface | Transport | Ships as |
+  |---|---|---|
+  | **CLI** (canonical) | process argv + exit code | console scripts `argus` / `argus-agent` / `repo-audit` |
+  | **MCP server** | **stdio only** | an entry point in the same distribution |
+  | *Assistant command assets* | *(not an entry point — configuration data)* | packaged files placed in the host's config |
+
+  **The invariant that makes this cheap: both entry points construct the same `AuditRequest` and consume
+  the same `AuditVerdict`.** The MCP server is **impure I/O wiring** in the §Pure/Impure master-rule sense
+  — a protocol adapter, exactly as `cli.py` is an argv adapter. It contains **no audit logic, no verdict
+  logic, and no second decision path**. A behaviour reachable through MCP and not through the CLI is an
+  architecture violation, not a feature.
+
+  **Binding constraints** (mirrors PRD §Project Classification; each is testable, not aspirational):
+  1. **stdio only** — no network listener is opened, no port is bound. Asserted by gate.
+  2. **No HTTP stack** — the `argus.* ⊬ fastapi/uvicorn/starlette` import-isolation gate (§H) extends to
+     the new module unchanged. ADR #20's *"downstream of the HTTP/A2A boundary — takes no A2A token,
+     registers no route"* is preserved verbatim.
+  3. **No new authority** — same work-manifest permission boundary (NFR-S4). No capability the CLI lacks.
+  4. **No credential handling** — accepts and stores no keys, tokens or accounts. `--deep` (FR36) reads its
+     provider credential through the existing adapter's environment contract, never through this surface.
+  5. **Verdict parity** — same repo, same commit, same verdict through either surface, pinned by test.
+
+  **Command assets are data, not code.** They instruct a host to invoke the CLI. They introduce no
+  execution path of their own, which is why they need no threat model beyond the CLI's — and it is why
+  they are listed here as configuration rather than as a third entry point.
+
+  **Why stdio rather than HTTP:** the excluded surface at PRD §Project Classification is a *hosted
+  service* — somebody else's audit on somebody else's machine, requiring endpoints, auth, rate limits, an
+  SDK and API versioning. A stdio process is the user's audit on the user's machine, speaking a protocol
+  instead of a shell. Choosing stdio is what keeps constraints 1–4 true by construction rather than by
+  discipline.
 
 ### B. Repository Intake & Indexing
 - **AST/code-graph index FIRST** via `tree-sitter==0.25.2` + `tree-sitter-python==0.25.0`; structural
   search, not embeddings.
 - **Graph-derived partitioning** (import/call graph, not directories); ≤40 files/15k LOC units, conservative
   budgets + `context_pressure` auto-downgrade.
-- **Stack detection** via `cloc`/`radon==4.1.0` + tree-sitter; V1 deep = Python only, `claim_emitted` proxy
-  elsewhere via a stack-agnostic `claim→validated?` interface (NFR-P2).
+- **Stack detection** via `cloc`/`radon==4.1.0` + tree-sitter; ~~V1 deep = Python only, `claim_emitted` proxy
+  elsewhere~~ **V1 deep grounding is delivered for every language enumerated in
+  `argus/shared/source_languages.py`, with the `claim_emitted` proxy for anything outside that set or any
+  file whose grammar is absent**, via a stack-agnostic `claim→validated?` interface (NFR-P2). *(Amended
+  2026-08-10, Story 10.2 / `DF-AUD-APAA-D`; delivered by `sprint-change-proposal-2026-07-28.md`.)*
 
 ### C. Coverage Ledger, Recording Schema & Verdict (determinism core)
 - **Fixed-enum Pydantic v2 ledger** (`audited_deep/_shallow/tool_scanned_only/inferred/skipped`); reserve
@@ -245,9 +372,37 @@ cache-key closure + single canonical serializer (C); filesystem-as-contract `.ap
 - **Pure-function verdict gate, 0 LLM tokens**, isolated module; **Prosecutor = distinct pure-consumer pass**
   (cannot call an LLM — FR15/FR19).
 - **Content-addressed memoization; cache key = full recording-producing closure**: detector-set content-hash
-  (NOT a human version string) + model-checkpoint-captured-from-API-response + tree-sitter-grammar/tool
-  versions + budget/materiality + work-manifest scope. **Invalidate on detector-set change; a human-rejected
+  (NOT a human version string) + model-checkpoint-captured-from-API-response + ~~tree-sitter-grammar/tool
+  versions~~ **per-grammar tree-sitter provenance (every grammar that PARSED, at its own version) + tool
+  versions** *(amended 2026-08-10, Story 10.2 / `DF-AUD-APAA-D` — a DESIGN CHANGE, not a defect fix)*
+  + budget/materiality + work-manifest scope. **Invalidate on detector-set change; a human-rejected
   finding busts its own key** (R2/R3). Cache-key derivation is a pure golden-tested function + CI canary.
+- **Memoization is specified here and NOT YET WIRED into the pipeline.** *(Recorded 2026-08-10b.)*
+  `argus/cache/memo_store.py` exists; `argus/pipeline.py` does not import it. **This is a delivery gap,
+  not a design gap** — the design above stands. **Wiring order is load-bearing and deliberate:**
+  1. **Story 10.2 first** — the cache key currently folds **one** `grammar_version` resolved from
+     `tree-sitter-python` while the index parses **10 languages**, so a non-Python grammar change would not
+     move the key. 10.2 makes provenance per-grammar and explicitly declines to wire the store.
+  2. **Story 12.3 second** — wires the store over the corrected key.
+
+  Wiring first would persist a key that is wrong for 9 of 10 languages, and undoing it would cost a
+  `CACHE_KEY_SCHEMA_VERSION` bump plus a migration. **Free now, expensive later** — the same
+  silent-staleness failure DF-5-1-A flags for `prompt_template_version`.
+
+  ✅ **Step 1 is DONE, and step 2 is deliberately NOT done — 2026-08-10, Story 10.2.** The key was
+  corrected **before** anything depended on it. Provenance is per-grammar, `CACHE_KEY_SCHEMA_VERSION` is
+  bumped `"2"` → `"3"`, and the bump cost exactly one constant because the measurement that licensed it
+  held at the moment it was taken: **no production caller derives a key.** `argus/pipeline.py` imports
+  neither `argus.cache.key` nor `argus.cache.memo_store`, and it still does not — Story 10.2 added not one
+  line to that file. **Not wiring the store was a positive requirement of Story 10.2 (its AC6), not an
+  omission**, and the fence is a mechanical one: `grep -rn "derive_cache_key\|MemoStore" --include=*.py
+  argus/` must not name `pipeline.py`. **Story 12.3 wires the store over the corrected key.** Had the
+  order been reversed, the first persisted entries would have been keyed on a fingerprint that was wrong
+  for nine of ten languages, and correcting it hours later would have cost the migration this ordering
+  exists to avoid.
+
+  **Wiring delivers FR27 / NFR-D1; it adds no requirement.** A cache is a correctness surface in an
+  assurance tool: a hit and a cold run must produce **byte-identical** verdicts, pinned by test.
 - **Single `apaa/store/canonical.py` serializer** (`sort_keys=True, separators=(",",":"),
   ensure_ascii=False`, `\n`-terminated UTF-8); ratios stored as fixed-precision decimal — no floats (R4/NFR-P1).
 
@@ -268,17 +423,44 @@ cache-key closure + single canonical serializer (C); filesystem-as-contract `.ap
 - **LLM dispatch — reuse the orchestrator BY IMPORT, behind ONE narrow APAA-owned port** (DIP, and required
   by NFR-D2 injectability — so NOT a speculative abstraction):
   - `apaa/audit/ports.py` → `LLMDispatchPort(Protocol)` with a single `dispatch(req) -> LLMRecording`.
-  - `apaa/audit/minions_llm_adapter.py` → thin adapter holding an `LLMProviderOrchestrator`
-    (`minions_core.providers.orchestrator`, verified FastAPI-free), mapping `LLMRequest`/`LLMResponse`
-    (`minions_core.providers.base`) ↔ APAA's frozen `LLMRecording`, **capturing the model checkpoint from
-    the API response** (R3).
+  - ~~`apaa/audit/minions_llm_adapter.py` → thin adapter holding an `LLMProviderOrchestrator`
+    (`minions_core.providers.orchestrator`), mapping `LLMRequest`/`LLMResponse` ↔ APAA's frozen
+    `LLMRecording`.~~
+    **Superseded by Story 9.1 (IN-2 / RS-1).** Argus imports `minions_core` in **no form**, and a committed
+    gate asserts it is absent from `sys.modules` in a fresh interpreter. The live dispatch path is
+    **`argus/audit/open_llm_adapter.py::OpenLLMAdapter`**, behind the opt-in **`[llm]`** extra. The port
+    contract (`LLMDispatchPort`, single `dispatch(req) -> LLMRecording`), the
+    checkpoint-captured-from-API-response rule (R3), and the `FakeDispatch` injection for zero-token tests
+    are **unchanged**. Struck rather than deleted (§3.4). *(Corrected 2026-08-10b.)*
+  - **Consequence of the separation, recorded:** the *"no fork (§3.3) — inherits the orchestrator's
+    fallback chain, circuit breaker and cost attribution **for free**"* rationale below **no longer holds
+    automatically.** Those behaviours are now Argus's own responsibility on the `OpenLLMAdapter` path.
+    Story 12.2's honest-degradation ACs (NFR-R1) are what supply them; they are not inherited.
   - `apaa/audit/deep_audit.py` depends on `LLMDispatchPort`, **never the orchestrator directly**; tests inject
     a `FakeDispatch` → 0 LLM tokens.
   - **No fork (§3.3):** inherits the orchestrator's fallback chain + circuit breaker + cost attribution, which
     feeds APAA cost governance + honest degradation for free.
   - **Tiered routing** (cheap triage → premium deep-read) + **prompt caching** for multi-perspective passes
     over a cached partition (research: 59–70% savings; the cache doubles as the determinism mechanism).
-  - **Packaging:** `minions[apaa]` extra gains `httpx` (providers' only third-party dep).
+  - ~~**Packaging:** `minions[apaa]` extra gains `httpx` (providers' only third-party dep).~~ **Corrected
+    2026-08-10b:** `httpx` is a **base dependency of `argus-agent`**; the LLM path ships behind the
+    optional **`[llm]`** extra. See §I.
+- **Deep audit is OFF by default** (FR36, added 2026-08-10b). `DeepAuditSeam`
+  (`argus/audit/deep_audit.py:91`) is referenced today only from `argus/audit/*` and
+  `argus/dogfood/proof_run.py` — **never from `argus/pipeline.py`**. Story 12.2 wires it as an explicit
+  opt-in.
+  - **Default path stays zero-token and offline** (NFR-C3, NFR-D2, NFR-S6) — no key, no account, no
+    transmission. **A default-on deep pass would trade away the free default, the clean privacy posture,
+    and NFR-D1 determinism simultaneously**; it is forbidden by the FR contract, not merely discouraged.
+  - **Egress is disclosed before the first byte is transmitted**, naming the provider (NFR-S6). A committed
+    gate fails if any egress path is reachable without opt-in — the shape of the existing import-isolation
+    gates.
+  - **Spend flows through the existing ceiling** (FR21/FR22) — halt → skip → downgrade → report. **No new
+    cost-governance mechanism** (AR7/§3.3).
+  - **Story 6.1's determinism quarantine holds unchanged:** the subprocess gate proving the pure seam does
+    not import providers must still pass after wiring. Wiring is an adapter change, never a purity change.
+  - **Tiered routing and prompt caching** (above) remain the design; they now describe the `OpenLLMAdapter`
+    path.
 
 ### F. Persistence & State
 - **NO database** — filesystem-as-contract `.apaa/{state,assignments,findings,decisions}/`; resumable +
@@ -296,20 +478,126 @@ cache-key closure + single canonical serializer (C); filesystem-as-contract `.ap
 - **HITL gate:** pattern-matched escalation, default-STOP, time-boxed park-at-STOP (FR23); append-only
   decision record (FR24, Tier-B).
 
+**Suppression threat model** *(added 2026-08-10 by Story 10.3 / `DF-AUD-APAA-E`)* — the specification
+artifact on which the bless of `--ignore-path` and `--ignore-pattern` stands. The epic's condition was
+explicit: *absent this model, the flags are removed rather than blessed.* Four questions, answered in
+these terms; this is a specification, not a security review of Argus at large.
+
+- **Who may suppress a secret finding — and why that is the wrong question.** There is exactly one
+  principal. The audit runs with the invoker's authority under the existing work-manifest permission
+  boundary (NFR-S4); Argus opens no listener, accepts no token and registers no route (ADR #20/AR9), so
+  there is no second party to authorise anything against. Anyone who can pass `--ignore-pattern` can
+  already edit the source, delete the finding, or not run the audit at all. **Suppression is therefore
+  not an access-control question, it is an evidence question** — and the answer to an evidence question
+  is recording, not permission. The threat this model addresses is not a malicious operator defeating a
+  control they own; it is **an audit that reports green while a credential it found sits unmentioned**,
+  and a reader of that report who cannot tell the difference between "clean" and "quiet".
+- **What is recorded when they do.** A suppression an operator's own flag caused is emitted as a
+  non-blocking, redacted `operator_suppressed_secret:<reason>` finding carrying its reason token
+  (`custom_ignore_pattern` / `custom_ignore_path`) and its repo-relative locator **and nothing else** —
+  never the secret, never source bytes, never the operator's pattern (which is operator-supplied text
+  and may itself be secret bytes), never an absolute host path (NFR-S1/NFR-S2/AR8). Every run also
+  prints one stderr line stating how many such suppressions occurred, **including when the answer is
+  none**: a disclosure that appears only when something was hidden is indistinguishable from an unwired
+  feature. Attribution is conservative — where a built-in default already matched, the operator's flag
+  caused nothing and is not credited. The record is `depth_supported=None`, so it is ineligible to
+  block a verdict by construction: disclosure can never itself become a gate. This is the register
+  `--coverage-scope` established — **a narrowing is permitted, disclosed, and never allowed to lower a
+  bar.**
+- **What each flag can and cannot reach.** The Live-Key Safeguard (`LIVE_KEY_PATTERNS` in
+  `argus/detectors/secret_suppression.py` — AWS access key, GitHub PAT, PEM private-key header, Slack
+  token) is now evaluated **above both flags**, so neither can suppress a high-confidence live
+  production key. Measured on 2026-08-10, this was true of `--ignore-path` and **false of
+  `--ignore-pattern`**: the CLI arm ran above the safeguard the module's own docstring promised, and
+  `--ignore-pattern "A"` suppressed every live key in the repository while recording nothing. The two
+  flags were never the same risk, which is why they took different rulings. The single remaining
+  override is the inline `# argus:ignore` annotation, preserved deliberately: it lands in a pull
+  request beside the line it exempts, which is a different accountability class from an argv flag.
+- **The residual risk, accepted and not engineered away.** `--ignore-pattern` matches by **bare
+  substring**, so a short pattern remains a wide net over everything the safeguard does not cover — the
+  generic assigned-secret and high-entropy classes, which are the majority of real findings. Bounding
+  the *matching semantics* (anchoring, a minimum length, requiring a locator scope) is a behavioural
+  redesign of a shipped flag and is out of this story's scope; it is filed as **`DF-10-3-C`**. Also
+  accepted and filed: built-in suppressions — the public sentinels, the inline annotation and
+  `DEFAULT_TEST_PATH_PATTERNS` — are **not** disclosed, because no operator flag caused them and
+  folding them in would move the finding count on runs that passed no flags (**`DF-10-3-B`**).
+
+  Referenced from the CHANGELOG entry that specifies the two flags, so a consumer reading about them
+  reaches this section. Pinned by `tests/test_secret_suppression_recording.py`
+  (`TC-ArgusAgent-SECRET-001-15`..`-22`).
+
 ### H. Self-Audit & CI (trust substrate)
 - **Defect cartridges** under `tests/apaa/cartridges/` (vacuous, secret, orphan) **+ hidden holdout + clean
   true-negative controls** (any 🔴 on a clean control = CI fail) — FR20.
 - **Import-isolation gate** `tests/apaa/test_no_web_imports.py` (`apaa.* ⊬ fastapi/uvicorn/starlette`) —
   committed/durable. (Verified today: all reuse targets, incl. `providers`, are FastAPI-free.)
 - **Determinism golden-tests** — cache-key derivation + envelope canonicalization.
+- **Evidence-citation rule for status claims** *(added 2026-08-10 by Story 10.1; satisfies AI-E9-7)* —
+  **a document that asserts a release or release-readiness status cites an executed gate — a GitHub
+  Actions run URL or run id, together with the sha that run covers — or records the status as NOT
+  ESTABLISHED.** Three parts, all binding:
+  - **The sha is part of the citation, not decoration.** A run id is sha-scoped, so a bare id looks like
+    evidence while covering an unknown tree — including trees created after the run. `run 31341363300`
+    is a half-truth; `run 31341363300 (00c8d1b, 3/3 legs green)` is the claim.
+  - **A local run is necessary, not sufficient.** `pytest`/`mypy`/`bandit` on a developer workstation is
+    not the gate and cannot see the runner's host; it is recorded as LOCAL and never on its own
+    discharges the rule. `DF-AUD-APAA-C` is the worked example: `sprint-change-proposal-2026-07-28.md`
+    declared READY FOR RELEASE on a local `pytest` run while the CI gate that same proposal had just
+    created had never passed (run `30774175196`, `failure`).
+  - **NOT ESTABLISHED is a first-class recordable state**, not a gap. This is the governance twin of
+    **`AUDIT_FAILED`-is-not-a-verdict** (`action.yml:33-48`) and of `INSUFFICIENT_COVERAGE` (AR10): the
+    tool refuses to dress a non-result as an assessment, and the project's own record is held to the
+    identical rule — one principle, applied to the tool's output and to its governance alike.
+
+  Enforced by `tests/test_evidence_citation.py` (`TC-ArgusAgent-DOCS-001-20`..`-23`); see §Enforcement.
 
 ### I. Packaging & Deployment
-- **`minions[apaa]` optional extra**: `["pydantic>=2","jsonschema","radon","httpx","tree-sitter",
-  "tree-sitter-python"]`; **`apaa` console script** (wired by the CLI story). No container/hosting in V1
-  (CLI/library); runs on Claude Code (parallel) + Cline (sequential).
+- ~~**`minions[apaa]` optional extra**: `["pydantic>=2","jsonschema","radon","httpx","tree-sitter",
+  "tree-sitter-python"]`; **`apaa` console script** (wired by the CLI story).~~
+  **Superseded 2026-08-10b — factually stale since the 2026-08-03 repository separation.** Argus is no
+  longer packaged inside Minions. The `minions[apaa]` extra and the `apaa` console script are
+  **Minions-side removal surface** and belong to handoff **H1**, not to this repository. Original text
+  struck rather than deleted (§3.4 evidence immutability).
+
+**Shipped package, measured in place 2026-08-10b:**
+
+| | |
+|---|---|
+| Distribution | **`argus-agent` 0.1.0**, module `argus`, flit backend |
+| Python | `>=3.10` |
+| Console scripts | `argus`, `argus-agent`, `repo-audit` — all → `argus.cli:main` |
+| Base deps | `pydantic>=2.0` · `jsonschema>=4.0` · `radon>=4.1.0` · `httpx>=0.24.0` · `tree-sitter>=0.25.0,<0.26` · `tree-sitter-python>=0.25.0,<0.26` |
+| Extras | `[dev]` · `[llm]` (`litellm>=1.0.0`) · `[languages]` (9 grammars) |
+| Grounded languages | **10** — Python (base) + 9 via `[languages]` |
+
+🚩 **The `tree-sitter <0.26` upper bound is LOAD-BEARING, not hygiene.** On `0.26.0` the cartridge
+self-audit flips `NOT_READY_FOR_RELEASE` → `RELEASE_READY` because AST corroboration stops firing —
+**a false negative from an assurance tool**, the PRD-fatal direction. A metadata bound constrains a
+*resolver*, never an already-installed environment on a machine we do not control, so it **must also be
+asserted at runtime** (Story 11.4). Do not widen without re-running `tests/test_cartridge_selfaudit.py`.
+
+⚠️ **Open packaging decision, owned by Story 12.5 (NFR-P3).** The 9 grammars are an **optional extra**,
+so the default public install grounds **Python only** — which NFR-P3 classifies as a packaging defect for
+the V1.5 audience. Resolving it means either promoting the grammars to base dependencies (larger install,
+no discovery burden) or making the documented public install command carry the extra (smaller default, a
+step the user must not miss). **Recorded as a decision, not decided here.**
+
+**V1.5 distribution channels** *(added 2026-08-10b; mirrors PRD §Developer Tool)*: public index (primary)
+· marketplace action (**gated on Story 11.3**) · **MCP server as an entry point in this same distribution
+— not a separate channel**, so it inherits the release workflow, version and gate evidence · packaged
+assistant command assets. Desktop stores and OS package managers **deferred with reasons**; hosted runner
+remains **V4**.
+
+**Verified privacy posture** *(measured 2026-08-10b)*: network egress confined to
+`argus/audit/open_llm_adapter.py` behind the opt-in `[llm]` extra · committed import gates · **no
+telemetry** · MIT licensed. NFR-S6 binds this: the default path transmits nothing, and the agent surface
+opens no listener.
+
+**No container/hosting in V1/V1.5** (CLI + library + local stdio surface); runs on a parallel-capable
+assistant host and a sequential-canonical fallback.
 
 ### Driver Namespace
-- **`APAA-FR-*` / `APAA-NFR-*`**, mapped 1:1 onto the PRD FR1–33 / NFR clusters; the full component↔driver
+- **`APAA-FR-*` / `APAA-NFR-*`**, mapped 1:1 onto the PRD FR1–37 / NFR clusters *(FR34–37 added 2026-08-10b)*; the full component↔driver
   table is built in the components step.
 
 ### Decision Impact Analysis
@@ -325,9 +613,27 @@ the memo cache (single source). The **`LLMDispatchPort`** is the only seam betwe
 non-deterministic LLM substrate.
 
 ### Still OPEN (delivery-detail, not architecture-blocking)
-- Validation-set `N` (gates precision-harness ground-truth shape — resolve before harness build).
-- Minions-dogfood partition + budget-sizing plan (so the proof run doesn't land `INSUFFICIENT_COVERAGE`).
-- Budget-ceiling `$X` default.
+- ~~Validation-set `N` (gates precision-harness ground-truth shape — resolve before harness build).~~
+  **Still open, and the "resolve before harness build" condition was not met.** The harness was built
+  (Story 6.6) and `precision-validation-protocol.md` resolved `N` **implicitly** — as `N ≥ 5` **labeled
+  cartridges** — while PRD L161 specifies `N ≈ 5–10` **real repositories**. **Two corpora, never
+  reconciled.** L152-154 called this *"the one open input that gates an ARCHITECTURE choice"*; it was
+  closed by implementation rather than by decision. **Owned by Story 13.1**, which must pick one
+  definition and amend the other. *(Recorded 2026-08-10b.)*
+- ~~Minions-dogfood partition + budget-sizing plan (so the proof run doesn't land
+  `INSUFFICIENT_COVERAGE`).~~ ✅ **CLOSED 2026-08-10b — DELIVERED by Story 7.1.** Artifacts on disk:
+  `minions-dogfood-partition-plan.md`, `minions-dogfood-budget-plan.md`.
+- ~~Budget-ceiling `$X` default.~~ ✅ **CLOSED 2026-08-10b — resolved as OI3, LOCKED, and the
+  resolution is "there is no default."** The epic-6 retrospective records *"OI3 (`$X` sized empirically
+  in 7.1) are LOCKED design inputs, not open questions."* Shipped code agrees:
+  `argus/cost/budget_governor.py` declares `ceiling_credits: int | None` with **no numeric default**,
+  treats `None` as the first-class *no-ceiling-configured* state, and maps `0 → None`. The operator
+  sets the ceiling per target; sizing is empirical per audited repository. **A numeric default was
+  deliberately refused** — a wrong default silently truncates an audit, which is the honest-degradation
+  failure NFR-C2 exists to prevent.
+
+*(Section reviewed end-to-end 2026-08-10b. All three entries are now closed or assigned; none is
+left as a bare OPEN marker with no owner.)*
 
 ## Implementation Patterns & Consistency Rules
 
@@ -391,12 +697,63 @@ but divergent code that breaks determinism, containment, or the frozen contracts
   (degraded → `INSUFFICIENT_COVERAGE`).
 - **Typed exceptions** at the impure shell (reuse `WorkspaceContainmentError`); no bare `except: pass`;
   no `print()` in library code (structured, secret-safe logging).
+- **A degraded outcome records the cause it actually had**, and **a recorded reason token names a remedy that works**
+  *(added 2026-08-10 by Story 10.4 / `DF-AUD-APAA-F`)*. A token that names the wrong cause is a
+  named reason in **form only** — it satisfies PRD `:473` ("a named reason token — never a silent drop")
+  on the page while handing the operator a remedy that cannot help. Corollaries: **classify by ARM
+  POSITION**, never by exception message or exception type (the same broken grammar surfaces as
+  `ValueError`/`TypeError`/`OSError`, and ABI text is a C format string a release may change); a broad
+  `except Exception` is permitted only with `# noqa: BLE001` **and** a comment naming the degraded
+  outcome it records; a caught-exception tuple whose members subclass one another
+  (`except (ImportError, Exception)`) is **forbidden** — it reads as if it discriminates and does not;
+  and **no exception message, `repr`, traceback or host path is ever persisted** (NFR-S1). `BaseException`
+  stays uncaught: AR10 degrades *errors*, never *signals*.
 
 ### Enforcement
 **All APAA agents MUST:** route JSON through `canonical`; emit findings with a locator or not at all; keep
 pure modules I/O-free; import only FastAPI-free leaf modules. **Enforced by:** the import-isolation gate,
 determinism golden-tests (serializer + cache-key), the secret-containment property suite, and file-size CI
 — committed under `tests/apaa/` + the Minions CI model.
+
+**Governance enforcement** *(added 2026-08-10 by Story 10.1)*: the §H **evidence-citation rule for status
+claims** is enforced by **`tests/test_evidence_citation.py`** (`TC-ArgusAgent-DOCS-001-20`..`-23`). It
+resolves `sprint-change-proposal-*.md` and `epic-*-retro-*.md` by **glob** under the artifact directory —
+so a proposal cannot escape the rule by being new — and fails any status claim carrying neither an
+executed-gate citation (run id **plus** the sha it covers) nor a **NOT ESTABLISHED** marker. A rule that
+lives only in a test is not a rule and a rule that lives only in prose is not enforced, so `-23` asserts
+this section and the §H rule text are both still present.
+
+**Invocation-contract enforcement** *(added 2026-08-10 by Story 10.3 / `DF-AUD-APAA-E`)*: the §A
+**invocation contract** is enforced by **`tests/test_invocation_contract.py`**
+(`TC-ArgusAgent-CLI-001-35`..`-41`, `TC-ArgusAgent-DOCS-001-28`). The accepted surface is **derived at
+run time from `argus/cli.py::build_parser`** — never transcribed — and compared against a declared
+contract registry in **both directions**: a flag the parser accepts and no document specifies fails,
+and a flag a document names and the parser rejects fails. Defaults and shapes are compared too, and
+every divergence must be a **named exemption carrying its reason** (DN-8's `coverage_scope` case) rather
+than silence. Each registry entry names its specifying site **by anchor text**, and the anchor must be
+findable in that file — a registry is not a contract, a document is. Every `argus …` command line
+committed in `README.md`, `action.yml` and `.github/workflows/*.yml` must parse through the live parser,
+so a documented invocation that would give a consumer an argparse usage error fails here first. Because
+the walk uses argparse private API, a non-vacuity assertion is mandatory (`-39`): an argparse-internals
+change must turn this red, not silently green. **A red result when a new flag lands (`--deep`/FR36, any
+MCP-era flag) is the guard working, not a defect** — registration is meant to cost a deliberate edit.
+
+**Degradation-diagnosis enforcement** *(added 2026-08-10 by Story 10.4 / `DF-AUD-APAA-F`)*: the
+§Error/Degradation rule above — *a degraded outcome records the cause it actually had, and a recorded
+reason token names a remedy that works* — is enforced by **`tests/test_grammar_diagnosis.py`**
+(`TC-ArgusAgent-INDEX-001-108`..`-119`, `TC-ArgusAgent-REPORT-002-25`..`-29`,
+`TC-ArgusAgent-DOCS-001-29`). The token vocabulary lives in ONE pure module,
+`argus/shared/grammar_status.py`, imported by the producer (`index/ast_index.py`) and the consumer
+(`reports/generator.py`) alike, so neither side may re-parse a token with its own `startswith`. The
+load-bearing half is a **closure over the code, not over a list**: the guard parses
+`argus/index/ast_index.py` with the stdlib `ast` module, walks `_get_parser_for_lang`'s own control
+flow, and rejects any handler that is bare, a lone `pass`, catches a signal, or catches a **redundant
+tuple** whose members subclass one another — plus every exit must return a **registered**
+`GrammarFailure`, so a **fifth** arm turns this red until it is registered *and* driven by the
+behavioural matrix. Story 10.2's hand-written site list was wrong three times; a list closes today's
+instances, a closure closes the class. Because a source-walking guard goes green by finding nothing, a
+non-vacuity assertion is mandatory (`-118`): a rename or move of the loader must turn this **red**, not
+silently green. `-29` asserts the rule text above and this registration are both still present.
 
 ## Project Structure & Boundaries
 
@@ -455,6 +812,16 @@ minions_core/apaa/
 modules are marked. Sub-package count is intentional: it honours the pure/impure split and keeps the
 determinism core isolated and independently testable.)*
 
+**Added 2026-08-10b (FR35):**
+
+```text
+argus/mcp/              # FR35 stdio protocol adapter — impure wiring, no audit logic
+argus/assets/commands/  # packaged assistant command assets (data, not code)
+```
+
+*(The tree header above still reads `minions_core/apaa/` — stale since the 2026-08-03 separation, on the
+same correction path as §I Packaging. Recorded here; the tree-wide rename is not this proposal's scope.)*
+
 ### Runtime artifact tree (`.apaa/` — in the AUDITED repo, not the package)
 
 ```
@@ -498,6 +865,12 @@ tests/security/
 - **Filesystem boundary:** all writes via the containment helper into `.apaa/`; nothing escapes the
   audited-repo root.
 
+- **`argus/mcp/**` (or equivalent) is an ADAPTER layer.** *(Added 2026-08-10b.)* It may import the pure
+  core and the same request/verdict types the CLI uses. It may **not** be imported by the pure core, must
+  not introduce a scheduling or concurrency model of its own (the sequential-canonical execution model at
+  §A is unchanged), and is subject to the §H import-isolation gate. The dependency arrow points **inward
+  only** — identical to `cli.py`.
+
 ### FR-cluster → location mapping
 
 | FR cluster | Location |
@@ -522,11 +895,28 @@ tests/security/
   and routes all writes through containment — the structure IS the boundary set.
 
 ### Requirements Coverage Validation ✅
-- **All 33 FRs** map to a concrete module (FR-cluster→location table). No FR is unsupported.
-- **All 21 NFRs** supported: D1–3 (`cache/`, `canonical`, pure `verdict`), S1–5 (containment + redaction +
-  `tests/security/`), C1–3 (`budget_governor`, `tool_runner`), R1–2 (failure→finding, `store/reader` resume),
-  P1–2 (`canonical`, stack-agnostic `claim→validated?`), A1–3 (`envelope`, `negative_assurance`), SC1
-  (`partitioner`), M1–2 (file-size CI, Pydantic v2).
+
+> ⚠️ **SCOPE, clarified 2026-08-10.** This validation was performed against the **pre-amendment contract
+> (33 FRs / 21 NFRs)**. It is **not** a validation of FR34–FR37 or NFR-S6/NFR-P3, which the 2026-08-10b
+> amendment added. Until 2026-08-10 it read *"All 33 FRs"* / *"All 21 NFRs"* with no qualifier, which reads
+> as a current certification of a superseded contract. The post-amendment additions are covered below and
+> map to modules named in this document; they have **not** been re-validated through this section's method.
+
+- **All 33 FRs of the base contract** map to a concrete module (FR-cluster→location table). No FR is unsupported.
+- **All 21 NFRs of the base contract** supported: D1–3 (`cache/`, `canonical`, pure `verdict`), S1–5
+  (containment + redaction + `tests/security/`), C1–3 (`budget_governor`, `tool_runner`), R1–2
+  (failure→finding, `store/reader` resume), P1–2 (`canonical`, stack-agnostic `claim→validated?`), A1–3
+  (`envelope`, `negative_assurance`), SC1 (`partitioner`), M1–2 (file-size CI, Pydantic v2).
+- **Post-amendment additions (2026-08-10b) — module placement recorded, delivery owned by Epics 11–12:**
+  **FR34** → the run-grade vs instrument-status distinction (§L158-173), extending the existing
+  `DOGFOOD_EXTERNALIZATION_GUARD`, never a second mechanism · **FR35** → `argus/mcp/**`, an adapter layer
+  with no audit logic and no second decision path (§L272-303, L631-634) · **FR36** → `DeepAuditSeam`
+  (`argus/audit/deep_audit.py`), off by default, spend through the existing ceiling (§L381-388) ·
+  **FR37** → `argus/reports/plain_english.py` + `argus/reports/generator.py`, the two verdict-rendering
+  surfaces · **NFR-S6** → the no-egress-without-opt-in committed gate (§L385-388, L460) ·
+  **NFR-P3** → ⚠️ **open packaging decision owned by Story 12.5** (§L446-447): the 9 non-Python grammars are
+  an optional extra, so the default install grounds **Python only** — the exact state NFR-P3 classifies as a
+  packaging defect.
 
 ### Implementation Readiness Validation ✅
 - Decisions complete with verified versions; patterns enforceable (committed gates: import-isolation,
@@ -559,8 +949,12 @@ requirements→structure mapping
 - **Key strengths:** determinism quarantined to one seam; LLM behind a single injectable port; reuse-by-import
   verified FastAPI-free; every FR/NFR traced to a module; the false-accusation moat protected by
   advisory-by-contract + holdout/clean cartridges.
-- **Future enhancement:** multi-language AST (V2), seam auditor (V2), mutation-grade vacuous (V2), consume
-  Minions layers (d)/(a)/(e), hosted runner + HTTP API (V4).
+- **Future enhancement:** ~~multi-language AST (V2),~~ seam auditor (V2), mutation-grade vacuous (V2), consume
+  Minions layers (d)/(a)/(e), hosted runner + HTTP API (V4). *(Amended 2026-08-10, Story 10.2 /
+  `DF-AUD-APAA-D`: multi-language AST grounding is **delivered in V1** — see
+  `argus/shared/source_languages.py` — and is struck here rather than deleted, per §3.4. The other items are
+  untouched. This site, like `§Stack` above, was missed by all three prior enumerations. Delivered by
+  `sprint-change-proposal-2026-07-28.md`.)*
 
 ### Implementation Handoff
 - **AI agents must:** follow these decisions exactly; route JSON through `canonical`; keep pure modules
