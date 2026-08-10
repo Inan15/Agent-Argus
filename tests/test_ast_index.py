@@ -141,3 +141,139 @@ def test_entries_sorted_and_index_frozen(tmp_path: Path) -> None:
     assert [e.file_path for e in index.entries] == ["a.py", "b.py"]
     with pytest.raises(Exception):
         index.grammar_version = "x"  # type: ignore[misc]
+
+
+# ─────────────────────────────────────────────────────────────────────────────
+# Story 10.2 / AC4 — provenance names the grammar that actually parsed, per grammar
+# ─────────────────────────────────────────────────────────────────────────────
+#
+# Measured on this tree 2026-08-10: a ten-language index recorded
+# `grammar_version = '0.25.0'` — `tree-sitter-python`'s — for a build in which
+# tree-sitter-rust 0.24.2, tree-sitter-java 0.23.5 and tree-sitter-ruby 0.23.1 had each
+# parsed a file. The recorded provenance was therefore wrong for 7 of the 8 languages
+# that grounded, and a Go/Rust/Java/C/C++/Ruby grammar upgrade would not have moved the
+# R3 cache key. That is the silent-cache-staleness class DF-5-1-A already files for
+# `prompt_template_version`, and the architecture records it as a DESIGN change (R3 was
+# designed for one grammar) rather than a defect fix.
+#
+# The fix is ADDITIVE (PRD :393, story DN-5): `grammar_version` is RETAINED, the
+# per-grammar record is added beside it, and `schema_version` is bumped.
+
+
+def _provenance_map(index: AstIndex) -> dict[str, str]:
+    return {record.language: record.version for record in index.grammar_versions}
+
+
+def test_TC_ArgusAgent_INDEX_001_105_provenance_is_recorded_per_grammar(tmp_path: Path) -> None:
+    """TC-ArgusAgent-INDEX-001-105 — Story 10.2/AC4.1: per-grammar provenance, sorted and frozen.
+
+    One scalar cannot describe a ten-language index. Each grammar that actually parsed is recorded
+    with the version of its own package, sorted by language (AR11) in a frozen tuple of frozen
+    models (the `Definition`/`CodeEdge` house shape), with no float and no dict-iteration-order
+    reliance (AR4/NFR-D1).
+    """
+    (tmp_path / "m.py").write_text(_FIXTURE, encoding="utf-8")
+    index = build_ast_index(tmp_path, ("m.py",))
+
+    assert index.grammar_versions, (
+        "AstIndex recorded NO per-grammar provenance for a build that parsed a Python file. The "
+        "R3 cache key would then be blind to every grammar that participated (DF-AUD-APAA-D)."
+    )
+    languages = [record.language for record in index.grammar_versions]
+    assert languages == sorted(languages), (
+        f"per-grammar provenance is not sorted by language: {languages} (AR11/AR4 — an "
+        "unsorted record makes the derived cache key depend on dict iteration order)"
+    )
+    assert len(languages) == len(set(languages)), (
+        f"a language appears twice in the provenance record: {languages}"
+    )
+    assert isinstance(index.grammar_versions, tuple), (
+        "provenance must be a frozen tuple, not a list — the index is a frozen pure contract"
+    )
+    for record in index.grammar_versions:
+        with pytest.raises(Exception):
+            record.version = "mutated"  # type: ignore[misc]
+        assert isinstance(record.version, str), "no float in a determinism input (AR4)"
+
+    # It names the grammar that actually parsed, with that grammar's own version.
+    assert _provenance_map(index) == {"python": index.grammar_version}, (
+        "a Python-only build must record exactly the python grammar, at exactly the version the "
+        "retained scalar reports — the two must not be able to disagree"
+    )
+
+
+def test_TC_ArgusAgent_INDEX_001_106_only_grammars_that_parsed_are_recorded(tmp_path: Path) -> None:
+    """TC-ArgusAgent-INDEX-001-106 — Story 10.2/AC4.3 + DN-6: both directions, asserted.
+
+    A grammar that parsed IS recorded; a grammar that did not is NOT. Recording every INSTALLED
+    grammar would make the key a function of the HOST rather than of the AUDIT — a determinism
+    regression (NFR-D1/AR4) and the exact inverse of the defect being closed. This host has all ten
+    grammars installed, so the second direction is a live risk here, not a hypothetical one.
+    """
+    (tmp_path / "m.py").write_text(_FIXTURE, encoding="utf-8")
+    (tmp_path / "notes.txt").write_text("not source\n", encoding="utf-8")
+    index = build_ast_index(tmp_path, ("m.py", "notes.txt"))
+
+    recorded = set(_provenance_map(index))
+    assert recorded == {"python"}, (
+        f"a Python-only audit recorded provenance for {sorted(recorded)}. Only grammars that "
+        "actually parsed a file in THIS build may be recorded; anything else keys the cache on "
+        "the host's installed packages (DN-6)."
+    )
+
+    # …and a language whose file IS present is recorded, so the assertion above is not passing by
+    # recording nothing at all.
+    (tmp_path / "s.go").write_text("package main\n\nfunc Add() int { return 1 }\n", encoding="utf-8")
+    with_go = build_ast_index(tmp_path, ("m.py", "s.go"))
+    go_entry = _entry_for(with_go, "s.go")
+    if go_entry.ast_eligible:
+        assert "go" in _provenance_map(with_go), (
+            "a Go file parsed cleanly but the go grammar is missing from the provenance record — "
+            "a grammar that determined this index's contents is invisible to the cache key"
+        )
+        assert _provenance_map(with_go)["go"] != "", "the recorded go version is empty"
+    else:  # the optional `[languages]` extra is absent in this environment
+        assert "go" not in _provenance_map(with_go), (
+            "the go grammar could not parse, yet it was recorded as participating provenance"
+        )
+
+
+def test_TC_ArgusAgent_INDEX_001_107_the_scalar_is_retained_and_the_schema_bumped(
+    tmp_path: Path,
+) -> None:
+    """TC-ArgusAgent-INDEX-001-107 — Story 10.2/AC4.2 + DN-5: additive-only, and the docstring lie fixed.
+
+    PRD `:393` binds schema evolution to additive-only: new fields, `schema_version` bumped,
+    determinism preserved. `grammar_version` is therefore RETAINED — roughly ten existing test
+    constructions and `argus/dogfood/partition_plan.py` depend on it — and the per-grammar record is
+    added beside it. What is corrected is the FIELD DESCRIPTION, which implied the scalar was the
+    index's provenance. It never was: it is, and always was, the resolved `tree-sitter-python`
+    package version, and reading it as the index's provenance is what misled the R3 design.
+    """
+    (tmp_path / "m.py").write_text(_FIXTURE, encoding="utf-8")
+    index = build_ast_index(tmp_path, ("m.py",))
+
+    assert index.grammar_version, "the retained scalar must still be populated (additive-only)"
+    assert index.schema_version == "2", (
+        f"AstIndex.schema_version is {index.schema_version!r}; adding the per-grammar provenance "
+        "field is a schema change and must bump it (PRD :393, additive-only policy)"
+    )
+
+    # The new field is DEFAULTED, so the existing constructions keep working unedited (AC4.4).
+    legacy = AstIndex(grammar_version="test", entries=())
+    assert legacy.grammar_versions == (), (
+        "AstIndex(grammar_version=...) without the new field must still construct, with an empty "
+        "provenance record — ~10 existing test constructions and partition_plan.py rely on it"
+    )
+
+    description = AstIndex.model_fields["grammar_version"].description or ""
+    assert "tree-sitter-python" in description, (
+        "the retained scalar's description must say WHAT IT ACTUALLY IS — the resolved "
+        "`tree-sitter-python` package version — rather than implying it is the index's provenance. "
+        "That implication is what the R3 cache-key design was built on (story §D)."
+    )
+    provenance_description = AstIndex.model_fields["grammar_versions"].description or ""
+    assert "parsed" in provenance_description.lower(), (
+        "the per-grammar field's description must state that it records only the grammars that "
+        "actually parsed in this build (DN-6)"
+    )

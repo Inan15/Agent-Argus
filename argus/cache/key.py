@@ -25,7 +25,11 @@ deterministic key:
 - the **content-hash** of the audited unit (REUSE the 1.1 ``compute_content_hash``);
 - the **detector-set content-hash** — a CONTENT hash of the enabled detector SET
   (code + config), NOT a human ``argus_version`` string (DN-DETECTORSET / AR5/R3);
-- the **tree-sitter grammar version** (REAL, recorded by 1.4) + **tool versions**;
+- the **per-grammar tree-sitter provenance** (REAL, recorded by 1.4) + **tool versions** — the
+  version of every grammar that ACTUALLY PARSED in the audited build, not one scalar. Folding a
+  single ``tree-sitter-python`` version for a ten-language index left the key blind to nine of the
+  ten (DF-AUD-APAA-D); folding every INSTALLED grammar instead would key on the host. The scalar
+  ``grammar_version`` is retained beside it under the additive-only policy;
 - the **budget / materiality** config (recorded by 1.7 / 3.1);
 - the **work-manifest scope** (the 2.4 manifest membership + 2.3 critical
   designation);
@@ -77,6 +81,7 @@ __all__ = [
     "CacheKeyError",
     "DetectorDescriptor",
     "FROZEN_DETECTOR_SET",
+    "GrammarProvenance",
     "RecordingProducingClosure",
     "detector_set_content_hash",
     "derive_cache_key",
@@ -87,7 +92,15 @@ __all__ = [
 # Bumped 1 → 2 (story 5.1 fix iter-1, DF-5-1-A): the prompt_template_version slot
 # was added to the closure payload, which deliberately moves every derived key
 # (the golden was regenerated accordingly).
-CACHE_KEY_SCHEMA_VERSION = "2"
+# Bumped 2 → 3 (story 10.2, DF-AUD-APAA-D / DN-7): PER-GRAMMAR provenance was added
+# to the closure payload. The key previously folded ONE grammar version, resolved
+# from tree-sitter-python, while the index parsed ten languages — so a Go, Rust,
+# Java, C, C++ or Ruby grammar upgrade did not move it. The bump is FREE at this
+# commit and only at this commit: measured 2026-08-10, no production caller derives
+# a key (argus/pipeline.py imports neither this module nor cache/memo_store.py) and
+# no persisted cache entry exists to migrate. Story 12.3 wires the store over the
+# CORRECTED key; after that, the same change costs a migration.
+CACHE_KEY_SCHEMA_VERSION = "3"
 
 # DN-PLACEHOLDER — the stable, testable V1 model-checkpoint constant. V1 Tier-A's
 # deep path is heuristic/claim-proxy with NO live LLM, so the checkpoint input is
@@ -193,6 +206,32 @@ def detector_set_content_hash(descriptors: tuple[DetectorDescriptor, ...]) -> st
         raise CacheKeyError(f"detector set is not canonically serializable: {exc}") from exc
 
 
+class GrammarProvenance(BaseModel):
+    """One participating grammar's resolved package version (frozen, PURE data).
+
+    Defined here, in the module that owns the determinism contract, and imported by the impure
+    ``index/ast_index.py`` shell that POPULATES it — never the other way round. This module must
+    stay free of I/O and ``importlib.metadata`` (AR8), so version RESOLUTION happens in the shell
+    and the resolved strings are passed in.
+
+    "Participating" is load-bearing (story 10.2 / DN-6): only a grammar that actually parsed a file
+    in the audited build belongs in this record. Folding every grammar merely INSTALLED on the host
+    would make the cache key a function of the machine instead of the audit — a determinism
+    regression (NFR-D1/NFR-P1) and the exact inverse of the defect being closed.
+    """
+
+    model_config = ConfigDict(frozen=True, extra="forbid")
+
+    language: str = Field(
+        ..., min_length=1, description="Language token (a value of shared.source_languages.LANGUAGE_BY_SUFFIX)."
+    )
+    version: str = Field(
+        ...,
+        min_length=1,
+        description="Resolved `tree-sitter-<language>` package version, or 'unknown' (AR10 honest degradation).",
+    )
+
+
 class RecordingProducingClosure(BaseModel):
     """The full recording-producing closure the cache key fingerprints (AR5 / NFR-D1).
 
@@ -214,7 +253,20 @@ class RecordingProducingClosure(BaseModel):
         description="Enabled detector descriptor set (DN-DETECTORSET); hashed in derive_cache_key.",
     )
     grammar_version: str = Field(
-        ..., min_length=1, description="Recorded tree-sitter-python grammar version (1.4)."
+        ...,
+        min_length=1,
+        description=(
+            "Recorded tree-sitter-PYTHON package version ONLY (1.4). RETAINED under the "
+            "additive-only policy; grammar_versions below is the index's actual provenance."
+        ),
+    )
+    grammar_versions: tuple[GrammarProvenance, ...] = Field(
+        default=(),
+        description=(
+            "Per-grammar provenance for the grammars that ACTUALLY parsed in the audited build "
+            "(1.4 / 10.2) — folded SORTED, order-independent. A grammar installed on the host but "
+            "unused by the audit is absent by design (DN-6)."
+        ),
     )
     tool_versions: dict[str, str] = Field(
         default_factory=dict, description="Recorded pinned-tool versions (radon, etc.) — 'unknown' fallback ok."
@@ -254,6 +306,25 @@ class RecordingProducingClosure(BaseModel):
             raise ValueError("must be a non-blank string")
         return value
 
+    @field_validator("grammar_versions")
+    @classmethod
+    def _one_version_per_language(
+        cls, value: tuple[GrammarProvenance, ...]
+    ) -> tuple[GrammarProvenance, ...]:
+        """Two records for one language is a malformed closure, not a merge problem (AR10).
+
+        The fold would otherwise depend on which duplicate it saw first, which is a silently-wrong
+        key — the failure mode this whole module exists to make impossible.
+        """
+        languages = [record.language for record in value]
+        duplicates = sorted({lang for lang in languages if languages.count(lang) > 1})
+        if duplicates:
+            raise ValueError(
+                f"grammar_versions records {duplicates} more than once; one language resolves to "
+                "exactly one grammar package version per build"
+            )
+        return value
+
 
 def _closure_payload(closure: RecordingProducingClosure) -> dict[str, Any]:
     """Canonical, order-independent payload the cache key is taken over.
@@ -269,6 +340,10 @@ def _closure_payload(closure: RecordingProducingClosure) -> dict[str, Any]:
         "content_hash": closure.content_hash,
         "detector_set_hash": detector_set_content_hash(closure.detectors),
         "grammar_version": closure.grammar_version,
+        "grammar_versions": [
+            {"language": record.language, "version": record.version}
+            for record in sorted(closure.grammar_versions, key=lambda r: r.language)
+        ],
         "tool_versions": {k: closure.tool_versions[k] for k in sorted(closure.tool_versions)},
         "budget": closure.budget,
         "materiality_bar": closure.materiality_bar,

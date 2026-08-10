@@ -39,6 +39,7 @@ from argus.cache.key import (
     V1_PROMPT_TEMPLATE_VERSION,
     CacheKeyError,
     DetectorDescriptor,
+    GrammarProvenance,
     RecordingProducingClosure,
     derive_cache_key,
     detector_set_content_hash,
@@ -53,6 +54,10 @@ def _baseline() -> RecordingProducingClosure:
         content_hash="a" * 64,
         detectors=FROZEN_DETECTOR_SET,
         grammar_version="0.23.6",
+        grammar_versions=(
+            GrammarProvenance(language="go", version="0.25.0"),
+            GrammarProvenance(language="python", version="0.23.6"),
+        ),
         tool_versions={"radon": "6.0.1", "tree-sitter": "0.23.2"},
         budget=100,
         materiality_bar="release",
@@ -87,9 +92,14 @@ def test_golden_key_pinned() -> None:
     that moves this number is surfaced as a RED build (the AR5 canary backbone).
     Regenerate ONLY with a documented intentional invalidation (e.g. a deliberate
     schema bump), never silently.
+
+    Regenerated ONCE since 5.1, for the story-10.2 `CACHE_KEY_SCHEMA_VERSION` "2" -> "3" bump that
+    added per-grammar provenance to the closure payload (DF-AUD-APAA-D). That is a documented
+    intentional invalidation, sanctioned by architecture.md R3 and free at this commit because no
+    production caller derives a key and no persisted entry exists to migrate.
     """
     golden = derive_cache_key(_baseline())
-    assert golden == "2628b9a6ecb72e845d6fb83286ca838db326fb888837dfbd9483a05de550ca87"
+    assert golden == "ccf2d132b699060b20afff5a42d4731f72d73f90b0b3cdfd3bc8e48c69f8b6af"
 
 
 # ── AC2: the bidirectional CI canary — each input perturbation moves the key ──
@@ -125,6 +135,17 @@ _PERTURBATIONS: tuple[tuple[str, dict[str, Any]], ...] = (
         },
     ),
     ("grammar_version", {"grammar_version": "0.24.0"}),
+    # Story 10.2 / AC5.4 — the per-grammar sibling of the scalar leg above. The scalar leg
+    # stays: it is the `tree-sitter-python` version and is still folded (additive-only).
+    (
+        "grammar_versions",
+        {
+            "grammar_versions": (
+                GrammarProvenance(language="go", version="0.26.0"),
+                GrammarProvenance(language="python", version="0.25.0"),
+            )
+        },
+    ),
     ("tool_versions", {"tool_versions": {"radon": "6.0.2", "tree-sitter": "0.23.2"}}),
     ("budget", {"budget": 200}),
     ("materiality_bar", {"materiality_bar": "internal"}),
@@ -390,3 +411,144 @@ def test_descriptor_is_frozen() -> None:
     d = FROZEN_DETECTOR_SET[0]
     with pytest.raises(dataclasses.FrozenInstanceError if False else Exception):
         d.rule_id = "mutated"  # type: ignore[misc]
+
+
+# ─────────────────────────────────────────────────────────────────────────────
+# Story 10.2 / AC5 — the key moves for a grammar that PARSED, and only for one that parsed
+# ─────────────────────────────────────────────────────────────────────────────
+#
+# The defect (DF-AUD-APAA-D, measured 2026-08-10): the closure folded ONE `grammar_version`,
+# resolved from `tree-sitter-python`, while the index parsed ten languages at versions ranging
+# 0.23.1 → 0.25.0. A Go, Rust, Java, C, C++ or Ruby grammar upgrade therefore did NOT move the R3
+# key — silent cache staleness, the class DF-5-1-A files for `prompt_template_version`.
+#
+# The architecture records this as a DESIGN change, not a defect fix: R3 was designed for one
+# grammar. `CACHE_KEY_SCHEMA_VERSION` is bumped "2" → "3" here because it is FREE today — measured
+# §C.1: no production caller derives a key, `argus/pipeline.py` imports neither `cache.key` nor
+# `cache.memo_store`, and no persisted entry exists in the world to migrate. After Story 12.3 wires
+# the store the same bump costs a migration. This is the moment the architecture reserved.
+
+_PY = GrammarProvenance(language="python", version="0.25.0")
+_GO = GrammarProvenance(language="go", version="0.25.0")
+_RUST = GrammarProvenance(language="rust", version="0.24.2")
+
+
+def _with_grammars(*records: GrammarProvenance) -> RecordingProducingClosure:
+    return _baseline().model_copy(update={"grammar_versions": records})
+
+
+def test_TC_ArgusAgent_CACHE_001_76_per_grammar_provenance_is_folded_sorted() -> None:
+    """TC-ArgusAgent-CACHE-001-76 — Story 10.2/AC5.1: the closure carries per-grammar provenance.
+
+    Folded SORTED, so a re-ordered record derives the SAME key (AR4/NFR-P1, the 3.5
+    sorted-vs-set precedent), and folded as data the payload can canonically serialize.
+    """
+    payload = cache_key._closure_payload(_with_grammars(_RUST, _PY, _GO))
+    assert payload["grammar_versions"] == [
+        {"language": "go", "version": "0.25.0"},
+        {"language": "python", "version": "0.25.0"},
+        {"language": "rust", "version": "0.24.2"},
+    ], (
+        "the per-grammar provenance must be folded SORTED by language; an arrival-order fold makes "
+        "the key depend on the order files happened to be indexed in (AR4/AR11)"
+    )
+    assert derive_cache_key(_with_grammars(_RUST, _PY, _GO)) == derive_cache_key(
+        _with_grammars(_PY, _GO, _RUST)
+    ), "re-ordering the provenance record moved the key — the fold is not order-independent"
+
+    # The retained scalar is still folded too (additive-only: nothing was taken away).
+    assert "grammar_version" in payload, (
+        "the scalar `grammar_version` was dropped from the payload. The change is ADDITIVE "
+        "(PRD :393): the per-grammar record is added BESIDE it, never in place of it."
+    )
+
+
+def test_TC_ArgusAgent_CACHE_001_77_a_grammar_that_parsed_moves_the_key() -> None:
+    """TC-ArgusAgent-CACHE-001-77 — Story 10.2/AC5.2, direction 1: the defect being closed.
+
+    Today a Go/Rust/JS grammar change did not move the key, because only `tree-sitter-python`'s
+    version was folded. A memoized result computed under `tree-sitter-go` 0.25.0 could be served
+    for a repository re-audited under 0.26.0 — reproducibility serving a result the current
+    toolchain would not produce.
+    """
+    base = _with_grammars(_PY, _GO)
+    upgraded = _with_grammars(_PY, GrammarProvenance(language="go", version="0.26.0"))
+    assert derive_cache_key(upgraded) != derive_cache_key(base), (
+        "upgrading a grammar that PARTICIPATED in the audit did not move the cache key — a stale "
+        "result computed under the old grammar can still be served (silent cache staleness, "
+        "AR5/AR6, DF-AUD-APAA-D)"
+    )
+
+    # Adding a language to the audit moves it too: the same repo parsed with one more grammar is a
+    # different recording-producing closure.
+    assert derive_cache_key(_with_grammars(_PY, _GO, _RUST)) != derive_cache_key(base), (
+        "an additional participating grammar did not move the key"
+    )
+
+
+def test_TC_ArgusAgent_CACHE_001_78_a_grammar_that_did_not_parse_cannot_move_the_key() -> None:
+    """TC-ArgusAgent-CACHE-001-78 — Story 10.2/AC5.2, direction 2 + DN-6: the regression prevented.
+
+    The inverse defect, and the easier one to ship by accident: folding every INSTALLED grammar
+    would make the key a function of the HOST rather than of the AUDIT. Two developers auditing the
+    same commit with different optional grammars installed would then derive different keys and
+    never share a hit, and NFR-P1 (byte-identical across environments) would be false.
+
+    This host has all ten grammars installed, so `rust` below is genuinely present on the machine
+    and genuinely absent from the audit — exactly the state the property is about.
+    """
+    python_only = _with_grammars(_PY)
+    assert derive_cache_key(python_only) == derive_cache_key(_with_grammars(_PY)), (
+        "the same closure derived two different keys — determinism is broken before the property "
+        "below can mean anything"
+    )
+
+    # A host upgrade to a grammar the audit never used changes nothing the audit depends on, so it
+    # must not appear in the record and therefore cannot reach the key.
+    assert "rust" not in {r.language for r in python_only.grammar_versions}
+    assert derive_cache_key(python_only) == derive_cache_key(
+        _baseline().model_copy(update={"grammar_versions": (_PY,)})
+    ), "the key is not a pure function of the recorded provenance"
+
+    # And the contrapositive is real: had rust participated, the key WOULD have moved — so the
+    # equality above is a property of non-participation, not of the fold being inert.
+    assert derive_cache_key(_with_grammars(_PY, _RUST)) != derive_cache_key(python_only), (
+        "the provenance fold is inert — the equality above proves nothing"
+    )
+
+
+def test_TC_ArgusAgent_CACHE_001_79_duplicate_language_is_a_typed_error() -> None:
+    """TC-ArgusAgent-CACHE-001-79 — Story 10.2/AC5 + AR10: one language, one version, or a typed error.
+
+    Two records for the same language is a malformed closure: the key would silently depend on
+    which one the fold saw first. It degrades to a typed error at construction rather than to a
+    quietly-wrong key.
+
+    Asserted through CONSTRUCTION, not ``model_copy(update=…)``: pydantic v2 documents
+    ``model_copy`` as the no-validation path, so testing it there would assert pydantic's behaviour
+    rather than this contract, and would pass for the wrong reason.
+    """
+    with pytest.raises(Exception):
+        RecordingProducingClosure(
+            content_hash="a" * 64,
+            grammar_version="0.23.6",
+            grammar_versions=(_PY, GrammarProvenance(language="python", version="0.24.0")),
+            budget=100,
+            materiality_bar="release",
+            work_manifest_files=("pkg/a.py",),
+        )
+
+
+def test_TC_ArgusAgent_CACHE_001_80_the_schema_version_is_bumped_for_the_key_shape_change() -> None:
+    """TC-ArgusAgent-CACHE-001-80 — Story 10.2/AC5.1 + DN-7: the documented intentional invalidation.
+
+    Adding an input to the closure payload changes the key shape. The bump is the project's
+    declared lever for that (the constant's own comment says so), and it is free at this exact
+    moment: no production caller derives a key and no persisted entry exists. Story 12.3 wires the
+    store over the CORRECTED key — after this, the same bump costs a migration.
+    """
+    assert CACHE_KEY_SCHEMA_VERSION == "3", (
+        f"CACHE_KEY_SCHEMA_VERSION is {CACHE_KEY_SCHEMA_VERSION!r}; adding per-grammar provenance "
+        "to the closure payload is a key-shape change and must bump it (AR5 canary, story DN-7)"
+    )
+    assert cache_key._closure_payload(_baseline())["schema_version"] == "3"

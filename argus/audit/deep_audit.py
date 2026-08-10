@@ -46,7 +46,7 @@ from argus.audit.ports import (
     LLMDispatchPort,
     LLMRecording,
 )
-from argus.cache.key import RecordingProducingClosure
+from argus.cache.key import GrammarProvenance, RecordingProducingClosure
 
 __all__ = ["build_closure_from_recording", "DeepAuditSeam"]
 
@@ -59,6 +59,7 @@ def build_closure_from_recording(
     budget: int,
     materiality_bar: str,
     work_manifest_files: tuple[str, ...],
+    grammar_versions: tuple[GrammarProvenance, ...] = (),
     tool_versions: dict[str, str] | None = None,
     critical_paths: tuple[str, ...] = (),
     excluded_critical_paths: tuple[str, ...] = (),
@@ -70,10 +71,16 @@ def build_closure_from_recording(
     into the EXISTING 5.1 slots (ADDITIVE — no key-shape change). All other
     closure inputs are passed through unchanged. REUSES the 5.1 closure model
     read-only; derives no key here (the caller composes ``derive_cache_key``).
+
+    *grammar_versions* is the 10.2 per-grammar provenance slot, threaded through for
+    COMPATIBILITY ONLY: this seam is unwired (Story 12.2's), so it gains no behaviour here. It
+    defaults to ``()`` so every existing caller is unaffected, and it is passed through rather than
+    computed because this module derives no key and probes no package metadata.
     """
     kwargs: dict[str, Any] = {
         "content_hash": content_hash,
         "grammar_version": grammar_version,
+        "grammar_versions": grammar_versions,
         "tool_versions": dict(tool_versions or {}),
         "budget": budget,
         "materiality_bar": materiality_bar,
