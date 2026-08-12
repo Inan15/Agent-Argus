@@ -821,10 +821,10 @@ after the last commit. Nothing was pushed, tagged, released, dispatched or uploa
 
 | Gate | Task 0 baseline (`ca37283`) | Final |
 |---|---|---|
-| `pytest` | **1405 collected / 1404 passed / 1 failed** (`DOCS-001-22` = `DF-11-1-A`) | **1425 / 1425 / 0** |
+| `pytest` | **1405 collected / 1404 passed / 1 failed** (`DOCS-001-22` = `DF-11-1-A`) | **1415 collected / 1415 passed / 0 failed / 0 error / 0 skipped** (+10: `MAINT-001-01`..`-05`, `DOGFOOD-001-49`..`-52`, `DOCS-001-59`) |
 | `mypy argus` | clean, **72** source files | clean, **73** source files |
 | `bandit -r argus` | 0 High / 0 Medium / **19** Low | 0 High / 0 Medium / **19** Low |
-| `argus audit .` | `RELEASE_READY 61/169 0 61/77 application 92`, exit 0 | see AC5 below |
+| `argus audit .` | `RELEASE_READY 61/169 0 61/77 application 92`, exit 0 | in place `RELEASE_READY 63/173 0 63/79 application 94`, exit 0 — **and `61/169 … 61/77 … 92` exactly, byte-for-byte, over the pre-story population; see AC5** |
 | `git ls-files -- argus` | 72 | 73 |
 | `git ls-files '*.py'` | 169 | 173 |
 | files over 1200 lines | **4** (`argus/pipeline.py` 1331, `test_pipeline_signature_demo.py` 1326, `test_v1_commitment_closure.py` 1308, `test_grammar_diagnosis.py` 1203) | **3** — all named, dated, filed exemptions |
@@ -987,10 +987,14 @@ exemptions, each with an owner and a live target story), `DF-12-1-D` (the sweep'
 
 **The strongest available proof, because the in-place figures necessarily move.** `argus audit .` on
 the working tree now reads `62/171 … 31/39 … held_out=93` rather than the fixture's `61/169 … 61/77
-… held_out=92`. That is a **population** change, not a behaviour change, and it is arithmetically
-exactly this story's own two source files: +1 deep (`argus/pipeline_stages.py`), +1 held out
-(`tests/test_module_size_ceiling.py`); `assessed_deep_ratio` is a reduced `Fraction`, and
-`62/78 = 31/39`. Asserting that is not evidence, so the two variables were **separated**:
+… held_out=92`. That was measured mid-story; on the FINAL tree it reads `63/173 … 63/79 … held_out=94`. Either
+way it is a **population** change, not a behaviour change, and it is arithmetically exactly this
+story's own new files: **+4 tracked `.py`** (169 → 173 — `argus/pipeline_stages.py`,
+`scripts/regenerate_dogfood_artifacts.py`, `tests/test_module_size_ceiling.py`,
+`tests/test_dogfood_artifact_currency.py`), of which **+2 are deep-gradable source** (61 → 63) and
+**+2 are held-out test files** (92 → 94), leaving assessed 173 − 94 = **79**. `assessed_deep_ratio`
+is a reduced `Fraction`, which is why the mid-story reading showed `31/39` for `62/78`. Asserting
+that is not evidence, so the two variables were **separated**:
 
 > **The NEW code, over the PRE-STORY population** — a pristine detached `git worktree` at `ca37283`,
 > audited with the post-12.1 package — returns
@@ -1002,7 +1006,8 @@ exactly this story's own two source files: +1 deep (`argus/pipeline_stages.py`),
 was audited twice with `--reports final-verdict,coverage-ledger,security-review,architecture-review`
 and an identical `--report-dir`: once by the **pre-12.1** code (run from inside the worktree) and once
 by the **post-12.1** code. `diff -r`: **4 report files byte-identical, 848 `.argus/` files
-byte-identical.** No caveat, no explained difference.
+byte-identical.** No caveat, no explained difference. Re-run on the FINAL committed tree after every
+edit had landed, with the same result, and the worktree was removed afterwards.
 
 **No test was modified to accommodate the move.** Import-path edits required: **zero** — the
 re-export made the split invisible. Four test/registry files were touched, each for a stated reason,
