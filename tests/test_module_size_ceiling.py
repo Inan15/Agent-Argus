@@ -63,7 +63,7 @@ _CEILING = 1200
 #: (``DF-8-5-B``'s close condition, applied to this guard's own class).
 _REMEDY = (
     "Split the file along a COHESION boundary into a sibling module and re-export, following "
-    "the `argus/pipeline_persist.py` (Story 6.3, DN-PIPELINE-SPLIT) and `argus/pipeline_resume.py` "
+    "the `argus/pipeline_persist.py` (Story 6.3, DN-PIPELINE-SPLIT) and `argus/pipeline_stages.py` "
     "(Story 12.1) precedent — a module docstring naming why the module exists, no function split "
     "across the boundary, `__all__` and every import path unchanged. Do NOT shave lines, and do "
     "NOT narrow this guard's population. If the split genuinely belongs to another story, add a "

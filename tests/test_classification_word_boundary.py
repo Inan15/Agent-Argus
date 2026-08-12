@@ -645,7 +645,10 @@ def test_TC_ArgusAgent_PIPELINE_002_11_is_test_is_derived_once_and_shared_by_bot
     (``_detect_per_file``) and the resume path (``_critical_candidate``). Both were in
     ``pipeline.py``; Story 12.1's NFR-M1 extraction moved both into
     ``argus/pipeline_stages.py``, so the population is now the whole ``pipeline*.py``
-    family, ENUMERATED FROM GIT (see :func:`_pipeline_family_sources`) rather than named —
+    family, ENUMERATED FROM THE FILESYSTEM (see :func:`_pipeline_family_sources`, which globs
+    ``argus/pipeline*.py`` rather than reading ``git ls-files``, so an unstaged sibling cannot
+    escape this walk mid-implementation — the ``DF-12-1-D`` seam, taken in the opposite
+    direction from the ``MAINT-001`` sweep and for the stated reason) rather than named —
     the guard's reach was widened, its claim was not narrowed. Static walk over the sources
     read as TEXT (the 10.5 DN-6 rule); it imports nothing from ``argus``.
     """

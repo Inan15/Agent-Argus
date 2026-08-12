@@ -419,6 +419,80 @@ report**. You do not loosen `test_evidence_citation.py` and you do not edit a re
         ESTABLISHED**.
   - [x] `sha256` every file in the File List.
 
+### Review Findings
+
+**Code-review verdict: CONCERNS (iteration 1, Sonnet).** Independently re-derived, not transcribed:
+full suite `1415 passed in 361.39s` (matches the claimed 1415/1415/0/0/0); `mypy argus` clean on
+**73** source files; `bandit -r argus` 0 High / 0 Medium / 19 Low; `python -m argus.cli audit .` ->
+`verdict=RELEASE_READY deep_ratio=63/173 blocking_findings=0 assessed_deep_ratio=63/79
+scope=application held_out=94`, exit 0 — byte-identical to the story's claim. `git diff --numstat
+ca37283 HEAD -- deferred-work.md` = `301 0` (append-only proven programmatically, zero deletions).
+`git diff --quiet a9cc933 93adc94 -- argus/` empty and `a9cc933` an ancestor of `HEAD`, both
+re-verified. `git tag -l` empty, `origin/master` unmoved at `00c8d1b`, HEAD 10 ahead — nothing
+published. Ran `scripts/regenerate_dogfood_artifacts.py` against the live tree as an idempotency
+check: the only line that changed was the provenance-sha stamp (expected, since the renderer
+stamps literal `git rev-parse HEAD` at generation time and HEAD had moved forward via a docs-only
+commit) — reverted before finishing. AST-diffed all 16 functions moved into
+`argus/pipeline_stages.py` against `git show ca37283:argus/pipeline.py`: 15 of 16 are structurally
+byte-identical; the one exception is documented below (Finding 1). Both new test files
+(`tests/test_module_size_ceiling.py`, `tests/test_dogfood_artifact_currency.py`) were read in full
+and are genuinely non-vacuous: `-05`'s adversarial variants are generated from the live 173-file
+population with a counted floor, `-52`'s current/stale classification is generated from real reachable
+commit history with both classes required non-empty, and the exemption registry (`-04`) is proven
+to shrink. No High/Medium functional, security or spec-conformance defect found; the extraction
+boundary (derivation-stages over §A.1's resume-family recommendation) is well-reasoned and its
+stated justification (avoiding the module-level re-export cycle) was independently confirmed by
+reading both candidate boundaries' dependency edges. All three findings below are prose/evidence
+accuracy issues, Low severity, unambiguous to fix — same class the story's own §11-2 precedent
+in `sprint-status.yaml` rated Low ("a prose inaccuracy only").
+
+- [x] [Review][Patch] AC1 Completion Notes overclaim "29 of 29 byte-identical" — one of the 16
+  moved definitions was intentionally modified, not preserved verbatim [`argus/pipeline_stages.py:505-512`,
+  story file AC1 "Purity proven mechanically, not asserted" paragraph, `sprint-status.yaml`
+  `last_updated` + story-entry comments]. The Completion Notes state all 16 moved + 13 retained
+  definitions are "29 of 29 byte-identical" to their pre-split form, "joined moved-body sha256 …
+  on both sides." Independently re-verified by `ast.dump()` structural comparison of each of the
+  16 moved functions against `git show ca37283:argus/pipeline.py`: 15 of 16 match; `_assessment_scope_paths`
+  does not — its body was intentionally rewritten from an inline `entry_by_path` dict-comprehension
+  filter into a call to the new `partition_application_files(ledger.entries, index)` helper, as
+  part of this same story's DF-8-3-C de-duplication (Task 4, mirrored in `argus/reports/generator.py`'s
+  matching edit). That change is correct, tested and accurately disclosed elsewhere in the story
+  (AC4 Completion Notes, the `generator.py` diff, `deferred-work.md`'s DF-8-3-C closure) — only
+  this one summary sentence under AC1 overclaims. **Fix:** change "29 of 29 byte-identical" to
+  "28 of 29 byte-identical (`_assessment_scope_paths` intentionally strengthened by the same
+  story's DF-8-3-C dedup — see AC4)" in both the story file and the two `sprint-status.yaml`
+  comments that repeat the "29 of 29" figure; re-derive or drop the "joined … sha256 on both sides"
+  claim to match (it cannot cover a function whose body changed).
+- [x] [Review][Patch] Self-contradicting docstring: `test_TC_ArgusAgent_PIPELINE_002_11` says
+  "ENUMERATED FROM GIT" but the population is enumerated from the filesystem
+  [`tests/test_classification_word_boundary.py:648`, vs. `_pipeline_family_sources` at
+  `tests/test_classification_word_boundary.py:107-127`]. The widened `-11` docstring says the
+  `argus/pipeline*.py` family "is now the whole `pipeline*.py` family, ENUMERATED FROM GIT (see
+  `:func:`_pipeline_family_sources`)`." `_pipeline_family_sources()` does not use git at all — it
+  globs the filesystem (`(_REPO_ROOT / "argus").glob("pipeline*.py")`) — and its own docstring
+  says exactly that ("globbed from the FILESYSTEM — never a hand list"), explaining that the
+  filesystem (not `git ls-files`) was deliberately chosen so an unstaged sibling module is not
+  missed (the same seam `DF-12-1-D` files in the other direction for the sweep). The call-site
+  docstring names the wrong mechanism. **Fix:** change "ENUMERATED FROM GIT" to "ENUMERATED FROM
+  THE FILESYSTEM" at `tests/test_classification_word_boundary.py:648`.
+- [x] [Review][Patch] AC1's "public import surface … Pinned by test" has no dedicated
+  `__all__` byte-identity assertion [`argus/pipeline.py:251-259`]. `argus.pipeline.__all__` is
+  in fact byte-identical to its pre-split form (independently diffed against `ca37283` — same
+  7 names, same order), and existing tests that import several of those names would fail with
+  `ImportError` if one were removed, but no test in this story's write set (nor found elsewhere)
+  asserts `list(pipeline.__all__) == [...]` as an explicit equality the way
+  `tests/test_dogfood_module_split.py::TC-ArgusAgent-DOGFOOD-001-45` pins `proof_run.__all__`
+  (no name dropped **and** the surface did not shrink). Today's indirect coverage only catches a
+  *removal* reached by an existing import, not an accidental addition or reorder to `__all__`
+  itself. **Fix:** add a one-line assertion (e.g. in `tests/test_no_web_imports.py` or a new
+  small test) that `list(pipeline.__all__) == ["PipelineError", "ResumeStateError", "AuditResult",
+  "run_audit", "run_audit_detailed", "resume_audit_detailed", "resume_audit"]`, following the
+  `DOGFOOD-001-45` precedent.
+
+**All three are RESOLVED — see Dev Agent Record → *Fix round 1*** for the re-derivation, the
+RED-first evidence and the re-run gates. A **fourth** item of the same class, **not filed by the
+review**, was found in this story's own write set and fixed with them.
+
 ---
 
 ## §A. What to build — the rulings
@@ -819,7 +893,13 @@ re-taken). **CI evidence: NOT ESTABLISHED** — no CI run has seen any Epic 10, 
 was attempted. `git tag -l` is empty and `origin/master` is unmoved (`00c8d1b`), both re-verified
 after the last commit. Nothing was pushed, tagged, released, dispatched or uploaded.
 
-| Gate | Task 0 baseline (`ca37283`) | Final |
+⚠️ **The "Final" column below is the end of implementation round 1.** The delivered tree is the end
+of **fix round 1**, whose gates were **re-run rather than carried** — see *Fix round 1* in the
+Completion Notes for the final figures and the attributed movement (`pytest` **1418/1418/0/0/0**,
+`argus audit .` **`21/58` = `63/174` reduced with `held_out=95`**, `git ls-files '*.py'` **174**;
+`mypy`, `bandit`, `git ls-files -- argus` and every dogfood figure **unmoved**).
+
+| Gate | Task 0 baseline (`ca37283`) | End of implementation round 1 |
 |---|---|---|
 | `pytest` | **1405 collected / 1404 passed / 1 failed** (`DOCS-001-22` = `DF-11-1-A`) | **1415 collected / 1415 passed / 0 failed / 0 error / 0 skipped** (+10: `MAINT-001-01`..`-05`, `DOGFOOD-001-49`..`-52`, `DOCS-001-59`) |
 | `mypy argus` | clean, **72** source files | clean, **73** source files |
@@ -849,11 +929,12 @@ inside the story that must prove its own audit population unchanged.
 | `argus/dogfood/partition_plan.py` | `fa4779f5d29bc14c3c336ad881e1c7cf4a2023a5cf68b71a76ba8ccb1a053c0b` |
 | `argus/dogfood/proof_render.py` | `d0bbe0d7492ecfc5ca9f00d4613537f02e5fcd543d59f24c7b49cebdad4f96b4` |
 | `scripts/regenerate_dogfood_artifacts.py` | `59f761eb52b82288976cbc5073fa11004051b9016770ec8a2e7778212f40a50c` |
-| `tests/test_module_size_ceiling.py` | `ad9cd70bb487d41e64e5fab6601561591018df63c53901c17a15f9dd46b49913` |
+| `tests/test_module_size_ceiling.py` | `ed20d8219d07b903f4f1599dc28b39faecfff0f3f64856ea70181ee1435d0354` *(fix round 1; was `ad9cd70bb487d4…`)* |
 | `tests/test_dogfood_artifact_currency.py` | `4a24285519190c64d954b0ba6514b102a09de8edef0813c3da7a88482971f998` |
+| `tests/test_pipeline_split_surface.py` | `3461df2e21406761c0f60d00b24df5a429db8f18a06fe59898b197e7dd8e7bfc` *(new in fix round 1)* |
 | `tests/test_evidence_citation.py` | `f43157ebfb7d3750adbb91784e14062ec976385e6d735bcd37ed0a9a76c77b82` |
 | `tests/test_no_web_imports.py` | `ef5391f165cbaa571e4e8cb1db52b5c08f89c99490cef2486292dad3d703b57e` |
-| `tests/test_classification_word_boundary.py` | `a380c42654805bef86fff27de87067c82349013a51f8ed8c265f53cb4e804026` |
+| `tests/test_classification_word_boundary.py` | `374c408f66a65951630f0372a8bf40c9d20b056b895799cca901e949431a1b5c` *(fix round 1; was `a380c42654805b…`)* |
 | `tests/test_dogfood_plan.py` | `44b38e78c504cd06de65618aeaa393633dca4e8619e5f213d9fe38ab644654fc` |
 | `tests/test_dogfood_proof.py` | `140caf9500c52b28a3a28226e2c0baef7aa8b20ab9ff8e33f0c4195da75b5002` |
 | `README.md` | `6ff38809748a560e1d4cd48d54c0424d22cd34ea6868718c21bf35b0f673172a` |
@@ -896,11 +977,49 @@ entry points the orchestrators call). It is also contiguous in the file: 349–7
 preserved unit 2's `partition_id`; that was deliberately **not** allowed to influence the choice —
 regeneration is required either way, and naming a module to flatter a hash is a defect.
 
-**Purity proven mechanically, not asserted.** The 16 moved definitions and the 13 that stayed were
-compared by `ast` span against `git show HEAD:argus/pipeline.py`: **29 of 29 byte-identical**, joined
-moved-body sha256 `c6edd6fa9ddd105fb0684647e2bf3c7595bb418fe44558679c1d737cb87ac97b` on both sides.
+**Purity proven mechanically, not asserted — and the count was RE-DERIVED BY EXECUTION in the fix
+round of 2026-08-12, never transcribed.** The honest figure is **28 of 29 byte-identical**, not the
+29 of 29 this paragraph originally claimed.
+
+**The denominator, stated so it can be checked.** A *definition* is a **top-level**
+`def` / `async def` / `class` statement in the pre-split blob `ca37283:argus/pipeline.py` — there
+are **29** — spanning the first line of its first decorator (or its own `def`/`class` line when
+undecorated) through its last line inclusive. **All 29 survive the split**: **16** into
+`argus/pipeline_stages.py` and **13** retained in `argus/pipeline.py`, with **0** dropped, **0**
+defined in both files and **0** newly introduced (each of those four counts is asserted by the
+derivation, not eyeballed). A definition is *byte-identical* iff its post-split bytes equal its
+pre-split bytes **exactly** — no normalisation of whitespace, comments or line endings.
+
+**Both sides are read as GIT BLOBS** (`git show <sha>:<path>`), never from the working tree. This
+matters and is not pedantry: the checkout is `core.autocrlf=true`, so a working-tree read reports
+**0 of 29** identical — every definition differs by one byte per line — and the one real change
+would have been buried inside 28 false ones. The first attempt at this re-derivation did exactly
+that before the artefact was recognised.
+
+**The single exception is `_assessment_scope_paths`** (moved; **1962 B → 2206 B**), and it is
+**intentional, not drift**: this same story's `DF-8-3-C` de-duplication replaced its inline
+`entry_by_path` comprehension with a call to the shared
+`partition_application_files(ledger.entries, index)` helper, mirrored in
+`argus/reports/generator.py`. That change is real, tested, and already disclosed accurately under
+AC4, in the ledger's `DF-8-3-C` closure and in the `generator.py` diff — **only this one summary
+sentence overclaimed**, which is what the review caught. The other **15** moved definitions and
+**all 13** retained ones are byte-identical.
+
+**Re-derived digests, each with its convention stated** (blob bytes, joined in pre-split file
+order, no separator): the **15 unchanged moved** bodies hash to
+`e478ec09edb501ef6bc10c839b35320a098b60e705d383dcf02f1a2dbc92968e` **on both sides**; the **13
+retained** bodies to `5ce703e8ca2e7be1ba26f4ae1e4c5ab12912f776efea5fa14a4eba825fae558a` **on both
+sides**; all **28** unchanged definitions together to
+`9d72d850905c310101daf75d01aad4ccee14abb13f3541c22421141867ac5734`. The previously published
+`c6edd6fa9ddd10…` is **WITHDRAWN, not restated**: it was searched for against both blobs under
+**48** span / line-ending / joiner conventions and reproduced by **none**, and in any case a
+both-sides-equal digest is arithmetically impossible over a set containing a body that changed.
+**A digest no one can re-derive is not evidence**, so it is retracted rather than carried.
+
 `pipeline.py` imports all sixteen back under their original private names, so `__all__` is
-byte-identical (7 entries, unchanged), **every** existing `from argus.pipeline import X` resolves —
+byte-identical (7 entries, unchanged) — **and, as of the fix round, PINNED BY TEST**
+(`TC-ArgusAgent-PIPELINE-002-14`..`-16`; AC1's *"Pinned by test"* clause was previously carried by
+indirect coverage only). **Every** existing `from argus.pipeline import X` resolves —
 including the private `_detect_per_file` (`tests/test_classification_word_boundary.py`,
 `tests/test_critical_eligibility_pipeline.py`) and `_assessment_scope_paths`
 (`tests/test_pipeline_coverage_scope.py`) — and
@@ -1055,6 +1174,10 @@ and every change is a **strengthening**:
    the new module was not yet staged — which is the measurement behind `DF-12-1-D`.)
 4. `tests/test_dogfood_plan.py` / `tests/test_dogfood_proof.py` — `-03` and `-20` widened, remedy
    sentences added (AC3). No assertion removed or weakened.
+5. *(fix round 1)* `tests/test_classification_word_boundary.py` again and
+   `tests/test_module_size_ceiling.py` — **docstring / failure-message prose only**, 4 / 1 and
+   1 / 1, no predicate or population touched; plus the **new** `tests/test_pipeline_split_surface.py`.
+   Still **zero** import-path edits, and still no test modified to accommodate the move.
 
 **Two published DERIVED FIGURES were updated** because `TC-ArgusAgent-DOCS-001-54` requires the
 documents to track the built artifact and *"the artifact is the fact"*: `README.md` and `CHANGELOG.md`
@@ -1104,6 +1227,161 @@ No other assertion went red, so §E's HALT condition 2 did not fire.
    make the split visible to the next consumer that reaches for one, which is exactly the
    compatibility claim the `pipeline_persist.py` precedent makes.
 
+#### Fix round 1 — the three filed review findings, resolved (2026-08-12, iteration 1 of a cap of 2)
+
+Code-review iteration 1 (Sonnet) returned **CONCERNS** with **three Low findings**, all
+evidentiary/prose accuracy, no functional, security or spec-blocking defect. **All three are
+resolved**, plus a **fourth of the same class that the review did not file** and that this round
+found in the story's own write set. **This round is NOT prose-only** — it ships a new committed
+guard — and the write set is enumerated and digested below.
+
+**Finding 1 — "29 of 29 byte-identical" (AC1). RE-DERIVED BY EXECUTION, not transcribed.**
+The corrected figure is **28 of 29**, and the full derivation, the explicit denominator, the
+blob-vs-working-tree trap and the re-derived digests are recorded in the AC1 Completion Notes
+above. Two things are worth pulling out here:
+
+- **Neither of the review's two numbers was copied.** The review reported *15 of 16 moved* by
+  `ast.dump()` and separately suggested the wording *"28 of 29"*; those do not obviously
+  reconcile, so both were set aside and the count was re-derived from first principles with the
+  population defined before it was counted. The re-derivation agrees with **both** — 15 of 16
+  moved **and** 13 of 13 retained **is** 28 of 29 — which is why they never conflicted; the review
+  simply never stated the denominator that joins them. **Stating it was the actual fix**: Epic 11's
+  precedent is that a corrected count is re-derived and its population defined, never transcribed.
+- **The claim is corrected in every place it appears**: the story's AC1 Completion Notes, and
+  **both** occurrences in `sprint-status.yaml` (the `last_updated` comment at the head of the file
+  and the `12-1-…` story-entry comment). Both were located by `grep -rn "29 of 29"`, which now
+  returns **only** the review-finding text quoting the original error and the corrections
+  themselves.
+- The superseded digest `c6edd6fa9ddd10…` is **withdrawn**, not silently replaced: 48 span /
+  line-ending / joiner conventions were searched against both blobs and none reproduces it.
+
+**Finding 2 — the `-11` docstring named the wrong mechanism.**
+`tests/test_classification_word_boundary.py::TC-ArgusAgent-PIPELINE-002-11` said the
+`argus/pipeline*.py` family was *"ENUMERATED FROM GIT"* while `_pipeline_family_sources()` globs
+the **filesystem** — and that function's own docstring says so, and says **why** (the git index
+would let an unstaged sibling escape the walk mid-implementation, which is exactly the seam
+`DF-12-1-D` files in the other direction for the `MAINT-001` sweep). The call-site docstring now
+reads **"ENUMERATED FROM THE FILESYSTEM"** and carries the reason inline, so the two docstrings
+state one mechanism instead of two. **Prose only; no assertion, population or predicate changed**
+— `git diff --numstat` on that file is **4 / 1**, all inside the docstring.
+
+**Finding 3 — AC1's *"Pinned by test"* had no test. It does now, and it is load-bearing.**
+New file `tests/test_pipeline_split_surface.py`, verification area
+**`TC-ArgusAgent-PIPELINE-002-14`..`-16`** (continuing the index Story 11.2 left at `-13`;
+`-14`/`-15`/`-16` were free, verified by grep over `tests/`). It follows the named
+`DOGFOOD-001-45` / `-46` precedent rather than the review's suggested one-liner, and it is a
+**dedicated file** because that precedent is a dedicated file — `tests/test_dogfood_module_split.py`
+guards the `DF-8-5-D` split's surface, and the alternative homes considered
+(`tests/test_no_web_imports.py`, `tests/test_classification_word_boundary.py`) would each have
+coupled an import-surface pin to a file whose stated single subject is something else.
+
+- **(i) The observable:** the exact **ordered** list `argus.pipeline.__all__`, held against the
+  pre-split surface by **list** equality — never set equality, which would wave through both a
+  reorder and a duplication.
+- **(ii) RED-first at the real seam, with the FINAL committed test code, and the file restored
+  byte-for-byte after every mutation.** `argus/pipeline.py` was mutated on disk, the suite run,
+  then restored with `git checkout --` and its **sha256 round-tripped to
+  `28f1181742b7f66a95ee4a876fc5a057b24bb6c8bcfc043877330ffbc7dab5cb`** — the value recorded in the
+  Task 7 digest table — after **each** of the four mutations:
+
+  | # | Mutation of the real seam | Result with the final test code |
+  |---|---|---|
+  | A | **addition** — `"_detect_per_file"` appended to `__all__` | **FULL SUITE: 1418 collected / 1413 passed / 5 failed.** `-14`, `-15`, `-16` red. |
+  | B | **reorder** — `run_audit` / `run_audit_detailed` transposed | `-14`, `-15`, `-16` red |
+  | C | **deletion** — `"resume_audit"` removed | `-14`, `-15`, `-16` red |
+  | D | **laundering** — the live `__all__` *and* the `_PRE_SPLIT_ALL` literal both widened | `-15` red (and `-14` on its arity floor); `-16` green, correctly |
+
+  **Mutation A is the finding's premise proven by execution.** Of the 1415 tests that existed
+  before this round, exactly **two** went red — `test_dogfood_plan.py`'s and
+  `test_dogfood_proof.py`'s committed-artifact checks — and they noticed the **added line**, not
+  the added export: mutating `argus/pipeline.py` moved the live LOC away from the committed
+  artifacts, which is this story's own widened `-03`/`-20` working. **Zero pre-existing tests saw
+  the `__all__` addition.** The review's claim that the surface was pinned only indirectly is
+  therefore not an inference; it is measured.
+  **Mutation D is why `-15` exists**: editing the literal to match a changed surface makes `-14`'s
+  equality green again, and `-15` stays red because it re-reads `__all__` **out of the immutable
+  blob** `ca37283:argus/pipeline.py` by `ast`. The pin cannot be laundered.
+- **(iii) Adversarial variants GENERATED from the structure, with the count:** `-16` generates
+  **`4n − 1` = 27** mutants from the **live** surface — every single-name deletion (7), every
+  adjacent transposition (6), every addition (7) and every duplication (7) — and drives each
+  through **the same predicate `-14` asserts with**, so the evidence cannot drift from the claim it
+  is evidence for. The count is asserted (`== 4n − 1 >= 20`), never a hand-listed sample. Under
+  mutation A the generator correctly produced **31** for the 8-name surface, which is how it was
+  confirmed to be closing over live structure rather than over a constant.
+- **Both directions, and non-vacuity:** `-16` asserts the unmutated surface is **accepted** before
+  asserting the mutants are **rejected**, so a predicate that said "no" to everything is refuted on
+  every run. `-14` asserts the arity (7) so an empty surface cannot pass its resolution loops
+  trivially; `-15` asserts `ca37283` is an ancestor of `HEAD` before trusting it, requires ≥ 16
+  definitions to be parsed out of `pipeline_stages.py` before its identity loop means anything,
+  and **fails rather than skips** when the blob is unreachable — a guard that quietly stops
+  checking when its evidence is missing is the vacuous guard this repository keeps filing.
+- **`-15` also pins two properties AC1 asserted in prose only:** every re-exported name is the
+  **same object** as `pipeline_stages`' (the `DOGFOOD-001-46` no-fork property — the reason
+  `monkeypatch.setattr(pipeline, "_detect_per_file", …)` still intercepts the real call), and none
+  of the sixteen private helpers **leaked into** `__all__`.
+- **Two warts in the new file were found by its own red output and narrowed EXPLICITLY**, not
+  quietly: `-16` originally asserted "mutants rejected" *before* "true surface accepted", so under
+  a real mutation it reported *"the guard does not bite"* when the truth was *"the live surface is
+  wrong"* — the order is now reversed and the message says so; and `-15` carried an assertion whose
+  message described the live surface while its predicate compared the blob to the literal (a
+  duplicate of the line above it) — it now compares the **live module to the blob directly**, which
+  is strictly stronger and is what makes mutation D red. Both changes **strengthen**; nothing was
+  weakened, deleted, skipped or re-baselined anywhere in this round.
+
+**Finding 4 — found by this round, NOT filed by the review, same class.** The `MAINT-001` sweep's
+failure-message remedy told the next reader to follow *"the `argus/pipeline_persist.py` … and
+`argus/pipeline_resume.py` (Story 12.1) precedent"* — but **`argus/pipeline_resume.py` does not
+exist**. It is the module name §A.1 *recommended*; the module this story actually shipped is
+`argus/pipeline_stages.py` (the boundary was re-derived and deliberately changed, as recorded under
+AC1). A remedy that names a nonexistent precedent is the same defect class as findings 1 and 2 — a
+document asserting something that is not so — sitting inside this story's own new guard, so it was
+fixed with them (`tests/test_module_size_ceiling.py`, `git diff --numstat` **1 / 1**, one string).
+
+**Gates RE-RUN on the final tree — not carried from the previous round. LOCAL, Windows / CPython
+3.11.15, pytest 9.1.1, mypy 2.3.0, bandit 1.9.4. CI evidence: NOT ESTABLISHED** (AI-E10-1's dated
+acceptance carried forward, **not** re-taken; no CI run has seen any Epic 10/11/12 sha and none was
+attempted).
+
+| Gate | End of round 1 | End of fix round 1 | Movement, attributed |
+|---|---|---|---|
+| `pytest` | 1418 collected / **1413 passed / 5 failed** *(under mutation A, deliberately)* | **1418 collected / 1418 passed / 0 failed / 0 error / 0 skipped** | baseline was 1415/1415/0; **+3**, exactly `PIPELINE-002-14`/`-15`/`-16`. **No red anywhere.** |
+| `mypy argus` | clean, 73 sources | clean, **73** sources | unmoved — `argus/**` was not touched |
+| `bandit -r argus` | 0 High / 0 Medium / 19 Low | **0 High / 0 Medium / 19 Low** | unmoved |
+| `argus audit .` | `RELEASE_READY 63/173 0 63/79 application 94`, exit 0 | **`RELEASE_READY deep_ratio=21/58 blocking_findings=0 assessed_deep_ratio=63/79 scope=application held_out=95`, exit 0** | **population, not behaviour**: `21/58` **is** `63/174` reduced (`Fraction`, the effect this story already documented at `31/39`); `held_out` 94 → **95** and total 173 → **174** are the one new **test** file, and `assessed_deep_ratio` is **63/79, unchanged**, because a held-out file leaves `174 − 95 = 79` assessed and adds no deep-gradable source. Verdict and blocking findings **identical**. |
+| `git ls-files -- argus` | 73 | **73** | **unmoved — no `argus/**` file was added, changed or deleted this round** |
+| `git ls-files '*.py'` | 173 | **174** | `tests/test_pipeline_split_surface.py` |
+| dogfood unit LOC / ids | 3 units | **3 units — `45cbaf975494` 39 files / 14938 LOC · `477ef77d7b65` 21 / 1341 · `9408a0fe1acf` 13 / 4385**; `source_file_count` **73**, `total_loc` **20664** | **all three `partition_id`s and every figure UNMOVED**, because the dogfood population is `git ls-files argus` and this round added only a `tests/` file. **No regeneration was required, none was performed, and no artifact was hand-edited.** The AC3 currency guard (`DOGFOOD-001-49`..`-52`) stays green: `git diff --quiet c4bd769 HEAD -- argus/` is still empty. |
+| files over 1200 lines | 3, all exempted | **3, all exempted** | the new file is 290 lines |
+
+**The write set, proven rather than described** (`git status --porcelain`, `git diff --numstat`,
+`sha256`) — five files, of which **two are documents**, **two are prose-only test edits** and
+**one is the new guard**; **`argus/`, `scripts/`, `README.md`, `CHANGELOG.md`, `architecture.md`
+and `deferred-work.md` are untouched, `git status --porcelain -- argus/ scripts/ README.md
+CHANGELOG.md` returning zero lines**:
+
+| File | `+ / −` | sha256 (final tree) |
+|---|---|---|
+| `tests/test_pipeline_split_surface.py` *(new)* | 290 / 0 | `3461df2e21406761c0f60d00b24df5a429db8f18a06fe59898b197e7dd8e7bfc` |
+| `tests/test_classification_word_boundary.py` | 4 / 1 | `374c408f66a65951630f0372a8bf40c9d20b056b895799cca901e949431a1b5c` |
+| `tests/test_module_size_ceiling.py` | 1 / 1 | `ed20d8219d07b903f4f1599dc28b39faecfff0f3f64856ea70181ee1435d0354` |
+| `…/stories/12-1-pipeline-stops-breaching-its-own-limit.md` | this section | *(a file cannot digest the line that records its digest)* |
+| `…/sprint-status.yaml` | 2 / 2 | *(records this round; digested by the reader, not by itself)* |
+
+One byte-level note recorded so the digests above are reproducible: this checkout is
+`core.autocrlf=true` and the repository's working-tree convention is **CRLF**. The editing tooling
+wrote LF; all three test files were normalised back to CRLF before digesting, so a fresh
+`git checkout` reproduces these sha256 values exactly. The committed blobs are unaffected either
+way — `git diff --numstat` shows only the intended 290 / 4 / 1 insertions and 0 / 1 / 1 deletions,
+with no line-ending churn.
+
+**Nothing was published, and nothing was weakened.** `git tag -l` **empty**; `origin/master`
+**unmoved at `00c8d1b`**; no push, tag, release, `workflow_dispatch` or index upload. No dogfood
+artifact was regenerated or hand-edited (none needed to be — see the table). No assertion anywhere
+in the suite was deleted, loosened, skipped, `xfail`-ed or re-baselined; the only two existing
+assertions this round touched are the two whose messages it **strengthened** inside the new file.
+No signed retrospective was edited and nothing above the new heading in `deferred-work.md` was
+touched — that file was not opened at all.
+
 #### What this story did NOT do
 
 No push, no tag, no release, no `workflow_dispatch`, no index upload — `git tag -l` empty and
@@ -1121,6 +1399,8 @@ loosened, deleted, skipped or `xfail`-ed. The untracked host directories (`argus
 - `argus/pipeline_stages.py`
 - `tests/test_module_size_ceiling.py`
 - `tests/test_dogfood_artifact_currency.py`
+- `tests/test_pipeline_split_surface.py` *(fix round 1 — the AC1 `__all__` pin,
+  `TC-ArgusAgent-PIPELINE-002-14`..`-16`)*
 - `scripts/regenerate_dogfood_artifacts.py`
 
 **Modified — code**
@@ -1164,3 +1444,9 @@ loosened, deleted, skipped or `xfail`-ed. The untracked host directories (`argus
 | 2026-08-12 | Ruled and recorded nine ledger items; `deferred-work.md` **+301 / −0** (append-only proven). |
 | 2026-08-12 | Registered both new rules in `architecture.md` §Enforcement and **corrected its false claim** that NFR-M1 was enforced by file-size CI under a `tests/apaa/` directory that does not exist. |
 | 2026-08-12 | Committed the implementation, regenerated all three dogfood artifacts **through their own renderers** at a truthful provenance sha, and committed them separately (the §0.1 / `93adc94` sequence). Nothing published. |
+| 2026-08-12 | **Fix round 1 — addressed code-review findings: 3 of 3 filed items resolved, plus 1 of the same class found by this round and not filed.** No functional, security or spec-blocking defect was filed and none was found. |
+| 2026-08-12 | **Fix 1 (AC1) — RE-DERIVED the byte-identity count by execution against `ca37283` rather than transcribing either of the review's two numbers: the truth is 28 of 29**, denominator = the 29 top-level definitions of `ca37283:argus/pipeline.py` (16 moved + 13 retained; 0 dropped, 0 duplicated, 0 added). The one exception, `_assessment_scope_paths`, was intentionally rewritten by this story's own `DF-8-3-C` dedup. Corrected in the story **and in both `sprint-status.yaml` occurrences**. The unreproducible digest `c6edd6fa…` is **withdrawn** and replaced by digests whose convention is stated. Both sides are read as **git blobs**, because a `core.autocrlf` working-tree read reports a false 0 of 29. |
+| 2026-08-12 | **Fix 2 (AC5) — `PIPELINE-002-11`'s docstring said "ENUMERATED FROM GIT"; the population is globbed from the FILESYSTEM.** Corrected, with the reason (`DF-12-1-D`) stated inline so the two docstrings name one mechanism. Prose only: 4 / 1, entirely inside the docstring. |
+| 2026-08-12 | **Fix 3 (AC1) — landed `tests/test_pipeline_split_surface.py` (`TC-ArgusAgent-PIPELINE-002-14`..`-16`), making AC1's *"Pinned by test"* true.** Proven **RED-first with the final code** against four mutations of the real seam (addition / reorder / deletion / laundering), `argus/pipeline.py` **sha256 round-tripped after each**. Mutation A proved the finding's premise: under it, **0 of the 1415 pre-existing tests** saw the `__all__` change. `-16` **generates** `4n−1 = 27` mutants from the live surface through `-14`'s own predicate; `-15` re-reads `__all__` out of the immutable `ca37283` blob so the pin cannot be laundered. |
+| 2026-08-12 | **Fix 4 (self-found, not filed) — the `MAINT-001` sweep's remedy named `argus/pipeline_resume.py`, a module that does not exist**; the shipped sibling is `argus/pipeline_stages.py`. Corrected (1 / 1). |
+| 2026-08-12 | **Fix-round gates RE-RUN on the final tree, not carried:** `pytest` **1418 / 1418 / 0 failed / 0 error / 0 skipped** (+3, exactly the new tests, no red anywhere); `mypy` clean on **73**; `bandit` **0 H / 0 M / 19 L**; `argus audit .` **`RELEASE_READY`, exit 0**, `assessed_deep_ratio` **63/79 unchanged** with `deep_ratio` `21/58` (= `63/174` reduced) and `held_out` 94 → 95 — a **population** move of exactly the one new test file. `git ls-files -- argus` **73, unmoved**, so all three `partition_id`s and every dogfood figure are unmoved and **no regeneration was required or performed**. Nothing published; `git tag -l` empty, `origin/master` unmoved at `00c8d1b`. |
