@@ -838,12 +838,41 @@ flagged, plus one this story adds: **`DF-9-2-C` is already resolved** — it cla
 Recorded as verified-absent; no `git rm --cached` was run, because that would move the git index
 inside the story that must prove its own audit population unchanged.
 
+#### `sha256` of every file in the File List (Task 7), measured on the delivered tree
+
+| File | sha256 |
+|---|---|
+| `argus/pipeline.py` | `28f1181742b7f66a95ee4a876fc5a057b24bb6c8bcfc043877330ffbc7dab5cb` |
+| `argus/pipeline_stages.py` | `132b8b24d98f027f10c3d08f7bce8157d9ea8184d18bd2673726b048e1a15883` |
+| `argus/detectors/vacuous_test.py` | `45777ef4fd898aac635a76b19a5315f7124457136cacc0abd1e1b00f2795f2d2` |
+| `argus/reports/generator.py` | `d929ac547f00bfea319297ed8a05e449a905272ade90d58edb2bb8a59cf8b910` |
+| `argus/dogfood/partition_plan.py` | `fa4779f5d29bc14c3c336ad881e1c7cf4a2023a5cf68b71a76ba8ccb1a053c0b` |
+| `argus/dogfood/proof_render.py` | `d0bbe0d7492ecfc5ca9f00d4613537f02e5fcd543d59f24c7b49cebdad4f96b4` |
+| `scripts/regenerate_dogfood_artifacts.py` | `59f761eb52b82288976cbc5073fa11004051b9016770ec8a2e7778212f40a50c` |
+| `tests/test_module_size_ceiling.py` | `ad9cd70bb487d41e64e5fab6601561591018df63c53901c17a15f9dd46b49913` |
+| `tests/test_dogfood_artifact_currency.py` | `4a24285519190c64d954b0ba6514b102a09de8edef0813c3da7a88482971f998` |
+| `tests/test_evidence_citation.py` | `f43157ebfb7d3750adbb91784e14062ec976385e6d735bcd37ed0a9a76c77b82` |
+| `tests/test_no_web_imports.py` | `ef5391f165cbaa571e4e8cb1db52b5c08f89c99490cef2486292dad3d703b57e` |
+| `tests/test_classification_word_boundary.py` | `a380c42654805bef86fff27de87067c82349013a51f8ed8c265f53cb4e804026` |
+| `tests/test_dogfood_plan.py` | `44b38e78c504cd06de65618aeaa393633dca4e8619e5f213d9fe38ab644654fc` |
+| `tests/test_dogfood_proof.py` | `140caf9500c52b28a3a28226e2c0baef7aa8b20ab9ff8e33f0c4195da75b5002` |
+| `README.md` | `6ff38809748a560e1d4cd48d54c0424d22cd34ea6868718c21bf35b0f673172a` |
+| `CHANGELOG.md` | `bc23514fdf4818923e88e4ab5c50f92956f18b4efcf787f47db407b029bfcf3e` |
+| `_bmad-output/design-artifacts/ArgusAgent/architecture.md` | `626687c31b4cfac4cb1d4bbbb1c8603afe903ce393a8055f468cd85540e2dbda` |
+| `_bmad-output/design-artifacts/ArgusAgent/deferred-work.md` | `4386675456ded3e162eb57a674710eb52289180fbcc6689d3de62ac807cbf2db` |
+| `_bmad-output/design-artifacts/ArgusAgent/sprint-status.yaml` | `fd82958a2b9166c130e0818a8a3b6aad1058a689c9be832d9992ade59e777141` |
+| `_bmad-output/design-artifacts/ArgusAgent/minions-dogfood-partition-plan.md` | `1595a81db1cefafa389f146ad497b21a0342864a8b1d1602755bda62ee8d9091` |
+| `_bmad-output/design-artifacts/ArgusAgent/minions-dogfood-budget-plan.md` | `6db42fe8c473c76b7e58bc5f902409eaae7c1953332d9f3acb346d12ad89cce9` |
+| `_bmad-output/design-artifacts/ArgusAgent/minions-dogfood-proof.md` | `167a050c582c797a2171dac3ee34e5e5e21702b3b458f7dae97a35b3f7437439` |
+
+This story file itself is deliberately absent: its digest cannot include the line that records its digest. Its content is fixed by the two commits below.
+
 ### Completion Notes List
 
 #### AC1 — `argus/pipeline.py` is under the ceiling, by a cohesion split
 
 `argus/pipeline.py` **1331 → 944** (256 lines of headroom for 12.2/12.3/12.4). New sibling
-`argus/pipeline_stages.py` (513 lines). `git ls-files -- argus | xargs wc -l` shows **no `argus/**`
+`argus/pipeline_stages.py` (512 lines). `git ls-files -- argus | xargs wc -l` shows **no `argus/**`
 file over 1200** (next largest: `argus/pipeline.py` 944, `argus/dogfood/proof_run.py` 749).
 
 **The boundary was re-derived, and it is NOT the one §A.1 recommended.** §A.1 recommended the
