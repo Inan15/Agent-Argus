@@ -188,6 +188,15 @@ _MODULES_UNDER_GUARD = (
     # any purity-asserting guard (mirroring store/writer.py). Imports ONLY done ArgusAgent
     # leaves — no web stack, no LLM/api/providers module. Extend (do NOT fork).
     "argus.pipeline_persist",
+    # Story 12.1 — the audit fold's DERIVATION stages extracted from pipeline.py (a pure
+    # no-behaviour-change refactor to bring pipeline.py back under the §3.2 / NFR-M1
+    # 1200-line limit, which it had breached at 1331). It is IMPURE in the same sense
+    # pipeline.py is — it READS source files and runs the four V1 deterministic detectors —
+    # so it is added to the import-isolation coverage (FastAPI-free) but NOT to any
+    # purity-asserting guard, exactly as `argus.pipeline_persist` was in 6.3. It imports
+    # ONLY done ArgusAgent leaves (grounding / detectors / index / ledger / cost) — no web
+    # stack, no LLM/api/providers module. Extend the guard (do NOT fork) per AI-E5-7.
+    "argus.pipeline_stages",
     # Story 6.4 — the PURE adversarial Prosecutor (FR19) + the CC #4 cross_partition
     # cut-edge pass + the advisory→verdict-eligible promotion authority (DN-PROMOTE).
     # The V1 default path is PURE-of-providers (DN-V1-DETERMINISTIC: the 6.1

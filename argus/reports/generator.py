@@ -20,7 +20,7 @@ from argus.reports.formatter import (
     render_markdown_table,
 )
 from argus.reports.plain_english import render_depth_meaning, render_ship_readiness
-from argus.detectors.vacuous_test import is_test_file
+from argus.detectors.vacuous_test import partition_application_files
 
 # The reason-token vocabulary is a PURE contract shared with the PRODUCER
 # (``argus/index/ast_index.py``). Importing it here — rather than importing the impure
@@ -170,17 +170,12 @@ def _render_test_dilution_hint(
     if verdict.deep_ratio >= RELEASE_READY_DEEP_THRESHOLD:
         return []  # coverage is not what withheld the verdict
 
-    # ONE test-file predicate for the whole run (§3.3 / AR7): the same call the
-    # pipeline's scope narrowing makes, fed from the same index.
-    entry_by_path = {
-        entry.file_path: entry for entry in (getattr(ast_index, "entries", ()) or ())
-    }
-    application = [
-        e
-        for e in ledger.entries
-        if not is_test_file(e.file_path, ast_entry=entry_by_path.get(e.file_path))
-    ]
-    held_out = len(ledger.entries) - len(application)
+    # ONE application/test derivation for the whole run (§3.3 / AR7): literally the same
+    # function the pipeline's scope narrowing calls, fed from the same index. Story 12.1
+    # closed `DF-8-3-C` here — the predicate was already shared, but this plumbing around it
+    # was a verbatim second copy, and the report's APPLICATION denominator and the verdict's
+    # assessed population must not be able to drift apart.
+    application, held_out = partition_application_files(ledger.entries, ast_index)
     if not application or held_out == 0:
         return []
 

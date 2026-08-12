@@ -566,7 +566,18 @@ def render_partition_plan_markdown(result: FullRepoPlan) -> str:
     lines.append("")
     lines.append("## Provenance")
     lines.append("")
-    lines.append(f"- Commit descriptor (HEAD at generation): `{result.commit_descriptor}`")
+    lines.append(
+        f"- Commit descriptor (`git rev-parse HEAD` at generation): "
+        f"`{result.commit_descriptor}`"
+    )
+    lines.append(
+        "- Enumerated population (the HONEST label — Story 12.1, closing `DF-10-4-D`): the "
+        "file list in this artifact is enumerated from the git INDEX (`git ls-files`), NOT "
+        "from the tree at the commit descriptor above. The two are the same tree exactly "
+        "when `argus/` carries no staged-or-uncommitted change, and "
+        "`TC-ArgusAgent-DOGFOOD-001-50` fails unless they agree — so this artifact cannot "
+        "quietly describe one tree while citing another."
+    )
     lines.append(f"- Source files ({scope}): **{result.source_file_count}**")
     lines.append(f"- Total physical LOC (build-cost proxy): **{result.total_loc}**")
     lines.append(
@@ -644,7 +655,18 @@ def render_budget_plan_markdown(result: FullRepoPlan) -> str:
     lines.append("")
     lines.append("## Provenance")
     lines.append("")
-    lines.append(f"- Commit descriptor (HEAD at generation): `{result.commit_descriptor}`")
+    lines.append(
+        f"- Commit descriptor (`git rev-parse HEAD` at generation): "
+        f"`{result.commit_descriptor}`"
+    )
+    lines.append(
+        "- Enumerated population (the HONEST label — Story 12.1, closing `DF-10-4-D`): the "
+        "file list in this artifact is enumerated from the git INDEX (`git ls-files`), NOT "
+        "from the tree at the commit descriptor above. The two are the same tree exactly "
+        "when `argus/` carries no staged-or-uncommitted change, and "
+        "`TC-ArgusAgent-DOGFOOD-001-50` fails unless they agree — so this artifact cannot "
+        "quietly describe one tree while citing another."
+    )
     lines.append(f"- Source files ({scope}): **{result.source_file_count}**")
     lines.append("")
     lines.append(_SELF_SCOPE_HONESTY)

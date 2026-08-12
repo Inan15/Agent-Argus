@@ -157,6 +157,31 @@ def test_full_repo_plan_is_multi_partition_and_within_hard_ceiling() -> None:
     assert len(all_files) == result.source_file_count, "the partition is not total (files dropped)"
 
 
+# ─────────────────────────────────────────────────────────────────────────────
+# The named regeneration remedy (Story 12.1, closing `DF-8-5-B` / `DF-10-4-D`)
+# ─────────────────────────────────────────────────────────────────────────────
+#
+# `DF-8-5-B`'s close condition, verbatim: *"either a documented regeneration entry point named
+# in the failure message of all three assertions, or a CI step that regenerates and fails on a
+# diff — so the remedy is discoverable from the red output. Do NOT close it by loosening an
+# assertion."* `DF-10-4-D` repeats it for all five. Every assertion in this file that can go red
+# because a committed artifact no longer matches the live derivation ends with this sentence.
+#
+# The half those entries did NOT ask for, because neither measured it, is the SILENT direction:
+# all three artifacts were stale at `ca37283` while all five of these assertions were green.
+# That is closed by `tests/test_dogfood_artifact_currency.py`
+# (`TC-ArgusAgent-DOGFOOD-001-49`..`-52`), which is where the red now comes from.
+_REGENERATE = (
+    "\n\nHOW TO FIX THIS: commit the `argus/` delta first, then run\n\n"
+    "    python scripts/regenerate_dogfood_artifacts.py\n\n"
+    "which re-renders all three committed dogfood artifacts through their OWN renderers "
+    "(render_partition_plan_markdown / render_budget_plan_markdown / render_proof_markdown) and "
+    "writes the output verbatim; then commit the regenerated artifacts as a SEPARATE commit. "
+    "Do NOT edit the .md by hand, and do NOT loosen or delete this assertion "
+    "(DF-8-5-B: 'Do not close it by loosening an assertion')."
+)
+
+
 def test_full_repo_plan_is_deterministic_and_byte_reproducible() -> None:
     """TC-ArgusAgent-DOGFOOD-001-02 — AC1/NFR-D1/P1: the plan re-derives byte-identically.
 
@@ -180,16 +205,55 @@ def test_committed_partition_plan_artifact_exists_and_matches_live_derivation() 
     The committed artifact is the durable §3.4 deliverable AND is reproducible — the
     live derivation's map (unit count + per-unit file/LOC rows) must appear in the
     committed markdown, so the artifact cannot silently rot away from the generator.
+
+    **WIDENED by Story 12.1 (`DF-8-5-B` / `DF-10-4-D`), never narrowed.** This docstring
+    claimed *"the artifact cannot silently rot away from the generator"* while the assertions
+    checked three things: the literal ``Unit count: N``, each 12-character ``partition_id``
+    prefix, and the phrase ``Reused planner``. Measured at ``ca37283`` on 2026-08-12, the
+    committed artifact was stale in **every derived figure** — total LOC 19783 vs 20454,
+    recorded cut edges 57 vs 64, unit-2 LOC 14793 vs 14997, unit-3 3660 vs 4127 — and this
+    test was **GREEN**, because it could not see one of them. The per-unit file/LOC rows the
+    docstring already promised are now actually asserted, so the claim and the code agree.
+    The strongest half of the currency property lives in
+    ``tests/test_dogfood_artifact_currency.py`` (``TC-ArgusAgent-DOGFOOD-001-49``..``-52``);
+    this is the local, artifact-specific half.
     """
     assert _PARTITION_PLAN.exists(), f"the partition plan must exist at {_PARTITION_PLAN}"
     text = _PARTITION_PLAN.read_text(encoding="utf-8")
     result = build_full_repo_plan(str(_REPO_ROOT))
-    assert f"Unit count: {len(result.partition_plan.partitions)}" in text
+    assert f"Unit count: {len(result.partition_plan.partitions)}" in text, (
+        f"the committed plan does not record the live unit count "
+        f"({len(result.partition_plan.partitions)})" + _REGENERATE
+    )
     for partition in result.partition_plan.partitions:
         assert partition.partition_id[:12] in text, (
             f"unit {partition.partition_id[:12]!r} missing from the committed plan (rot?)"
+            + _REGENERATE
         )
-    assert "REUSING" in text or "Reused planner" in text  # the AR7 no-fork narration
+    assert "REUSING" in text or "Reused planner" in text, (  # the AR7 no-fork narration
+        "the committed plan lost the AR7 no-fork narration" + _REGENERATE
+    )
+    # The DERIVED FIGURES this test's own docstring always claimed to cover. Each is a number
+    # the artifact publishes and the generator derives from `argus/**`, so each is a way the
+    # artifact can be wrong while the three tokens above are right.
+    assert f"**{result.source_file_count}**" in text, (
+        f"the committed plan does not record the live source-file count "
+        f"({result.source_file_count})" + _REGENERATE
+    )
+    assert f"**{result.total_loc}**" in text, (
+        f"the committed plan does not record the live total physical LOC ({result.total_loc}) — "
+        "the build-cost proxy every budget figure folds from" + _REGENERATE
+    )
+    for partition in result.partition_plan.partitions:
+        assert str(partition.file_count) in text, (
+            f"unit {partition.partition_id[:12]!r}'s file count ({partition.file_count}) is not "
+            "recorded in the committed plan" + _REGENERATE
+        )
+        assert str(partition.total_loc) in text, (
+            f"unit {partition.partition_id[:12]!r}'s LOC ({partition.total_loc}) is not recorded "
+            "in the committed plan — the figure that moved 14793 -> 14997 while this test was "
+            "green" + _REGENERATE
+        )
 
 
 # ─────────────────────────────────────────────────────────────────────────────
@@ -267,7 +331,9 @@ def test_budget_reuses_the_31_accountant_no_fork() -> None:
     # OI3: the module default carries NO numeric ceiling (no hardcoded $X in code).
     assert BudgetConfig().ceiling_credits is None
     # The committed budget artifact records the sized ceiling + the OI3 resolution.
-    assert _BUDGET_PLAN.exists(), f"the budget plan must exist at {_BUDGET_PLAN}"
+    assert _BUDGET_PLAN.exists(), (
+        f"the budget plan must exist at {_BUDGET_PLAN}" + _REGENERATE
+    )
     text = _BUDGET_PLAN.read_text(encoding="utf-8")
     assert str(sized) in text
     assert "no numeric" in text.lower() or "no hardcoded" in text.lower()

@@ -218,6 +218,25 @@ def test_dogfood_completes_within_the_843_ceiling_and_demonstrates_halt(
     assert not isinstance(cost.baseline_ratio, float)
 
 
+# ─────────────────────────────────────────────────────────────────────────────
+# The named regeneration remedy (Story 12.1, closing `DF-8-5-B` / `DF-10-4-D`)
+# ─────────────────────────────────────────────────────────────────────────────
+#
+# `DF-8-5-B`'s close condition is that the remedy be *discoverable from the red output*, and
+# `DF-10-4-D` extends it to all five committed-artifact assertions. The SILENT half of the
+# class — all three artifacts stale at `ca37283` while every one of these was green — is closed
+# by `tests/test_dogfood_artifact_currency.py` (`TC-ArgusAgent-DOGFOOD-001-49`..`-52`).
+_REGENERATE = (
+    "\n\nHOW TO FIX THIS: commit the `argus/` delta first, then run\n\n"
+    "    python scripts/regenerate_dogfood_artifacts.py\n\n"
+    "which re-renders all three committed dogfood artifacts through their OWN renderers "
+    "(render_partition_plan_markdown / render_budget_plan_markdown / render_proof_markdown) and "
+    "writes the output verbatim; then commit the regenerated artifacts as a SEPARATE commit. "
+    "Do NOT edit the .md by hand, and do NOT loosen or delete this assertion "
+    "(DF-8-5-B: 'Do not close it by loosening an assertion')."
+)
+
+
 def test_committed_proof_artifact_exists_and_matches_live_run(
     dogfood_proof: DogfoodProofRun,
 ) -> None:
@@ -227,13 +246,34 @@ def test_committed_proof_artifact_exists_and_matches_live_run(
     reproducible — the live run's verdict + ceiling + grade appear in the committed
     markdown, so the artifact cannot silently rot away from the generator.
     """
-    assert _PROOF_ARTIFACT.exists(), f"the proof artifact must exist at {_PROOF_ARTIFACT}"
+    assert _PROOF_ARTIFACT.exists(), (
+        f"the proof artifact must exist at {_PROOF_ARTIFACT}" + _REGENERATE
+    )
     text = _PROOF_ARTIFACT.read_text(encoding="utf-8")
     proof = dogfood_proof
-    assert f"`{proof.verdict}` (exit `{proof.exit_code}`)" in text
-    assert "$X` = 843" in text or "843" in text
-    assert DOGFOOD_GRADE in text
-    assert "REUSED" in text or "REUSING" in text  # the AR7 no-fork narration
+    assert f"`{proof.verdict}` (exit `{proof.exit_code}`)" in text, (
+        f"the committed proof does not record the live verdict {proof.verdict!r} / exit "
+        f"{proof.exit_code}" + _REGENERATE
+    )
+    assert "$X` = 843" in text or "843" in text, (
+        "the committed proof does not record the $X ceiling" + _REGENERATE
+    )
+    assert DOGFOOD_GRADE in text, (
+        f"the committed proof does not record the honest grade {DOGFOOD_GRADE!r}" + _REGENERATE
+    )
+    assert "REUSED" in text or "REUSING" in text, (  # the AR7 no-fork narration
+        "the committed proof lost the AR7 no-fork narration" + _REGENERATE
+    )
+    # Story 12.1 (`DF-8-5-B`/`DF-10-4-D`): the DERIVED FIGURES, not only the tokens. The proof
+    # published `19783` LOC over a `20454`-line tree at `ca37283` while this test was green.
+    assert f"**{proof.source_file_count}**" in text, (
+        f"the committed proof does not record the live audited population "
+        f"({proof.source_file_count})" + _REGENERATE
+    )
+    assert f"**{proof.total_loc}**" in text, (
+        f"the committed proof does not record the live total physical LOC ({proof.total_loc})"
+        + _REGENERATE
+    )
     # The live render re-derives the SAME committed structure (headings), not a rot.
     live = render_proof_markdown(proof)
     for heading in (
@@ -241,7 +281,9 @@ def test_committed_proof_artifact_exists_and_matches_live_run(
         "## 3. The SIGNED, source-free evidence bundle",
         "## 7. The",
     ):
-        assert heading in live and heading in text, f"proof artifact missing {heading!r} (rot?)"
+        assert heading in live and heading in text, (
+            f"proof artifact missing {heading!r} (rot?)" + _REGENERATE
+        )
 
 
 # ─────────────────────────────────────────────────────────────────────────────

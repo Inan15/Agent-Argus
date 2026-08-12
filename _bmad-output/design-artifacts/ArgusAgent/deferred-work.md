@@ -2761,3 +2761,304 @@ outside the repository.
   - target_story: **12.7**
   - category: documentation-accuracy
   - severity: 🟢
+
+## Deferred from: story 12-1-pipeline-stops-breaching-its-own-limit (2026-08-12)
+
+**Append-only (§3.4): nothing above this heading was edited, reordered or deleted.** Every figure
+below is **LOCAL, Windows / CPython 3.11.15**, re-derived by execution on this tree on 2026-08-12
+under the dated risk acceptance of 2026-08-11 (carried forward, not re-taken). **CI evidence: NOT
+ESTABLISHED.**
+
+### Closed by this story
+
+- **`DF-8-2-A` — CLOSED 2026-08-12.** `argus/pipeline.py` was **1331** lines against the NFR-M1
+  cap of 1200 — 131 over, drifted from the 1199 this entry recorded at Story 8.2 and warned about
+  in exactly these words: *"the next edit of any size breaches NFR-M1"*. It is now **944**, with
+  256 lines of headroom for the three Epic-12 stories that must land in it. The audit fold's
+  DERIVATION stages (`_is_python` … `_assessment_scope_paths`, sixteen functions) were extracted
+  verbatim into the new sibling `argus/pipeline_stages.py`, following Story 6.3's
+  `DN-PIPELINE-SPLIT` precedent. Proven a pure restructuring rather than asserted to be one: the
+  sixteen moved definitions and the thirteen that stayed are **byte-identical** to their pre-12.1
+  form (compared by `ast` span and sha256), and the pre- and post-change code produce
+  **byte-identical** reports (4 files) and `.argus/` output (848 files) over an identical tree.
+  **⚠️ RECORD FOR THE NEXT READER — this entry's OWN named remedy was measured INSUFFICIENT.** It
+  prescribed *"extract a shell-helper module (e.g. `argus/pipeline_facts.py` carrying
+  `_critical_ineligibility` and its siblings)"*. Re-measured 2026-08-12: that family is **~59
+  lines** against the **>=131** required, and would have left `pipeline.py` at ~1272 — **still over
+  the cap**. The prescription was correct when the file was 1199 and needed to shed one line; it
+  stopped being correct as the file drifted. A remedy written against a measurement expires with
+  that measurement.
+  **The boundary that was taken, and why it beat the story's own recommendation.** Story 12.1
+  recommended the 357-line Story-3.4 resume family (`argus/pipeline_resume.py`) and explicitly
+  permitted a better measured boundary. The dependency direction was measured by an `ast` walk over
+  the pre-split file and decided it: the resume family references **eleven** names that would stay
+  behind (`_assemble_and_persist`, `_detect_per_file`, `_project_halt`, `_critical_candidates`,
+  `AuditResult`, `ResumeStateError` …) while `pipeline.py` must keep re-exporting `resume_audit`
+  from `__all__` — a module-level import **cycle** survivable only by a bottom-of-file or
+  function-local import trick. The derivation stages reference **three** names that stay behind,
+  all constants, which moved with them — so the dependency points strictly downward, there is no
+  cycle, every moved body is byte-identical (no call site had to be rewritten to reach back into
+  the parent module), and it sheds **403** lines rather than 357. A restructuring story whose
+  defining criterion is *behaviour proven untouched* must not ship a fragile import graph to save a
+  line count.
+  - id: DF-8-2-A
+  - closed_by: 12-1-pipeline-stops-breaching-its-own-limit
+  - closed_on: 2026-08-12
+  - status: CLOSED — `argus/pipeline.py` 1331 → 944; enforced repo-wide by
+    `tests/test_module_size_ceiling.py` (`TC-ArgusAgent-MAINT-001-01`..`-05`)
+
+- **`DF-8-3-C` — CLOSED 2026-08-12.** The duplicated ast-index → application/test plumbing is gone.
+  One helper, `partition_application_files(entries, ast_index) -> (application, held_out)`, now
+  lives beside `is_test_file` in `argus/detectors/vacuous_test.py` — the home this entry named, an
+  **existing** file, so it cost no new module — and **both** sites call it:
+  `pipeline_stages._assessment_scope_paths` (which narrows the assessed population the verdict gate
+  folds over) and `reports.generator._render_test_dilution_hint` (which derives the report's
+  APPLICATION denominator). The two derivations whose agreement the verdict depended on are now
+  literally the same code. It is typed structurally (a `_HasFilePath` Protocol + a `TypeVar`) so
+  this leaf detector module gains **no new import edge** — the import-isolation gate keeps
+  `argus.detectors.*` a leaf, and each caller gets its own element type back.
+  **⚠️ Its recorded coordinates were STALE, as Story 12.1's create-story pass measured.** The entry
+  named `pipeline.py:686-694` and `generator.py:86-93`; the sites were found at
+  `argus/pipeline.py:745` and `argus/reports/generator.py:176` — and by the time the change landed
+  the first had moved again, into `argus/pipeline_stages.py`, by this story's own extraction. Found
+  by **anchor text**, never by line number. That is the fourth stale-coordinate finding in this
+  ledger in three days.
+  - id: DF-8-3-C
+  - closed_by: 12-1-pipeline-stops-breaching-its-own-limit
+  - closed_on: 2026-08-12
+  - status: CLOSED — one derivation, two call sites, no behaviour change (the 848-file `.argus/`
+    and 4-file report A/B is byte-identical across the change)
+
+- **`DF-8-5-B` + `DF-10-4-D` — CLOSED TOGETHER 2026-08-12**, per `DF-10-4-D`'s own instruction
+  (*"supersede or close them together, never separately"*). Closed by
+  `tests/test_dogfood_artifact_currency.py` (`TC-ArgusAgent-DOGFOOD-001-49`..`-52`) plus the
+  regeneration-command sentence now carried by every one of the five committed-artifact
+  assertions' failure messages.
+  **The remedy both entries named was necessary and NOT sufficient, and the reason is a finding
+  neither entry measured.** Both describe the class as *guards that break too often*. Measured on
+  this tree at `ca37283`, the opposite failure was **also live and worse**: all three committed
+  dogfood artifacts were **already stale** — provenance `a9cc933` vs `HEAD` `ca37283`, total
+  physical LOC 19783 vs 20454, recorded cut edges 57 vs 64, unit-2 LOC 14793 vs 14997, unit-3 3660
+  vs 4127, the NFR-C1 baseline ratio `360/19783` vs `60/3409` — **while all five `DF-10-4-D`
+  assertions were GREEN**. They were green because of what they actually assert, which is far less
+  than their own docstrings claim: `-03` says *"the artifact cannot silently rot away from the
+  generator"* and checks the literal `Unit count: 3`, three 12-character `partition_id` prefixes and
+  the phrase `Reused planner` — it cannot see a single figure in that list. So *"name a regeneration
+  entry point in the failure message"* improved a red that today never appeared. **This is the
+  fifth-plus instance of this project's dominant defect class** (Epic-11 retrospective, `AI-E11-1`):
+  a guard structurally incapable of seeing the thing it names.
+  **What was built instead — a closure over the real structure, not over a list of tokens.** An
+  artifact is CURRENT iff (a) the provenance sha it cites is a real commit **and an ancestor of
+  `HEAD`**, and (b) `git diff --quiet <cited-sha> HEAD -- argus/` is empty. It was **RED at
+  `ca37283` for free**, on the real defect, with no reconstruction (`git diff a9cc933 HEAD --
+  argus/` = 7 files, +749/−78), and it would have been **GREEN at the last honest regeneration**
+  (`git diff a9cc933 93adc94 -- argus/` is empty and `a9cc933` is an ancestor of `HEAD`) — so it
+  distinguishes the honest state from the rotten one rather than failing always. **No assertion was
+  loosened or deleted**; `-03` was widened, which `DF-8-5-B` explicitly welcomes.
+  **The provenance/enumeration reconciliation `DF-10-4-D` asked for, decided and recorded.** The
+  artifacts claimed *"Commit descriptor (HEAD at generation)"* while
+  `enumerate_minions_source_files` reads `git ls-files` — the **INDEX** — *"and those are two
+  different trees."* **Decision: the label now tells the truth about what was enumerated**, rather
+  than pinning the enumeration to the commit. Reason: pinning would have changed what the dogfood
+  planner enumerates, which is a verdict-adjacent behaviour change inside the one story whose
+  defining criterion is *behaviour proven untouched*, and it would have broken the staged fixture
+  repositories `tests/test_dogfood_*.py` build. The two trees are now reconciled **mechanically**
+  as well as in prose: the currency guard fails unless `argus/**` at the cited sha equals `argus/**`
+  at `HEAD`, which is exactly the condition under which the index-enumerated population and the
+  `HEAD`-cited provenance describe the same `argus/` tree.
+  - id: DF-8-5-B
+  - closed_by: 12-1-pipeline-stops-breaching-its-own-limit
+  - closed_on: 2026-08-12
+  - status: CLOSED — jointly with `DF-10-4-D`
+  - id: DF-10-4-D
+  - closed_by: 12-1-pipeline-stops-breaching-its-own-limit
+  - closed_on: 2026-08-12
+  - status: CLOSED — jointly with `DF-8-5-B`; the bootstrap ordering hazard it named was executed
+    in the order it prescribed (implement → commit → regenerate through the renderers → re-run)
+
+- **`DF-11-1-A` — CLOSED 2026-08-12.** `epic-10-retro-2026-08-11.md` and
+  `epic-11-retro-2026-08-12.md` are registered in `_STATUS_DOCUMENTS`
+  (`tests/test_evidence_citation.py`), ending a carve-out that five consecutive stories had passed
+  down by node id. `TC-ArgusAgent-DOCS-001-22` is green and the suite is clean of it: **1405
+  collected / 1405 passed / 0 failed** immediately after the two-line registration, against the
+  1405/1404/1 baseline this story started from. **Registration is inert against every other
+  assertion in that file, verified by execution**: `_status_assertions()` returns **0** status
+  assertions for each retrospective, so `-21`'s per-document loop short-circuits. **No
+  retrospective was edited and no citation was minted** — the entry's close condition also asked for
+  a §H citation, and that half is *not* taken here: minting a citation for a document this dev did
+  not author, on a tree no CI run has seen, would manufacture exactly the false-citation class Epic
+  10 exists to close. The registration alone is sufficient because both documents make **zero**
+  status claims; the day either one makes a claim, `-20`/`-21` will demand the citation from its
+  author, which is the correct owner.
+  - id: DF-11-1-A
+  - closed_by: 12-1-pipeline-stops-breaching-its-own-limit
+  - closed_on: 2026-08-12
+  - status: CLOSED — registered; the §H-citation half is deliberately NOT taken (both documents make
+    zero status claims, so it is not owed; `-20`/`-21` will demand it the day one is made)
+
+- **`DF-11-5-A` — CLOSED 2026-08-12.** *"The unit-2 dogfood LOC budget is down to 3 lines … the next
+  story that writes more than 3 physical lines into any unit-2 module cannot proceed without
+  regenerating the dogfood artifacts."* That is this story, and it regenerated them — through
+  `render_partition_plan_markdown`, `render_budget_plan_markdown` and `render_proof_markdown`, at a
+  provenance sha that genuinely contains the delta, under the operator ruling of 2026-08-12 that
+  pre-authorises the sequence for all of Epic 12. Not one character of any artifact was hand-edited.
+  The budget did exactly what this entry predicted: the extraction re-split the oversized cohesion
+  component and moved partition ids, `TC-ArgusAgent-DOGFOOD-001-03` went red by construction, and
+  the remedy was regeneration rather than a loosened assertion.
+  - id: DF-11-5-A
+  - closed_by: 12-1-pipeline-stops-breaching-its-own-limit
+  - closed_on: 2026-08-12
+  - status: CLOSED
+
+- **`DF-9-2-C` — ALREADY RESOLVED; verified, not assumed.** The entry says three
+  `argus/dogfood/__pycache__/*.pyc` files are tracked and names Story 12.1 as its target. Measured
+  on this tree 2026-08-12: `git ls-files -- argus | grep -c pycache` returns **0**, and
+  `git ls-files -- argus` contains **no non-`.py` path at all**. They were untracked at or before
+  `ca37283`. **Nothing was done here** — recording a verified absence rather than performing a
+  `git rm --cached` that would have moved the git index, which is the `DF-10-4-D` trigger, inside
+  the one story that must prove its own audit population unchanged.
+  - id: DF-9-2-C
+  - closed_by: 12-1-pipeline-stops-breaching-its-own-limit
+  - closed_on: 2026-08-12
+  - status: CLOSED — already true on arrival; verified by measurement, no change made
+
+### Re-recorded with a new reason and a live target
+
+- **`DF-8-3-A` — RE-RECORDED, target `12-4-every-outcome-names-its-next-action`.** Its recorded
+  blocker is **DISCHARGED**: it deferred *"AFTER the DF-8-2-A shell-helper extraction has made room
+  in `pipeline.py`"*, and the room now exists — `argus/pipeline.py` is 944 lines with 256 of
+  headroom. **What remains is not a room ruling but a SCOPE ruling, and it is a different reason
+  from the old one.** Threading `CriticalSubsystemSet.heuristic_excluded_ineligible` into
+  `generate_reports` / `render_final_verdict_report` and naming the vacuity in prose is a
+  **report-content change**. Story 12.1's AC5 forbids that by construction — its evidence is that
+  the four report artifacts and the 848-file `.argus/` output are **byte-identical** across the
+  change, and a new disclosure sentence would have destroyed exactly that proof. Its natural home is
+  Story 12.4, whose entire subject (FR37) is what a terminal outcome says and why, including the
+  `INSUFFICIENT_COVERAGE` and critical-subsystem explanations this disclosure belongs beside.
+  - id: DF-8-3-A
+  - owner: Engineering
+  - target_story: **12-4-every-outcome-names-its-next-action**
+  - category: correctness
+  - severity: 🟢 (unchanged)
+  - blocker_status: the `pipeline.py` room blocker is **DISCHARGED** by 12.1; the remaining reason is
+    scope, not room
+
+### Ruled OUT of this story, with reasons, rather than quietly not mentioned
+
+- **`DF-10-2-A` — stays OPEN and UNOWNED. Ruled out of Story 12.1 deliberately.** It is 🟡, has been
+  unowned for two epics, and has been named critical-path twice (`AI-E10-4`, `AI-E11-7`). It is about
+  C/C++/Ruby/Rust grounding with zero definition extraction — **no relationship to `pipeline.py`,
+  to NFR-M1, or to the dogfood artifacts**. `AI-E11-7` asks for a **dated operator decision**
+  (*"a fix is probably not needed … what is needed is a dated decision"*), which is a type-(H) item
+  and outside a dev agent's authority to take. Folding an unrelated governance decision into a
+  restructuring story would be scope creep in the one story that must prove nothing changed. **Said
+  out loud here rather than passed over in silence — that is the whole point of this paragraph.**
+  - id: DF-10-2-A
+  - owner: **XAgent007 (operator)** for the dated decision — UNCHANGED, still unassigned in practice
+  - target_story: **NONE** — third consecutive story to carry it forward without a home
+  - severity: 🟡 (unchanged)
+
+- **`DF-11-4-D` / `AI-E11-6` (the `_NOTE_SECTIONS` impact rank) — RE-TARGETED to Story 12.4**, not
+  folded into 12.1 as the Epic-11 retrospective suggested. Three measured reasons: (1) **the trigger
+  does not fire here** — `DF-11-4-D`'s rule of thumb is *the next story that edits the file*, and
+  Story 12.1 **adds no release-note section** (it changes no user-visible surface, which AC5
+  forbids), so folding the rework in would mean opening a registry this story otherwise has no
+  reason to touch, which is precisely the *"routinely widened to fit whatever the current story
+  needs"* pattern the entry was filed about; (2) **single-purpose** — 12.1's write set is already an
+  extraction, a repo-wide sweep, a currency guard, an architecture registration, nine ledger rulings
+  and a two-commit regeneration sequence, and the Epic-11 retrospective's own §3.1 finding is that
+  this project's defects come from guards written under load; (3) **12.4 owns the vocabulary** —
+  `AI-E11-6`'s proposed rank (`changes_exit_code` > `changes_verdict` >
+  `security_on_executable_surface` > `changes_no_observable`) is an **outcome-impact** vocabulary,
+  and 12.4 must enumerate exactly those outcomes to satisfy FR37 and is the first Epic-12 story that
+  certainly does add a note section. **`AI-E11-6`'s alternative DoD is explicitly NOT taken:** this
+  is a re-targeting, not a dated acceptance that the narrative convention is fine.
+  - id: DF-11-4-D
+  - owner: Engineering
+  - target_story: **12-4-every-outcome-names-its-next-action**
+  - category: process
+  - severity: 🟡 (unchanged)
+
+### Opened by this story
+
+- **DF-12-1-A** — 🟢 **`tests/test_pipeline_signature_demo.py` is 1326 lines, 126 over the NFR-M1
+  ceiling.** Registered as a NAMED, DATED exemption in
+  `tests/test_module_size_ceiling.py::_EXEMPT_BY_DESIGN`, never as silence and never by narrowing
+  the swept population — the sweep covers **all 169 tracked `.py` files** and is red on this one
+  without the entry (demonstrated: with the registry emptied, the sweep names all four breaching
+  files). **Not fixed here:** this file demonstrates the FR32 pipeline signature end to end over
+  real git fixtures; splitting it is a substantial refactor of a load-bearing guard file inside a
+  story whose defining criterion is that behaviour is PROVEN untouched, and a restructuring story
+  must not also refactor the guard that would notice if it broke something. The exemption registry
+  **shrinks**: `TC-ArgusAgent-MAINT-001-04` fails if this entry names a file that no longer exists
+  **or that is no longer over the cap**, so it cannot become dead weight.
+  - id: DF-12-1-A
+  - origin_story: 12-1-pipeline-stops-breaching-its-own-limit
+  - owner: Engineering
+  - target_story: **12-2-deep-audit-is-wired-opt-in-and-honest** — the next story to edit the
+    pipeline surface this file demonstrates
+  - category: maintainability
+  - severity: 🟢
+
+- **DF-12-1-B** — 🟢 **`tests/test_v1_commitment_closure.py` is 1308 lines, 108 over the NFR-M1
+  ceiling.** Same registry, same reason. This is Story 10.5's delivery-closure guard: two static
+  closures that meet in the middle over `E-PRD/prd.md` and the `argus/**` import graph. Its own
+  architecture registration predicts that **Story 12.3** will edit it (wiring the memo-store seam
+  flips a `library-seam` disposition and turns it red until the disposition is updated), which makes
+  12.3 the honest target rather than an invented one.
+  - id: DF-12-1-B
+  - origin_story: 12-1-pipeline-stops-breaching-its-own-limit
+  - owner: Engineering
+  - target_story: **12-3-a-re-run-returns-the-recorded-result**
+  - category: maintainability
+  - severity: 🟢
+
+- **DF-12-1-C** — 🟢 **`tests/test_grammar_diagnosis.py` is 1203 lines — three lines over the NFR-M1
+  ceiling.** Same registry, same reason. Story 10.4's grammar-diagnosis guard, including the `ast`
+  closure over the loader's own control flow. **Three lines** is the cheapest of the three to close
+  and the most likely to be closed by accident by any story that touches it, which is why it carries
+  a live target rather than `NONE`: Story 12.5 owns the grammar / NFR-P3 surface this file guards.
+  - id: DF-12-1-C
+  - origin_story: 12-1-pipeline-stops-breaching-its-own-limit
+  - owner: Engineering
+  - target_story: **12-5-default-install-grounds-languages-it-claims**
+  - category: maintainability
+  - severity: 🟢
+
+- **DF-12-1-D** — 🟡 **The NFR-M1 sweep reads the git INDEX, so an unstaged module escapes it.**
+  `tests/test_module_size_ceiling.py` enumerates `git ls-files -- '*.py'` deliberately: a module is
+  swept the moment it is `git add`-ed, which is when a developer wants to know. The cost is the
+  mirror image — a module that is written and **never staged** is not swept at all, so a dev agent
+  could finish a story with an over-cap module the guard never saw. This is the same
+  index-versus-worktree seam `DF-10-4-D` measured in `argus/dogfood/`, read in the other direction.
+  It bit during this story's own implementation: `TC-ArgusAgent-PIPELINE-002-11`'s widened reach was
+  first written against `git ls-files -- 'argus/pipeline*.py'` and went **red for the wrong reason**
+  because the new module was untracked; it was moved to a filesystem glob for that guard. The sweep
+  itself keeps the index population on purpose — a filesystem walk would drag in `.venv/`,
+  `__pycache__` and untracked scratch, which the standard does not govern — so the honest fix is
+  probably a second, cheap assertion over untracked-but-present `argus/**` and `tests/**` sources,
+  not a change of population. **Filed rather than fixed**: adding a second population to the guard
+  this story ships, in the same story, is how a guard gets written under load.
+  - id: DF-12-1-D
+  - origin_story: 12-1-pipeline-stops-breaching-its-own-limit
+  - owner: Engineering
+  - target_story: NONE — the next story that edits `tests/test_module_size_ceiling.py`
+  - category: testability
+  - severity: 🟡
+
+- **DF-12-1-E** — 🟢 **There are now three `argus/pipeline*.py` siblings, and no guard asserts the
+  family's SHAPE.** `pipeline.py` (944), `pipeline_persist.py` (268) and `pipeline_stages.py`
+  together are the audit fold. Two guards now close over the family by glob
+  (`TC-ArgusAgent-PIPELINE-002-11`), but nothing states the intended layering — orchestration and
+  the typed contracts in `pipeline.py`, `.argus/` writes in `pipeline_persist.py`, derivation in
+  `pipeline_stages.py` — or fails when a future story puts an orchestration decision in a derivation
+  module. The layering is currently documented in three docstrings and enforced only by the fact
+  that the dependency graph happens to be acyclic today. **Not built here:** an `ast`-derived
+  layering assertion is a third new guard, and 12.1 already ships two.
+  - id: DF-12-1-E
+  - origin_story: 12-1-pipeline-stops-breaching-its-own-limit
+  - owner: Engineering
+  - target_story: NONE — the next story that adds a fourth `argus/pipeline*.py` module (12.2 is the
+    likely trigger)
+  - category: maintainability
+  - severity: 🟢

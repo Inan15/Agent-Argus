@@ -93,6 +93,42 @@ _ARTIFACT_DIR = _REPO_ROOT / "_bmad-output" / "design-artifacts" / "ArgusAgent"
 _ARCHITECTURE = _ARTIFACT_DIR / "architecture.md"
 _PIPELINE_SOURCE = _REPO_ROOT / "argus" / "pipeline.py"
 
+
+def _pipeline_family_sources() -> tuple[Path, ...]:
+    """Every ``argus/pipeline*.py`` module, globbed from the FILESYSTEM — never a hand list.
+
+    Story 12.1 moved ``_detect_per_file`` and ``_critical_candidate`` out of
+    ``argus/pipeline.py`` into the sibling ``argus/pipeline_stages.py`` (the NFR-M1
+    extraction). ``-11`` went RED, which is the guard working: it reads a file BY NAME and
+    the code it reads moved. The fix is to widen the guard's REACH, never to narrow its
+    CLAIM — the claim has always been *"in the pipeline, every ``_critical_ineligibility``
+    call receives an ``is_test`` value bound from a single ``is_test_file`` evaluation in
+    its own function"*, and the pipeline is now more than one file.
+
+    Globbed so a THIRD sibling (12.2's deep-audit wiring is the next candidate) is swept
+    the moment it exists. Pinning the names that exist today would re-acquire exactly the
+    defect this repository keeps re-finding: a guard that names the files that existed when
+    it was written. The FILESYSTEM is the population rather than ``git ls-files`` — the
+    index would let an unstaged new sibling escape the walk mid-implementation, which is
+    the ``DF-10-4-D`` property, desirable for a currency guard and a hole in a purity one.
+    """
+    found = tuple(
+        sorted(
+            path
+            for path in (_REPO_ROOT / "argus").glob("pipeline*.py")
+            if path.is_file() and "__pycache__" not in path.parts
+        )
+    )
+    assert found, (
+        "no `argus/pipeline*.py` module was enumerated — the walk below would be vacuous. "
+        f"{_WORKING}"
+    )
+    assert _PIPELINE_SOURCE in found, (
+        f"argus/pipeline.py is not in the enumerated pipeline family {found} — the pathspec "
+        f"is broken. {_WORKING}"
+    )
+    return found
+
 _GUARD = "tests/test_classification_word_boundary.py"
 _OWNING_MODULE = "argus/detectors/vacuous_test.py"
 
@@ -600,21 +636,27 @@ def test_TC_ArgusAgent_PIPELINE_002_11_is_test_is_derived_once_and_shared_by_bot
     """TC-ArgusAgent-PIPELINE-002-11 — Story 11.2 / AC4.2: the structural half, by `ast` walk.
 
     The BEHAVIOURAL half above proves the two stages agree on today's fixture. This proves
-    the MECHANISM by which they could ever come to disagree does not exist: in
-    ``argus/pipeline.py`` (read-only — the file is byte-fenced to Story 12.1) every
-    ``_critical_ineligibility`` call receives an ``is_test`` value bound from a SINGLE
-    ``is_test_file`` evaluation in its own function. A third derivation, or a call passing a
-    separately-computed value, turns this red.
+    the MECHANISM by which they could ever come to disagree does not exist: across the
+    ``argus/pipeline*.py`` family (read-only) every ``_critical_ineligibility`` call receives
+    an ``is_test`` value bound from a SINGLE ``is_test_file`` evaluation in its own function.
+    A third derivation, or a call passing a separately-computed value, turns this red.
 
     Measured 2026-08-11: exactly two such construction sites — the fresh path
-    (``_detect_per_file``) and the resume path (``_critical_candidate``). Static walk over
-    the source read as TEXT (the 10.5 DN-6 rule); it imports nothing from ``argus``.
+    (``_detect_per_file``) and the resume path (``_critical_candidate``). Both were in
+    ``pipeline.py``; Story 12.1's NFR-M1 extraction moved both into
+    ``argus/pipeline_stages.py``, so the population is now the whole ``pipeline*.py``
+    family, ENUMERATED FROM GIT (see :func:`_pipeline_family_sources`) rather than named —
+    the guard's reach was widened, its claim was not narrowed. Static walk over the sources
+    read as TEXT (the 10.5 DN-6 rule); it imports nothing from ``argus``.
     """
-    tree = ast.parse(_PIPELINE_SOURCE.read_text(encoding="utf-8"))
-    functions = [n for n in ast.walk(tree) if isinstance(n, ast.FunctionDef)]
+    sources = _pipeline_family_sources()
+    functions: list[ast.FunctionDef] = []
+    for source in sources:
+        tree = ast.parse(source.read_text(encoding="utf-8"))
+        functions.extend(n for n in ast.walk(tree) if isinstance(n, ast.FunctionDef))
     assert len(functions) >= 20, (
-        f"only {len(functions)} functions parsed out of {_PIPELINE_SOURCE.name}; the walk found "
-        f"nothing and every assertion below is vacuous. {_WORKING}"
+        f"only {len(functions)} functions parsed out of {[s.name for s in sources]}; the walk "
+        f"found nothing and every assertion below is vacuous. {_WORKING}"
     )
 
     def _calls_to(node: ast.AST, name: str) -> list[ast.Call]:

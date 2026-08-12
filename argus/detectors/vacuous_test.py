@@ -81,6 +81,7 @@ subset therefore works on NAME-level structural facts, not a resolved call graph
 from __future__ import annotations
 
 from fractions import Fraction
+from typing import Iterable, Protocol, TypeVar
 
 from pydantic import BaseModel, ConfigDict, Field
 
@@ -347,6 +348,62 @@ def is_test_file(file_path: str, *, ast_entry: "AstIndexEntry | None" = None) ->
             return True
         return _exhibits_test_definitions(ast_entry)
     return False
+
+
+class _HasFilePath(Protocol):
+    """Structural row type: anything carrying a repo-relative ``file_path``.
+
+    Declared structurally so :func:`partition_application_files` can serve both call sites
+    without this leaf detector module importing the ledger (the import-isolation gate keeps
+    ``argus.detectors.*`` a leaf), and so each caller gets its OWN element type back.
+    """
+
+    @property
+    def file_path(self) -> str: ...  # pragma: no cover - structural declaration
+
+
+_EntryT = TypeVar("_EntryT", bound=_HasFilePath)
+
+
+def partition_application_files(
+    entries: Iterable[_EntryT],
+    ast_index: object | None = None,
+) -> tuple[list[_EntryT], int]:
+    """Split ledger entries into (APPLICATION entries, held-out count) — ONE derivation.
+
+    Closes ``DF-8-3-C``. Story 8.3's AC8 correctly REUSED :func:`is_test_file` rather than
+    forking a second classifier, but the *plumbing* around it was written twice, verbatim, in
+    two modules: ``pipeline._assessment_scope_paths`` (which narrows the ASSESSED population
+    the verdict gate folds over) and ``reports.generator._coverage_scope_suggestion`` (which
+    derives the report's APPLICATION denominator). Two spellings of one derivation, whose
+    agreement the verdict depends on — precisely the disagreement class AC8 removed one level
+    down. This is the single derivation both now call; it is a DE-DUPLICATION, not a second
+    parallel derivation (AR7 / §3.3: reuse, never fork).
+
+    *ast_index* is the pre-built 1.4 AST index when the caller has one (both production
+    callers do), and ``None`` for callers that do not. It is read defensively via ``getattr``
+    — the same spelling ``generator.py`` already used — so an index-less caller keeps the
+    name-only tier-3 behaviour byte-for-byte. The AST entry is what lets an ambiguously-named
+    ``*_test.py`` module be classified BY CONTENT, which is the mechanism that stops the
+    report's denominator and the verdict's assessed population from disagreeing inside a
+    single run.
+
+    Typed structurally rather than against ``CoverageLedgerEntry`` so this leaf detector
+    module gains no new import edge, and so the returned list keeps the caller's own element
+    type. The held-out count is returned beside the list because both call sites need it and
+    ``len(entries) - len(application)`` is the third place the same subtraction would be
+    written.
+    """
+    entry_list = list(entries)
+    entry_by_path = {
+        entry.file_path: entry for entry in (getattr(ast_index, "entries", ()) or ())
+    }
+    application = [
+        e
+        for e in entry_list
+        if not is_test_file(e.file_path, ast_entry=entry_by_path.get(e.file_path))
+    ]
+    return application, len(entry_list) - len(application)
 
 
 def _is_test_function(definition: Definition) -> bool:

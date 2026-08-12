@@ -77,6 +77,13 @@ _STATUS_DOCUMENTS: tuple[str, ...] = (
     "epic-7-retro-2026-07-04.md",
     "epic-8-retro-2026-08-08.md",
     "epic-9-retro-2026-08-09.md",
+    # Registered by Story 12.1 (2026-08-12), closing DF-11-1-A. `-22` had been carved out by node
+    # id by five consecutive stories because these two retrospectives existed on disk but were
+    # unregistered. Registration is INERT against every other assertion in this file:
+    # `_status_assertions()` returns 0 status assertions for each (verified by execution), so the
+    # per-document loop in `-21` short-circuits. No retrospective was edited and no citation minted.
+    "epic-10-retro-2026-08-11.md",
+    "epic-11-retro-2026-08-12.md",
 )
 
 # Exactly the set the epic's AC names — "any future change proposal or retrospective".

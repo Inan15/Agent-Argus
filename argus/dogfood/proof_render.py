@@ -291,7 +291,18 @@ def render_proof_markdown(proof: DogfoodProofRun) -> str:
     lines.append("")
     lines.append(_SELF_AUDIT_HONESTY)
     lines.append("")
-    lines.append(f"- Commit descriptor (HEAD at generation): `{proof.commit_descriptor}`")
+    lines.append(
+        f"- Commit descriptor (`git rev-parse HEAD` at generation): "
+        f"`{proof.commit_descriptor}`"
+    )
+    lines.append(
+        "- Enumerated population (the HONEST label — Story 12.1, closing `DF-10-4-D`): the "
+        "file list in this artifact is enumerated from the git INDEX (`git ls-files`), NOT "
+        "from the tree at the commit descriptor above. The two are the same tree exactly "
+        "when `argus/` carries no staged-or-uncommitted change, and "
+        "`TC-ArgusAgent-DOGFOOD-001-50` fails unless they agree — so this artifact cannot "
+        "quietly describe one tree while citing another."
+    )
     lines.append(f"- Source files audited: **{proof.source_file_count}**")
     lines.append(f"- Total physical LOC (build-cost proxy): **{proof.total_loc}**")
     lines.append(f"- Partition units (7.1 plan, CONSUMED): **{proof.unit_count}**")

@@ -434,12 +434,12 @@ to block, and flipping the default here would pre-empt a policy decision that be
 ### Packaging: what the distribution contains
 
 `[tool.flit.module] name = "argus"` packages the `argus` Python package and nothing else. Measured on the
-built artifacts: the wheel holds 72 modules plus metadata; the sdist adds `pyproject.toml`, `README.md`,
+built artifacts: the wheel holds 73 modules plus metadata; the sdist adds `pyproject.toml`, `README.md`,
 `LICENSE` and `PKG-INFO`. The RAM workflow directories (`audit/`, `phases/`, `adapters/`, `templates/`)
 and the installer scripts are **repository-only** — see README.md for the full capability split.
 
 Measured on the built wheel with this repository removed from `sys.path`, one clean subprocess per module:
-**72 of the 72 shipped modules import.** None fail. Five did until 2026-08-12 —
+**73 of the 73 shipped modules import.** None fail. Five did until 2026-08-12 —
 `argus/precision/__init__.py`, `argus/precision/replay_harness.py`, `argus/dogfood/proof_types.py`,
 `argus/dogfood/proof_render.py` and `argus/dogfood/proof_run.py` — because the precision harness imported
 its labelled-cartridge registry from `tests/`, which is not shipped, and the other four reached that
