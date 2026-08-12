@@ -493,14 +493,16 @@ to block, and flipping the default here would pre-empt a policy decision that be
 ### Packaging: what the distribution contains
 
 `[tool.flit.module] name = "argus"` packages the `argus` Python package and nothing else. Measured on the
-built artifacts: the wheel holds 74 modules plus metadata; the sdist adds `pyproject.toml`, `README.md`,
+built artifacts: the wheel holds 75 modules plus metadata; the sdist adds `pyproject.toml`, `README.md`,
 `LICENSE` and `PKG-INFO`. The RAM workflow directories (`audit/`, `phases/`, `adapters/`, `templates/`)
 and the installer scripts are **repository-only** — see README.md for the full capability split.
 
 Measured on the built wheel with this repository removed from `sys.path`, one clean subprocess per module:
-**74 of the 74 shipped modules import.** None fail. (The figure read 73 of 73 when `0.1.0` was
+**75 of the 75 shipped modules import.** None fail. (The figure read 73 of 73 when `0.1.0` was
 written; it is DERIVED from the freshly built artifact by `TC-ArgusAgent-DOCS-001-54` — *the artifact
-is the fact* — and moved to 74 on 2026-08-13 when Story 12.2 added `argus/audit/deep_pass.py`. The
+is the fact* — and moved to 74 on 2026-08-13 when Story 12.2 added `argus/audit/deep_pass.py`, then
+to 75 later the same day when Story 12.3 added `argus/cache/stage_memo.py`, the production call site
+that wires the FR27/NFR-D1 memoization store. The
 count is restated rather than frozen precisely so it cannot go stale, which is the defect this guard
 exists to catch; nothing about the `0.1.0` release itself is amended.) Five modules did fail until
 2026-08-12 —
