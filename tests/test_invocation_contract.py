@@ -479,8 +479,76 @@ class DocumentedInvocation:
     command: str
 
 
-def _executable_line_numbers(text: str, suffix: str) -> set[int]:
-    """1-based line numbers that sit inside an executable block (PURE)."""
+# The YAML `run:` header, in BOTH shapes GitHub accepts, and in EVERY spelling YAML gives each
+# shape. Group `block` is the block-scalar header if one is present, group `rest` is whatever
+# else follows the key on the same line.
+#
+# `block` deliberately matches the whole YAML block header — the style indicator `|` or `>`
+# followed by its OPTIONAL indentation indicator (a digit) and chomping indicator (`-`/`+`), in
+# EITHER order, which is what the YAML spec allows (`c-b-block-header`). So `|`, `>`, `|-`, `|+`,
+# `>-`, `>+`, `|2`, `|2-`, `|-2`, `>-2` are all recognised as block headers. The previous rule
+# `(?:[|>][-+]?\s*)?(.*)` did not, and the miss was not academic: a digit is not `[-+]`, so
+# `run: |2` fell into group 1 non-empty and was classified as the SINGLE-LINE form.
+#
+# 🚩 THE CLASSIFICATION KEYS ON THE PRESENCE OF `block`, NOT ON WHETHER SOMETHING FOLLOWS IT.
+# That is the whole correction (Story 11.3 review iteration 1). YAML permits exactly one thing
+# after a block header on the same line — a comment — so `run: | # scrub inputs first` IS a block
+# scalar, and the old "is the remainder non-empty?" test read the comment text as the command and
+# never scanned the indented body where the real script lives. Nine header spellings were
+# measured VACUOUS on 2026-08-12 before this fix (`| #`, `> #`, `|- #`, `|+ #`, `|2`, `|2- #`,
+# `>-2`, `run: # …`, and a single-line scalar continued onto the next line); each is ordinary,
+# non-adversarial CI YAML. Keying on the indicator makes the set of recognised block spellings
+# the YAML grammar itself rather than a list of the ones somebody thought of (§C.6).
+_RUN_HEADER_RE = re.compile(r"^-?\s*run:\s*(?P<block>[|>][0-9+\-]*)?\s*(?P<rest>.*)$")
+
+
+def _expression_is_open(text: str) -> bool:
+    """Does *text* carry a `${{` that has not been closed by a `}}` yet? (PURE)"""
+    return text.count("${{") > text.count("}}")
+
+
+def executable_line_numbers(text: str, suffix: str) -> set[int]:
+    """1-based line numbers that sit inside an executable block (PURE).
+
+    PUBLIC on purpose (Story 11.3 / DN-2): this is the SINGLE definition of "which lines are
+    shell source?" in this repository, and `tests/test_workflow_input_containment.py` imports
+    it rather than carrying a second copy (AR7 / architecture §3.3 — extend, never duplicate).
+    A private spelling would have forced the injection guard to reach through `_`-prefixed
+    API or to re-implement the rule, and a rule implemented twice drifts in one of the two.
+
+    **Both YAML `run:` shapes are recognised, and that generalisation is load-bearing.** The
+    original rule keyed on ``^-?\\s*run:\\s*[|>]?[-+]?\\s*$`` — the ``\\s*$`` requires
+    end-of-line after the key, so it saw block scalars ONLY. Measured on 2026-08-12 against a
+    synthetic ``- run: echo "${{ inputs.evil }}"`` it returned an **empty** set, and against
+    `.github/workflows/release.yml` it missed four real single-line `run:` steps. A guard
+    inheriting that blindness would have been vacuous against the cheapest way to reintroduce
+    `DF-9-2-D`: writing the interpolation on one line. Re-measured after the generalisation,
+    `extract_documented_invocations()` returns the same five invocations element-by-element —
+    every single-line `run:` in the corpus starts with `python`, which is not a console script
+    this distribution ships.
+
+    **Story 11.3, review iteration 1 — the same lesson, one shape further out.** The first
+    generalisation asked *"is anything left on the line after the key?"* and called a non-empty
+    remainder the command. That re-created the identical blindness for a header carrying a
+    trailing YAML comment (``run: | # scrub inputs before use``) and for a header carrying an
+    indentation indicator (``run: |2``): the remainder is non-empty in both, so the line was
+    classified single-line, ``run_indent`` was never set, and **the indented body — where the
+    script and any interpolation live — was never scanned at all**. Measured before the fix,
+    nine such headers each yielded an EMPTY hit set from the containment guard. The rule now
+    keys on the PRESENCE of the block indicator (YAML allows only a comment after it), which
+    makes the recognised set the YAML grammar rather than an enumeration. ``-32`` in
+    ``tests/test_workflow_input_containment.py`` drives the whole generated cross product of
+    style x indentation x chomping x comment through this function and fails on any spelling
+    that collapses back to the single-line branch.
+
+    **A single-line ``run:`` whose value carries an unclosed ``${{`` absorbs its continuation
+    lines**, because a YAML plain or quoted scalar may span lines and ``run: echo "${{`` /
+    ``  inputs.evil }}"`` is legal YAML that the runner folds into one command. The continuation
+    is bounded by the closing ``}}`` and by the indentation returning, deliberately narrowly: a
+    single-line ``run:`` is normally followed by a SIBLING key (``env:``, ``with:``) whose body is
+    more indented, and absorbing that would report `env:`-bound values — the very shape this
+    project asks authors to write — as shell source.
+    """
     inside: set[int] = set()
     if suffix == ".md":
         fenced = False
@@ -492,8 +560,11 @@ def _executable_line_numbers(text: str, suffix: str) -> set[int]:
             if fenced:
                 inside.add(number)
         return inside
-    # YAML: everything under a `run:` block scalar, until the indentation returns.
+    # YAML: everything under a `run:` block scalar, until the indentation returns — PLUS the
+    # single-line `run: cmd …` form, which is shell source on the key's own line.
     run_indent: int | None = None
+    open_indent: int | None = None  # single-line `run:` whose value has an unclosed `${{`
+    open_text = ""
     for number, line in enumerate(text.splitlines(), start=1):
         stripped = line.strip()
         if not stripped:
@@ -502,9 +573,26 @@ def _executable_line_numbers(text: str, suffix: str) -> set[int]:
         if run_indent is not None and indent > run_indent:
             inside.add(number)
             continue
+        if open_indent is not None and indent > open_indent:
+            inside.add(number)  # continuation of a multi-line single-line-form scalar
+            open_text += "\n" + stripped
+            if not _expression_is_open(open_text):
+                open_indent = None
+            continue
         run_indent = None
-        if re.match(r"^-?\s*run:\s*[|>]?[-+]?\s*$", stripped):
-            run_indent = indent
+        open_indent = None
+        header = _RUN_HEADER_RE.match(stripped)
+        if header is not None:
+            rest = header.group("rest").strip()
+            if header.group("block") is not None or not rest or rest.startswith("#"):
+                # Block scalar (`run: |`, `run: >-2`, `run: |+ # note`) or a bare `run:` key:
+                # the script is what follows, indented. Only a COMMENT may legally follow a
+                # block header, so its remainder is never the command.
+                run_indent = indent
+            else:
+                inside.add(number)  # single-line `run: cmd …` — the line itself is the script
+                if _expression_is_open(rest):
+                    open_indent, open_text = indent, rest
     return inside
 
 
@@ -517,7 +605,7 @@ def extract_documented_invocations() -> tuple[DocumentedInvocation, ...]:
         if not path.exists():
             continue
         text = path.read_text(encoding="utf-8")
-        executable = _executable_line_numbers(text, path.suffix)
+        executable = executable_line_numbers(text, path.suffix)
         lines = text.splitlines()
         number = 0
         while number < len(lines):

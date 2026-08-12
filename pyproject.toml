@@ -5,7 +5,7 @@ build-backend = "flit_core.buildapi"
 [project]
 name = "argus-agent"
 version = "0.1.0"
-description = "ArgusAgent: Agent-First Deterministic Repository Assurance & Audit Engine"
+description = "ArgusAgent: Agent-First Deterministic Repository Assurance & Audit Engine. Argus's own finding precision has not been independently validated."
 readme = "README.md"
 authors = [
     { name = "Minions & Argus Agent Team" }
@@ -17,12 +17,26 @@ dependencies = [
     "jsonschema>=4.0",
     "radon>=4.1.0",
     "httpx>=0.24.0",
-    # Upper bound is load-bearing, not hygiene: architecture AR1 sanctions
-    # tree-sitter 0.25.x and folds the grammar version into the Epic-5 determinism
-    # cache key. On 0.26.0 the cartridge self-audit flips
-    # NOT_READY_FOR_RELEASE -> RELEASE_READY (AST corroboration stops firing), i.e.
-    # a false-negative verdict from an assurance tool. Do not widen without
-    # re-running tests/test_cartridge_selfaudit.py.
+    # STRUCK 2026-08-12 (Story 11.4) — the claim below was measured and is FALSE as
+    # written. Original kept legible per architecture.md §3.4 evidence immutability:
+    #   ~~"On 0.26.0 the cartridge self-audit flips NOT_READY_FOR_RELEASE -> RELEASE_READY
+    #     (AST corroboration stops firing)."~~
+    # CORRECTION, measured 2026-08-12: NOT REPRODUCIBLE as stated, two ways. (a) Upstream
+    # 0.26.0's breaking changes are Language.version->abi_version, Language.query()->
+    # Query(...), the two timeout_micros removals, and Point becoming a tuple subclass;
+    # Argus uses none of them and the minimum grammar ABI is unchanged. (b) When AST
+    # extraction is made to fail totally, the cartridges land on INSUFFICIENT_COVERAGE /
+    # exit 3 (the coverage floor fires first), never RELEASE_READY — and the cartridge
+    # corpus sits at deep 1/2 = 50%, below the 60% gate, so it is structurally incapable
+    # of the stated flip.
+    # The bound is RETAINED as conservative-by-default: 0.26 is unproven here, not proven
+    # safe, and widening it is a packaging decision owned by 12.5 / the operator (NFR-P3).
+    # What now carries the guarantee is a RUNTIME defence, because a metadata bound
+    # constrains a resolver and constrains nothing on a machine where the package is
+    # already installed, pinned, vendored or patched: argus/index/ast_index.py's ARM 5
+    # parses a per-language behavioural canary through the real loader seam and withholds
+    # the parser when the toolchain does not extract what Argus was validated against
+    # (argus/shared/grammar_status.py, tests/test_grammar_runtime_validation.py).
     "tree-sitter>=0.25.0,<0.26",
     "tree-sitter-python>=0.25.0,<0.26",
 ]

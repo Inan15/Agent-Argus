@@ -40,6 +40,189 @@ versioning intent is [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
 ## Unreleased
 
+### Disclosed — Argus now states its own validation status on every verdict surface
+
+Until this release, Argus stated a release-readiness verdict without ever stating that its own
+finding precision has never been independently measured. That was true of **every verdict the tool
+has ever emitted**, and it is the one gap that gets worse rather than better on publication.
+
+Every surface that carries a verdict now carries this sentence, and it comes from one constant in
+`argus/verdict/negative_assurance.py` rather than from four hand-typed copies:
+
+> Instrument status: Argus's own finding precision has not been independently validated. Its findings rest on the Argus dogfood corpus, a self-audit of this repository with no human true-positive/false-positive adjudication behind it. This notice is removed only when Epic 13's human adjudication clears the >=80% precision gate; nothing else removes it.
+
+**Where it appears.** On `stderr` after the ship-readiness block on every invocation that printed a
+`verdict=` line; in all four generated reports (`final-verdict.md`, `coverage-ledger.md`,
+`security-review.md`, `architecture-review.md`); and, in a one-line summary form, in this
+distribution's PyPI description and the composite action's Marketplace description. **`stdout` is
+byte-unchanged** — it is the wire contract a pipeline parses positionally, so the disclosure stays
+off it. The residual is stated rather than hidden: a consumer that discards `stderr` sees a verdict
+without the disclosure, which is why the four report artifacts carry it too.
+
+**What it is not.** It is **not** the per-run grade. `grade: demo-heuristic-only` describes how a
+single run was configured and is removed by engaging the deep pass; this describes how the tool's
+findings have been validated, and is removed **only** when the >=80% precision gate clears. Enabling
+a deeper audit changes the run's grade — it does not validate the instrument. It is also distinct
+from the negative-assurance scope disclaimer, and both apply.
+
+**It cannot quietly become permanent, and it cannot quietly disappear.** The surface set is closed by
+a committed test rather than by an author remembering: `tests/test_instrument_disclosure.py` parses
+the report writer's own body and fails if a *fifth* report is written without the disclosure, fails
+if a consumer-facing listing surface is added without it, and fails the day an MCP entry point
+appears without one. When the precision gate does clear, the same guard fails until the sentence is
+**replaced** by the cleared statement — never deleted.
+
+**No verdict, threshold, exit code or decision-table string changed.**
+
+### Fixed — an unvalidated parsing toolchain can no longer produce a false green
+
+Argus resolved the `tree-sitter-<lang>` versions it ran on and folded them into its determinism cache
+key, and it had **never once checked whether that toolchain actually behaves the way Argus was
+validated against**. Every other verdict was defended — the coverage floor against too little
+evidence, the decision table against blocking findings, the depth rules against a wrong 🔴. Nothing
+defended against a wrong 🟢 caused by the parser itself, which is the direction that matters: a false
+red is an annoyance you argue with, a false green from an assurance tool is the product inverted, and
+the user has no way to detect it.
+
+**Measured on a repository above the deep-coverage gate**, with an ordinary, in-bound `tree-sitter
+0.25.2` installed and a planted vacuous test present in both runs:
+
+```
+healthy grammar : NOT_READY_FOR_RELEASE  exit 2  deep 5/6  blocking 1
+drifted grammar : RELEASE_READY          exit 0  deep 5/6  blocking 0
+```
+
+A CI gate that blocked now passed. The planted defect never moved — Argus simply stopped corroborating
+it against the AST, so a verdict-eligible finding silently became an advisory one, and advisory
+findings cannot move a verdict by design. **The coverage ratio is identical in both runs**, so no
+number Argus printed could have told you.
+
+Argus now **self-checks the toolchain behaviourally**, per language, at the one seam every parse
+already passes through: a pinned snippet is parsed and its extraction compared against a frozen
+expectation. When it does not match, Argus **withholds the parser rather than computing a verdict on
+top of it**, and the run degrades to the existing `INSUFFICIENT_COVERAGE` / exit 3 — the honest "not
+enough was assessed to vouch" answer — with a named reason and an operator remedy. No new verdict, no
+new exit code, no decision-table change.
+
+**It is deliberately not a version check.** The failure above happens at an *in-bound* version, so a
+version assertion would have been green on the exact tree where the defect was live. The declared
+supported range is now checked too, as a second and independent signal, and the previously documented
+claim that `tree-sitter` 0.26.0 causes this flip has been **re-measured and corrected** — 0.26.0's
+breaking changes touch nothing Argus uses. The `<0.26` bound is **retained** as conservative-by-default
+and is unchanged; what changed is that it is no longer the only defence.
+
+**Also fixed:** a grammar-failure cause with no registered operator remedy now raises instead of
+silently rendering a different cause's remedy — which would have told you to reinstall a package that
+was installed and fine.
+
+### Fixed — a production file is no longer mistaken for a test because its name ends in the right letters
+
+Argus identifies test files partly by naming convention. Three of those conventions were written
+without a word separator — `test.java`, `spec.rb` and a bare `test.py` — so they matched a **letter
+sequence** rather than a word. Any file whose name merely *ended* that way was classified as a test:
+`latest.java`, `myspec.rb`, `respec.rb`, `contest.py`, `attest.py`, `greatest.py`, `latest.py` and
+`mytest.py` are all ordinary production code, and all eight were called tests.
+
+**Why that mattered, measured rather than described.** A test file is graded shallow by construction
+and is excluded from the critical-subsystem set. On a polyglot repository, a production Java file
+that Argus assessed **CRITICAL** was therefore removed from that set under the reason `test_file` — a
+statement that was simply false — which left the critical set **empty**, so the release gate's "all
+critical subsystems examined deeply" clause was satisfied because there was nothing left to satisfy
+it with. `RELEASE_READY` was reachable on a repository whose one critical production file had never
+been deep-graded and had been reported to the operator as a test.
+
+**What changed.** Every recognised convention now carries the word boundary that ecosystem actually
+uses. Java is matched **case-sensitively** against the original-case filename (`*Test.java` — Maven
+Surefire's convention is CamelCase, and the capital *is* the separator; spelling it `_test.java`
+would have stopped recognising every Java test in existence). Ruby keeps `*_spec.rb`, RSpec's real
+convention. `conftest.py` is now matched as a whole filename and still resolved by its content, so a
+`conftest.py` holding only fixtures is production and one holding test helpers is not.
+
+**What this means for your repository, stated plainly rather than hedged.** If your repository
+contains any of the affected filenames, **your verdict may move** — and it can only move
+**conservatively**: files that were being held out of the assessed population return to it, and a
+returning file that Argus cannot ground *lowers* the deep-coverage ratio. It can never turn a
+blocking verdict into `RELEASE_READY`. This is not a behaviour-preserving change, and on the
+repositories it is aimed at it is not meant to be. Two known losses, stated rather than left to be
+discovered: a file named literally `spec.rb` outside a `spec/` directory is no longer a test by name,
+and one named literally `test.py` is no longer treated as an ambiguous Python test name (`test_*.py`,
+`*_test.py` and `conftest.py` all still are).
+
+**Not fixed, and filed:** several real conventions Argus still does not recognise — minitest's
+`*_test.rb`, Surefire's `*Tests.java` / `*TestCase.java` / `Test*.java`, PHPUnit's `*Test.php` and
+C's `*_test.c`. Those are the opposite error (a test mistaken for production), they would *widen*
+what Argus classifies as a test, and they are tracked separately rather than slipped into this fix.
+
+### Security — the composite action no longer pastes your workflow's inputs into its shell script
+
+If you use `action.yml` (the `ArgusAgent Code Audit & Release Gate` composite action), its four
+inputs — `repo-path`, `commit-sha`, `report-dir` and `strict` — were expanded **into the text of the
+shell script** before `bash` parsed it. That is GitHub's documented script-injection shape: a
+`${{ }}` expression is substituted into the script source, so the value is code rather than data.
+A workflow that wired any of those inputs to a value an outsider can influence — `${{ github.event.issue.title }}`
+is the common one — could have had arbitrary commands run in **its own** job, with that job's token,
+`$GITHUB_ENV`, `$GITHUB_OUTPUT` and checked-out source in reach.
+
+Every value the action's shell touches is now bound through a step-level `env:` map and referenced as
+a double-quoted shell variable (`"$REPO_PATH"`, `"$COMMIT_SHA"`, `"$REPORT_DIR"`, `"$STRICT"`),
+following the discipline `.github/workflows/release.yml` already documented. `github.action_path` on
+the install step was bound the same way — it is set by the runner and was never attacker-settable, so
+it was not part of the defect; it is included so the file carries zero interpolations inside any
+`run:` body rather than one with a footnote. `tests/test_workflow_input_containment.py` now fails on
+the next such interpolation written anywhere in this repository's workflows, in both the block-scalar
+and the single-line `run:` form.
+
+**Do I need to change anything?** No. No input name, default or description changed; no output name
+or value changed; the exit-code map, its `::error::` strings and `assessed` are untouched. A workflow
+already using this action needs no edit and will behave identically.
+
+**What is not claimed.** This hardens the action; it does not publish it, and the action is still not
+listed on the GitHub Marketplace. The fix was verified by local text-invariance tests on Windows /
+CPython 3.11.15 — the property proven is that the script text cannot vary with an input value. **No
+CI run has executed this action**, before or after the change, so nothing here rests on a runner
+having exercised it, and no statement above should be read as a claim about Argus's finding
+precision, which remains not independently validated.
+
+### Fixed — five shipped modules could not be imported from the distribution at all
+
+Installing the distribution and then running `import argus.precision` raised
+`ModuleNotFoundError: No module named '_registry'`. Five of the seventy-two shipped modules did it —
+`argus/precision/__init__.py`,
+`argus/precision/replay_harness.py`, `argus/dogfood/proof_types.py`, `argus/dogfood/proof_render.py`
+and `argus/dogfood/proof_run.py` — because the precision replay harness inserted `tests/cartridges/`
+onto `sys.path` and imported its labelled-cartridge registry **at module import time**, and `tests/`
+is not in the distribution (and must not be: it is the golden-key store the precision number is
+measured against). The registry is now resolved **lazily**, on first use. Measured on a freshly built
+wheel with this repository removed from `sys.path`, one clean subprocess per module: **72 of 72
+import**, against 67 of 72 before. `argus audit` was never affected — no consumer-facing module was
+ever on that path — and no verdict, exit code, threshold, default or rendered `stdout` string changed.
+*Running* the precision replay or the dogfood proof generator still needs the git repository, because
+that is where the labelled cartridges live.
+
+**The guard that was supposed to hold this was blind, and that is the more important half.** The old
+guard walked the *source tree* with `ast`. It stayed **green across the entire fix** — an
+`import _registry` inside a function body is the same AST node as one at module level — and it never
+noticed the published figures rotting from "66 of the 71" to a measured 67 of 72 while it watched,
+because it pinned a set of paths and the documents publish numbers. It is replaced by
+`TC-ArgusAgent-RELEASE-001-20`, which **builds the wheel and the sdist and imports every shipped
+module out of the built artifact**, and by `TC-ArgusAgent-DOCS-001-54`, which asserts the published
+figures against that measurement in both directions.
+
+**Also corrected in the documents, because a shipped artifact that says untrue things is the same
+defect.** The instrument-status disclosure printed on `stderr` by every `argus audit` run said its
+findings rest on *"the Minions dogfood corpus"* and then described that corpus, four words later, as
+*"a self-audit of this repository"*. The **subject** was wrong and is now *"the Argus dogfood
+corpus"*; the claim, the negation, the status vocabulary and the removal condition (Epic 13's human
+adjudication, and nothing else) are unchanged. README's *"When installed, `ArgusAgent` registers slash
+commands in your AI coding assistant"* is corrected to what the wheel measurably contains — three
+console aliases (`argus`, `argus-agent`, `repo-audit`), all three entry points for `argus.cli:main`,
+and zero data assets — and the seven `/audit …` commands are **marked forthcoming** against Story 12.7
+/ FR35 rather than deleted, with a test that fails if the marker outlives the gap or is removed before
+it closes.
+
+Every figure above is LOCAL, Windows / CPython 3.11.15. **CI evidence: NOT ESTABLISHED** — no CI run
+has executed this change. Nothing here is published: no tag, no release, no index upload.
+
 ### Specified — six CLI flags that shipped in `0.1.0` accepted and specified nowhere
 
 `argus audit` has always accepted more than its published invocation contract described. Measured on
@@ -251,17 +434,21 @@ to block, and flipping the default here would pre-empt a policy decision that be
 ### Packaging: what the distribution contains
 
 `[tool.flit.module] name = "argus"` packages the `argus` Python package and nothing else. Measured on the
-built artifacts: the wheel holds 71 modules plus metadata; the sdist adds `pyproject.toml`, `README.md`,
+built artifacts: the wheel holds 72 modules plus metadata; the sdist adds `pyproject.toml`, `README.md`,
 `LICENSE` and `PKG-INFO`. The RAM workflow directories (`audit/`, `phases/`, `adapters/`, `templates/`)
 and the installer scripts are **repository-only** — see README.md for the full capability split.
 
 Measured on the built wheel with this repository removed from `sys.path`, one clean subprocess per module:
-**66 of the 71 shipped modules import.** Five module files do not — `argus/precision/__init__.py`,
-`argus/precision/replay_harness.py`, `argus/dogfood/proof_types.py`, `argus/dogfood/proof_render.py` and
-`argus/dogfood/proof_run.py` — because the precision harness imports its labelled-cartridge registry from
-`tests/`, which is not shipped, and the other four reach that import transitively. Those are Argus's own
-self-audit tools; the entire `argus audit` path is unaffected and was executed from the installed wheel.
-Tracked as `DF-9-2-A`.
+**72 of the 72 shipped modules import.** None fail. Five did until 2026-08-12 —
+`argus/precision/__init__.py`, `argus/precision/replay_harness.py`, `argus/dogfood/proof_types.py`,
+`argus/dogfood/proof_render.py` and `argus/dogfood/proof_run.py` — because the precision harness imported
+its labelled-cartridge registry from `tests/`, which is not shipped, and the other four reached that
+import transitively. The registry is now resolved lazily (`DF-9-2-A`, **CLOSED**); *running* the
+precision replay or the dogfood proof generator still needs the git repository, because that is where the
+labelled cartridges live. Those are Argus's own self-audit tools; the entire `argus audit` path is
+unaffected and was executed from the installed wheel. Every figure in this section is re-derived from a
+freshly built wheel and sdist by `TC-ArgusAgent-DOCS-001-54` and `TC-ArgusAgent-RELEASE-001-20`, so it
+cannot drift from what actually ships.
 
 ### No assurance claim is made by this release
 

@@ -28,10 +28,15 @@ from argus.detectors.vacuous_test import is_test_file
 # is what keeps the remedy this report prints tied to the cause the index actually recorded
 # (Story 10.4 / DN-3; the arrow stays impure-shell → pure-contract, AR8).
 from argus.shared.grammar_status import (
-    CORE_PACKAGE,
-    GrammarFailure,
-    classify_reason,
-    grammar_package_for,
+    CORE_PACKAGE, INSPECT_CORE_VERSION_COMMAND, SUPPORTED_CORE_RANGE,
+    GrammarFailure, classify_reason, grammar_package_for,
+)
+# The FR34 instrument-status disclosure is a PURE constant + renderer in the verdict
+# layer, which this module already depends on. Reaching it from here rather than from each
+# renderer is what lets ONE injection point cover all four artifacts (Story 11.1 / §C.2).
+from argus.verdict.negative_assurance import (
+    INSTRUMENT_STATUS,
+    render_instrument_disclosure,
 )
 from argus.verdict.verdict_gate import (
     RELEASE_READY_DEEP_THRESHOLD,
@@ -322,13 +327,34 @@ def _render_grammar_remedy(failure: GrammarFailure, counts: Counter[str]) -> str
             f"reinstall or rebuild `{packages}` and check that its version pairs with the "
             f"installed `{CORE_PACKAGE}` (an ABI mismatch or a corrupt build looks like this)."
         )
-    # CORE_RUNTIME_MISSING — deliberately last, and deliberately not per-language: EVERY
-    # language is down, so naming one grammar package here would be the maximally wrong
-    # remedy. It is also why this token carries no `<lang>` suffix.
-    return (
-        f"- **The `{CORE_PACKAGE}` core runtime is not importable** ({files} file(s)): run "
-        f"`pip install {CORE_PACKAGE}` and re-run. **Every** language is affected by this — it is "
-        f"not a per-language problem, so installing individual grammar packages will not help."
+    if failure is GrammarFailure.CORE_RUNTIME_MISSING:
+        # Deliberately not per-language: EVERY language is down, so naming one grammar package
+        # here would be the maximally wrong remedy. It is why this token carries no `<lang>` suffix.
+        return (
+            f"- **The `{CORE_PACKAGE}` core runtime is not importable** ({files} file(s)): run "
+            f"`pip install {CORE_PACKAGE}` and re-run. **Every** language is affected by this — it is "
+            f"not a per-language problem, so installing individual grammar packages will not help."
+        )
+    if failure is GrammarFailure.RUNTIME_UNVALIDATED:
+        # Also not per-language, and for a sharper reason than cause 4's: the parser CONSTRUCTED
+        # fine, so there is nothing visibly broken to reinstall. No observed version, exception
+        # message or host path is rendered (NFR-S1 / 10.4 DN-5) — the operator is given the range
+        # and the command to read their own environment; a richer diagnostic is Story 12.8's.
+        return (
+            f"- **The installed parsing toolchain did not pass Argus's self-check** ({files} file(s)): "
+            f"Argus withholds a verdict rather than compute one on a toolchain it has not validated. "
+            f"Install a supported `{CORE_PACKAGE}` (`{SUPPORTED_CORE_RANGE}`) and re-run; check what "
+            f"you have with `{INSPECT_CORE_VERSION_COMMAND}`. **Every** language is affected — "
+            f"installing individual grammar packages will not help."
+        )
+    # DF-10-4-E (closed by Story 11.4). This was an unconditional fallthrough, so a fifth cause
+    # would have silently rendered the fourth's remedy — reintroducing, inside 10.4's own fix, the
+    # exact "named reason whose remedy cannot work" defect 10.4 existed to close. An unregistered
+    # member is now LOUD at the one surface an operator reads, not plausible-looking prose.
+    raise ValueError(
+        f"no operator remedy is registered for GrammarFailure.{failure.name}. Every registered "
+        "cause must render ITS OWN remedy: falling through to another cause's would tell the "
+        "operator to run a command that cannot help them (argus/shared/grammar_status.py)."
     )
 
 
@@ -692,6 +718,30 @@ def render_architecture_review_report(
     return "\n".join(lines)
 
 
+def _with_instrument_disclosure(content: str) -> str:
+    """Append the FR34 instrument-status disclosure to a report artifact (PURE).
+
+    Every report is a verdict surface, and FR34 permits none without the disclosure. This
+    is the SINGLE injection point: ``generate_reports`` routes all four ``write_text``
+    calls through it, and ``tests/test_instrument_disclosure.py`` parses that function's
+    own body to require it, so a FIFTH report added without this helper turns the guard
+    red rather than shipping undisclosed.
+
+    Injecting at the WRITE rather than in each renderer is what keeps ``coverage-ledger.md``
+    covered without an ``argus/ledger/**`` edit: that artifact is rendered by
+    ``argus/ledger/coverage_report.py``, and reaching the constant from there would invert
+    the layering (``generator.py`` already imports FROM ``coverage_report``).
+
+    PURE (AR8) and deterministic (NFR-P1): a constant appended to a string — no clock, no
+    run id, no host path, so the artifacts stay byte-identical for identical inputs.
+    """
+    return (
+        f"{content.rstrip()}\n\n---\n\n"
+        f"## Instrument status (FR34)\n\n"
+        f"{render_instrument_disclosure(INSTRUMENT_STATUS)}\n"
+    )
+
+
 def generate_reports(
     request: AuditRequest,
     verdict: AuditVerdict,
@@ -718,26 +768,26 @@ def generate_reports(
             source_state=source_state, ast_index=ast_index,
         )
         dest = out_path / "final-verdict.md"
-        dest.write_text(content, encoding="utf-8")
+        dest.write_text(_with_instrument_disclosure(content), encoding="utf-8")
         generated["final-verdict"] = dest
 
     if "coverage-ledger" in enabled_set or "all" in enabled_set:
         cov_report = build_coverage_report(ledger)
         content = render_coverage_text(cov_report)
         dest = out_path / "coverage-ledger.md"
-        dest.write_text(content, encoding="utf-8")
+        dest.write_text(_with_instrument_disclosure(content), encoding="utf-8")
         generated["coverage-ledger"] = dest
 
     if "security-review" in enabled_set or "all" in enabled_set:
         content = render_security_review_report(request, findings)
         dest = out_path / "security-review.md"
-        dest.write_text(content, encoding="utf-8")
+        dest.write_text(_with_instrument_disclosure(content), encoding="utf-8")
         generated["security-review"] = dest
 
     if "architecture-review" in enabled_set or "all" in enabled_set:
         content = render_architecture_review_report(request, findings)
         dest = out_path / "architecture-review.md"
-        dest.write_text(content, encoding="utf-8")
+        dest.write_text(_with_instrument_disclosure(content), encoding="utf-8")
         generated["architecture-review"] = dest
 
     return generated

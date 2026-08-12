@@ -123,6 +123,10 @@ from argus.detectors.secret_scan import RULE_OPERATOR_SUPPRESSED_SECRET
 from argus.models import AuditRequest
 from argus.pipeline import run_audit
 from argus.reports.plain_english import ShipReadinessError, render_ship_readiness
+from argus.verdict.negative_assurance import (
+    INSTRUMENT_STATUS,
+    render_instrument_disclosure,
+)
 from argus.verdict.verdict_gate import AuditVerdict
 
 __all__ = ["build_parser", "main"]
@@ -393,6 +397,38 @@ def _emit_suppression_disclosure(verdict: AuditVerdict) -> None:
     )
 
 
+def _emit_instrument_disclosure() -> None:
+    """Disclose how the TOOL's own findings have been validated (FR34 / Story 11.1).
+
+    Printed on EVERY invocation that emitted a ``verdict=`` line, unconditionally,
+    including a clean ``RELEASE_READY`` run — ``_emit_suppression_disclosure``'s reason
+    applies unchanged: a disclosure that only appears when something is wrong is one an
+    operator learns nothing from.
+
+    DISTINCT FROM THE SHIP-READINESS BLOCK AND FROM THE FR17 DISCLAIMER, and both apply.
+    Those bound THIS AUDIT — what was assessed, how deeply, with what materiality bar.
+    This bounds THE INSTRUMENT: an audit can be perfectly scoped and still be produced by
+    a tool whose finding precision nobody has measured. It is also NOT the run grade: it
+    does not move when a deeper pass is engaged, and it is removed only by Epic 13
+    clearing the >=80% precision gate.
+
+    STDERR, for the reason the human register and the suppression disclosure both use:
+    stdout is the FR18/AR3 wire contract a CI step parses positionally, and appending to
+    it would break that. THE RESIDUAL IS REAL AND IS RECORDED RATHER THAN HIDDEN — a
+    consumer that discards stderr sees a verdict without the disclosure. It is bounded by
+    the invariant above (a ``verdict=`` line and this line always appear together in one
+    invocation) and by the fact that the machine consumer's own artifacts — the four
+    generated reports — each carry it too.
+
+    The text is the ONE constant in ``argus/verdict/negative_assurance.py``, never a
+    second copy: the listing surfaces are compared against it rather than transcribed.
+    """
+    print(
+        f"{_PROG}: {render_instrument_disclosure(INSTRUMENT_STATUS)}",
+        file=sys.stderr,
+    )
+
+
 def _emit_ship_readiness(
     verdict: AuditVerdict, enabled_passes: tuple[str, ...]
 ) -> int | None:
@@ -466,11 +502,18 @@ def main(argv: list[str] | None = None) -> int:
         # A ShipReadinessError is a CONTRACT VIOLATION: the run is not trustworthy and exits
         # `1`, meaning no verdict reached the consumer. Disclosing a suppression count beside
         # a verdict we have just refused to vouch for would dress a non-result as a result.
+        #
+        # FR34 still applies here, and that is not an inconsistency: a `verdict=` line HAS
+        # reached stdout, and the instrument disclosure is a statement about the TOOL, never
+        # about this run — it can only add caution to a refusal, never dress one as a result.
+        # The invariant is therefore keyed on the verdict line, not on the exit code.
+        _emit_instrument_disclosure()
         return readiness_failure
 
     # AFTER the human register, deliberately: `Ship-readiness: …` is the headline and stays
     # the first line an operator sees on stderr (pinned by tests/test_cli.py).
     _emit_suppression_disclosure(verdict)
+    _emit_instrument_disclosure()
 
     return verdict.exit_code
 

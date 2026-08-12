@@ -4,12 +4,18 @@
 # Date: 2026-07-28T16:43:04.914Z
 
 user_skill_level: intermediate
-planning_artifacts: "{project-root}/_bmad-output/planning-artifacts"
-implementation_artifacts: "{project-root}/_bmad-output/implementation-artifacts"
+# CORRECTED 2026-08-10b. These were the INSTALLER DEFAULTS and pointed at
+# `_bmad-output/planning-artifacts`, which DOES NOT EXIST in this repository. The real
+# artifact tree is `_bmad-output/design-artifacts/ArgusAgent/`, and `_bmad/custom/config.toml`
+# has overridden both keys to it since installation — so `resolve_config.py` resolved
+# correctly while any skill reading THIS file directly resolved to a missing directory.
+# Aligned here so the two config surfaces cannot disagree.
+planning_artifacts: "{project-root}/_bmad-output/design-artifacts/ArgusAgent"
+implementation_artifacts: "{project-root}/_bmad-output/design-artifacts/ArgusAgent"
 project_knowledge: "{project-root}/docs"
 
 # Core Configuration Values
-user_name: Varin
+user_name: XAgent007
 project_name: ArgusAgent
 communication_language: English
 document_output_language: English

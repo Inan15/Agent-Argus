@@ -14,14 +14,15 @@ float), ArgusAgent-NFR-S1 (no source/secret byte from any cartridge appears in t
 precision result / rows — the result carries only counts + rule-id provenance +
 the fixed-precision ratio string), ArgusAgent-AR4 (precision = TP / (TP + FP) is an
 exact ``Fraction`` stored as a ``"num/den"`` string ratio — NEVER a ``float``),
-ArgusAgent-AR8 (PURE: no I/O, no clock, no LLM, no random), ArgusAgent-NFR-M1/M2 (<=1200-line
-files; the frozen Epic-1..6 contracts + the 6.5 ``_registry.py`` shape are
-unchanged — this module COMPOSES them, edits none).
+ArgusAgent-AR8 (PURE core — no clock, no LLM, no random; its ONE declared impure edge is the
+LAZY ``_registry_module()``, strictly LESS I/O than the module-level import it replaced —
+DF-9-2-A), ArgusAgent-NFR-M1/M2 (<=1200-line files; the frozen Epic-1..6 contracts + the 6.5
+``_registry.py`` shape are unchanged — this module COMPOSES them, edits none).
 
 What this module IS (partial-reuse note, AI-E5-7)
 -------------------------------------------------
 It is the PURE diff/classify/roll-up CORE. It REUSES the 6.5 substrate BY VALUE:
-the caller (``tests/argus/test_precision_replay.py``) stages each registry
+the caller (``tests/test_precision_replay.py``) stages each registry
 cartridge via the LOCKED ``stage_cartridge`` + audits it via the deterministic
 zero-token ``run_audit_detailed`` + reads the emitted findings through the
 ``ApaaStoreReader`` (exactly as the 6.5 self-audit harness does), then feeds the
@@ -78,22 +79,25 @@ import sys
 from dataclasses import dataclass
 from fractions import Fraction
 from pathlib import Path
+from typing import TYPE_CHECKING, Any
 
-# REUSE the 6.5 cartridge registry as the labeled ground-truth source (no fork).
-# The registry lives under tests/argus/cartridges/ (the committed golden-key store).
-# It carries NO source bytes (the golden key is value-free — the 6.5 NFR-S1
-# contract), so importing it into a production module leaks no secret/source byte.
+# REUSE the 6.5 cartridge registry as the labeled ground-truth source (no fork). It lives
+# under tests/cartridges/ — REPOSITORY-ONLY, absent from the built distribution — so it is
+# resolved ON DEMAND, never at module import time (DF-9-2-A). It carries NO source bytes
+# (value-free golden key, the 6.5 NFR-S1 contract), so importing it leaks no secret byte.
 _CARTRIDGES_DIR = Path(__file__).resolve().parents[2] / "tests" / "cartridges"
-if str(_CARTRIDGES_DIR) not in sys.path:
-    sys.path.insert(0, str(_CARTRIDGES_DIR))
+if TYPE_CHECKING:
+    from _registry import CartridgeSpec, GoldenFinding  # type: ignore[import-not-found]
 
-from _registry import (  # type: ignore[import-not-found]  # noqa: E402
-    CARTRIDGE_REGISTRY,
-    VALIDATION_SET_FLOOR_N,
-    CartridgeSpec,
-    GoldenFinding,
-    populated_planted_defect_count,
-)
+
+def _registry_module() -> Any:
+    """Resolve ``_registry`` lazily — this function IS this module's declared impure edge."""
+    if _CARTRIDGES_DIR.is_dir() and str(_CARTRIDGES_DIR) not in sys.path:
+        sys.path.insert(0, str(_CARTRIDGES_DIR))
+    import _registry  # type: ignore[import-not-found]
+
+    return _registry
+
 
 __all__ = [
     "MatchKey",
@@ -103,7 +107,6 @@ __all__ = [
     "golden_match_key",
     "compute_precision",
     "precision_gate_status_for",
-    "VALIDATION_SET_FLOOR_N",
 ]
 
 # The shared 6.5 match key: (rule_id, verdict_eligible, advisory). ``verdict_eligible``
@@ -161,8 +164,8 @@ class PrecisionResult:
     Carries per-cartridge rows + the corpus TP/FP/FN totals + the precision number
     as a fixed-precision STRING ratio (``Fraction`` rendered ``"num/den"`` — NEVER a
     float, AR4) + the labeled-cartridge count ``n`` + the locked floor + the
-    ``provisional`` flag + the gate-status string. PURE (no I/O / clock / LLM /
-    random — AR8). The gate-status string REUSES the 6.5 marker convention.
+    ``provisional`` flag + the gate-status string. PURE DATA — no clock, LLM or random
+    (AR8; the producer's ONE I/O edge is ``_registry_module()``). REUSES the 6.5 marker.
 
     ``precision`` is the exact ``Fraction`` (the in-memory truth); ``precision_ratio``
     is its committed STRING form (``f"{num}/{den}"``) — the only precision surface
@@ -219,17 +222,18 @@ def _ratio_string(fraction: Fraction) -> str:
 def compute_precision(
     emitted_keys_by_cartridge: dict[str, frozenset[MatchKey]],
     *,
-    registry: tuple[CartridgeSpec, ...] = CARTRIDGE_REGISTRY,
+    registry: tuple[CartridgeSpec, ...] | None = None,
     protocol_cleared: bool = False,
     protocol_path: str = "_bmad-output/design-artifacts/ArgusAgent/precision-validation-protocol.md",
 ) -> PrecisionResult:
     """Diff emitted findings against the registry ground truth → a PURE PrecisionResult.
 
-    AC1/AC2/AC3/AC5. PURE (no I/O / clock / LLM / random — AR8). The caller supplies
-    ``emitted_keys_by_cartridge`` — a map of ``cartridge_id -> frozenset`` of emitted
-    match keys (each ``(rule_id, verdict_eligible, advisory)``, derived via
-    ``finding_match_key``); this module never stages/audits a repo (the impure
-    staging is the test-harness shell, §3.3).
+    AC1/AC2/AC3/AC5. Pure apart from ONE declared edge — ``_registry_module()`` resolves
+    the cartridge registry LAZILY (DF-9-2-A; strictly less I/O than the module-level import
+    it replaced) — and otherwise no clock, no LLM, no random (AR8). The caller supplies
+    ``emitted_keys_by_cartridge`` — a map of ``cartridge_id -> frozenset`` of emitted match
+    keys (each ``(rule_id, verdict_eligible, advisory)``, derived via ``finding_match_key``);
+    this module never stages/audits a repo (the impure staging is the test shell, §3.3).
 
     Classification, per the 6.5 match key (DN-MATCH-KEY-REUSE):
     - an emitted key IN the cartridge's golden key -> **TP**;
@@ -252,6 +256,9 @@ def compute_precision(
     failure, never a silent skip (the AI-E5-1 no-crash leg; the caller converts a
     staging raise into a NAMED assertion before reaching here).
     """
+    registry_module = _registry_module()
+    registry = registry_module.CARTRIDGE_REGISTRY if registry is None else registry
+    floor_n = registry_module.VALIDATION_SET_FLOOR_N
     rows: list[CartridgePrecisionRow] = []
     total_tp = total_fp = total_fn = clean_repo_fp = 0
 
@@ -312,13 +319,13 @@ def compute_precision(
     recall_den = total_tp + total_fn
     recall = Fraction(total_tp, recall_den) if recall_den else Fraction(1, 1)
 
-    n = populated_planted_defect_count()
+    n = registry_module.populated_planted_defect_count()
     # DN-PROVISIONAL: the gate is provisional UNLESS the corpus genuinely reached
     # N>=5 distinct planted-defect cartridges AND the protocol pass/fail is recorded
     # cleared AND the exact precision Fraction meets the >=80% threshold. The harness
     # never silently clears the gate from a thin corpus (the OI1 over-claim ban).
     provisional = not (
-        n >= VALIDATION_SET_FLOOR_N
+        n >= floor_n
         and protocol_cleared
         and precision >= _PRECISION_GATE_THRESHOLD
     )
@@ -334,13 +341,14 @@ def compute_precision(
         recall=recall,
         recall_ratio=_ratio_string(recall),
         n=n,
-        floor_n=VALIDATION_SET_FLOOR_N,
+        floor_n=floor_n,
         provisional=provisional,
         gate_status=precision_gate_status_for(
             precision=precision,
             n=n,
             provisional=provisional,
             protocol_path=protocol_path,
+            floor_n=floor_n,
         ),
     )
 
@@ -351,6 +359,7 @@ def precision_gate_status_for(
     n: int,
     provisional: bool,
     protocol_path: str,
+    floor_n: int | None = None,
 ) -> str:
     """The 6.6 gate-status string — REUSES the 6.5 marker convention (no forked marker).
 
@@ -365,17 +374,18 @@ def precision_gate_status_for(
     and points at the validation protocol; it NEVER says "cleared" unless the gate
     has genuinely flipped (``provisional is False``).
     """
+    floor_n = _registry_module().VALIDATION_SET_FLOOR_N if floor_n is None else floor_n
     ratio = _ratio_string(precision)
     if provisional:
         return (
             f"provisional (Story 6.6 precision harness; precision={ratio} over FINDINGS "
-            f"not repos; N={n} labeled cartridges populated, floor N={VALIDATION_SET_FLOOR_N}; "
-            f"the >=80% externalization gate stays PROVISIONAL until N>={VALIDATION_SET_FLOOR_N} "
+            f"not repos; N={n} labeled cartridges populated, floor N={floor_n}; "
+            f"the >=80% externalization gate stays PROVISIONAL until N>={floor_n} "
             f"with the validation protocol applied — this number is an EARLY/PROVISIONAL "
             f"signal, NOT a cleared gate; adjudication method: {protocol_path})"
         )
     return (
         f"cleared (Story 6.6 precision harness; precision={ratio} >= 4/5 over FINDINGS; "
-        f"N={n} labeled cartridges >= floor N={VALIDATION_SET_FLOOR_N}; the validation "
+        f"N={n} labeled cartridges >= floor N={floor_n}; the validation "
         f"protocol's per-metric pass/fail is recorded cleared — {protocol_path})"
     )

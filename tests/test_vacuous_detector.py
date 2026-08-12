@@ -29,6 +29,7 @@ from argus.detectors.vacuous_test import (
 from argus.index.ast_index import AstIndexEntry, CodeEdge, Definition
 from argus.ledger.coverage_ledger import CoverageDepth
 from argus.store import canonical
+from tests.test_classification_word_boundary import NEAR_MISS_CORPUS, assert_corpus_holds
 
 
 # ── Pure-logic cases (no tree-sitter) — construct the AstIndexEntry directly ──
@@ -81,6 +82,29 @@ def test_test_classification_content_dependence_names_the_tier_that_answered() -
     # …and the guess itself is unchanged: tier 3 with an unreadable entry stays "test".
     unreadable = AstIndexEntry(file_path="app/auth_test.py", ast_eligible=False, parse_failed=True)
     assert is_test_file("app/auth_test.py", ast_entry=unreadable)
+
+
+def test_a_name_convention_matches_a_word_not_a_letter_sequence() -> None:
+    """TC-ArgusAgent-DETECT-001-100 — Story 11.2 / AC2.5: the near-miss corpus, pinned HERE.
+
+    ``DF-8-2-B``'s close condition names THIS file explicitly, so the two headline
+    near-misses are pinned beside ``-85``/``-95`` where a reviewer will look for them:
+    ``svc/latest.java`` and ``svc/myspec.rb`` are ordinary production files that the
+    tier-2 table used to claim as tests, which removed them from the FR4 critical set
+    under the false reason ``test_file``.
+
+    The corpus itself is declared ONCE, in
+    ``tests/test_classification_word_boundary.py``, and IMPORTED here — never restated
+    (AI-E9-7: an enumerable fact gets one home). The closure that makes the class stay
+    closed lives there too (``-97``/``-98``/``-99``); this case is the signpost.
+    """
+    assert ("svc/latest.java", False, False) in {
+        (c.path, c.is_test, c.content_dependent) for c in NEAR_MISS_CORPUS
+    }
+    assert ("svc/myspec.rb", False, False) in {
+        (c.path, c.is_test, c.content_dependent) for c in NEAR_MISS_CORPUS
+    }
+    assert_corpus_holds()
 
 
 def test_vacuous_mock_dominated_test_flagged_and_corroborated() -> None:

@@ -50,6 +50,65 @@ _ARTIFACT_DIR = _REPO_ROOT / "_bmad-output" / "design-artifacts" / "ArgusAgent"
 # too — so a future edit can neither quietly drop the exit-code contract nor bolt on an
 # unreviewed claim section.
 _NOTE_SECTIONS: tuple[str, ...] = (
+    # `## Unreleased` — added 2026-08-11 by Story 11.1 (FR34). Registered FIRST because it is
+    # the claim a consumer of THIS release must read before weighing any other: the tool now
+    # states its own validation status on every verdict surface. Order is pinned by `-16`, so
+    # a later story cannot demote it by adding a section above it without deciding to.
+    "### Disclosed — Argus now states its own validation status on every verdict surface",
+    # `## Unreleased` — added 2026-08-12 by Story 11.4. Registered SECOND, and the placement is
+    # the DECISION this registry's comment above demands rather than a default. 11.1's
+    # instrument disclosure stays first for the reason it was placed there — it bounds how a
+    # consumer should weigh every other claim in this note, including this one — so it was NOT
+    # demoted. This section is placed above 11.2's and 11.3's on the registry's own stated
+    # principle, *what breaks a pipeline soonest*: it is the only entry that can change an EXIT
+    # CODE on an unchanged repository, from `0` to `3`, for a consumer who changed nothing but
+    # their environment. 11.2's classification fix moves a verdict conservatively and 11.3's
+    # binds only the marketplace channel; this one binds every channel and every language,
+    # because the toolchain it validates is the substrate under all of them. It is also the
+    # entry a reader most needs BEFORE the others: if their toolchain does not validate, the
+    # coverage numbers every other section discusses are withheld rather than wrong. No
+    # existing section moved relative to any other — this is a pure insertion.
+    "### Fixed — an unvalidated parsing toolchain can no longer produce a false green",
+    # `## Unreleased` — added 2026-08-11 by Story 11.2 (DF-8-2-B). Registered THIRD, and that
+    # placement is a DECISION this registry's own comment above demands rather than a default:
+    # 11.1's instrument disclosure bounds how a consumer should weigh every other claim in this
+    # note, including this one, so demoting it beneath a behavioural fix would be the wrong
+    # signal for an assurance tool. This section is nonetheless a consumer-visible BEHAVIOUR
+    # change — it can move a polyglot repository's verdict, conservatively — which is why it
+    # precedes the 10.2/10.3 sections and states its direction rather than hedging it.
+    "### Fixed — a production file is no longer mistaken for a test because its name ends in the right letters",
+    # `## Unreleased` — added 2026-08-12 by Story 11.3 (DF-9-2-D). Registered FOURTH (was third
+    # until Story 11.4 inserted above it on 2026-08-12; its own reasoning below is unchanged and
+    # still holds — it was not reordered relative to any other section). The placement is the
+    # DECISION this registry's comment above demands rather than a default.
+    # Urgency alone would promote it: it is the only *security* entry in the note. It is placed
+    # below 11.1's and 11.2's anyway because the stated principle is *what a consumer of THIS
+    # release hits first*, and the dominant install path for this release is the index/VCS channel:
+    # a CLI or library consumer is entirely UNAFFECTED by the composite-action fix, whereas 11.1's
+    # instrument disclosure bounds how they should weigh every claim in this note and 11.2's
+    # classification change can move ANY consumer's verdict. The action fix binds only the
+    # marketplace channel, which `epics.md` Story 11.3 AC3 hard-gates on this story and ships later
+    # (Story 12.9). Reordering an already-reviewed entry would also add avoidable churn to a
+    # security change, so no existing section moved.
+    "### Security — the composite action no longer pastes your workflow's inputs into its shell script",
+    # `## Unreleased` — added 2026-08-12 by Story 11.5 (DF-9-2-A / DF-9-2-B). Registered FIFTH,
+    # and the placement is the DECISION this registry's comment above demands rather than a
+    # default. THIS IS THE FIFTH CONSECUTIVE STORY TO EDIT THIS REGISTRY (11.1, 11.2, 11.3,
+    # 11.4, now 11.5), filed as `DF-11-4-D` and stated here rather than left to be counted:
+    # the Epic-11 checkpoint review should look at this file's history and decide whether the
+    # registry's cost is buying what it was meant to buy. It is a pure INSERTION — no existing
+    # section moved relative to any other, and nothing was demoted.
+    # Placed below the four above it on the registry's own stated principle, *what breaks a
+    # pipeline soonest*, applied honestly against this entry rather than flatteringly:
+    # 11.1 bounds how a consumer weighs every other claim here (including this one); 11.4 can
+    # change an EXIT CODE on an unchanged repository; 11.2 can move any consumer's verdict;
+    # 11.3 is a security fix on an executable surface. This entry changes NO verdict, NO exit
+    # code, NO threshold, NO default and no `stdout` byte — it can only turn an import that
+    # failed into one that succeeds, and correct sentences that were untrue. Promotion above
+    # 11.3 was considered on the ground that this one binds the dominant index/VCS channel
+    # while 11.3 binds only the marketplace channel, and DECLINED: a security fix on an
+    # executable surface outranks a packaging fix on a non-consumer module surface.
+    "### Fixed — five shipped modules could not be imported from the distribution at all",
     # `## Unreleased` — added 2026-08-10 by Story 10.2 (DF-AUD-APAA-D). Registered deliberately,
     # which is what this enumeration is for: each one is a consumer-visible claim someone signed
     # off. "Documented" records the `[languages]` extra, which shipped with zero README/CHANGELOG
@@ -89,6 +148,12 @@ _RELEASE_SURFACES: tuple[str, ...] = (
     "README.md",
     "CHANGELOG.md",
     "action.yml",
+    # Registered 2026-08-11 by Story 11.1 (FR34). `[project].description` is the ONE-LINE
+    # PyPI summary a stranger reads beside the package name — before the README, before
+    # anything. It now carries the instrument-status disclosure, so it has to be inside the
+    # over-claim guard: a surface this release publishes on and `-17` does not scan is a
+    # surface where an over-claim can land unseen.
+    "pyproject.toml",
     ".github/workflows/release.yml",
     "_bmad-output/design-artifacts/ArgusAgent/minions-dogfood-proof.md",
     "_bmad-output/design-artifacts/ArgusAgent/minions-dogfood-partition-plan.md",
@@ -101,6 +166,7 @@ _RELEASE_SURFACE_PATTERNS: tuple[str, ...] = (
     "README.md",
     "CHANGELOG.md",
     "action.yml",
+    "pyproject.toml",
     ".github/workflows/release.yml",
     "_bmad-output/design-artifacts/ArgusAgent/minions-dogfood-*.md",
 )

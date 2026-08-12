@@ -1983,3 +1983,781 @@ not exist until an operator pushes.
     same class measured one trigger short — supersede or close them together, never separately)
   - category: developer-experience
   - severity: 🟡
+
+## Deferred from: code review of 10-4-a-grammar-that-fails-to-load-names-why (2026-08-11)
+
+Appended by the `bmad-code-review` gate, iteration 1 (verdict: PASS). **Append-only (§3.4): nothing
+above this heading was edited, reordered or deleted.**
+
+- **`_render_grammar_remedy`'s per-cause branching has no exhaustiveness guard of its own**
+  (`argus/reports/generator.py:295-332`). `_get_parser_for_lang`'s AST-closure guard (AC5.2,
+  `tests/test_grammar_diagnosis.py::-115`) forces any FUTURE fifth `GrammarFailure` member to be
+  registered and driven through the loader, but nothing forces a matching branch in
+  `_render_grammar_remedy`: its last branch is an unconditional fallthrough (a comment, not an
+  assertion), so a hypothetical fifth cause would silently render the core-runtime remedy instead of
+  failing loudly — the one place in Story 10.4's own design that does not match the "fail loudly, never
+  silently" standard it otherwise establishes (E.4's spirit, applied to the report side rather than the
+  loader side). **Not a defect today**: `GrammarFailure` has exactly the four members AC1.1 of Story
+  10.4 locks, and `tests/test_grammar_diagnosis.py::REPORT-002-26/-27` behaviourally exercise all four
+  correctly. No operator-visible harm exists on this tree. Verified by reading
+  `argus/reports/generator.py:295-332` directly and confirming no `else: raise` / no AST-closure
+  equivalent to `-115` exists for this function.
+  - id: DF-10-4-E
+  - origin_story: 10-4-a-grammar-that-fails-to-load-names-why (code review, iteration 1)
+  - owner: **Engineering Lead**
+  - target_story: **NONE — unscheduled; Engineering Lead to schedule** against whichever future story
+    next extends `GrammarFailure`'s membership (none proposes a fifth cause today)
+  - category: developer-experience
+  - severity: 🟢
+
+## Deferred from: Story 10.5 — the V1 delivery-closure sweep (2026-08-11)
+
+Appended by Story 10.5 (*a V1 commitment is delivered, or it is explicitly not V1*), the last story
+of Epic 10. **Append-only (§3.4): nothing above this heading was edited, reordered or deleted —
+verified programmatically (`after.startswith(before)`), not by eye.** Every disposition below is
+dated 2026-08-11 and was produced by measurement: a claim-shape parse of the whole `E-PRD/prd.md`
+(forward) and a static `ast` import-reachability walk of `argus/**` from `argus/cli.py` (reverse),
+both now committed as `tests/test_v1_commitment_closure.py`.
+
+### The closing statement of the class — read this first
+
+**This defect class was filed four times over five weeks and swept zero times.** `DF-AUD-APAA-A` and
+`DF-AUD-APAA-B` (2026-07-04) named it exactly — *"ORPHAN relative to the shipped `run_audit`/CLI
+path"*, *"has NO production caller … the security guarantee is proven only in tests"*. `DF-6-7-A`
+filed FR23. `DF-10-4-B` filed `DetectorResult.degraded`. **Each was recorded as an instance; none
+triggered a sweep**, and two of the four were pointed at `epic-7-minions-dogfood-proof-run` — an
+epic that is `done` — so they could never be closed by the thing they named.
+`implementation-readiness-report-2026-08-03.md:400` had even scored the blind spot eight days before
+this story ran: *"The failures are all in the same blind spot: obligations the PRD binds without an
+FR number. The requirement-ID pass scores 100%; **the unnumbered-obligation pass scores 68%**."* The
+score was never acted on either. Measured today, the reverse sweep is **not one hit but four** —
+FR23, FR24, FR26, FR29 — and **three of them had never been filed at all**, while
+`architecture.md`'s *"No FR is unsupported"* certified all of them over a module-**placement** table.
+**`tests/test_v1_commitment_closure.py` is what makes the fifth filing impossible:** a V1 commitment
+now carries exactly one dated disposition or the suite is red, and a `wired` disposition is refuted
+mechanically by the import graph rather than believed. A list closes today's instances; a closure
+closes the class.
+
+### Dispositions of entries that named this class
+
+- **`DF-6-7-A` — CLOSED 2026-08-11 by disposition (not by wiring).** FR23 is disposed
+  **`library-seam`** (Story 10.5, DN-3), and `E-PRD/prd.md`'s FR23 text is amended
+  struck-not-deleted, dated and attributed, to record that the pattern-matched escalation evaluator,
+  the resolution model and `DecisionRecordWriter` are **delivered and test-proven**
+  (`tests/test_hitl_escalation.py`) while **their INVOCATION is deferred**. Measured 2026-08-11:
+  `argus/governance/escalation.py` is not in the transitive import closure from `argus/cli.py`, and
+  its single importer inside the package (`governance/decision_record.py`) is itself unreachable.
+  **The reason has two halves and both bind:** (a) every call site lands in `argus/pipeline.py`,
+  **1331 lines against the NFR-M1 cap of 1200**, byte-fenced to Story 12.1; and (b) the V1 default
+  path is **unattended CI** (Journeys 3 and 5) with **no human to answer a default-STOP gate**, so a
+  naive wiring would deadlock every automated audit. **The cost is stated, not hidden:** the
+  §Cut-Order marks **FR23 non-negotiable core** — only FR24 is `[Tier B]` — and
+  `implementation-readiness-report-2026-08-03.md:365` already flagged FR23 as stranded in a slippable
+  epic. This closure de-scopes a non-negotiable-core capability's invocation to an unscheduled story.
+  **It is the one decision in Story 10.5 an operator may reasonably overturn**, and the honest route
+  to overturning it is a new Epic 12 story, not a quiet re-wiring.
+  - id: DF-6-7-A
+  - owner: **XAgent007 (Governance Owner)**
+  - target_story: **NONE — unscheduled; Governance Owner to schedule** once Story 12.1 lifts the
+    NFR-M1 gate on `pipeline.py` (the `DF-10-4-E` form: house-legal because a human is named)
+  - status: **CLOSED (disposition recorded) / OPEN (invocation)** — superseded for tracking purposes
+    by the FR23 amendment in `E-PRD/prd.md` and by `tests/test_v1_commitment_closure.py`, which turns
+    red the day the seam becomes reachable and the disposition still says it is not
+
+- **`DF-10-4-B` — DISPOSED 2026-08-11 and RE-TARGETED OFF STORY 10.5.** Story 10.4 filed it against
+  10.5 so 10.5 would inherit a measurement rather than a rediscovery; that hand-off is hereby
+  discharged. **`DetectorResult.degraded` is not an FR**, so it is not an AC4 hit — it is the same
+  class **one level down**, and it is the evidence that the class is systemic rather than FR-shaped:
+  a reason is computed, recorded and then read by nothing. Re-measured 2026-08-11 and **unchanged**:
+  zero production readers. **It is not fixed here** — Epic 10 closes the record and ships nothing,
+  and giving the field a reader is a product change in a fenced file. It now carries a **live**
+  target instead of pointing at the story that is closing.
+  - id: DF-10-4-B
+  - owner: **Engineering Lead**
+  - target_story: **12-4-every-outcome-names-its-next-action** (which owns *outcome names its next
+    action*, the natural first reader of a recorded degradation cause) — with
+    **12-5-default-install-grounds-languages-it-claims** as the secondary surface if 12.4 renders the
+    cause only in the terminal and not in the persisted report
+  - status: OPEN, owned — **no longer targeted at Story 10.5**
+  - severity: 🟡 unchanged
+
+- **`DF-AUD-APAA-A` — RE-TARGETED 2026-08-11 (entry text above is unchanged).** Its stated target,
+  `epic-7-minions-dogfood-proof-run`, is an epic that is **`done`**, so the entry was **unclosable as
+  written** — an orphan, in the register that exists to prevent orphans. Re-measured today: the
+  `cache/` sub-package is still outside the closure from `argus/cli.py` (`memo_store.py` and
+  `invalidation.py` unreachable; `key.py` is reachable but `MemoStore` is never constructed).
+  ⚠️ **It is NOT an FR-delivery defect**, and Story 10.5's reverse sweep says so explicitly: **FR27
+  is disposed `delivered-differently`, not `library-seam`.** FR27 promises *the same verdict for the
+  same repository and APAA version*; the default run is zero-token and deterministic, so the property
+  **holds by determinism rather than by cache**. Recording FR27 as undelivered would have been a
+  false accusation — the failure mode this product exists to prevent — and this entry tracks the
+  **mechanism**, not the requirement.
+  - id: DF-AUD-APAA-A
+  - owner: **Engineering Lead**
+  - target_story: **12-3-memoization-mechanism-is-wired** (was: `epic-7-minions-dogfood-proof-run`, an
+    epic already `done`)
+  - status: OPEN, owned — mechanism deferred; **FR27 itself is delivered by determinism**
+  - severity: 🟢 unchanged
+
+- **`DF-AUD-APAA-B` — RE-RECORDED 2026-08-11 as open-and-unowned-BY-DECISION (entry text above is
+  unchanged).** Same orphaned target as `-A`. Re-measured today: `read_in_scope`
+  (`argus/index/partitioner.py`) still has **no production caller**, so the NFR-S4 manifest read
+  boundary remains **unenforced at runtime** while its docstring asserts an off-scope read is
+  impossible. Story 10.5 disposes the `work_manifest` commitment **`nfr-backed`** — *specified, not a
+  gap* (DN-5): the FR preamble binds capabilities and NFR-S4 is a binding requirement, so treating it
+  as a missing FR would manufacture a defect and dilute the four real hits. **The reachability half
+  is a genuine hit and stays open here rather than being re-filed under a new id** — re-filing a
+  five-week-old finding as new would reset its age, which is the opposite of what this ledger is for.
+  - id: DF-AUD-APAA-B
+  - owner: **XAgent007 (Governance Owner)** — named human, per AI-E9-8
+  - target_story: **NONE — open, unowned by decision; Governance Owner to schedule** against Story
+    12.1, since routing the live read path through `read_in_scope` edits `argus/pipeline.py` (1331 /
+    1200, fenced)
+  - status: OPEN, owned — explicitly *not* closed by Story 10.5
+  - severity: 🟡 unchanged
+
+### New filings — the three library seams that had NEVER been filed, and the V2 re-entry point
+
+Each of the three below is **built, typed and test-proven**, and each is **unreachable from
+`argus/cli.py`**. *"It has tests"* is therefore not evidence of delivery, and saying so is half the
+point of Story 10.5. All three are amended in `E-PRD/prd.md` struck-not-deleted, dated and
+attributed. **None is fixed here**: every call site lands in `argus/pipeline.py` (1331 / 1200) or
+needs a new CLI surface, and both are fenced.
+
+- **`DF-10-5-A` — FR24's append-only decision record has no production call site, and had never been
+  filed.** `argus/governance/decision_record.py::DecisionRecordWriter` is built, typed and
+  test-proven, and has **no importer at all inside `argus/`**; its only trace in the package is a
+  prose mention in `store/integrity.py`. It follows FR23 by construction — a decision record has
+  nothing to record until the gate it records for is invoked — so it must be scheduled **with** FR23,
+  never separately. Close = wire it behind FR23's gate, or record it permanently library-only with a
+  contract amendment. Tier B.
+  - id: DF-10-5-A
+  - origin_story: 10-5-a-v1-commitment-is-delivered-or-explicitly-not-v1
+  - owner: **XAgent007 (Governance Owner)**
+  - target_story: **NONE — unscheduled; Governance Owner to schedule** together with `DF-6-7-A`
+    once Story 12.1 lifts the NFR-M1 gate on `pipeline.py`
+  - category: capability
+  - severity: 🟡
+
+- **`DF-10-5-B` — FR26 / NFR-A2's referential-integrity lint never runs on an operator's audit, and
+  had never been filed.** `argus/store/integrity.py::lint_referential_integrity` is proven by
+  `tests/test_store_integrity_lint.py` and is imported only by `dogfood/proof_run.py` and
+  `evidence/bundle.py` — **both themselves unreachable from `argus/cli.py`**. Consequence stated
+  precisely: **no audit an operator can run today lints its own on-disk state**, so a dangling
+  reference in `.argus/` would be caught in the dogfood harness and nowhere else. ⚠️ This is a
+  **governance** defect, not a correctness defect — it changes no verdict, gate or finding today.
+  Close = call the lint at the end of the pipeline's write phase (Story 12.1's file), or amend NFR-A2
+  to say the lint is a maintainer tool. Tier B.
+  - id: DF-10-5-B
+  - origin_story: 10-5-a-v1-commitment-is-delivered-or-explicitly-not-v1
+  - owner: **XAgent007 (Governance Owner)**
+  - target_story: **NONE — unscheduled; Governance Owner to schedule** against Story 12.1
+  - category: capability
+  - severity: 🟡
+
+- **`DF-10-5-C` — FR29 says an OPERATOR can export an evidence bundle, and no operator can. Never
+  filed.** The sharpest of the four, because the FR text names the actor: `build_evidence_bundle` /
+  `persist_evidence_bundle` (`argus/evidence/bundle.py`) are proven by `tests/test_evidence_bundle.py`,
+  **no `argus` CLI subcommand exports a bundle**, and the only importer in the package is
+  `dogfood/proof_run.py`. **Journey 4's hand-delivered bundle is produced by the dogfood harness, not
+  by a surface Dana's engineer can invoke** — which is why this one is worth more than its severity:
+  it is the gap between a journey the PRD tells and a command that exists. Close = add an
+  `argus evidence-bundle` subcommand (a CLI-surface change, Story 12.8's fence), or amend FR29 to name
+  the operated-service harness as the only producer. The **source-retention guarantee** in FR29 is
+  unaffected and still binding.
+  - id: DF-10-5-C
+  - origin_story: 10-5-a-v1-commitment-is-delivered-or-explicitly-not-v1
+  - owner: **XAgent007 (Governance Owner)**
+  - target_story: **NONE — unscheduled; Governance Owner to schedule** against Story 12.8 (the CLI
+    surface), which must not be started before 12.1 lands
+  - category: capability
+  - severity: 🟡
+
+- **`DF-10-5-D` — the `standards_refs[]` V2 re-entry point, so a reclassification is not a
+  disappearance.** Story 10.5 reclassified `standards_refs[]` + CWE-required-on-every-security-category
+  -finding (with its `^CWE-\d+$` format validation) from **V1 to V2** at all three sites that bound it,
+  and merged it into §Growth Features (V2)'s pre-existing *standards mapping (CWE/ASVS/ISO 25010/SLSA)*
+  item. **This entry is the ledger's record that the commitment exists and is owed**, so it cannot
+  quietly become *"it was always V2"*. Re-entry conditions, both required: (1) the ≥80%
+  finding-precision gate is **CLEARED** (Epic 13) — until then no attested audience is served by the
+  field; and (2) a `finding`-schema amendment is scheduled that respects NFR-A1/NFR-M2 additive-only
+  and re-bounds the redaction surface (NFR-S1/S2). Consequence today, recorded at
+  `E-PRD/prd.md` §Journey 4: a V1 security finding — in practice an **FR11** hardcoded-secret finding,
+  the one security-category producer in V1 — carries **no standards reference**, so the evidence
+  bundle is weaker compliance evidence than §Compliance & Regulatory previously implied.
+  - id: DF-10-5-D
+  - origin_story: 10-5-a-v1-commitment-is-delivered-or-explicitly-not-v1
+  - owner: **XAgent007 (Governance Owner)**
+  - target_story: **NONE — unscheduled; Governance Owner to schedule** once Epic 13 clears the
+    precision gate (V2 scope by decision DN-1, not a V1.5 slip)
+  - category: governance
+  - severity: 🟢
+
+### ⛔ What Story 10.5 did NOT close — asserted, not remembered
+
+Story 10.5 is the story most likely to close an open item **by accident**, because *sweep everything
+and classify it* reads like permission to tidy. The first two below are pinned **by test**
+(`tests/test_v1_commitment_closure.py::-38`), so the guard defends against its own author; the rest
+were verified by inspection and are recorded here so the inspection is auditable.
+
+- **H0 — the Minions handoff H1–H4 is STILL NOT FILED.** ⚠️ **A measured correction to Story 10.5's
+  own brief**, recorded rather than quietly adopted: the story was written expecting H0 to be *"OPEN
+  and UNOWNED"*, and on this tree it is not — the 2026-08-10b append records H0's **ownership**
+  closed via pre-authorised option (b), the operator electing to file outside this workflow. The
+  **residual** is the execution, and the same entry states it: *"It does not mean H1–H4 have been
+  filed"*, and *"Assumption A5 remains ⚠️ UNSUPPORTED"*. Story 10.5's forward sweep therefore disposes
+  §Product Scope's *"APAA specifies the cost/memory consumption-contracts it will need from Minions
+  (a)/(d)/(e)"* as **`specified-not-built`** — the specification exists (§Dependencies /
+  Cross-product Boundary), the **filing does not** — and **never as `done`**. Pinning the stale
+  *"UNOWNED"* would have been pinning a fact that stopped being true the day before; the guard pins
+  the residual that is still true instead. **Unchanged by this story.**
+- **`DF-7-2-A` — the human TP/FP adjudication is OPEN.** An owner was named on 2026-08-10b
+  (XAgent007); **a named owner is not an adjudication**, `protocol_cleared` is still `False`, and only
+  Epic 13 can clear it. **Unchanged by this story.**
+- **The ≥80% finding-precision gate — NOT CLEARED.** Nothing in Epic 10 clears, softens or schedules
+  it. Journey 4's new consequence note is explicitly written not to read as if it does.
+- **`DF-10-2-A`, `DF-10-4-A`, `-C`, `-D`, `-E`, `DF-6-6-A` / `-P1` / `-P2`, `DF-8-*`, `DF-9-2-C`** —
+  untouched, by inspection. `DF-10-4-D`'s dogfood-staleness trap did not fire because this story's
+  write set contains **no `argus/**` file** — a **designed property**, not luck (DN-7): `git ls-files
+  argus` cannot move if nothing under `argus/` is created, modified or staged.
+- **`AI-E8-9` — only the F2/CWE half is disposed**, by the DN-1 decision. Its **F4 (`SC-E`), F10
+  (`architecture.md`) and D1 (config drift) are STILL OPEN and are not Story 10.5's.** Naming them
+  closed would be the exact over-claim this epic exists to stop.
+
+
+## Story 11.1 filing — a red the story did not cause and must not close (2026-08-11)
+
+**Filed by Story 11.1's dev run. Nothing in Story 11.1 is closed by this entry, and Story 11.1
+deliberately did NOT fix it** — the fix edits `tests/test_evidence_citation.py`, which is outside
+this story's declared write set, and it closes an item belonging to Epic 10's retrospective rather
+than to FR34.
+
+- **`DF-11-1-A` — the Epic-10 retrospective is an unregistered status document, and
+  `TC-ArgusAgent-DOCS-001-22` is red on `master` because of it.** Story 10.1's evidence-citation
+  closure resolves `epic-*-retro-*.md` **by glob** under the artifact directory precisely so a new
+  document cannot escape the rule by being new. `epic-10-retro-2026-08-11.md` was then written
+  (untracked, mtime 2026-08-11T20:04) and never registered in `_STATUS_DOCUMENTS`, so `-22`'s
+  closed-set assertion fails. **The guard is working exactly as designed** — this is the red it
+  exists to produce.
+  **Attribution, measured rather than asserted:** the failing assertion reads two inputs only — the
+  files matching the glob, and `_STATUS_DOCUMENTS`. Story 11.1 authored neither
+  (`git status --porcelain -- tests/test_evidence_citation.py` is EMPTY, mtime 2026-08-10; the retro
+  file is `??` untracked and predates this story's first write by ~75 minutes). It was red before
+  this story began and is red after it, unchanged.
+  Close = register the retrospective in `_STATUS_DOCUMENTS` **and** give it the §H citation it now
+  owes (an `audit-ci.yml` run id plus the sha it covers, or a `NOT ESTABLISHED` marker) — the
+  registration alone would only move the failure to `-20`/`-21`.
+  - id: DF-11-1-A
+  - origin_story: 11-1-tool-discloses-its-status-with-an-expiry
+  - owner: **XAgent007 (operator — the retrospective's author)**
+  - target_story: **NONE — unscheduled; operator to schedule before Epic 11 closes**, since a red
+    committed guard on `master` degrades every subsequent story's ability to distinguish its own
+    regressions from inherited ones
+  - category: governance
+  - severity: 🟡
+
+## Deferred from: implementation of 11-2-polyglot-repository-is-classified-correctly (2026-08-11)
+
+- **`DF-8-2-B` — CLOSED 2026-08-11 by story 11-2-polyglot-repository-is-classified-correctly**
+  (append-only closure note, §3.4 — the original entry at `DF-8-2-B` above is NOT rewritten; this
+  section was appended to the END of this file and `after.startswith(before)` was verified
+  programmatically, +n/-0). Three things the original entry got wrong or could not have known are
+  recorded here rather than edited into it:
+  1. **The count was TWO and it is THREE.** Every planning document, four times over, named
+     `"test.java"` and `"spec.rb"`. `_AMBIGUOUS_PYTHON_TEST_SUFFIXES` also carried a bare
+     `"test.py"` with the identical defect — `contest.py`, `attest.py`, `greatest.py`, `latest.py`
+     and `mytest.py` all matched it. That is the **sixth** hand-counted enumeration in this project
+     to be re-measured and found wrong, which is why the close is a CLOSURE over both tables
+     (`tests/test_classification_word_boundary.py::TC-ArgusAgent-DETECT-001-97`/`-98`/`-99`) and
+     not the list of near-misses the original close condition asked for.
+  2. **The premise "not a false green" EXPIRED.** It was written 2026-08-04, when Java had no
+     grammar and both stages misclassified these files identically. Re-measured 2026-08-11:
+     `build_ast_index` over `svc/latest.java` returns `ast_eligible=True`, `parse_failed=False`,
+     **2 definitions** — the file is deep-*gradable*, so the agreement between the stages now costs
+     real assurance coverage.
+  3. **The measured consequence, which escalates the severity the entry recorded as 🟢.** Driving
+     the real pipeline over a polyglot fixture at `93adc94` with the defect live:
+     `svc/latest.java is_test=True depth=audited_shallow crit=CRITICAL inelig=test_file`, **critical
+     set `()`**, `excluded {'svc/latest.java': 'test_file'}`. Ordinary production Java that Argus
+     assesses CRITICAL was removed from the FR4 critical set under a reason that is false, emptying
+     the set, so FR16's *"all critical subsystems deep"* clause was satisfied **vacuously** and
+     `RELEASE_READY` was reachable on a repository whose one critical production file was never
+     deep-graded — a false green in the PRD-fatal direction (inversion F1). The entry is
+     append-only, so the escalation is recorded here rather than by editing the original 🟢
+     (operator open question 3 of story 11.2).
+  **What actually shipped:** `"test.java"` / `"spec.rb"` / bare `"test.py"` removed;
+  `_CASE_SENSITIVE_TEST_SUFFIXES = ("Test.java",)` added inside tier 2 and matched against the
+  ORIGINAL-CASE basename (DN-1 — Java's separator is the CamelCase capital; the original entry's
+  alternative spelling `"_test.java"` would have deleted every Java true positive, because
+  `_lower_basename` destroys exactly that boundary); `_AMBIGUOUS_PYTHON_TEST_BASENAMES =
+  ("conftest.py",)` added inside tier 3 (DN-2 — the whole-basename rule the bare `"test.py"` was
+  really standing in for, keeping `TC-ArgusAgent-DETECT-001-95` passing UNMODIFIED). Zero existing
+  tests changed. The near-miss corpus is pinned in `tests/test_vacuous_detector.py`
+  (`TC-ArgusAgent-DETECT-001-100`) as the original close condition asked, by IMPORT from the single
+  declaration in `tests/test_classification_word_boundary.py`.
+
+- **`DF-11-2-A` — six real test-name conventions are UNRECOGNISED, and every one of them is a false
+  NEGATIVE.** Measured 2026-08-11 by cross-referencing `argus/shared/source_languages.py`'s ten
+  grounded languages against both classification tables: minitest's `*_test.rb`, Maven Surefire's
+  `**/*Tests.java`, `**/*TestCase.java` and `**/Test*.java` (the prefix form — `TestUserService.java`
+  lowercases to `testuserservice.java`, which does NOT match tier 2's `startswith("test.")`; only
+  the exact name `test.java` does), PHPUnit's `*Test.php`, and C's `*_test.c`. A genuine test file
+  carrying one of these is classified PRODUCTION, so it is graded as if it were the system under
+  test and the vacuous-test pass never runs over it.
+  **Story 11.2 deliberately did NOT fix these.** They are a different defect class from the one it
+  closed: that story only *removes* false positives, and every entry here would *add* true positives
+  and therefore MOVE classification on real repositories — a widening, in an epic whose charter is
+  "nothing unsafe or untrue can be published". `TC-ArgusAgent-DETECT-001-99` makes the gap
+  registered rather than invisible, so this stays visible until it is decided.
+  Close = add each convention to the table whose boundary rule it satisfies (`_test.rb`/`_test.c` to
+  `_UNAMBIGUOUS_TEST_SUFFIXES`; `Tests.java`/`TestCase.java`/`Test.php` to
+  `_CASE_SENSITIVE_TEST_SUFFIXES`; the `Test*` PREFIX form needs a new case-sensitive PREFIX
+  registration, which is why it is the expensive one), remove the matching
+  `_NO_CONVENTION_EXEMPTIONS` entry in `tests/test_classification_word_boundary.py`, and MEASURE the
+  classification movement on a polyglot fixture rather than asserting there is none.
+  - id: DF-11-2-A
+  - origin_story: 11-2-polyglot-repository-is-classified-correctly
+  - owner: **Delivery Orchestrator**
+  - target_story: **12.5** (`a deliberately-excluded language states its absence AND reason at the
+    point of downgrade` — the same disclosure surface answers both; recommendation of record from
+    story 11.2's operator open question 1)
+  - category: correctness
+  - severity: 🟡
+
+- **`DF-11-2-B` — `c` and `php` ground but have NO test-name convention at all, and the exemption is
+  now load-bearing.** Eight of the ten languages in `LANGUAGE_BY_SUFFIX` carry at least one
+  registered convention; `c` and `php` carry none, so on a C or PHP repository EVERY file — test
+  suites included — is classified production. They are registered as reason-carrying exemptions in
+  `tests/test_classification_word_boundary.py::_NO_CONVENTION_EXEMPTIONS` so that
+  `TC-ArgusAgent-DETECT-001-99` goes RED the day an eleventh language is grounded without a decision
+  being taken, or the day one of these two quietly acquires a convention.
+  **This is a REGISTERED gap, not a fixed one.** The registration forces a decision; it does not
+  authorise adding a convention (that is `DF-11-2-A`).
+  Close = jointly with `DF-11-2-A`, or by a recorded ruling that these two languages are out of
+  V1 scope, in which case the exemption reason is updated to cite that ruling.
+  - id: DF-11-2-B
+  - origin_story: 11-2-polyglot-repository-is-classified-correctly
+  - owner: **Delivery Orchestrator**
+  - target_story: **12.5** (with `DF-11-2-A`)
+  - category: correctness
+  - severity: 🟢
+
+## Story 11.3 closure — 2026-08-12
+
+- **`DF-9-2-D` — CLOSED 2026-08-12 by story
+  `11-3-published-action-cannot-execute-consumer-input`** (append-only closure note — the original
+  entry at *"Deferred from: code review of story 9-2…"* is **NOT rewritten**, §3.4 evidence
+  immutability. That matters here more than usual: the original entry contains a **count and a
+  coordinate that are both wrong**, and correcting them by editing it would destroy the record of
+  what the project believed when it filed the item.)
+
+  **(a) The real count is FIVE consumer-controlled sites, not one.** The entry describes a single
+  site. Re-derived 2026-08-12 by regex over `action.yml` and cross-checked against the run-block
+  resolver, every `${{ inputs.* }}` occurrence sitting inside a `run:` body was at
+  **`:74` (`mkdir -p`), `:78` (the `argus audit` positional), `:79` (`--commit`), `:80`
+  (`--report-dir`) and `:126` (the `strict` comparison)** — identical in the working tree and at
+  `HEAD` `93adc94`. The entry's own **Close** condition did ask for the sweep (*"do the same sweep
+  over every other `${{ inputs.* }}` occurrence… in one pass"*), so the defect was under-*described*
+  rather than under-*scoped*.
+
+  **(b) The entry's one coordinate, `action.yml:127`, is OFF BY ONE.** The site is **`:126`**, which
+  carries `if [ "${{ inputs.strict }}" = "true" ] && [ "$EXIT_CODE" -ne 0 ]; then`. Line `:127` is
+  the `echo "❌ Argus Release Gate failed with exit code $EXIT_CODE"` beneath it, which contains no
+  interpolation at all. Recorded because this is the **seventh** stale coordinate this project has
+  found in its own records, and the pattern — not the individual typo — is the finding.
+
+  **(c) There was a SIXTH in-`run:` interpolation that no document named: `:68`,
+  `pip install "${{ github.action_path }}"[languages]`.** It is **not** the vulnerability —
+  `github.action_path` is set by the runner to the action's own checkout directory and is not
+  consumer-settable — so it is not a `DF-9-2-D` instance. It was swept anyway (story DN-3): it cost
+  three lines and buys a materially stronger claim on the **published** artifact, namely *zero*
+  interpolations inside any `run:` body in `action.yml`, with **no exemption registered against the
+  one file a consumer's job executes**. Behaviour is identical; only the moment the text is produced
+  differs.
+
+  **(d) `:135`, `with: path: ${{ inputs.report-dir }}`, is NOT a shell site and was deliberately
+  NOT changed** (story DN-4). It is an **action input** to `actions/upload-artifact`, not shell
+  source — the same distinction `.github/workflows/release.yml:84-87` already documents in prose for
+  its `ref:`. A step-level `env:` cannot reach a later step's `with:` in any case, and routing it
+  through a step output would add machinery to "fix" a non-bug. `TC-ArgusAgent-SECURITY-001-25`
+  asserts that line is still present, so the non-change is pinned rather than merely explained: a
+  future sweep that "tidies" it goes red.
+
+  **(e) The exploit was DEMONSTRATED, not asserted, and the method is recorded because the method is
+  the evidence.** At story-design time the `:126` template was rendered with the crafted `strict`
+  value `x" = "x" ]; then echo PWNED_ARBITRARY_EXECUTION; id -un; fi; if [ "z` and the resulting
+  script handed to a **real `bash`** exactly as the runner does; the injected `id -un` **executed**
+  and printed the username, rc `0`. The same value through the `env:`-bound form printed `GATE_OFF`,
+  rc `0`, executing nothing. **That demonstration is deliberately NOT in the test suite** — a
+  `bash`-dependent guard cannot run on a Windows developer's machine, `pytest.skip` is a false green
+  in this project (`audit-ci.yml` sets `ARGUS_REQUIRE_LANGUAGE_GRAMMARS=1` precisely to make a skip a
+  hard failure), `PyYAML` is not a declared dependency, and a committed test that spawns a shell to
+  prove code execution is itself a liability. What ships instead is the stronger, portable,
+  stdlib-only property: **the `run:` script text of every step is INVARIANT under the value of every
+  action input** (`TC-ArgusAgent-SECURITY-001-27`), with a mandatory positive control (`-28`) that
+  applies the identical assertion to the pre-fix line held as a literal and requires it to FAIL.
+
+  **(f) The Close condition's guard is delivered as a CLOSURE, and the obvious implementation of it
+  would have been VACUOUS.** The entry asks for *"a guard test that fails on any `${{ inputs.`
+  appearing inside a `run:` block"*. This repository already owned a run-block resolver
+  (`tests/test_invocation_contract.py::_executable_line_numbers`) and AR7 / architecture §3.3 forbid
+  a second mechanism where one exists — but that resolver keyed on `^-?\s*run:\s*[|>]?[-+]?\s*$`,
+  whose `\s*$` requires end-of-line after the key, so it recognised **block scalars only**. Measured:
+  against a synthetic `- run: echo "${{ inputs.evil }}"` it returned an **empty** line set, and it
+  was missing four real single-line `run:` steps in `release.yml`. A guard built naively on it would
+  have passed while the vulnerability stood, blind to the cheapest way to reintroduce this exact
+  defect. The resolver was therefore **generalized in place and renamed public**
+  (`executable_line_numbers`), not forked; the documented-invocation set it also feeds was proven
+  **element-identical** across the change (5 before, 5 after, 0 added, 0 removed). The guard bans
+  `inputs.*` **and** `github.event.*` outright with no exemption possible, so it protects the future
+  rather than today's five sites, and detects over the JOINED run-body text so a `${{` wrapped onto
+  the next line cannot escape it.
+
+  - id: DF-9-2-D
+  - closed_by_story: 11-3-published-action-cannot-execute-consumer-input
+  - closed: 2026-08-12
+  - verification: `tests/test_workflow_input_containment.py`
+    (`TC-ArgusAgent-SECURITY-001-24`..`-31`), 8 tests. Post-fix measurement over the whole committed
+    corpus: **zero** interpolations inside any `run:` body in `action.yml` (was six), and **zero**
+    forbidden contexts corpus-wide (was five).
+  - residual: **two registered, reason-carrying exemptions remain**, both
+    `.github/workflows/argus-student-audit.yml` `${{ github.sha }}` — runner-provided 40-hex, not
+    attacker-settable. One interpolates into **Python** source inside a `python -c "…"` body and is
+    registered separately for that reason. `.github/workflows/release.yml` and `audit-ci.yml`
+    measured **ZERO** hits: they already complied and were not touched.
+  - evidence_status: **LOCAL** (Windows, CPython 3.11.15). CI evidence: **NOT ESTABLISHED** — no
+    `audit-ci.yml` run has ever executed any Epic 10 or Epic 11 sha, and the artifact hardened here
+    executes **only** inside GitHub Actions. The command a human runs to establish it is
+    `gh workflow run audit-ci.yml --ref master` after pushing, then citing the run id **plus the sha
+    it covers**. Nothing was pushed, tagged, released or dispatched by this story (`AI-E10-1`
+    dated risk acceptance, carried forward; publication is Story 12.9).
+
+  **(g) APPENDED 2026-08-12 — Story 11.3 review iteration 1. The guard delivered under (f) was
+  itself VACUOUS against nine ordinary `run:` header spellings, and this is recorded because the
+  pattern, not the individual miss, is the finding.** The generalised resolver classified a `run:`
+  line by asking *"is anything left on the line after the key?"* and calling a non-empty remainder
+  the command. That is true of a block header carrying a trailing YAML comment
+  (`run: | # scrub inputs before use`) and of one carrying an indentation indicator (`run: |2` — a
+  digit is not `[-+]`, so no comment is even needed), so both were misread as the single-line form:
+  `run_indent` was never set and **the indented body, where the script and any `${{ inputs.* }}`
+  live, was never scanned at all**. Measured on the unfixed resolver, `interpolations()` returned
+  `()` against an `action.yml`-shaped document containing `echo "${{ inputs.strict }}"`, and 102 of
+  the 108 spellings YAML's `c-b-block-header` grammar admits were blind. `action.yml` never used
+  that shape, so the six sites closed above were and are genuinely closed — but the guard's mandate
+  is the NEXT one, and a contributor appending a comment to a `run: |` would have reopened
+  `DF-9-2-D` with the suite fully green.
+
+  **The repair, and the reason it is not a fourth item on a list.** The classification now keys on
+  the PRESENCE of the `|`/`>` block indicator, which YAML permits only a comment to follow — so the
+  remainder is never the command, and the recognised set is the grammar rather than an enumeration.
+  A single-line `run:` whose value carries an unclosed `${{` also absorbs its continuation lines,
+  closing the folded-plain-scalar shape. `TC-ArgusAgent-SECURITY-001-32` asserts this over the
+  GENERATED cross product (style x indentation indicator x chomping indicator x comment, both
+  indicator orders, 108 spellings); `-29` gained four readable shapes. Both were demonstrated RED
+  against the pre-fix resolver with the final test code and a `sha256` round-trip
+  (`55b3efa15c18ea09…` -> `6025e2d0f8298015…` -> `55b3efa15c18ea09…`). The resolver change is
+  provably inert on the real corpus: **zero** executable lines added or removed in any of
+  `action.yml`, the three workflows or `README.md`, and `extract_documented_invocations()` still
+  returns the same **5** invocations element-for-element. This supersedes the `-24`..`-31` / 8-test
+  figure in `verification` below, which was correct when written: the set is now
+  `TC-ArgusAgent-SECURITY-001-24`..`-32`, **9 tests**, 1371 collected suite-wide. **LOCAL**
+  (Windows, CPython 3.11.15); CI evidence remains **NOT ESTABLISHED**; nothing pushed, tagged,
+  released or dispatched.
+
+## Deferred from: Story 11.4 — a wrong grammar version cannot silently produce a false green (2026-08-12)
+
+Appended by Story 11.4. **Append-only (§3.4): nothing above this heading was edited, reordered or
+deleted — verified programmatically (`after.startswith(before)`), not by eye.** Every figure below is
+**LOCAL** (Windows, CPython 3.11.15); CI evidence remains **NOT ESTABLISHED** (`AI-E10-1`) — a human
+establishes it by pushing and running `audit-ci.yml`, then citing the run id **plus the sha it
+covers**. Nothing was pushed, tagged, released or dispatched.
+
+- **`DF-10-4-E` — CLOSED 2026-08-12 by Story 11.4.** Its entry (above, from Story 10.4's review
+  iteration 1) carried `target_story: **NONE — unscheduled; Engineering Lead to schedule** against
+  whichever future story next extends `GrammarFailure`'s membership (none proposes a fifth cause
+  today)`. **Story 11.4 is that story**: it registers a fifth member, `RUNTIME_UNVALIDATED`.
+
+  **Why it could not be deferred again.** `argus/reports/generator.py::_render_grammar_remedy` ended
+  in an **unconditional fallthrough**, so the fifth cause would have silently rendered the
+  *core-runtime* remedy — telling an operator to `pip install tree-sitter` when the core is installed,
+  importable and fine. That is precisely the "a recorded reason token names a remedy that works" rule
+  Story 10.4 exists to enforce, violated **inside 10.4's own fix**, by the first story to extend it.
+  Deferring would have shipped the defect it was filed to prevent.
+
+  **The repair.** The fallthrough is now an explicit `if failure is GrammarFailure.CORE_RUNTIME_MISSING`
+  arm, and the function ends in a `raise ValueError` naming the unregistered member. An unregistered
+  cause is therefore **loud at the one surface an operator reads**, rather than plausible-looking prose
+  for a different cause. The pure contract gained the matching import-time closure: every
+  `GrammarFailure` member must own exactly one token spelling in `TOKEN_PREFIX_BY_FAILURE`
+  (language-scoped) or `TOKEN_BY_UNSUFFIXED_FAILURE` (runtime-scoped), so a sixth member with neither
+  fails at **import** rather than at audit time.
+
+  **Verification.** `TC-ArgusAgent-REPORT-002-33` drives **all five** causes to the operator surface and
+  asserts each renders its **own** distinct remedy (five causes → five distinct strings), plus a
+  negative control proving an unregistered member **raises**; `-34` asserts the fifth cause is not
+  silent at the callout and keeps its own remedy when mixed with a load cause. Cost: 19 physical lines
+  in `argus/reports/generator.py`, inside the measured dogfood unit-2 budget.
+
+  - status: **CLOSED**
+  - closed_by: `11-4-wrong-grammar-version-cannot-produce-false-green`
+  - closed_date: 2026-08-12
+  - verification: `tests/test_grammar_runtime_validation.py::TC-ArgusAgent-REPORT-002-33`, `-34`
+
+### Re-affirmed as OPEN and explicitly NOT absorbed by Story 11.4
+
+Recorded so the next story inherits a measurement rather than a rediscovery. Each was re-verified
+against the working tree on 2026-08-12; none is a new item and none is edited above.
+
+- **`DF-10-2-A`** (C / C++ / Ruby / Rust parse cleanly and extract **zero definitions**) — **OPEN,
+  re-measured, and deliberately ACCOMMODATED rather than fixed.** Re-confirmed by execution: the four
+  grammars load, `has_error` is `False`, and `_extract` returns no definitions because their definition
+  nodes are `function_item` / `method` / a `declarator` field that `_DEF_KIND_BY_NODE` and `_node_name`
+  do not cover. Story 11.4's canary expectations therefore pin **today's honest truth per language**,
+  including the empty tuples, and `TC-ArgusAgent-INDEX-001-123` asserts all four pass their canaries
+  **by name**. A uniform "≥1 definition" canary would have fired on four **healthy** grammars and taken
+  every polyglot audit to `INSUFFICIENT_COVERAGE` — a false-green fix that ships a mass false red. When
+  `DF-10-2-A` is fixed those expectations must be re-measured and updated deliberately; `-123` is
+  written to go **red** at that moment rather than silently absorb the change.
+  - owner: unchanged · target_story: unchanged (`NONE`)
+
+- **`DF-11-1-A`** (`tests/test_evidence_citation.py::test_TC_ArgusAgent_DOCS_001_22_the_status_document_set_is_closed`
+  fails because `epic-10-retro-2026-08-11.md` is unregistered) — **OPEN, carved out by node id for the
+  FIFTH consecutive story.** Owner remains **XAgent007 (operator)**. Closing it means registering the
+  retro in `_STATUS_DOCUMENTS`, which then obliges that retro to carry a run id **plus the sha it
+  covers**; no such run exists (`AI-E10-1`), so closing it from a story means either editing a signed
+  Epic-10 retrospective or minting a citation no story may create. **Now a standing carve-out rather
+  than an exception, and it should be adjudicated at the Epic 11 checkpoint.**
+  - owner: unchanged · target_story: unchanged
+
+- **`DF-11-2-A`** / **`DF-11-2-B`** (six unrecognised real test-name conventions; `c`/`php` grounded
+  with no convention) — **OPEN, untouched.** Both are file-classification defects in
+  `argus/detectors/vacuous_test.py`, both carry `target_story: 12.5`, and both *widen* classification
+  and *move* verdicts on real repositories — the opposite shape to a story that withholds a verdict.
+  Story 11.3 ruled identically.
+  - owner: unchanged · target_story: unchanged (12.5)
+
+### New this story
+
+- id: DF-11-4-A
+  - title: **The runtime toolchain check does not reach the operator on a PARTIAL failure**
+  - detail: `_render_readability_warning`'s all-or-nothing trigger (`if eligible: return []`) means the
+    new `tree_sitter_runtime_unvalidated` cause is announced **only when nothing at all parsed**. On a
+    polyglot repository whose Python validates and whose Rust does not, the Rust files are recorded
+    `ast_eligible=False` with the correct token, the coverage numbers move honestly, and **no callout
+    names the cause**. This is not a new blind spot — it is the **same** trigger already filed as
+    `DF-10-4-A` — but it now has a fifth, more consequential cause behind it, because the other four
+    mean "a grammar is visibly absent" while this one means "a grammar is present and lying".
+  - measured: 2026-08-12, by reading the live trigger and by `TC-ArgusAgent-REPORT-002-29`, which pins
+    the narrow trigger in **both** directions and is deliberately left unrelaxed by this story.
+  - why_not_fixed_here: widening the trigger adds a per-file point-of-downgrade operator surface that
+    **Story 12.5 owns by name** (`epics.md` Epic 12). Taking it here would be scope leak into another
+    story's ground, and Story 10.4 already refused the same widening for the same reason.
+  - owner: **Engineering Lead**
+  - target_story: **12.5** — fold into `DF-10-4-A`'s remedy; the two share one trigger and one fix.
+  - category: developer-experience
+  - severity: 🟡 (upgraded from `DF-10-4-A`'s 🟢: silence about an *absent* grammar is a slower path to
+    the right answer, silence about a *drifted* one leaves a wrong 🟢 unexplained)
+
+- id: DF-11-4-B
+  - title: **The `tree-sitter <0.26` pin's stated reason is disproved; the pin itself is unre-validated**
+  - detail: Story 11.4 measured that 0.26.0's breaking changes touch nothing Argus uses and that the
+    stated cartridge flip is not reproducible (`architecture.md` §Packaging, corrected in place). The
+    pin was **retained** as conservative-by-default (DN-7) and its prose corrected, but nobody has run
+    the suite against a real 0.26 install. The bound is now duplicated-by-design in exactly two places
+    — `pyproject.toml`'s specifier and `argus/shared/grammar_status.py`'s integer tuples — held equal
+    in both directions by `TC-ArgusAgent-DOCS-001-54`, so this is a *decision* to take, not a drift to
+    fix.
+  - why_not_fixed_here: dependency **bounds** are a packaging decision with a named owner (NFR-P3;
+    `architecture.md` records it as *"a decision, not decided here"*), and §0.1.4 forbids this story
+    from changing the venv to observe a change. Re-validating requires a throwaway environment, which
+    is an operator action.
+  - owner: **XAgent007 (operator)** for the decision; **12.5** for the packaging change if taken
+  - target_story: **12.5**
+  - category: packaging
+  - severity: 🟢 (the runtime defence this story added is what now carries the guarantee; the pin is no
+    longer the only line of defence, which is precisely why widening it is now a *choice*)
+
+## Deferred from: code review of story 11-4-wrong-grammar-version-cannot-produce-false-green (2026-08-12)
+
+Appended by the `bmad-code-review` gate, iteration 1 (verdict: PASS). **Append-only (§3.4): nothing
+above this heading was edited, reordered or deleted.**
+
+- **Canary is a finite-sample check, not a universal grammar verifier**
+  (`argus/shared/grammar_status.py::GrammarCanary`). `canary_matches` proves the toolchain behaves as
+  validated on ONE pinned snippet per `(language, entry point)` seam; it cannot prove correctness for
+  every input the toolchain will ever see. This is inherent to any canary/sample-based check, not a
+  defect in this story's design, and is already disclosed in `DEV-1`'s own docstring (sensitivity to a
+  deliberate change of `_DEF_KIND_BY_NODE` / `_CALL_NODE_TYPES` is named as intended). Not actionable.
+  - id: DF-11-4-C
+  - origin_story: 11-4-wrong-grammar-version-cannot-produce-false-green (code review, iteration 1)
+  - owner: Engineering Lead
+  - target_story: NONE — accepted design property, revisit only if a real drift is found that a canary
+    cannot see
+  - category: testability
+  - severity: 🟢
+
+- **`tests/test_release_surface_honesty.py`'s note-section registry has been edited by three
+  consecutive stories** (11.1, 11.2/11.3, 11.4). Each edit examined by this review is a clean, justified
+  insertion — Story 11.4's is a pure addition with zero lines removed or reordered, placed second on the
+  registry's own stated ordering principle, and it did not demote Story 11.1's instrument disclosure.
+  Flagged as a pattern, not a defect: a registry that is routinely widened to fit whatever the current
+  story needs to say is a registry that is one unexamined edit away from becoming decorative. Recommend
+  the operator review this file's edit history at the Epic 11 checkpoint.
+  - id: DF-11-4-D
+  - origin_story: 11-4-wrong-grammar-version-cannot-produce-false-green (code review, iteration 1)
+  - owner: XAgent007 (operator)
+  - target_story: NONE — epic checkpoint review item
+  - category: process
+  - severity: 🟡
+
+## Deferred from: story 11-5-published-artifact-is-complete-and-true (2026-08-12)
+
+Appended by `dev-story`. **Append-only (§3.4): nothing above this heading was edited, reordered or
+deleted** — verified programmatically (`git diff --numstat` on this file shows `-0` deletions).
+
+Every figure below is **LOCAL, Windows / CPython 3.11.15**, under the dated risk acceptance recorded
+in Story 11.1 §0.1 (AI-E10-1, 2026-08-11, XAgent007), carried forward rather than re-taken.
+**CI evidence: NOT ESTABLISHED.** Nothing was published: `git tag -l` is empty, `origin/master` did
+not move, no release and no index upload. The wheel and sdist were built into a temporary directory
+outside the repository.
+
+### Closed by this story
+
+- **`DF-9-2-A` — CLOSED 2026-08-12.** `argus/precision/replay_harness.py` now resolves the 6.5
+  cartridge registry through a lazy `_registry_module()` helper instead of a module-level
+  `sys.path.insert` + `from _registry import …`; `compute_precision` takes `registry=None` and
+  `precision_gate_status_for` takes a keyword-only `floor_n=None`, so
+  `argus/dogfood/proof_run.py:642` is **byte-unchanged**. **Measured on a freshly built wheel**
+  (`python -m build --no-isolation`, `argus_agent-0.1.0-py3-none-any.whl`, 77 entries = 72
+  `argus/**` modules + 5 `dist-info`; sdist `argus_agent-0.1.0.tar.gz`, 76 members, no `tests/`),
+  one clean subprocess per module, this repository removed from `sys.path` by normalised absolute
+  path, `cwd` outside the repository, and `argus.__file__` asserted to resolve inside the extraction
+  directory before any result was trusted: **72 of 72 import, 0 fail** — against a baseline
+  re-measured the same way on the same tree of **67 of 72, 5 fail**
+  (`ModuleNotFoundError: No module named '_registry'`: `argus/precision/__init__.py`,
+  `argus/precision/replay_harness.py`, `argus/dogfood/proof_types.py`,
+  `argus/dogfood/proof_render.py`, `argus/dogfood/proof_run.py`).
+  ⚠️ **The stated close condition was FALSE and is corrected here rather than quietly satisfied.**
+  It read *"update `_NOT_IMPORTABLE_FROM_DISTRIBUTION` … which is pinned in BOTH directions, so a fix
+  that leaves the record stale goes RED."* `TC-ArgusAgent-RELEASE-001-11` pinned that constant by
+  walking the **source tree** with `ast`, and an `import _registry` inside a function body is the
+  same AST node as one at module level — so `-11` **stayed GREEN across the entire fix**, and would
+  have stayed green had the record been left stale. It also could not see the published figures
+  rotting from *"66 of the 71"* to a measured 67 of 72 across Epics 10–11, because it pins a set of
+  paths and the documents publish numbers. A guard that inspects the source tree is vacuous by
+  construction for a claim about the distribution. `-11` is **narrowed, not deleted** (it still
+  honestly names which modules mention the repository-only test tree, and its docstring now says what
+  it can and cannot see); the distribution claim moved to `TC-ArgusAgent-RELEASE-001-20`
+  (`tests/test_built_distribution.py`), which builds a real wheel and sdist and imports every shipped
+  module out of the built artifact, with `-21` as the provenance control, `-23` as the
+  fails-when-the-artifact-is-wrong control and `-24` as the never-passes-silently control.
+  - id: DF-9-2-A
+  - closed_by: 11-5-published-artifact-is-complete-and-true
+  - closed_on: 2026-08-12
+  - status: CLOSED
+
+- **`DF-9-2-B` — PARTIALLY CLOSED 2026-08-12.** The bounded prose pass its close condition asked for
+  was performed: **all 21** bare-word `Minions` occurrences under `argus/**` were re-derived by
+  executing the regex `(?<![A-Za-z_])Minions(?![A-Za-z_])` over `git ls-files -- argus` (the ledger's
+  own figure of *25 total / 23 outside `dogfood/`* was stale, as was the epic's *22 across 14*), read
+  one by one, and classified. **19 are TRUE HISTORICAL and were kept** — each records where a design,
+  a constant or a containment rule came FROM (AR7 reuse provenance, negative dependency claims,
+  superseded-run citations); deleting them would make the modules less true, not more. **2 were FALSE
+  SUBJECT claims and were rewritten**: `argus/verdict/negative_assurance.py`'s two FR34 instrument
+  disclosures said the findings rest on *"the Minions dogfood corpus"* and then described that corpus
+  four words later as *"a self-audit of this repository"*. Those two sentences are the
+  highest-visibility text Argus has — `argus audit .` prints one of them on `stderr` on every run —
+  and they are single-sourced, so the copies at `README.md:10` and `CHANGELOG.md:52` were updated in
+  the same change and `tests/test_instrument_disclosure.py` passes without weakening. The subject was
+  corrected; the claim, the negation, the two-member `InstrumentStatus` vocabulary and the removal
+  condition (Epic 13's human adjudication) are unchanged. The classification is now a **closure**, not
+  a list: `TC-ArgusAgent-DOCS-001-57` re-derives the occurrence set from the tree and goes RED on any
+  unclassified member, in both directions.
+  **What is NOT closed:** this covers `argus/**` only, which is what `DF-9-2-B` scoped. Bare-word
+  occurrences elsewhere in the repository (planning artifacts, `tests/**`, the preserved Story-7.2
+  record) are untouched and were never in its scope.
+  - id: DF-9-2-B
+  - closed_by: 11-5-published-artifact-is-complete-and-true
+  - closed_on: 2026-08-12
+  - status: PARTIALLY CLOSED — `argus/**` closed; the rest of the repository was never in scope
+
+### Restated as OPEN, so it does not vanish when Epic 11 closes
+
+- **`AI-E10-4` / `DF-10-2-A` remain OPEN and still have no home.** `AI-E10-4` offered *"(11.5), or a
+  dated V2 decision"* as `DF-10-2-A`'s home (C/C++/Ruby/Rust ground with `ast_eligible=True` but
+  extract zero function/class definitions). **Story 11.5 rules it OUT with reasons** (DN-7): it is a
+  *detector-coverage* change that moves classification on real repositories, this story is packaging
+  and documentation correctness, and the unit-2 LOC budget had 3 lines left after the DF-9-2-A fix —
+  nowhere near enough to widen extraction safely. **Epic 11 closes after this story with both still
+  open.** A dated decision is needed.
+  - id: DF-10-2-A
+  - owner: **XAgent007 (operator)** for the dated decision; Engineering for the change if taken
+  - target_story: **NONE** — needs a named owner or a dated V2 deferral
+  - category: detector-coverage
+  - severity: 🟡 (unchanged)
+
+- **`DF-11-4-D` reached its FIFTH consecutive `_NOTE_SECTIONS` edit here** (11.1, 11.2, 11.3, 11.4,
+  11.5). Story 11.5's edit is a pure zero-deletion insertion registered fifth, with its ordering
+  reason stated and a promotion above 11.3's security entry explicitly considered and declined; no
+  existing section moved and none was demoted. Recorded rather than left to be counted, as
+  `DF-11-4-D` asks. **The Epic-11 checkpoint review should read this file's edit history**: the
+  pattern the reviewer flagged after three consecutive edits has now run to five.
+  - id: DF-11-4-D
+  - owner: XAgent007 (operator)
+  - target_story: NONE — epic checkpoint review item
+  - category: process
+  - severity: 🟡 (unchanged)
+
+- **`DF-9-2-C` deliberately NOT closed.** The three tracked `argus/dogfood/__pycache__/*.pyc` files
+  are adjacent and tempting, and `git rm --cached` would fix them in one line — but that changes the
+  git **index**, which is exactly the `DF-10-4-D` trigger this story is fenced by (`git ls-files --
+  argus` must read 72 before and after staging). Left for whoever owns Story 12.1.
+  - id: DF-9-2-C
+  - owner: Engineering
+  - target_story: **12.1**
+  - category: repository-hygiene
+  - severity: 🟢 (unchanged)
+
+### Opened by this story
+
+- **DF-11-5-A** — 🟡 **The unit-2 dogfood LOC budget is down to 3 lines.** Measured after this
+  story's `git add`: unit `82a3d605e61e` = **14997 / 15000**, all three partition_ids byte-unchanged
+  (`477ef77d7b65` 1330 / `82a3d605e61e` 14997 / `ed6d08f25ce3` 4116). The cliff was measured to the
+  line by Story 11.5's SM: `+13` keeps all three ids, `+14` splits unit 2 and moves two of them,
+  turning the committed-artifact staleness test RED. This story consumed **10 of the 13** available.
+  **The next story that writes more than 3 physical lines into any unit-2 module cannot proceed
+  without regenerating the dogfood artifacts**, which is Story 12.1's remedy and which 10.4 and 11.5
+  both refused to take on their own authority. This is not a defect in any story; it is a budget that
+  has nearly run out and now needs an owner.
+  - id: DF-11-5-A
+  - origin_story: 11-5-published-artifact-is-complete-and-true
+  - owner: **Engineering Lead**
+  - target_story: **12.1** — regenerate the dogfood plan/budget/proof artifacts at a truthful sha
+  - category: process
+  - severity: 🟡
+
+- **DF-11-5-B** — 🟢 **The built-artifact guard costs ~5 seconds of wall clock per suite run.**
+  `tests/test_built_distribution.py` invokes `python -m build --no-isolation` once per session
+  (~2.2 s) and then spawns one subprocess per shipped module (72 of them, ~2.5 s across 8 worker
+  threads). It is the only test in this suite that shells out to a build backend. It is cheap enough
+  today and deliberately NOT marked `slow` — a guard behind an opt-in marker is a guard nobody runs —
+  but the cost scales with the module count and should be revisited if the suite gains a fast/slow
+  split.
+  - id: DF-11-5-B
+  - origin_story: 11-5-published-artifact-is-complete-and-true
+  - owner: Engineering
+  - target_story: NONE — revisit if a fast/slow split is introduced
+  - category: testability
+  - severity: 🟢
+
+- **DF-11-5-C** — 🟢 **`README.md`'s seven `/audit …` commands are documented but undelivered.**
+  Marked FORTHCOMING against Story 12.7 / FR35 rather than deleted, because the shape is the contract
+  12.7 delivers against. `TC-ArgusAgent-DOCS-001-56` holds it in both directions: it fails if the
+  marker is removed while the wheel still ships no command asset, **and** it fails if the marker
+  survives once the wheel ships one. Filed so that 12.7 knows the marker is its to remove.
+  - id: DF-11-5-C
+  - origin_story: 11-5-published-artifact-is-complete-and-true
+  - owner: Engineering
+  - target_story: **12.7**
+  - category: documentation-accuracy
+  - severity: 🟢

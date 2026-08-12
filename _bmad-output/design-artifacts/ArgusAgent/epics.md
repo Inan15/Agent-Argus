@@ -2086,12 +2086,37 @@ So that an assurance tool never emits a false green from a dependency it did not
 
 **Acceptance Criteria:**
 
-**Given** the `tree-sitter <0.26` bound is **load-bearing**: on `0.26.0` the cartridge self-audit flips
+~~**Given** the `tree-sitter <0.26` bound is **load-bearing**: on `0.26.0` the cartridge self-audit flips
 `NOT_READY_FOR_RELEASE` -> `RELEASE_READY` because AST corroboration stops firing — a **false negative
 from an assurance tool**, the PRD-fatal direction (inversion F1)
 **When** an out-of-bound version is present at runtime
 **Then** the assertion fires **at runtime**, not only at resolve time — a metadata bound constrains a
-resolver, never an already-installed environment.
+resolver, never an already-installed environment.~~
+
+🔴 **CORRECTED IN PLACE 2026-08-12 by Story 11.4 (AC5.3), following the 10.2 precedent for a
+premise fix in an unstarted story. The story's INTENT is unchanged; only the false measurement is.**
+Struck rather than deleted (§3.4 evidence immutability). **Reason:** the `Given` above was re-measured
+by execution and against the upstream release notes and is **NOT REPRODUCIBLE as stated** — 0.26.0's
+breaking changes (`Language.version`→`abi_version`, `Language.query()`→`Query(...)`, the
+`timeout_micros` removals, `Point` as a tuple subclass) touch **nothing Argus uses**, the minimum
+grammar ABI is unchanged, and total AST loss lands the cartridges on `INSUFFICIENT_COVERAGE`/exit 3
+because the coverage floor fires first. The cartridge corpus also sits at deep 1/2 = 50%, **below** the
+60% gate, so it is structurally incapable of the flip. See `architecture.md` §Packaging.
+
+**Given** an installed parsing toolchain that Argus has never checked — and noting that the
+demonstrated failure occurs at an **IN-BOUND** version, so a version comparison cannot be the mechanism
+**When** a repository **above** the 60% deep gate is audited with an extraction vocabulary that has
+drifted (measured: `NOT_READY_FOR_RELEASE`/exit 2 → `RELEASE_READY`/exit 0, with `deep_ratio` **5/6 in
+both runs** — a verdict-eligible `vacuous_test_ast` silently degraded to advisory
+`vacuous_test_heuristic`, invisible on every surface Argus prints)
+**Then** Argus **behaviourally self-checks** the toolchain per language at the real loader seam — a
+pinned canary whose extraction is compared against a frozen expectation — and `RELEASE_READY` is
+**unreachable** when it does not match. The declared version range is recorded and checked as a
+**second, independent** signal, never as the check itself.
+
+**Given** a metadata bound constrains a *resolver* and constrains nothing on a machine where the
+package is already installed, pinned by another tool, vendored or patched
+**Then** the defence is asserted **at runtime**, not only at resolve time.
 
 **Given** the degradation must not itself be a crash (NFR-R1)
 **Then** it produces a **typed finding and a non-vouching verdict**; `RELEASE_READY` is **never** computed

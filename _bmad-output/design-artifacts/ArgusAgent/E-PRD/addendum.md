@@ -9,7 +9,7 @@ than in the PRD's capability contract. The PRD states *what must be true*; this 
 ## A1 — FR16 / FR4 amendment mechanics (2026-08-03)
 
 **Change signal:** [sprint-change-proposal-2026-08-03.md](../sprint-change-proposal-2026-08-03.md)
-**Approved by:** Varin, at the contract gate (step 4 of the proposal's recommended sequence).
+**Approved by:** XAgent007, at the contract gate (step 4 of the proposal's recommended sequence).
 
 ### Options considered for the verdict vocabulary
 

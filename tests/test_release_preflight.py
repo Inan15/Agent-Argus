@@ -252,6 +252,25 @@ def test_TC_ArgusAgent_RELEASE_001_10_the_workflow_claims_no_publication_and_no_
 # substrate in a release story that has no mandate over it. Filed as `DF-9-2-A` in
 # deferred-work.md with this measurement attached.
 #
+# ── FIXED 2026-08-12 by Story 11.5 (`DF-9-2-A` CLOSED), and the guard below was proven
+#    VACUOUS in the doing. `argus/precision/replay_harness.py` now resolves the registry
+#    through a lazy `_registry_module()` helper, and a freshly built wheel goes from
+#    **67 of 72 import / 5 fail** to **72 of 72 import / 0 fail**. `-11` STAYED GREEN
+#    ACROSS THE ENTIRE FIX: `import _registry` inside a function body is still an
+#    `ast.Import` node named `_registry`, so a source-tree walk finds it exactly as
+#    before. The walk cannot distinguish a module-level import from a lazy one — which is
+#    the whole content of the fix — so it could never have held the claim README.md
+#    credited it with ("pinned in both directions ... so this list cannot drift from the
+#    code"). It also missed the record drifting underneath it: the denominator moved
+#    71 → 72 and the importable count 66 → 67 across Epics 10–11 with nothing red, because
+#    `-11` pins a SET OF PATHS and the documents publish NUMBERS.
+#
+#    `-11` is NARROWED rather than deleted (Story 11.5 / AC2.3): it still has one honest
+#    job — naming which modules mention the repository-only test tree at all — and it says
+#    so below. The claim about the BUILT DISTRIBUTION moved to
+#    `TC-ArgusAgent-RELEASE-001-20` in `tests/test_built_distribution.py`, which builds a
+#    real wheel and imports every shipped module out of it in a clean subprocess.
+#
 # WHY THE RELEASE STILL STANDS: IN-1/IN-3 need `argus audit` — the CLI, the pipeline, the
 # detectors, the verdict gate, the reports. All of that imports and RUNS from the wheel
 # (proven: `argus --help` exit 0; `argus audit <fixture>` -> RELEASE_READY, exit 0, from a
@@ -262,11 +281,25 @@ def test_TC_ArgusAgent_RELEASE_001_10_the_workflow_claims_no_publication_and_no_
 # The guard below pins the boundary in BOTH directions.
 # ─────────────────────────────────────────────────────────────────────────────
 
-# Modules that are KNOWN to be unimportable from the built distribution, each because of
-# the single `_registry` import above. Pinned exactly: the test fails if the set GROWS (a
-# new module joined the broken surface) and if it SHRINKS (someone fixed DF-9-2-A and must
-# now update this record rather than leave a stale claim behind).
-_NOT_IMPORTABLE_FROM_DISTRIBUTION: frozenset[str] = frozenset(
+# Modules that are KNOWN to be unimportable from the built distribution. Pinned exactly:
+# the guard fails if the set GROWS (a module joined the broken surface) and if it SHRINKS
+# (the record went stale behind a fix). MEASURED EMPTY 2026-08-12 by Story 11.5 against a
+# freshly built wheel — 72 of 72 shipped modules import with this repository off
+# `sys.path`. It stays here, at the address Story 9.2 gave it, but it is ASSERTED by
+# `TC-ArgusAgent-RELEASE-001-20` in `tests/test_built_distribution.py`, because that is
+# the only guard in this suite that can actually observe it. It is imported from there
+# rather than copied: a second copy of a pinned figure is the fork class Epic 9's
+# retrospective named and this repository has now rotted twice.
+_NOT_IMPORTABLE_FROM_DISTRIBUTION: frozenset[str] = frozenset()
+
+# The import that does it, and the tree it points into.
+_TEST_TREE_IMPORT = "_registry"
+
+# Every `argus/**` module that NAMES the repository-only test tree, in any position —
+# module level or inside a function body. This is what an `ast` walk can see, and it is
+# ALL it can see. Post-fix these five still name `_registry` and all five import cleanly
+# from the wheel; the two sets are unrelated, which is the point of separating them.
+_MODULES_NAMING_THE_TEST_TREE_IMPORT: frozenset[str] = frozenset(
     {
         "argus/precision/__init__.py",
         "argus/precision/replay_harness.py",
@@ -275,9 +308,6 @@ _NOT_IMPORTABLE_FROM_DISTRIBUTION: frozenset[str] = frozenset(
         "argus/dogfood/proof_run.py",
     }
 )
-
-# The import that does it, and the tree it points into.
-_TEST_TREE_IMPORT = "_registry"
 
 # The consumer-facing surface IN-1 / IN-3 depend on. Every one of these was executed from
 # the installed wheel during Story 9.2's AC4 proof.
@@ -332,23 +362,35 @@ def _modules_reaching(target: str) -> set[str]:
     return reaching
 
 
-def test_TC_ArgusAgent_RELEASE_001_11_distribution_gap_is_pinned_exactly() -> None:
-    """TC-ArgusAgent-RELEASE-001-11 — AC4/AC5b: the un-shippable surface is measured, not guessed.
+def test_TC_ArgusAgent_RELEASE_001_11_source_graph_names_the_test_tree_reach() -> None:
+    """TC-ArgusAgent-RELEASE-001-11 — NARROWED 2026-08-12 (Story 11.5 / AC2.3).
 
-    The distribution packages the ``argus`` module only. Any ``argus/**`` module that
-    reaches ``tests/cartridges/_registry`` cannot be imported by a consumer who installed
-    the wheel, no matter how green the source-tree suite is — the suite runs with
-    ``tests/`` on the path and is structurally blind to it. This computes the reachable
-    set from the import graph and pins it against the set MEASURED inside a fresh
-    virtualenv during Story 9.2's AC4 proof.
+    **What this guard can see:** which ``argus/**`` modules NAME ``tests/cartridges``'s
+    ``_registry``, directly or transitively, anywhere in their source.
+
+    **What it CANNOT see, and was wrongly credited with:** whether the built distribution
+    is importable. It walks the SOURCE TREE with ``ast``, and an ``ast.Import`` node named
+    ``_registry`` looks identical whether it sits at module level (which breaks every
+    consumer of the wheel) or inside a function body (which breaks nobody). Story 11.5
+    moved that import into ``_registry_module()``, the wheel went from 5 failing modules
+    to 0 — and this test did not move. It also cannot see the NUMBERS the documents
+    publish: it pins a set of paths, so "66 of the 71" stayed in README.md and CHANGELOG.md
+    for two epics while the truth became 67 of 72.
+
+    **The claim about the distribution now lives in
+    ``tests/test_built_distribution.py::test_TC_ArgusAgent_RELEASE_001_20_…``**, which
+    builds a real wheel and imports every shipped module out of it in a clean subprocess
+    with this repository off ``sys.path``. This one is kept, narrowed, because knowing
+    which modules touch the repository-only tree is still worth pinning — ``-12`` reads
+    the same walk to keep that reach off the consumer surface.
     """
     reaching = _modules_reaching(_TEST_TREE_IMPORT)
     assert reaching, "the import-graph walk found nothing — the walk itself is broken"
-    assert reaching == set(_NOT_IMPORTABLE_FROM_DISTRIBUTION), (
-        "the set of argus/** modules that cannot be imported from the built "
-        "distribution changed. If it GREW, a new module was made unshippable; if it "
-        "SHRANK, DF-9-2-A was fixed and this record and README.md must be updated to "
-        f"match. expected {sorted(_NOT_IMPORTABLE_FROM_DISTRIBUTION)}, "
+    assert reaching == set(_MODULES_NAMING_THE_TEST_TREE_IMPORT), (
+        "the set of argus/** modules NAMING the repository-only test tree changed. This "
+        "says nothing on its own about what the wheel can import (see the docstring and "
+        f"TC-ArgusAgent-RELEASE-001-20) — but it is a deliberate decision either way. "
+        f"expected {sorted(_MODULES_NAMING_THE_TEST_TREE_IMPORT)}, "
         f"measured {sorted(reaching)}"
     )
 

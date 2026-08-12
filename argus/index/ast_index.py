@@ -70,7 +70,10 @@ from argus.cache.key import GrammarProvenance
 # alternative — the report importing this impure module for a constant, or each side doing
 # its own ``startswith`` on the token — is how ``grammar_entrypoint_missing_go`` becomes
 # either silence or ``pip install tree-sitter-entrypoint_missing_go``.
-from argus.shared.grammar_status import GrammarFailure, reason_token_for
+from argus.shared.grammar_status import (
+    CORE_PACKAGE, CanaryObservation, GrammarFailure, canary_for, canary_matches,
+    core_version_is_supported, parse_version_tuple, reason_token_for,
+)
 from argus.shared.source_languages import LANGUAGE_BY_SUFFIX, PYTHON_SUFFIXES
 
 __all__ = [
@@ -252,17 +255,21 @@ def _grammar_version() -> str:
     return _package_version("python")
 
 
-def _package_version(lang: str) -> str:
-    """Resolved ``tree-sitter-<lang>`` package version, or ``"unknown"`` (AR10, never raises).
+def _distribution_version(distribution: str) -> str | None:
+    """Resolved version of *distribution*, or ``None`` when it is not installed (never raises).
 
-    The IMPURE probe. It lives here, in the impure shell, and the resolved strings are PASSED IN to
-    the pure ``cache/key.py`` — reading package metadata inside that module would breach its stated
-    AR8 purity contract.
+    The IMPURE probe. Resolved strings are PASSED IN to the pure ``cache/key.py`` and
+    ``shared/grammar_status.py``; reading metadata inside either would breach its AR8 contract.
     """
     try:
-        return importlib.metadata.version(f"tree-sitter-{lang}")
+        return importlib.metadata.version(distribution)
     except importlib.metadata.PackageNotFoundError:
-        return "unknown"
+        return None
+
+
+def _package_version(lang: str) -> str:
+    """Resolved ``tree-sitter-<lang>`` package version, or ``"unknown"`` (AR10, never raises)."""
+    return _distribution_version(f"tree-sitter-{lang}") or "unknown"
 
 
 def _is_python(rel_path: str) -> bool:
@@ -339,6 +346,55 @@ def _entry_point_for(lang: str, suffix: str) -> str:
     return _ENTRY_POINT_BY_SUFFIX.get(suffix) or _ENTRY_POINT_BY_LANGUAGE.get(
         lang, _DEFAULT_ENTRY_POINT
     )
+
+
+def _observe_canary(parser: object, source: str) -> CanaryObservation:
+    """Parse one pinned canary and record what THIS toolchain actually extracted (IMPURE).
+
+    ``vocabulary`` is the LIVE intersection of the tree's node types with Argus's own extraction
+    tables, so a drifted grammar and a drifted table are both caught. Why that is the right
+    observable is argued beside the corpus, in ``shared/grammar_status.py::GrammarCanary``.
+    """
+    tree = parser.parse(source.encode("utf-8"))  # type: ignore[attr-defined]
+    root = tree.root_node
+    known = set(_DEF_KIND_BY_NODE) | set(_CALL_NODE_TYPES)
+    seen: set[str] = set()
+    stack: list[object] = [root]
+    while stack:
+        node = stack.pop()
+        if node.type in known:  # type: ignore[attr-defined]
+            seen.add(node.type)  # type: ignore[attr-defined]
+        stack.extend(node.children)  # type: ignore[attr-defined]
+    definitions, edges = _extract(root)
+    return CanaryObservation(
+        parse_error=bool(root.has_error),
+        vocabulary=tuple(sorted(seen)),
+        definitions=tuple((d.kind, d.name) for d in definitions),
+        edges=tuple(e.callee for e in edges),
+    )
+
+
+def _toolchain_is_validated(lang: str, entry_point: str, parser: object) -> bool:
+    """Does this constructed parser behave the way Argus was validated against (IMPURE)?
+
+    Two independent signals, and the order is the design (Story 11.4 / DN-1): the BEHAVIOURAL
+    canary is the mechanism — the false 🟢 this closes was measured at an in-bound
+    ``tree-sitter 0.25.2`` — and the declared range is a second, weaker one. Fails CLOSED on
+    an unpinned seam and on a canary that raises: "I could not tell" is not "I checked".
+    """
+    if not core_version_is_supported(parse_version_tuple(_distribution_version(CORE_PACKAGE))):
+        return False
+    canary = canary_for(lang, entry_point)
+    if canary is None:
+        return False
+    try:
+        observation = _observe_canary(parser, canary.source)
+    except Exception:  # noqa: BLE001 — degraded outcome `tree_sitter_runtime_unvalidated`, not an uncaught raise (AR10)
+        # Broad ON PURPOSE and carrying a recorded outcome: a grammar broken badly enough to
+        # raise inside `parse()` is precisely a toolchain Argus cannot vouch on top of, and the
+        # type varies by how it is broken (ARM 3's reasoning, one layer in).
+        return False
+    return canary_matches(canary, observation)
 
 
 class _ParserLoad(NamedTuple):
@@ -419,7 +475,7 @@ def _get_parser_for_lang(lang: str, entry_point: str = _DEFAULT_ENTRY_POINT) -> 
 
     # ── ARM 3 — the grammar is installed and broken for THIS runtime ──────────────────
     try:
-        return _ParserLoad(parser_cls(language_cls(lang_func())), None)
+        parser = parser_cls(language_cls(lang_func()))
     except Exception:  # noqa: BLE001 — degraded outcome `grammar_load_failed_<lang>`, not an uncaught raise (AR10)
         # Broad ON PURPOSE, and it carries a recorded outcome rather than a `pass`: the type
         # genuinely varies (ValueError / TypeError / OSError, and whatever the next
@@ -427,6 +483,18 @@ def _get_parser_for_lang(lang: str, entry_point: str = _DEFAULT_ENTRY_POINT) -> 
         # constructed from an installed grammar". Same house form as `_index_source_file`
         # below, `secret_scan.py` and `tool_runner.py`.
         return _ParserLoad(None, GrammarFailure.LOAD_FAILED)
+
+    # ── ARM 5 — the parser was CONSTRUCTED, and Argus has not validated it (Story 11.4) ─
+    # The only arm where nothing is visibly wrong, and so the only one that can produce a false
+    # 🟢. Arms 1-4 leave the index empty and the coverage floor already withholds the verdict; a
+    # grammar that loads and extracts the WRONG THING keeps `deep_ratio` intact (measured: exit
+    # 2 → exit 0, `deep_ratio` 5/6 in BOTH runs) while downgrading a verdict-eligible finding to
+    # advisory. Returning NO parser routes it into that same floor row — the honest "not enough
+    # assessed to vouch" state `architecture.md` §Error/Degradation prescribes — leaving
+    # `verdict_gate.py`, `pipeline.py`, the decision table and every threshold untouched.
+    if not _toolchain_is_validated(lang, entry_point, parser):
+        return _ParserLoad(None, GrammarFailure.RUNTIME_UNVALIDATED)
+    return _ParserLoad(parser, None)
 
 
 def _index_source_file(rel_path: str, source: bytes, parser: object) -> AstIndexEntry:

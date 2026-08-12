@@ -73,6 +73,7 @@ first test file in it (the 1.6 gate tests live in ``test_verdict_gate.py``).
 
 from __future__ import annotations
 
+import enum
 from fractions import Fraction
 
 from pydantic import BaseModel, ConfigDict, Field
@@ -85,6 +86,13 @@ from argus.verdict.verdict_gate import AuditVerdict, Verdict
 __all__ = [
     "NEGATIVE_ASSURANCE_SCHEMA_VERSION",
     "DISCLAIMER",
+    "InstrumentStatus",
+    "INSTRUMENT_STATUS",
+    "INSTRUMENT_DISCLOSURE_NOT_INDEPENDENTLY_VALIDATED",
+    "INSTRUMENT_DISCLOSURE_VALIDATED",
+    "INSTRUMENT_DISCLOSURE_SHORT_NOT_INDEPENDENTLY_VALIDATED",
+    "INSTRUMENT_DISCLOSURE_SHORT_VALIDATED",
+    "render_instrument_disclosure",
     "NegativeAssuranceError",
     "ScopeStatement",
     "NegativeAssuranceVerdict",
@@ -113,6 +121,123 @@ DISCLAIMER = (
 )
 
 
+class InstrumentStatus(str, enum.Enum):
+    """CLOSED two-member vocabulary for the TOOL's own validation state (FR34).
+
+    The sibling of :data:`DISCLAIMER`, and deliberately co-located with it so the
+    distinction is reviewable side by side rather than asserted in prose:
+    :data:`DISCLAIMER` bounds **this audit** (FR17 — what was and was not assessed);
+    this vocabulary bounds **the instrument** (FR34 — how the tool's findings have
+    themselves been validated). *An audit can be perfectly scoped and still be
+    produced by an unvalidated instrument*, so both apply and neither substitutes
+    for the other.
+
+    NOT the run grade. ``grade: demo-heuristic-only`` describes how a single RUN was
+    configured, varies per run, and is removed by engaging the deep pass. Instrument
+    status describes how the tool's FINDINGS have been validated, varies per tool
+    VERSION, and is removed by Epic 13 clearing the >=80% precision gate — nothing
+    else. Merging them would mislabel a deep run and, far worse, make the disclosure
+    appear to lift when a user enables a flag.
+
+    * ``NOT_INDEPENDENTLY_VALIDATED`` — today. The >=80% finding-precision gate is
+      uncleared: no human true-positive/false-positive adjudication has been run over
+      the corpus, so the tool's precision is unmeasured rather than measured-and-low.
+    * ``VALIDATED`` — post-Epic-13. The gate has cleared against a named corpus. The
+      disclosure is then REPLACED by the cleared statement, never deleted: the
+      surface never becomes silent and the enforcing guard never becomes vacuous
+      (FR34.4).
+
+    EXACTLY two members; :func:`render_instrument_disclosure` is exhaustive over them
+    and RAISES on an unregistered one (AR10, the ``exit_code_for_verdict`` pattern).
+    A silent default would render "not validated" for a state nobody registered —
+    the comfortable wrong answer.
+    """
+
+    NOT_INDEPENDENTLY_VALIDATED = "not-independently-validated"
+    VALIDATED = "validated"
+
+
+# The disclosure text for each member — fixed module CONSTANTS with NO interpolation,
+# no clock and no host path (AR8 pure / NFR-P1 determinism / NFR-S1). Each states the
+# three things FR34's Content clause requires: the validation state, the CORPUS the
+# claim rests on, and what would remove it. They carry no over-claim stem ("certif",
+# "is correct", "proven", "guarantee", "defect-free", "bug-free", "passed") and no
+# affirmative over-claim phrase — the banned phrase "independently validated" appears
+# only where a negation PRECEDES it, which is the honest form.
+#
+# These are the ONE source for every surface. `README.md`, `CHANGELOG.md`,
+# `pyproject.toml` and `action.yml` are COMPARED against them by
+# `tests/test_instrument_disclosure.py`; a hand-typed second copy is the drift class
+# this project has hit five times (AI-E9-7).
+#
+# SUBJECT CORRECTED 2026-08-12 (Story 11.5 / AC6.2, `DF-9-2-B`). Both sentences said "the
+# MINIONS dogfood corpus" and then contradicted themselves four words later — the corpus is
+# "a self-audit of THIS repository". `argus/dogfood/proof_run.py` records that the Minions
+# run was Story 7.2's and is SUPERSEDED, and `argus/__init__.py` states Argus runs "with no
+# Minions package present". A false SUBJECT on the highest-visibility surface Argus has —
+# `argus audit .` prints this on stderr on every run — is `DF-9-2-B`'s class at its worst.
+# What changed is the NAME OF THE CORPUS and nothing else: the claim, the negation, the
+# two-member `InstrumentStatus` vocabulary and the removal condition (Epic 13's human
+# adjudication, and nothing else) are untouched. Pinned by
+# `tests/test_built_distribution.py::…DOCS_001_58`.
+INSTRUMENT_DISCLOSURE_NOT_INDEPENDENTLY_VALIDATED = (
+    "Instrument status: Argus's own finding precision has not been independently "
+    "validated. Its findings rest on the Argus dogfood corpus, a self-audit of this "
+    "repository with no human true-positive/false-positive adjudication behind it. "
+    "This notice is removed only when Epic 13's human adjudication clears the >=80% "
+    "precision gate; nothing else removes it."
+)
+
+INSTRUMENT_DISCLOSURE_VALIDATED = (
+    "Instrument status: Argus's own finding precision meets the >=80% precision gate, "
+    "measured by the Epic 13 human true-positive/false-positive adjudication over the "
+    "Argus dogfood corpus. The corpus and the adjudication that established it are "
+    "recorded with this release."
+)
+
+# The SHORTENED form for the two one-line summary fields a stranger reads in an index
+# listing (`pyproject.toml [project].description`, `action.yml description:`), where a
+# multi-sentence paragraph does not fit. Each is a SUBSTRING of its full text rather
+# than an independently authored sentence, and that relation is asserted — a second
+# sentence would be a second thing to keep true.
+INSTRUMENT_DISCLOSURE_SHORT_NOT_INDEPENDENTLY_VALIDATED = (
+    "Argus's own finding precision has not been independently validated."
+)
+
+INSTRUMENT_DISCLOSURE_SHORT_VALIDATED = (
+    "Argus's own finding precision meets the >=80% precision gate"
+)
+
+_INSTRUMENT_DISCLOSURE_BY_STATUS: dict[InstrumentStatus, tuple[str, str]] = {
+    InstrumentStatus.NOT_INDEPENDENTLY_VALIDATED: (
+        INSTRUMENT_DISCLOSURE_NOT_INDEPENDENTLY_VALIDATED,
+        INSTRUMENT_DISCLOSURE_SHORT_NOT_INDEPENDENTLY_VALIDATED,
+    ),
+    InstrumentStatus.VALIDATED: (
+        INSTRUMENT_DISCLOSURE_VALIDATED,
+        INSTRUMENT_DISCLOSURE_SHORT_VALIDATED,
+    ),
+}
+
+# The instrument's DECLARED status, and the single place it is declared.
+#
+# It is declared here WITHOUT importing `argus.precision.replay_harness`, which is the
+# module that actually computes the gate state. That is deliberate and it is forced by
+# measurement: the harness performs a module-level `sys.path.insert` of
+# `<repo>/tests/cartridges` followed by `from _registry import ...`, which is the wheel
+# defect Story 11.5 exists to fix — importing it from a user-facing path would put a
+# known-broken import on every install's critical path.
+#
+# A hand-maintained status that can silently disagree with the harness would be the
+# second mechanism AR7/§3.3 forbid, so the agreement is CLOSED by a committed guard
+# instead: `tests/test_instrument_disclosure.py` (tests may import the harness, and
+# already do) asserts this constant is NOT_INDEPENDENTLY_VALIDATED if and only if no
+# production call site passes `protocol_cleared=True`. When Story 13.3 passes it True,
+# that guard goes RED until this declaration and every surface are REPLACED with the
+# cleared statement. That red is the guard working.
+INSTRUMENT_STATUS: InstrumentStatus = InstrumentStatus.NOT_INDEPENDENTLY_VALIDATED
+
+
 class NegativeAssuranceError(ValueError):
     """A TYPED malformed-input failure for the wrapper builder (AR10).
 
@@ -124,6 +249,36 @@ class NegativeAssuranceError(ValueError):
     in library code. The message names the offending value/type only — never source /
     secret bytes (NFR-S1).
     """
+
+
+def render_instrument_disclosure(
+    status: InstrumentStatus, *, short: bool = False
+) -> str:
+    """Render the FR34 instrument-status disclosure for *status* (PURE).
+
+    Exhaustive over :class:`InstrumentStatus` — RAISES :class:`NegativeAssuranceError`
+    on an unregistered member rather than returning a silent default, so adding a
+    status without its disclosure text is a build-time failure (the
+    ``exit_code_for_verdict`` house pattern, AR10). A fall-through would render "not
+    validated" for a state nobody registered, which is the *comfortable* wrong answer.
+
+    ``short=True`` returns the one-line summary form for a listing field that cannot
+    hold the full paragraph; it is a SUBSTRING of the full text, never an independent
+    sentence.
+
+    PURE (AR8): a dictionary lookup over module constants. No I/O, no clock, no
+    ``uuid``/``random``, no ``float``, no network — so the four report artifacts stay
+    byte-identical for identical inputs (NFR-P1) and the text can never carry a source
+    byte or a host path (NFR-S1).
+    """
+    try:
+        full, brief = _INSTRUMENT_DISCLOSURE_BY_STATUS[status]
+    except (KeyError, TypeError) as exc:
+        raise NegativeAssuranceError(
+            f"no disclosure text registered for instrument status {status!r}; the FR34 "
+            "disclosure map must be exhaustive over the InstrumentStatus enum"
+        ) from exc
+    return brief if short else full
 
 
 class ScopeStatement(BaseModel):

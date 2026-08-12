@@ -6,6 +6,15 @@
 
 > **Integrating `argus audit` into a pipeline?** Every consumer-visible change to the exit codes, artifact schemas, defaults, rendered strings and public API — and what deliberately did *not* change — is recorded in **[CHANGELOG.md](CHANGELOG.md)**.
 
+> ⚠️ **Instrument status — read this before you weigh any verdict this tool gives you.**
+> Instrument status: Argus's own finding precision has not been independently validated. Its findings rest on the Argus dogfood corpus, a self-audit of this repository with no human true-positive/false-positive adjudication behind it. This notice is removed only when Epic 13's human adjudication clears the >=80% precision gate; nothing else removes it.
+>
+> This is **distinct from** the scope disclaimer on each audit, and both apply: that one bounds
+> *this audit* — what was examined, sampled and not covered — while this one bounds *the tool*.
+> An audit can be perfectly scoped and still be produced by an instrument nobody has measured.
+> It is also **not** the per-run grade: engaging a deeper audit pass changes how a run was
+> configured, and does not validate the instrument.
+
 ---
 
 ## 🌟 Key Features
@@ -122,10 +131,12 @@ graded, but has no definition for the depth gate to stand on. Pinned language-by
 
 ### What the distribution contains, and what needs the git repository
 
-MEASURED from the built wheel (`argus_agent-0.1.0-py3-none-any.whl`, 76 entries) and sdist
-(`argus_agent-0.1.0.tar.gz`, 75 files), not inferred: `[tool.flit.module] name = "argus"`
+MEASURED from the built wheel (`argus_agent-0.1.0-py3-none-any.whl`, 77 entries) and sdist
+(`argus_agent-0.1.0.tar.gz`, 76 files), not inferred: `[tool.flit.module] name = "argus"`
 packages **the `argus` Python package and nothing else**. The sdist additionally carries
-`pyproject.toml`, `README.md`, `LICENSE` and `PKG-INFO`.
+`pyproject.toml`, `README.md`, `LICENSE` and `PKG-INFO`. Both figures are re-derived from a
+freshly built pair of artifacts by `TC-ArgusAgent-DOCS-001-54`, which fails if this
+paragraph and the artifact ever disagree — in either direction.
 
 | Capability | From the installed distribution | Needs the git repository |
 |---|---|---|
@@ -135,27 +146,33 @@ packages **the `argus` Python package and nothing else**. The sdist additionally
 | The RAM workflow framework — `audit/`, `phases/`, `adapters/`, `templates/` | ❌ **not packaged** — these are sibling top-level directories, not part of the `argus` module | ✅ |
 | `install.sh` / `install.ps1` (which copy the adapters into your assistant) | ❌ not packaged | ✅ |
 | The test suite and the defect cartridges under `tests/` | ❌ not packaged | ✅ |
-| Argus's own dogfood proof generator (`argus.dogfood.*`, `argus.precision.*`) | ❌ **imports, but does not load** — see the note below | ✅ |
+| Argus's own dogfood proof generator (`argus.dogfood.*`, `argus.precision.*`) | ✅ imports; **generating a proof still needs the repository** — see the note below | ✅ for the proof run |
 
-> **Measured limitation, stated rather than discovered later.** Measured on the built
-> wheel with this repository removed from `sys.path` and one clean subprocess per module:
-> **66 of the 71 shipped modules import**. **Five module files do not:**
+> **Measured limitation, stated rather than discovered later — and now measured away.** On a
+> freshly built wheel, with this repository removed from `sys.path` and one clean subprocess
+> per module, **72 of the 72 shipped modules import**. None fail.
 >
-> - `argus/precision/__init__.py`
-> - `argus/precision/replay_harness.py`
-> - `argus/dogfood/proof_types.py`
-> - `argus/dogfood/proof_render.py`
-> - `argus/dogfood/proof_run.py`
+> Until 2026-08-12 five did — `argus/precision/__init__.py`,
+> `argus/precision/replay_harness.py`, `argus/dogfood/proof_types.py`,
+> `argus/dogfood/proof_render.py` and `argus/dogfood/proof_run.py` — all with
+> `ModuleNotFoundError: No module named '_registry'`, because
+> `argus/precision/replay_harness.py` imported the labelled-cartridge registry from
+> `tests/cartridges/` at module import time and the distribution does not (and should not)
+> contain it. That registry is now resolved **lazily**, so importing the module from the
+> wheel succeeds; *running* the precision replay or the dogfood proof generator still needs
+> the git repository, because that is where the labelled cartridges live. Those are Argus's
+> *self-audit and precision-measurement* tools, not consumer features. `DF-9-2-A` in
+> `_bmad-output/design-artifacts/ArgusAgent/deferred-work.md` is **CLOSED**.
 >
-> All five fail with `ModuleNotFoundError: No module named '_registry'`, because
-> `argus/precision/replay_harness.py` imports the labelled-cartridge registry from
-> `tests/cartridges/`, which the distribution does not (and should not) contain — the other
-> four reach that one import transitively. These are Argus's *self-audit and
-> precision-measurement* tools, not consumer features; the entire `argus audit` path is
-> unaffected and was executed from the installed wheel. The same five files are pinned in
-> both directions by `TC-ArgusAgent-RELEASE-001-11`, so this list cannot drift from the
-> code. Tracked as `DF-9-2-A` in
-> `_bmad-output/design-artifacts/ArgusAgent/deferred-work.md`.
+> **What holds this claim.** `TC-ArgusAgent-RELEASE-001-20`
+> (`tests/test_built_distribution.py`) **builds the wheel and the sdist and imports every
+> shipped module out of the built artifact**, so the count above cannot drift from what
+> actually ships. It replaces a claim that used to be made here for
+> `TC-ArgusAgent-RELEASE-001-11`, which was **false**: `-11` walks the *source tree* with
+> `ast`, cannot tell a module-level import from a lazy one, and stayed green across the
+> entire fix while the published figures rotted from "66 of 71" to a measured 67 of 72
+> underneath it. A guard that inspects the source tree cannot hold a claim about the
+> distribution.
 
 ### Clone-based installation (for the RAM framework and development)
 
@@ -177,7 +194,19 @@ pip install -e .
 
 ## 💻 Slash Commands & Usage
 
-When installed, `ArgusAgent` registers slash commands in your AI coding assistant (Claude Code, Cursor, Cline, etc.):
+**What `pip install argus-agent` actually installs — measured on the built wheel, not assumed.**
+Three console aliases, and nothing else: `argus`, `argus-agent` and `repo-audit`, all three
+entry points for `argus.cli:main`. The wheel carries **zero data assets** (77 entries = 72
+`argus/**` modules + 5 `dist-info` files), so the distribution contains no command file, no
+skill manifest and no registration mechanism of any kind. **Installing it registers no slash
+command in any assistant.**
+
+> 🚧 **FORTHCOMING — documented ahead of delivery, owned by Story 12.7 / FR35.** The seven
+> commands below are the shape the vendor adapters are being built to, not a capability the
+> published distribution has today. They are kept here rather than deleted because the shape
+> is the contract 12.7 delivers against — and `TC-ArgusAgent-DOCS-001-56` fails the build if
+> this marker is ever removed while the wheel still ships no mechanism, **or** left in place
+> once it does.
 
 ```bash
 /audit                  # Run full repository audit pipeline

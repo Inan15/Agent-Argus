@@ -191,12 +191,28 @@ class VacuousTestScore(BaseModel):
 
 # Suffixes that identify a test file on the FILENAME alone, with no ambiguity: in
 # these ecosystems the convention is reserved for tests and no production module
-# adopts it.
+# adopts it. EVERY entry begins with a real WORD SEPARATOR (``_`` or ``.``), because
+# a convention without one matches a letter SEQUENCE instead of a word: ``"test.java"``
+# and ``"spec.rb"`` used to sit here and claimed ``latest.java`` / ``myspec.rb``, which
+# removed ordinary production files from the FR4 critical set under the false reason
+# ``test_file`` (DF-8-2-B). ``tests/test_classification_word_boundary.py`` closes over
+# these tables and fails on any future entry that carries no boundary.
 _UNAMBIGUOUS_TEST_SUFFIXES = (
     "_test.go", ".test.js", ".spec.js",
     ".test.ts", ".spec.ts", ".test.jsx", ".spec.jsx", ".test.tsx", ".spec.tsx",
-    "_test.rs", "test.java", "spec.rb", "_spec.rb", "_test.cpp", "_test.cc",
+    "_test.rs", "_spec.rb", "_test.cpp", "_test.cc",
 )
+
+# Java's word separator is a CASE boundary, so this table is matched CASE-SENSITIVELY
+# against the ORIGINAL-CASE basename, before the lowercasing below. Maven Surefire's
+# defaults are ``**/Test*.java``, ``**/*Test.java``, ``**/*Tests.java``,
+# ``**/*TestCase.java`` — all CamelCase; Java has no ``_`` convention, so spelling this
+# ``"_test.java"`` would delete every Java test in the world, and lowercasing first
+# destroys the only boundary the name has. This is a language-specific NAMING
+# convention, not a grammar/parse conditional, so it belongs here beside the other
+# conventions and does NOT breach NFR-P2 ("the language conditional remains confined to
+# ``argus/index/``").
+_CASE_SENSITIVE_TEST_SUFFIXES = ("Test.java",)
 
 # Python suffixes that are GENUINELY AMBIGUOUS. ``*_test.py`` is a real pytest
 # convention (``python_files = test_*.py *_test.py``), so it cannot simply be dropped
@@ -204,7 +220,14 @@ _UNAMBIGUOUS_TEST_SUFFIXES = (
 # ``argus/detectors/vacuous_test.py``, the vacuous-TEST DETECTOR. Classifying that as
 # a test file skipped it from deep grading and dropped it to ``tool_scanned_only``.
 # These are resolved by CONTENT when an AST entry is available (see below).
-_AMBIGUOUS_PYTHON_TEST_SUFFIXES = ("_test.py", "test.py")
+_AMBIGUOUS_PYTHON_TEST_SUFFIXES = ("_test.py",)
+
+# Whole BASENAMES resolved by the same tier-3 content rule. A bare ``"test.py"`` suffix
+# used to stand in for this and matched ``contest.py`` / ``attest.py`` / ``latest.py``
+# too; the fix is the whole-name rule it was really standing in for, not deleting it.
+# ``conftest.py`` genuinely is ambiguous — one holding only fixtures is production and
+# one holding test helpers is not — so it stays in TIER 3 and is decided by CONTENT.
+_AMBIGUOUS_PYTHON_TEST_BASENAMES = ("conftest.py",)
 
 _TEST_DIRECTORY_NAMES = ("tests", "test", "__tests__", "spec", "specs")
 
@@ -254,6 +277,11 @@ def _is_unambiguous_test_path(file_path: str) -> bool:
         parts and parts[0] in ("tests", "test", "spec")
     ):
         return True
+    # Checked BEFORE the lowercasing: for these conventions the capital IS the word
+    # separator, so folding case first would destroy the only boundary they have.
+    raw = parts[-1] if parts else file_path
+    if any(raw.endswith(s) for s in _CASE_SENSITIVE_TEST_SUFFIXES):
+        return True
     name = _lower_basename(file_path)
     if name.startswith("test_") or name.startswith("test."):
         return True
@@ -281,8 +309,9 @@ def is_test_classification_content_dependent(file_path: str) -> bool:
     """
     if _is_unambiguous_test_path(file_path):
         return False
-    return any(
-        _lower_basename(file_path).endswith(s) for s in _AMBIGUOUS_PYTHON_TEST_SUFFIXES
+    name = _lower_basename(file_path)
+    return name in _AMBIGUOUS_PYTHON_TEST_BASENAMES or any(
+        name.endswith(s) for s in _AMBIGUOUS_PYTHON_TEST_SUFFIXES
     )
 
 
@@ -293,10 +322,14 @@ def is_test_file(file_path: str, *, ast_entry: "AstIndexEntry | None" = None) ->
     C/C++, Ruby. Three tiers, evaluated in order:
 
     1. **Location** — anything under a test directory is a test file.
-    2. **Unambiguous filename** — a ``test_``/``test.`` prefix, or a suffix from
-       :data:`_UNAMBIGUOUS_TEST_SUFFIXES`.
-    3. **Ambiguous Python suffix** (``*_test.py``) — resolved by CONTENT when
-       *ast_entry* is supplied, and by the filename alone when it is not.
+    2. **Unambiguous filename** — a ``test_``/``test.`` prefix, a suffix from
+       :data:`_UNAMBIGUOUS_TEST_SUFFIXES`, or a CASE-SENSITIVE suffix from
+       :data:`_CASE_SENSITIVE_TEST_SUFFIXES` (``*Test.java``, whose separator is the
+       capital). Every one of them carries a real word boundary, so a production file
+       whose name merely ENDS with those letters — ``latest.java``, ``myspec.rb`` — is
+       not claimed here.
+    3. **Ambiguous Python name** (``*_test.py``, ``conftest.py``) — resolved by CONTENT
+       when *ast_entry* is supplied, and by the filename alone when it is not.
 
     ``ast_entry`` is OPTIONAL and keyword-only, so every existing call site keeps its
     exact behaviour (tier 3 without an entry answers ``True``, as before). A caller

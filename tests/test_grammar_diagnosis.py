@@ -134,6 +134,25 @@ def _module_whose_entry_point_raises() -> types.ModuleType:
     return mod
 
 
+def _module_with_a_substituted_grammar() -> types.ModuleType:
+    """An installed grammar package that loads cleanly and is the WRONG GRAMMAR (cause 5).
+
+    Story 11.4. Nothing is missing and nothing raises: ``Parser(Language(...))`` constructs
+    perfectly and the parser then extracts something other than what Argus was validated
+    against. This is the ONLY cause that can produce a false 🟢 — the other four leave the
+    index empty, so the coverage floor already withholds the verdict.
+
+    Simulated by handing the Go seam Python's grammar capsule, which is the shape a drifted,
+    vendored, patched or mis-resolved grammar package actually has. ⛔ Never by installing or
+    uninstalling a real package (§0.1.4; Story 10.4's E.3 rule).
+    """
+    import tree_sitter_python
+
+    mod = types.ModuleType(_GRAMMAR_MODULE)
+    mod.language = tree_sitter_python.language  # type: ignore[attr-defined]
+    return mod
+
+
 def _module_with_bad_capsule() -> types.ModuleType:
     """An installed grammar whose capsule ``Language()`` rejects.
 
@@ -182,9 +201,27 @@ _MODES: tuple[_Mode, ...] = (
     _Mode("load_failed_entry_raises", GrammarFailure.LOAD_FAILED, _GRAMMAR_MODULE, _module_whose_entry_point_raises),
     _Mode("load_failed_bad_capsule", GrammarFailure.LOAD_FAILED, _GRAMMAR_MODULE, _module_with_bad_capsule),
     _Mode("core_runtime_missing", GrammarFailure.CORE_RUNTIME_MISSING, _CORE_MODULE, _raise_core_import_error),
+    _Mode(
+        "runtime_unvalidated",
+        GrammarFailure.RUNTIME_UNVALIDATED,
+        _GRAMMAR_MODULE,
+        _module_with_a_substituted_grammar,
+    ),
 )
 
 _MODES_BY_NAME: dict[str, _Mode] = {mode.name: mode for mode in _MODES}
+
+#: The FOUR causes in which no parser could be constructed at all. Story 11.4 added a fifth
+#: (``RUNTIME_UNVALIDATED``) in which one COULD be — see ``-114``'s docstring for why the
+#: two groups are asserted separately rather than merged or loosened.
+_LOAD_FAILURE_CAUSES: frozenset[GrammarFailure] = frozenset(
+    {
+        GrammarFailure.PACKAGE_MISSING,
+        GrammarFailure.ENTRY_POINT_MISSING,
+        GrammarFailure.LOAD_FAILED,
+        GrammarFailure.CORE_RUNTIME_MISSING,
+    }
+)
 
 
 def _install_seam(monkeypatch: pytest.MonkeyPatch, mode: _Mode) -> None:
@@ -431,12 +468,28 @@ def test_verdict_and_coverage_are_identical_across_all_four_causes(
     produced the same grade. Splitting the token must leave that invariant intact: the
     pipeline and the grounding audit branch on the ``parse_failed`` / ``ast_eligible``
     BOOLEANS, never on the token, and this asserts they still do. A divergence here means
-    the token reached a decision — the 11.4 fence crossed, a 🟢 diagnosis story turned into
-    a release-integrity change.
+    the token reached a decision — a 🟢 diagnosis story turned into a release-integrity change.
+
+    ⚠️ NARROWED BY STORY 11.4, DELIBERATELY AND WITH A REASON (11.4 AC4.1 / DN-10; 10.4's
+    own DN-9 fenced the version comparison TO 11.4 by name, so this is the sanctioned
+    crossing, not a regression). The scope is now the **four LOAD causes** — the ones in
+    which no parser could be constructed — held to the invariant they always had. It is
+    narrowed by an explicit membership set with an asserted count, **never** by deleting the
+    test and never by loosening the equality: a scope that could silently shrink to one
+    cause would pass trivially, which is the failure mode 10.3's ``-39`` paid for.
+
+    11.4's fifth cause is asserted SEPARATELY below. Its recorded shape is deliberately the
+    same (DN-2: no new verdict, no new row, no ``verdict_gate.py`` change) — what differs is
+    the STATE it fires from. Cause 5 fires where a parser WAS constructible, i.e. exactly
+    where the other four cannot fire and where the run would otherwise have produced a
+    confident verdict. That difference is only visible above the 60% deep gate, and it is
+    measured there by
+    ``tests/test_grammar_runtime_validation.py::…-121`` — not here, where the one-file Go
+    fixture is below the floor by construction.
     """
     graded: dict[str, tuple[object, ...]] = {}
     for mode in _MODES:
-        if mode.failure is None:
+        if mode.failure is None or mode.failure not in _LOAD_FAILURE_CAUSES:
             continue
         root = tmp_path / f"repo_{mode.name}"
         root.mkdir(parents=True, exist_ok=True)
@@ -455,13 +508,58 @@ def test_verdict_and_coverage_are_identical_across_all_four_causes(
             tuple(sorted(f.rule_id for f in verdict.ordered_findings)),
         )
 
+    driven_load_causes = {_MODES_BY_NAME[name].failure for name in graded}
+    assert driven_load_causes == _LOAD_FAILURE_CAUSES, (
+        f"the load-cause scope drifted: drove {sorted(f.value for f in driven_load_causes)}, "
+        f"expected {sorted(f.value for f in _LOAD_FAILURE_CAUSES)}. Narrowing this test is "
+        "allowed ONLY as a deliberate, counted decision (11.4 AC4.1); a scope that quietly "
+        "shrinks makes the equality below pass over nothing."
+    )
+    assert len(_LOAD_FAILURE_CAUSES) == 4, (
+        f"{len(_LOAD_FAILURE_CAUSES)} load causes, expected exactly 4. A fifth LOAD cause "
+        "belongs in this invariant; 11.4's RUNTIME_UNVALIDATED is not one — a parser WAS "
+        "constructed — so it is asserted separately rather than folded in here."
+    )
     assert len(graded) >= 4, "fewer than four causes were graded — the matrix went vacuous (E.4)"
     distinct = set(graded.values())
     assert len(distinct) == 1, (
-        "the four grammar-load causes produced DIFFERENT graded outcomes: "
+        "the four grammar-LOAD causes produced DIFFERENT graded outcomes: "
         f"{json.dumps({k: str(v) for k, v in graded.items()}, indent=2)}. Naming the cause "
-        "must change the EVIDENCE, never the verdict (DN-9, fence to Story 11.4). Something "
-        "downstream is branching on the reason token instead of on ast_eligible/parse_failed."
+        "must change the EVIDENCE, never the verdict (DN-9). Something downstream is "
+        "branching on the reason token instead of on ast_eligible/parse_failed."
+    )
+
+    # ── Story 11.4's fifth cause, asserted SEPARATELY (AC4.1) ────────────────────────
+    # Its recorded shape matches the four (DN-2 routes it into the SAME floor row rather
+    # than inventing a verdict), and that sameness is the load-bearing claim: it is what
+    # lets the story change no decision-table row. What is deliberately different is where
+    # it fires from — a toolchain that WAS constructible — and that is measured above the
+    # deep gate in tests/test_grammar_runtime_validation.py::…-121.
+    unvalidated = _MODES_BY_NAME["runtime_unvalidated"]
+    assert unvalidated.failure not in _LOAD_FAILURE_CAUSES, (
+        "RUNTIME_UNVALIDATED was folded into the load-cause set. It is not a load failure — "
+        "the parser constructed — and merging it would hide the one cause that can produce a "
+        "false 🟢 behind an invariant written for the four that cannot."
+    )
+    root = tmp_path / "repo_runtime_unvalidated"
+    root.mkdir(parents=True, exist_ok=True)
+    (root / "go.mod").write_text("module example.com/app\n\ngo 1.21\n", encoding="utf-8")
+    (root / _FIXTURE).write_text(_FIXTURE_SOURCE, encoding="utf-8")
+    with monkeypatch.context() as patch:
+        _install_seam(patch, unvalidated)
+        fifth = run_audit(
+            AuditRequest(repo_path=str(root), commit="HEAD", budget=100, materiality_bar="default")
+        )
+    assert (
+        fifth.verdict,
+        fifth.total_count,
+        fifth.deep_count,
+        tuple(sorted(f.rule_id for f in fifth.ordered_findings)),
+    ) == distinct.pop(), (
+        "the fifth cause produced a DIFFERENT graded shape from the four load causes. DN-2 "
+        "routes it into the existing floor row precisely so that no new verdict, row or "
+        "threshold is introduced; a divergence here means verdict_gate.py or pipeline.py was "
+        "touched after all."
     )
 
 
@@ -782,17 +880,22 @@ def test_this_guard_cannot_pass_vacuously() -> None:
     nothing. Every count this file depends on is pinned here, so deleting a mode, emptying
     the registry or renaming the loader turns the suite RED instead of quiet.
     """
-    assert len(_MODES) >= 5, f"only {len(_MODES)} simulated modes — the four causes plus a baseline are the floor"
+    assert len(_MODES) >= 6, f"only {len(_MODES)} simulated modes — the five causes plus a baseline are the floor"
     assert any(mode.failure is None for mode in _MODES), "no success baseline: a seam that never works looks like a pass"
     assert {mode.failure for mode in _MODES if mode.failure is not None} == registered_failures(), (
         "the mode table and the registry have drifted apart; -116's both-direction closure "
-        "is comparing something other than the four causes."
+        "is comparing something other than the registered causes."
     )
 
-    assert len(registered_failures()) == 4, (
-        f"{len(registered_failures())} failure classes registered, expected the four measured "
-        "causes. A fifth is fine — register it, drive it in _MODES, give it a remedy in the "
-        "report, and update this number deliberately."
+    assert len(registered_failures()) == 5, (
+        f"{len(registered_failures())} failure classes registered, expected the five measured "
+        "causes (10.4's four load causes + Story 11.4's RUNTIME_UNVALIDATED). A sixth is fine "
+        "— register it, drive it in _MODES, give it a remedy in the report, and update this "
+        "number deliberately. Updating it is the point: registration must cost an edit."
+    )
+    assert _LOAD_FAILURE_CAUSES < registered_failures(), (
+        "the load-cause subset -114 narrows to is no longer a PROPER subset of the registry. "
+        "Either the fifth cause was deleted or -114 quietly re-absorbed it (11.4 DN-10)."
     )
 
     function = _loader_ast()

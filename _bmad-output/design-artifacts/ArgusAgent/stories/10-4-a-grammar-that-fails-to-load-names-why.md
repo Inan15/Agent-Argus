@@ -27,7 +27,7 @@ epic: 10
 
 # Story 10.4: A grammar that fails to load names why
 
-Status: review
+Status: done
 
 <!-- Note: Validation is optional. Run validate-create-story for quality check before dev-story. -->
 
@@ -581,6 +581,69 @@ operator, and no existing test notices.
         evidence; see DEV-6.**
   - [x] **D2** — file the systemic sub-finding append-only in `deferred-work.md` with a named owner
         and a real `target_story`. — **`DF-10-4-D` filed; `git diff --numstat` `+585 / -0`.**
+
+### Review Findings
+
+**Code review — iteration 1 — 2026-08-11 — VERDICT: PASS.** Adversarial, execution-based review (Blind
+Hunter + Edge Case Hunter + Acceptance Auditor against this story). Every mechanical claim in the Dev
+Agent Record was independently re-derived, not trusted:
+
+- Full suite `ARGUS_REQUIRE_LANGUAGE_GRAMMARS=1 pytest tests/` → **1324 tests, 0 failures, 0 errors, 0
+  skipped** (`--junit-xml`, this shell's truncation confirmed as the same host quirk 10.3 measured).
+  Dogfood subset (`test_dogfood_plan.py` + `test_dogfood_proof.py` + `test_dogfood_module_split.py`) →
+  **48/48 green**, independently re-run against the regenerated artifacts.
+- `mypy argus` → clean, **72** files. `bandit -r argus --severity-level medium` → **0 High / 0 Medium**
+  (19 Low). `pytest --cov=argus --cov-fail-under=80` → **95.51%**, gate met.
+- `argus audit .` re-run directly (not read off the story): `verdict=RELEASE_READY deep_ratio=61/163
+  blocking_findings=0 assessed_deep_ratio=61/77 scope=application held_out=86`, exit `0` — byte-identical
+  to the story's own re-measurement (DN-9 / AC4.4 held).
+- **Provenance chain verified by git forensics, not assertion.** `a9cc933` genuinely contains the
+  10.1–10.4 deltas (`git show --stat` confirms `ast_index.py`, `generator.py`, the new
+  `grammar_status.py`, the new `tests/test_grammar_diagnosis.py`, `architecture.md` and
+  `deferred-work.md` are all in that one commit). All three regenerated `minions-dogfood-*.md`
+  artifacts cite `Commit descriptor: a9cc93398c1b1937d981e8f22108aa72cad157ba` — the sha that was
+  genuinely `HEAD` at generation time, and `a9cc933` is an ancestor of current `HEAD` (`93adc94`, which
+  only adds the artifacts themselves). `HEAD ahead of origin/master by 6`, `git tag -l` empty — nothing
+  pushed, tagged or dispatched; CI evidence remains honestly **NOT ESTABLISHED**.
+- **`deferred-work.md`'s `+585/-0` is genuinely append-only**: diffed against the immediate parent
+  content and confirmed **zero removed/changed lines** — every hunk is a pure insertion (the original
+  `DF-AUD-APAA-F` entry stays byte-intact; the two-causes→four correction and `DF-10-4-A/B/C/D` are all
+  new text inserted after it, matching this project's established closure-note convention from 10.1/10.2).
+- **AC5's closure guard was proven to bite, live, not read off the story.** A fifth, unregistered
+  `except RuntimeError: return _ParserLoad(None, GrammarFailure.SOME_UNREGISTERED_CAUSE)` arm was
+  injected into the real `_get_parser_for_lang` in `argus/index/ast_index.py`, and
+  `test_loader_has_no_unnamed_swallowed_or_redundant_arm` turned **RED** exactly as claimed
+  (`AssertionError: _get_parser_for_lang returns GrammarFailure member(s)
+  ['SOME_UNREGISTERED_CAUSE'] that are not registered…`). The file was restored and verified
+  `git diff --quiet` clean afterward.
+- **AC6 verified against the actual `_render_grammar_remedy`**: cause 1 → `pip install
+  tree-sitter-<lang>` only; cause 2 → explicit "this is an Argus defect," no install command; cause 3 →
+  reinstall/rebuild, not a fresh install; cause 4 → names the core package, no per-language name. Mixed
+  case renders one bullet per class (`test_mixed_failure_classes_each_keep_their_own_remedy`).
+- **Fences held**: `git diff --quiet` confirms `argus/pipeline.py` (1331 lines, NFR-M1), `argus/models.py`,
+  `argus/cache/key.py`, `argus/cli.py`, `pyproject.toml`, `epics.md`, `README.md`, `CHANGELOG.md`,
+  `action.yml`, `audit-ci.yml`, `E-PRD/**` are untouched by the 10.4 commit (`a9cc933`) or the
+  regeneration commit (`93adc94`) — the only files those two commits touch are exactly the ones AC7.6
+  and the operator's write-set widening permit. `tests/test_ast_index.py` / `test_multilanguage_audit.py`
+  (`-73`/`-74`, `INTAKE-003-07/-08`) confirmed unmodified by 10.4's commits and green.
+- No new field on `AstIndexEntry`; `schema_version` still `"2"`; `CACHE_KEY_SCHEMA_VERSION` still `"3"`
+  (DN-5 held). `argus/shared/grammar_status.py` confirmed pure (`enum` + `typing` only, no I/O, no
+  `importlib`, no `tree_sitter` import — AR8 held).
+
+- [x] **[Review][Defer] `_render_grammar_remedy`'s per-cause branching has no exhaustiveness guard of
+      its own** [`argus/reports/generator.py:295-332`] — deferred, pre-existing shape, not a defect in
+      this delivery. `_get_parser_for_lang`'s closure guard (AC5.2) forces a **future** fifth
+      `GrammarFailure` member to be registered and driven, but nothing forces `_render_grammar_remedy`
+      to grow a matching branch: today the function's last branch is an unconditional fallthrough
+      (comment-only "CORE_RUNTIME_MISSING — deliberately last"), so a hypothetical fifth cause would
+      silently render the core-runtime remedy instead of failing loudly — the one place in this story's
+      own design that doesn't match its own "fail loudly, never silently" standard (E.4's spirit,
+      applied to the report side). **Not a defect today**: `GrammarFailure` has exactly the four members
+      AC1.1 locks, and the behavioural matrix (`REPORT-002-26/-27`) exercises all four correctly. Low
+      severity, no operator-visible harm exists on this tree. Worth a one-line `else: raise
+      AssertionError` (or an AST-closure mirror of `-115` over `_render_grammar_remedy`) whenever a
+      future story next touches `GrammarFailure`'s membership — flagged here so that story inherits the
+      measurement rather than rediscovering it, the same courtesy 10.2 paid 10.4 (§A.1).
 
 ---
 
