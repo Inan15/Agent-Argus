@@ -152,6 +152,19 @@ _MODULES_UNDER_GUARD = (
     # ArgusAgent leaves — no web stack, no LLM/api/providers module. Extend the guard (do
     # NOT fork) per AI-E4-7.
     "argus.cache.invalidation",
+    # Story 12.3 — the IMPURE composition that WIRES the 5.1 key + the 5.2 store onto the
+    # pipeline's deterministic detect/grade stage (FR27/NFR-D1). It is the first module in
+    # `argus.cache` to be reachable from `argus.cli` on the DEFAULT path, which makes its
+    # import hygiene load-bearing rather than incidental: it now runs on every invocation.
+    # It composes the 5.1 key + 5.2 store + the 1.4 index's version probe + the intake's
+    # source state, and imports ONLY done ArgusAgent leaves — no web stack, no
+    # LLM/api/providers module, and in particular NOT `argus.audit.*`, whose dispatch
+    # surface must never reach the memoization path (NFR-S6). The AC6.1 fence therefore
+    # names the deep pass's rule stem as a literal and joins it to
+    # `deep_pass.RULE_DEGRADED_DEEP_READ` in the TEST layer
+    # (`TC-ArgusAgent-CACHE-001-97`), never by importing it here. Extend the guard (do NOT
+    # fork) per AI-E4-7.
+    "argus.cache.stage_memo",
     # Story 1.7 — the Epic-1 capstone: the AuditRequest contract (pure), the
     # sequential pipeline orchestrator (impure shell), and the thin argparse CLI.
     # All three must stay FastAPI-free AND LLM-free (the Epic-1 verdict path is

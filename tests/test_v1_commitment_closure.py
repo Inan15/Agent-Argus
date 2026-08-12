@@ -444,14 +444,22 @@ _REVERSE_REGISTRY: tuple[_Delivery, ...] = (
               "`argus.cli`, so no audit an operator can run lints its own on-disk state. Filed as "
               "`DF-10-5-B`; owner Governance Owner; target_story NONE — unscheduled; the call site "
               "lands in `pipeline.py`, fenced to 12.1."),
-    _Delivery("FR27", "delivered-differently", "argus/cache/memo_store.py", "class MemoStore:",
-              "THE ASYMMETRY'S WORKED EXAMPLE — unreachable module, DELIVERED requirement. The "
-              "memoization MECHANISM is unwired (`DF-AUD-APAA-A`), but FR27 promises *the same "
-              "verdict for the same repository and APAA version*, and the default run is "
-              "zero-token and deterministic, so the property holds BY DETERMINISM rather than by "
-              "cache — pinned by the determinism golden tests, not by a cache HIT. Mechanism "
-              "deferred to Story 12.3. Classifying this `library-seam` would manufacture a false "
-              "accusation, which is the failure mode this product exists to prevent."),
+    _Delivery("FR27", "wired", "argus/cache/memo_store.py", "class MemoStore:",
+              "RE-DERIVED 2026-08-13 by Story 12.3, which WIRED the mechanism this entry had "
+              "disposed as absent. `argus/pipeline.py` now consults `MemoStore` through a key "
+              "derived by `argus.cache.key.derive_cache_key` around the deterministic "
+              "detect/grade stage, so this module is in the import closure from `argus.cli` and "
+              "a re-run over an unchanged closure is SERVED the recorded result. Proven, not "
+              "asserted: `TC-ArgusAgent-CACHE-001-81` proves the warm run does not execute the "
+              "stage, and `-82` poisons the slot and proves the served value reaches the verdict "
+              "— byte-identity alone could not, since it is green with no cache at all. "
+              "SUPERSEDED (not deleted, §3.4): this entry previously read `delivered-differently` "
+              "on the grounds that *the memoization MECHANISM is unwired (`DF-AUD-APAA-A`) … "
+              "Mechanism deferred to Story 12.3*, the property holding BY DETERMINISM rather "
+              "than by cache. Both halves of that sentence are now false. That the registry "
+              "could not SEE them become false is the hole `delivered_differently_refutations` "
+              "closes (AC6.3); scoped honestly, the memoization covers the DETERMINISTIC stage "
+              "only — the `--deep-audit` component is not served from the store (`DF-12-3-A`)."),
     _Delivery("FR28", "wired", "argus/detectors/secret_scan.py", "class SecretFindingEvidence(",
               "Excerpts are redacted before storage; no source or secret bytes reach ledger, "
               "evidence, logs or traces (NFR-S1)."),
@@ -812,6 +820,65 @@ def not_built_refutations(
     return tuple(problems)
 
 
+# Phrases by which a disposition's REASON makes a claim about REACHABILITY. Lower-cased
+# substrings, matched against the reason text itself, so the claim is read off the committed
+# sentence rather than inferred from the label. Story 12.3 measured these against the live
+# registry: FR27's reason carried "is unwired" AND "deferred to Story 12.3", both of which its
+# own wiring falsified.
+_UNWIREDNESS_CLAIM_MARKERS: tuple[str, ...] = (
+    "is unwired",
+    "mechanism is unwired",
+    "not wired",
+    "no production call site",
+    "no production caller",
+    "deferred to story",
+)
+
+
+def delivered_differently_refutations(
+    entries: tuple[tuple[str, str, str, str], ...], reachable: frozenset[str]
+) -> tuple[str, ...]:
+    """Refute a `delivered-differently` disposition whose REASON claims something now false.
+
+    ``entries`` are ``(fr, disposition, module_name, reason)``. Pure, so `-37c` can drive it over
+    a synthetic graph exactly as `-37`/`-37b` drive the other three directions.
+
+    THE HOLE THIS CLOSES, measured by Story 12.3 by EXECUTING this module's own code rather than
+    reading it. ``delivered-differently`` makes no reachability claim, and
+    ``reachability_refutations`` therefore never refutes it — correctly, because a walk that
+    assigned it one would manufacture the false accusations this product exists to prevent. But
+    that left a gap in the one direction that matters: the LABEL makes no claim while the REASON
+    freely does. FR27's reason asserted *"the memoization MECHANISM is unwired … Mechanism
+    deferred to Story 12.3"*, and when Story 12.3 wired it, **nothing in this repository was able
+    to notice that sentence had become false**. The registry would have gone on asserting it
+    forever, behind a fully green suite — a disposition outliving the fact it disposed, arriving
+    through the one door `-37`/`-37b` left open.
+
+    Story 12.2's ``not_built_refutations`` is the precedent and this is deliberately just as
+    NARROW. It fires only when BOTH hold: the reason makes an explicit unwiredness/deferral claim,
+    AND the module that reason is about is reachable. A `delivered-differently` entry that claims
+    only *"this holds by another mechanism"* — the disposition's legitimate use — is untouched.
+    The remedy when it fires is never to soften the reason: it is to re-derive the disposition,
+    which for a seam that has just been wired is ``wired``.
+    """
+    problems: list[str] = []
+    for fr, disposition, module_name, reason in entries:
+        if disposition != "delivered-differently" or module_name not in reachable:
+            continue
+        claims = sorted(
+            marker for marker in _UNWIREDNESS_CLAIM_MARKERS if marker in reason.lower()
+        )
+        if claims:
+            problems.append(
+                f"{fr}: disposed 'delivered-differently', and its REASON still claims {claims} — "
+                f"but {module_name} IS reachable from {_ENTRY_POINT}, so that claim is FALSE. "
+                "The label makes no reachability claim; the reason did, and it outlived the fact "
+                "it disposed. Re-derive the disposition (a seam that has been wired is 'wired') "
+                "rather than editing the sentence until it stops matching."
+            )
+    return tuple(problems)
+
+
 def closure_errors(
     atoms: tuple[_Atom, ...], anchors: tuple[str, ...]
 ) -> tuple[tuple[str, ...], tuple[str, ...], tuple[str, ...]]:
@@ -1029,6 +1096,28 @@ def test_a_wired_disposition_is_proven_against_the_import_closure() -> None:
         + "\n  ".join(stale)
     )
 
+    # Story 12.3 / AC6.3 — the FOURTH direction. A `delivered-differently` disposition whose
+    # REASON claims the mechanism is unwired or deferred, over a module that IS reachable. The
+    # label makes no reachability claim, so nothing here could see such a reason go false —
+    # measured on 12.3's own subject: FR27 said "the memoization MECHANISM is unwired … deferred
+    # to Story 12.3", and wiring it turned nothing red anywhere in this repository.
+    differently = tuple(
+        (
+            entry.fr,
+            entry.disposition,
+            _module_name(_REPO_ROOT / entry.module, _PACKAGE_ROOT),
+            entry.reason,
+        )
+        for entry in _REVERSE_REGISTRY
+        if entry.module.startswith("argus/")
+    )
+    rotted = delivered_differently_refutations(differently, reachable)
+    assert not rotted, (
+        "A 'delivered-differently' REASON asserts something the import graph now falsifies. The "
+        "disposition label was never the problem — the sentence under it was.\n  "
+        + "\n  ".join(rotted)
+    )
+
 
 def test_every_library_seam_is_amended_in_the_prd_and_filed_in_the_ledger() -> None:
     """TC-ArgusAgent-DOCS-001-35 — a seam the FR text still reads as delivered is the defect."""
@@ -1207,6 +1296,79 @@ def test_a_not_built_disposition_is_refuted_once_its_seam_becomes_reachable() ->
 
     # And it stays silent when nothing is reachable at all (the empty-graph degenerate case).
     assert not_built_refutations(delivered, frozenset()) == ()
+
+
+def test_a_delivered_differently_reason_is_refuted_once_its_module_becomes_reachable() -> None:
+    """TC-ArgusAgent-DOCS-001-37c — AC6.3 positive control, over the SAME synthetic graph.
+
+    Story 12.3, fourth direction, driven exactly as `-37` and `-37b` drive the other three: a
+    refutation nobody has watched fire is a refutation nobody knows is reachable.
+
+    THE HOLE IT CLOSES, verified by RUNNING this module's own code on `58c8f6b` rather than by
+    reading it. Executed there, ``reachability_refutations`` over
+    ``("FR27", "delivered-differently", "argus.cache.memo_store")`` with ``memo_store`` forced
+    REACHABLE returned ``()`` — no refutation — while the identical tuple disposed
+    ``library-seam`` fired immediately. So `DF-12-1-B`'s stated trigger (*wiring the memo store
+    "flips a `library-seam` disposition and turns it red"*) was measurably FALSE: FR27 was never
+    disposed `library-seam`. Wiring the store would have turned NOTHING red, and the registry
+    would have gone on asserting *"the memoization MECHANISM is unwired … deferred to Story
+    12.3"* about a mechanism that had just been built.
+
+    Both directions are asserted, because a guard that only ever rejects cannot be shown
+    reachable and one that only ever accepts cannot be shown to bite. The third case is the
+    important one: a `delivered-differently` reason that makes NO reachability claim is the
+    disposition's legitimate use and must stay silent, or this direction would manufacture the
+    false accusations `-37` deliberately refuses to make.
+    """
+    graph: dict[str, frozenset[str]] = {
+        "pkg.cli": frozenset({"pkg.live"}),
+        "pkg.live": frozenset(),
+        "pkg.seam": frozenset(),
+    }
+    reachable = reachable_from(graph, "pkg.cli")
+
+    # REFUTED — the exact pre-fix FR27 shape: an unwiredness claim over a module that is now
+    # reachable. This is the sentence that could rot, and now cannot.
+    rotted = (
+        (
+            "FRa",
+            "delivered-differently",
+            "pkg.live",
+            "The memoization MECHANISM is unwired, so the property holds by determinism. "
+            "Mechanism deferred to Story 12.3.",
+        ),
+    )
+    problems = delivered_differently_refutations(rotted, reachable)
+    assert len(problems) == 1, problems
+    assert "IS reachable" in problems[0] and "is unwired" in problems[0], problems[0]
+
+    # SILENT — the same claim while the module really is unreachable. Nothing has expired.
+    assert delivered_differently_refutations(
+        (("FRa", "delivered-differently", "pkg.seam", "The mechanism is unwired."),), reachable
+    ) == (), "an unwiredness claim over an UNREACHABLE module is simply true and must not fire"
+
+    # SILENT — the disposition's LEGITIMATE use: delivered by another mechanism, no claim about
+    # wiring at all. Refuting this would be the false accusation `-37` exists to avoid.
+    assert delivered_differently_refutations(
+        (
+            (
+                "FRb",
+                "delivered-differently",
+                "pkg.live",
+                "Delivered in a different form than promised; the divergence is named and the "
+                "property is pinned by the golden tests.",
+            ),
+        ),
+        reachable,
+    ) == (), (
+        "'delivered-differently' makes no reachability claim BY LABEL, and an entry whose "
+        "reason makes none either must never be refuted here"
+    )
+
+    # SILENT — other dispositions are not this function's business (they have their own).
+    assert delivered_differently_refutations(
+        (("FRc", "wired", "pkg.live", "The mechanism is unwired."),), reachable
+    ) == ()
 
 
 # ─────────────────────────────────────────────────────────────────────────────

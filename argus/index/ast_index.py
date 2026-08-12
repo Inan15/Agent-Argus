@@ -272,6 +272,19 @@ def _package_version(lang: str) -> str:
     return _distribution_version(f"tree-sitter-{lang}") or "unknown"
 
 
+def resolved_tool_version(distribution: str) -> str:
+    """Resolved version of a pinned analysis tool, or ``"unknown"`` (AR10, never raises).
+
+    The PUBLIC face of the existing impure probe above, added by Story 12.3 so the cache
+    closure builder can fold the pinned-tool versions its detectors actually depend on
+    (``RecordingProducingClosure.tool_versions``) WITHOUT forking a second
+    ``importlib.metadata`` read (AR7 — reuse, never fork). The probe stays here, in the
+    impure shell that already owns it; ``cache/key.py`` remains PURE and is handed the
+    resolved string.
+    """
+    return _distribution_version(distribution) or "unknown"
+
+
 def _is_python(rel_path: str) -> bool:
     return Path(rel_path).suffix in _PYTHON_SUFFIXES
 

@@ -162,6 +162,8 @@ from typing import Any
 
 from pydantic import ValidationError
 
+from argus.cache.memo_store import RecordedStageResult
+from argus.cache.stage_memo import memoize_detect_stage
 from argus.detectors.orphan_code import RULE_ORPHAN_CODE
 from argus.index.ast_index import AstIndex, build_ast_index
 from argus.cost.budget_governor import budget_config_from_budget
@@ -593,19 +595,54 @@ def run_audit_detailed(
             assessed_entries = tuple(
                 e for e in index.entries if e.file_path in assessed_set
             )
-            entries, findings, candidates = _detect_per_file(
-                repo_root, assessed_entries, request
-            )
-            entries = entries + _skipped_remainder_entries(halt_projection.skipped_paths)
         else:
             assessed_entries = index.entries
-            entries, findings, candidates = _detect_per_file(
-                repo_root, index.entries, request
+
+        def _run_detect_stage() -> RecordedStageResult:
+            """The recording-producing closure itself: the detect/grade + orphan passes.
+
+            Story 6.3 (DN-WHOLE-INDEX): the single cross-file orphan pass runs AFTER the
+            per-file detect stage, over the ASSESSED entries only. Findings-only —
+            appended to the existing accumulation; a no-orphan repo stays byte-identical.
+            """
+            staged, found, cands = _detect_per_file(repo_root, assessed_entries, request)
+            return RecordedStageResult(
+                entries=tuple(staged),
+                findings=tuple(found) + tuple(_orphan_findings(index, assessed_entries, request)),
+                candidates=tuple(cands),
             )
-        # Story 6.3 (DN-WHOLE-INDEX): the single cross-file orphan pass, AFTER the
-        # per-file detect stage, over the ASSESSED entries only. Findings-only —
-        # appended to the existing accumulation; a no-orphan repo stays byte-identical.
-        findings = findings + _orphan_findings(index, assessed_entries, request)
+
+        # Story 12.3 (FR27 / NFR-D1 / DN-1): THE MEMOIZATION HOOK. It wraps the
+        # deterministic stage above and nothing else — a second run over an unchanged
+        # closure is SERVED the recorded result instead of recomputing it, and the served
+        # answer is byte-identical to the computed one because it IS the same canonical
+        # bytes. The store is advisory: every typed cache failure degrades to a recompute,
+        # so the verdict is correct whether or not the cache exists, is warm, or is wiped.
+        #
+        # 🔴 SCOPE: this covers the DETERMINISTIC component ONLY. The opt-in deep pass runs
+        # DOWNSTREAM, inside `_assemble_and_persist`, and is never served from the store —
+        # so with `--deep-audit` on, a re-run dispatches again and PRD §501 is NOT
+        # delivered (DF-12-3-A; the reasoning and the model-collision hazard are in
+        # `argus/cache/stage_memo.py`'s module docstring, and the fence that makes the
+        # hazard impossible is `memo_store._fence_llm_derived`).
+        stage = memoize_detect_stage(
+            repo_root=repo_root,
+            request=request,
+            index=index,
+            assessed_entries=assessed_entries,
+            source_state=source_state,
+            compute=_run_detect_stage,
+        )
+        entries = list(stage.result.entries)
+        findings = list(stage.result.findings)
+        candidates = list(stage.result.candidates)
+        if halt_projection.halted_on_exhaustion:
+            # Appended OUTSIDE the memoized payload: the skipped remainder is a pure
+            # function of the halt projection, not of the detectors, so memoizing it would
+            # store a derivable value. `work_manifest_files` already folds the ASSESSED
+            # set into the key, so a run that halts at a different point reads a different
+            # slot and cannot be served this one's entries.
+            entries = entries + _skipped_remainder_entries(halt_projection.skipped_paths)
         halt_report = build_halt_report(halt_projection)
     except (WorkspaceContainmentError, RepoIntakeError):
         raise

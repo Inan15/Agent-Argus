@@ -148,7 +148,37 @@ def _repo_above_the_deep_gate(dest: Path) -> Path:
     return repo
 
 
+def _wipe_memo_cache(repo: Path) -> None:
+    """Empty ``.argus/cache/`` so a leg computes rather than being served a previous leg's answer.
+
+    STORY 12.3 NOTE — why this exists, since deleting it would silently gut ``-125``.
+    ``-125`` audits ONE repository THREE times to contrast three TOOLCHAIN STATES (healthy /
+    drifted-with-the-fix-disabled / drifted-with-the-guard-live). Story 12.3 wired the FR27
+    memoization store onto the detect/grade stage, and the three legs present the SAME
+    recording-producing closure to it: the repository, the flags and the RECORDED grammar
+    versions are identical in all three, because the drift is simulated by monkeypatching
+    Argus's own ``_CALL_NODE_TYPES`` in-process rather than by installing a different grammar
+    (see ``_drift_extraction_vocabulary`` — deliberately so). A real drifted grammar arrives
+    with its own package version, which the 10.2 per-grammar provenance folds into the key; an
+    in-process patch of Argus's internals cannot move that key and is not meant to.
+
+    So without this wipe the second leg would be SERVED the first leg's recorded result and
+    would report the healthy verdict, and ``-125`` would fail while asserting something true.
+    Wiping is the sanctioned lever, not a workaround: ``memo_store.py``'s own invariant is that
+    *the verdict is correct whether or not the cache exists, is warm, or is wiped*. Nothing
+    about what ``-125`` measures changes — each leg simply computes its own answer, exactly as
+    it did before the store was wired.
+    """
+    cache_dir = repo / ".argus" / "cache"
+    if not cache_dir.is_dir():
+        return
+    for slot in cache_dir.iterdir():
+        if slot.is_file():
+            slot.unlink()
+
+
 def _audit(repo: Path) -> object:
+    _wipe_memo_cache(repo)
     return run_audit(
         AuditRequest(repo_path=str(repo), commit="HEAD", budget=200, materiality_bar="default")
     )

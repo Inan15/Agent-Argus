@@ -3312,3 +3312,206 @@ re-taken). **CI evidence: NOT ESTABLISHED** — no CI run has executed any Epic 
   - category: correctness
   - severity: 🟡 (the capability is incomplete, but it fails SAFE and is now disclosed at
     every site a user or a reader of FR36 would otherwise be misled)
+
+## Deferred from: story 12-3-a-re-run-returns-the-recorded-result (2026-08-13)
+
+**Baseline re-measured on this tree before any edit, never transcribed:** bare `python -m pytest`
+= **1441 passed / 0 failed / 0 error / 0 skipped in 137.81s**; `HEAD` `58c8f6b`; `origin/master`
+UNMOVED at `00c8d1b`; `git tag -l` EMPTY; `git ls-files -- argus` = **74**; `python -m argus.cli
+audit .` = `RELEASE_READY deep_ratio=64/177 blocking_findings=0 assessed_deep_ratio=4/5
+scope=application held_out=97`, exit 0; `.argus/cache/` held **0** files (the zero-migration
+premise, confirmed). Closure probe re-run against the guard's own builder: **74** graph nodes,
+**58** reachable from `argus.cli`, `argus.cache.memo_store` **reachable=False**.
+
+### New filing
+
+- **`DF-12-3-A` — 🟡 PRD §501 is NOT delivered: with `--deep-audit` on, a re-run still
+  dispatches, so the DEEP component of a verdict is not reproducible through the FR27/NFR-D1
+  memoization path.** `E-PRD/prd.md:501` (under FR36) states *"Determinism is preserved by the
+  FR27/NFR-D1 memoization path — a re-run returns the recorded result. Enabling this pass must not
+  make the verdict irreproducible."* Story 12.3 wired that path, and it is **scoped to the
+  deterministic detect/grade stage only**. The deep pass runs DOWNSTREAM of the memo hook, inside
+  `pipeline._assemble_and_persist`, and no LLM-derived byte is ever served from the store.
+  Measured, not asserted: `TC-ArgusAgent-CACHE-001-98` runs `--deep-audit` twice over one repo
+  with an injected port and shows the deterministic stage HITS while the port dispatches the SAME
+  number of times on both runs, and it sweeps the persisted slot BYTES for LLM-derived rule ids.
+
+  **Why it was scoped rather than delivered — three measured reasons, none of them convenience.**
+  (a) The cache key's `model_checkpoint` is the fixed sentinel `v1-heuristic-no-llm` and its
+  `prompt_template_version` is `v1-no-prompt-template`, while the deep pass dispatches under
+  `DEEP_PROMPT_TEMPLATE_VERSION = "argus-deep-v1"` to whatever `ARGUS_LLM_MODEL` / `OLLAMA_MODEL`
+  resolves. **Neither value reaches the key**, so memoizing deep output under this key as it
+  stands would let two runs against two DIFFERENT MODELS collide on ONE cache slot, and the store
+  would serve a result computed under model A to a run that asked for model B — the single failure
+  `argus/cache/key.py` exists to make impossible. (b) `DF-12-2-D` (open) records that the
+  `delivered` branch is unreachable through the shipped adapter, so what would be memoized today
+  is the `empty-response` DEGRADATIONS — *"memoization caches errors → reproducibility ≠
+  correctness"* is `memo_store.py`'s own named failure mode. (c) Doing it honestly requires
+  folding the CAPTURED checkpoint and a real prompt-template version into the closure — that is
+  `argus/audit/deep_audit.py::build_closure_from_recording` plus a claim grammar, which
+  **`DF-12-2-D` already assigns to 6.2-style claim-grammar work with a named owner**; re-homing it
+  here would fork an owned item. Story 12.3's §0.3(c) also forbids the live dispatch that would be
+  needed to validate it, and `AI-E10-1` records that CI evidence is NOT ESTABLISHED.
+
+  **Made impossible rather than left as a warning.** `argus/cache/memo_store.py::_fence_llm_derived`
+  refuses, at the store's write path, to persist a payload containing an LLM-derived recording
+  while the closure carries the V1 placeholder checkpoint, and its message names the
+  model-collision hazard rather than merely forbidding the act. The fence is CONDITIONAL: once a
+  real captured checkpoint reaches the closure the key can discriminate and the fence stands down
+  by itself, so it fences a key that cannot yet tell two models apart rather than banning deep
+  memoization forever. Both directions are pinned by `TC-ArgusAgent-CACHE-001-96`, and
+  `-97` pins the fence's rule-id vocabulary against `deep_pass.RULE_DEGRADED_DEEP_READ` so the
+  literal cannot silently drift out of step (memo_store may not import deep_pass — NFR-S6).
+
+  **Disclosed where a reader would otherwise be misled**, per the discipline `DF-12-2-B` set: the
+  `argus/cache/stage_memo.py` module docstring (the module that owns the hook) carries a 🔴 SCOPE
+  DISCLOSURE section; the hook's call site in `argus/pipeline.py` carries the same scope note;
+  `architecture.md` §Memoization carries it under the amended step-2 record; and **Story 12.4 is
+  named explicitly** — that story writes the next-action text a user reads about what a verdict
+  means, and **it must not imply that a deep verdict is reproducible.**
+  - id: DF-12-3-A
+  - origin_story: 12-3-a-re-run-returns-the-recorded-result
+  - owner: Engineering
+  - target_story: **the same 6.2-style claim-grammar work `DF-12-2-D` already names** — the two
+    are the same blocker seen from two sides and should be closed together: a declared claim
+    format makes the `delivered` branch reachable AND supplies the real prompt-template version
+    that, with the captured checkpoint, lets the key discriminate between models. Until one is
+    scheduled: the next story that folds a captured checkpoint into `RecordingProducingClosure`.
+  - category: correctness
+  - severity: 🟡 (a documented capability is narrower than the PRD states; it fails SAFE — the
+    deterministic component is fully memoized and the deep component is recomputed every run,
+    which is slower, never wrong — and it is now disclosed at four sites)
+  - cross-reference: `DF-12-2-D` (why the `delivered` branch is unreachable today), `DF-5-1-A`
+    (closed — the prompt-template slot that makes the eventual fix additive)
+
+### Corrections to an existing entry — recorded as a new append (§3.4 append-only)
+
+- **`DF-12-1-B` — its stated TRIGGER is measurably FALSE, and its size figure is stale by 111.**
+  The entry says wiring the memo store *"flips a `library-seam` disposition and turns it red until
+  the disposition is updated"*. **It does not, and this was established by EXECUTING the guard's
+  own code rather than by reading it.** FR27 was disposed **`delivered-differently`**, never
+  `library-seam`; `reachability_refutations` refutes exactly `wired`-over-unreachable and
+  `library-seam`-over-reachable, and its own docstring says `delivered-differently` *"makes no
+  reachability claim and is never refuted here"*. Executed on `58c8f6b` with `memo_store` forced
+  REACHABLE, the FR27 tuple returned `()` while the identical tuple disposed `library-seam` fired
+  immediately. **So wiring the store would have turned NOTHING red**, and the registry would have
+  gone on asserting *"the memoization MECHANISM is unwired … Mechanism deferred to Story 12.3"*
+  about a mechanism that had just been built, behind a fully green suite. The SUBSTANCE the entry
+  pointed at was real; the mechanism it named would never have fired.
+  **Both halves are now closed** (Story 12.3, AC6.3): FR27's entry is re-derived to `wired` with
+  the superseded sentence recorded rather than deleted, AND the refutation gap that let it rot is
+  closed by `delivered_differently_refutations` — a fourth direction, as narrow as Story 12.2's
+  `not_built_refutations`, firing only when a reason makes a registered unwiredness/deferral claim
+  over a module that IS reachable. Proven **RED-first with the final committed code** against the
+  real pre-fix registry state, and driven in all three outcomes over a synthetic graph by
+  `TC-ArgusAgent-DOCS-001-37c`. Registered in `architecture.md` §Enforcement.
+  **Size figure:** the entry records `tests/test_v1_commitment_closure.py` at **1308** lines; it
+  measured **1419** at the start of this story and **1581** after it (this story edits the registry
+  that file holds). The 1200-line breach itself **stays exempt** for the reason 12.1 and 12.2 both
+  gave, and which is stronger here: splitting a delivery-closure guard inside the very story that
+  changes what that guard measures removes the evidence for the property being changed. The
+  exemption registry still SHRINKS (`TC-ArgusAgent-MAINT-001-04`), so it cannot become dead weight.
+  - id: DF-12-1-B (correction appended; the original entry is NOT edited — §3.4)
+  - origin_story: correction filed by 12-3-a-re-run-returns-the-recorded-result
+  - owner: Engineering
+  - target_story: unchanged
+  - category: correctness (of the ledger entry itself) + maintainability (the size exemption)
+  - severity: 🟡
+
+### Every other §F item, ruled — none left silent (AC7.6)
+
+- **`DF-12-1-A` — 🟢 OUT, and ESCALATED rather than re-homed a FOURTH time.**
+  `tests/test_pipeline_signature_demo.py`, re-measured **1326** lines (unchanged by this story).
+  The measured reason not to close it here is the same one 12.1 and 12.2 gave and is again
+  stronger: **this story modifies the pipeline surface that file demonstrates**, and refactoring
+  the witness in the same change that alters what it witnesses removes the evidence for the
+  property this story most needs witnessed. It has now been carried by THREE consecutive stories
+  and was already escalated to the **Epic-12 retrospective** as needing a dedicated home rather
+  than a fourth re-homing. **This story does not re-escalate it as if new and does not re-home
+  it** — it records that the escalation still stands and that the file is unchanged.
+- **`DF-12-2-D` — 🟡 OUT. Cited, NOT re-homed.** Owner and target are already assigned. It is
+  load-bearing CONTEXT for `DF-12-3-A` above and is cited there in full; silently adopting it here
+  would fork an owned item.
+- **`DF-12-2-E` — 🟢 OUT, trigger did NOT fire.** Its trigger is a story that touches
+  `argus/audit/deep_pass.py` or the adapter's endpoint resolution. **Story 12.3 did not edit
+  either file** — verified by `git status`/`git diff --stat`. The AC6.1 fence deliberately lives
+  in `argus/cache/memo_store.py`, not in `deep_pass.py`, precisely because `memo_store` may not
+  import the dispatch surface (NFR-S6); the join between the fence's rule-id literal and
+  `deep_pass.RULE_DEGRADED_DEEP_READ` is made in the TEST layer (`TC-ArgusAgent-CACHE-001-97`),
+  which is the same "two literals that can drift" shape this entry is about, closed the same way.
+- **`DF-10-2-A` — 🟡 OUT, and it is not this story's to close.** C/C++/Ruby/Rust ground but
+  extract zero definitions. Story 12.2 escalated it to the **Epic-12 retrospective** with owner
+  **OPERATOR (XAgent007)**; `AI-E11-7` says what is needed is *a dated decision, not an
+  implementation*. **Left flagged for the retrospective, not silently re-homed and not
+  re-escalated as if new.**
+- **`DF-12-1-D` — 🟡 hazard was LIVE; trigger did NOT fire.** Its trigger is *"the next story that
+  edits `tests/test_module_size_ceiling.py`"* and **this story does not edit that file**. The
+  HAZARD applied directly and was handled: the NFR-M1 sweep reads the git **INDEX**, so an
+  unstaged new module is invisible to the guard that governs it. `argus/cache/stage_memo.py` and
+  all three new test files were `git add`-ed IMMEDIATELY on creation, and the sweep then did its
+  job — it caught `tests/test_stage_memo_wiring.py` at **1388** lines, 188 over the ceiling, and
+  the sanctioned remedy (a COHESION split, never shaving lines and never an exemption) was taken:
+  the file was split into `tests/test_stage_memo_wiring.py` (*is the cache load-bearing?*) and
+  `tests/test_stage_memo_contract.py` (*can the cache lie?*) over a shared
+  `tests/_stage_memo_corpus.py`, following the `tests/cartridges/_cartridge.py` fixture-module
+  precedent. **No exemption was added.**
+- **`DF-12-1-E` — 🟢 trigger did NOT fire, recorded either way.** Its trigger is *"the next story
+  that adds a fourth `argus/pipeline*.py` module"*. Re-measured after this story's changes:
+  `git ls-files -- 'argus/pipeline*.py'` is still **three** (`pipeline.py`, `pipeline_persist.py`,
+  `pipeline_stages.py`). This story's new module is `argus/cache/stage_memo.py` — placed in the
+  package that already owns the cache concern, which is both the story's own structural guidance
+  and the reason the trigger does not fire.
+- **`DF-5-1-A` — CLOSED 2026-06-28, not reopened.** Its CONTRACT is live and is now proven over
+  the wired path: `TC-ArgusAgent-CACHE-001-94` asserts the `prompt_template_version` slot still
+  moves the key, using the LIVE `DEEP_PROMPT_TEMPLATE_VERSION` rather than another sentinel, so
+  the forward-coupling hole stays closed for the day a real value lands.
+
+### Ruled OUT OF SCOPE with reasons, as AC5.4 requires out loud
+
+- **Story 5.3 ACTIVE invalidation (`argus/cache/invalidation.py`) — 🟢 OUT OF SCOPE, option (b).**
+  Not silence: the ruling is asserted by `TC-ArgusAgent-CACHE-001-95`, which requires the 5.3
+  surface to remain importable and intact AND records the measured fact the ruling rests on —
+  `argus.cache.invalidation` is **not** in the import closure from `argus.cli` (re-measured after
+  this story: 75 graph nodes, 60 reachable; `memo_store` flipped to reachable, `invalidation` did
+  not). Reasons: the epic AC names only *"the DF-5-1-A invalidation contract holds over the wired
+  path"*, which is delivered by `-94` plus the NATURAL misses of `-86`/`-92`/`-93`; wiring active
+  eviction is a SECOND delivery with its own correctness surface (deleting entries is destructive
+  in a way consulting them is not); and it is unnecessary for correctness here, because a
+  detector-set edit ALREADY moves the key onto a different slot — the 5.2-vs-5.3 fence
+  `memo_store.py` states in its own docstring. **If a later story wires it, `-95` goes red and the
+  ruling must be re-taken rather than inherited.**
+  - id: DF-12-3-B
+  - origin_story: 12-3-a-re-run-returns-the-recorded-result
+  - owner: Engineering
+  - target_story: NONE — unscheduled; the natural MISS makes it an optimization, not a correctness
+    requirement. To be scheduled if cache-slot growth over long-lived repositories becomes a
+    measured problem (nothing measures it today, and nothing claims it does).
+  - category: scope
+  - severity: 🟢
+
+### Filed in passing — measured by this story, NOT caused by it, NOT fixed by it
+
+- **`DF-12-3-C` — 🟢 `tests/test_secret_containment.py` cannot be collected in ISOLATION: it
+  inserts a `sys.path` entry for `argus/cartridges`, a directory that has never existed.** The
+  cartridges live at `tests/cartridges`. Measured 2026-08-13 while running the AC7.2 gate list as
+  a subset: `python -m pytest tests/test_secret_containment.py` alone fails at COLLECTION with
+  `ModuleNotFoundError: No module named '_cartridge'`. It passes in the full suite only because
+  another module (e.g. `tests/test_sequential_portability.py`, which inserts the CORRECT
+  `tests/cartridges` path) happens to be imported first, leaving the right directory on
+  `sys.path`. **Attributed, not inherited:** the file is byte-identical to `58c8f6b`
+  (`git diff HEAD -- tests/test_secret_containment.py` empty), the same line is present in the
+  `58c8f6b` blob at line 66, and `git ls-tree 58c8f6b -- argus/cartridges` is empty, so the
+  directory never existed at the baseline either. **This is therefore PRE-EXISTING and is not a
+  regression introduced by Story 12.3.** It is filed rather than fixed because fixing an
+  unrelated test module's import path inside the story that wires the memoization store would mix
+  two changes, and because the guard is GREEN in the only configuration the gates actually run it
+  in (the full suite). The risk it carries is real but latent: any future change to test ordering,
+  or any attempt to run this NFR-S1 containment gate on its own, silently gets a collection error
+  rather than a security assertion.
+  - id: DF-12-3-C
+  - origin_story: 12-3-a-re-run-returns-the-recorded-result (measured in passing; not caused here)
+  - owner: Engineering
+  - target_story: NONE — the next story that touches `tests/test_secret_containment.py` or the
+    cartridge staging convention
+  - category: maintainability (test-harness fragility on a security gate)
+  - severity: 🟢

@@ -95,11 +95,29 @@ __all__ = [
 # Bumped 2 → 3 (story 10.2, DF-AUD-APAA-D / DN-7): PER-GRAMMAR provenance was added
 # to the closure payload. The key previously folded ONE grammar version, resolved
 # from tree-sitter-python, while the index parsed ten languages — so a Go, Rust,
-# Java, C, C++ or Ruby grammar upgrade did not move it. The bump is FREE at this
-# commit and only at this commit: measured 2026-08-10, no production caller derives
-# a key (argus/pipeline.py imports neither this module nor cache/memo_store.py) and
-# no persisted cache entry exists to migrate. Story 12.3 wires the store over the
-# CORRECTED key; after that, the same change costs a migration.
+# Java, C, C++ or Ruby grammar upgrade did not move it. The bump was FREE at that
+# commit and only at that commit: measured 2026-08-10, no production caller derived
+# a key and no persisted cache entry existed to migrate.
+#
+# ⚠️ THAT WINDOW IS NOW CLOSED — corrected 2026-08-13 by story 12.3 (AC7.4). The
+# sentence this comment used to carry — "argus/pipeline.py imports neither this
+# module nor cache/memo_store.py" — described a tree that no longer exists, in two
+# separate ways, and re-measurement rather than transcription is why both were caught:
+#
+#   * Story 12.2 made this module PRODUCTION-IMPORTED before 12.3 touched anything:
+#     argus/audit/deep_audit.py imports GrammarProvenance + RecordingProducingClosure
+#     and argus/index/ast_index.py imports GrammarProvenance, so argus.cache.key was
+#     already in the static import closure from argus.cli. Reachable was never the
+#     same as derives-a-key, so 10.2's SUBSTANTIVE claim (the bump was free) survived
+#     intact — but the evidence offered for it had stopped being true.
+#   * Story 12.3 then wired the store: argus/cache/stage_memo.py::memoize_detect_stage
+#     calls derive_cache_key on every run, and argus/pipeline.py calls it. There IS a
+#     production caller now, and there ARE persisted entries under .argus/cache/.
+#
+# So bumping this constant is NO LONGER FREE. A change to the key SHAPE from here on
+# strands every persisted entry — which is precisely the migration cost the
+# 10.2-before-12.3 ordering was designed to pay in advance, and the reason story 12.3
+# deliberately did NOT move this value (pinned by TC-ArgusAgent-CACHE-001-84).
 CACHE_KEY_SCHEMA_VERSION = "3"
 
 # DN-PLACEHOLDER — the stable, testable V1 model-checkpoint constant. V1 Tier-A's
