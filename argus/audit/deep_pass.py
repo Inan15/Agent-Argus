@@ -56,6 +56,45 @@ finding none, degrades immediately without ever constructing an adapter (§A.5 o
 The residual is REAL and is DISCLOSED, not hidden: the adapter still fabricates for any
 OTHER caller. Filed as ``DF-12-2-B`` in ``deferred-work.md`` with an owner and a target.
 
+HOW FAR THE SHIPPED ADAPTER ACTUALLY CARRIES THIS PASS (DF-12-2-D) — READ THIS BEFORE
+TRUSTING THE WORD "WIRED"
+--------------------------------------------------------------------------------------
+``LLMRecording.structured_output`` is the field ``_dispatch_one`` requires before a claim
+is even offered to :func:`_claim_is_ast_grounded`, and **neither**
+``OpenLLMAdapter._dispatch_litellm`` **nor** ``._dispatch_httpx`` ever populates it: both
+capture the response's usage, model id and finish reason and DISCARD the completion
+content. Measured over a mocked transport at review iteration 1
+(``TC-ArgusAgent-AUDIT-001-73``): a fully successful dispatch to a healthy provider comes
+back with ``structured_output == ()``, so it degrades as ``empty-response`` before
+grounding is ever consulted. **Through the shipped adapter, ``delivered_count`` is
+therefore always 0; the delivered branch is reachable only through an injected port.**
+
+Three things follow, and all three are load-bearing:
+
+* **The gap is one field wide, and it is the ADAPTER'S, not this module's.**
+  ``TC-ArgusAgent-AUDIT-001-74`` is the positive control: the same real adapter, the same
+  mocked transport, the same real pipeline, with the discarded completion carried onto
+  ``structured_output`` and NOTHING else changed — and the pass delivers. Everything wired
+  downstream of the port works on real provider-shaped input.
+* **The wiring is NOT vacuous, and this is the discrimination that shows it.** The egress
+  path genuinely fires: the pipeline constructs the real adapter and the request really
+  reaches the transport (asserted in ``-73``). What is unreachable is only the FAVOURABLE
+  outcome. The failure polarity is the opposite of a false claim — the pass under-claims,
+  never over-claims — so FR36's *"never produces a false deep claim"* is made
+  unconditional by this gap rather than weakened by it.
+* **Closing it is NOT a one-line change and must not be attempted as one.** There is no
+  claim grammar and no response contract: ``OpenLLMAdapter._build_messages`` never asks
+  the model for structured output. ``structured_output``'s own contract in ``ports.py`` is
+  *claim/locator-shaped strings, NEVER raw prompt/response bytes* (NFR-S1, producer-side
+  redaction), so tipping the completion text into it is a documented contract violation,
+  not a fix — and ``tests/test_open_llm_adapter.py`` asserts ``structured_output == ()``
+  for exactly that reason. Doing it honestly means a declared claim grammar, a prompt
+  contract, a redacting parser, and a ``DEEP_PROMPT_TEMPLATE_VERSION`` bump (an AR5
+  cache-key closure input). That is Story 6.2's *full claim-grammar grounding*, which
+  ``deep_audit.py`` and :func:`_claim_is_ast_grounded` both already name as 6.2's.
+
+Filed as ``DF-12-2-D`` with an owner and a target story.
+
 NFR-S1
 ------
 Nothing this module records can carry prompt/response bytes, an endpoint or a key: the

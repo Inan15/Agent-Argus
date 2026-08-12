@@ -265,6 +265,20 @@ and a verdict that does not claim depth it did not get. Spend flows through the 
 **No FR16 row, threshold, boundary or exit-code mapping changed.** No network listener is added and
 no port is bound.
 
+**⚠️ KNOWN LIMITATION — what `--deep-audit` does NOT yet do, stated here rather than left for you
+to discover.** The bundled provider adapter does not currently return the model's answer in the
+form the pass consumes: it captures the model id, the token counts and the finish reason, and
+discards the completion itself. The practical consequence is that **today, with any provider you
+configure, the third state above is the one you will get** — *requested and not delivered*. The
+run will dispatch, tell you it dispatched, bill the spend against `--budget`, then report that it
+did not get a usable deep read and grade the files at the depth they actually earned. **Nothing
+about that is unsafe** — it is the same honest degradation as an unreachable provider, and no deep
+claim is ever fabricated — but if you enable this flag expecting deeper coverage, you will not get
+it yet, and you should not pay a provider for it. This is tracked as `DF-12-2-D`; closing it needs
+a declared claim format the model is actually asked to produce, which is a separate piece of work.
+**`--deep-audit` is shipped as the safe, disclosed, opt-in egress path it is, not as a finished
+depth feature.**
+
 Every figure above is LOCAL, Windows / CPython 3.11.15. **CI evidence: NOT ESTABLISHED** — no CI run
 has executed this change. Nothing here is published: no tag, no release, no index upload.
 

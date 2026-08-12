@@ -23,7 +23,9 @@ from __future__ import annotations
 import subprocess
 import sys
 from pathlib import Path
+from typing import Any
 
+import httpx
 import pytest
 
 from argus.audit.ports import (
@@ -580,9 +582,16 @@ def test_TC_ArgusAgent_AUDIT_001_69_an_unconfigured_provider_never_fabricates_de
     assert outcome.credits_used == "0"
     assert result.verdict.deep_pass.degraded_count == 1
 
-    # And the adapter module must not even have been imported: refusing to construct is
-    # structural, not a runtime check inside a constructed object.
-    assert "argus.audit.open_llm_adapter" not in sys.modules or True  # see PIPELINE-001-11
+    # The companion property — that refusing to construct is STRUCTURAL, so the adapter
+    # module is never even imported — cannot honestly be asserted in THIS process: an
+    # unrelated earlier test may already have imported it, so `not in sys.modules` here
+    # would be flaky and `... or True` would be an assertion that cannot fail. It is held
+    # instead by `TC-ArgusAgent-PIPELINE-001-11`, which measures residency in a FRESH
+    # SUBPROCESS per leg — the only shape in which the observation means anything.
+    # (Removed at review iteration 1: the line here was literally `assert X or True`, i.e.
+    # a vacuous guard, in the story chartered against vacuous guards. Deleting an assertion
+    # that asserts nothing is not a weakening; the property it named is unchanged and is
+    # proven, more strongly, elsewhere.)
 
 
 # ─────────────────────────────────────────────────────────────────────────────
@@ -816,4 +825,280 @@ def test_TC_ArgusAgent_DOCS_001_60_both_story_12_2_rules_are_registered_in_the_a
         f"behind the `[llm]` extra: {live_claims}. It does not: the extra holds only "
         "litellm while httpx is a BASE dependency, so a no-extras install already "
         "carries a complete egress path."
+    )
+
+
+# ─────────────────────────────────────────────────────────────────────────────
+# DF-12-2-D — how far the SHIPPED adapter actually carries this wiring
+#
+# Filed at code review, iteration 1. Everything above this line proves the deep
+# pass's behaviour through an INJECTED port. This section is the one measurement
+# that drives the REAL, UNMODIFIED ``OpenLLMAdapter`` — over a MOCKED TRANSPORT,
+# never a socket — and records exactly where the shipped adapter stops.
+# ─────────────────────────────────────────────────────────────────────────────
+
+
+class _MockedProviderTransport:
+    """A stand-in for ``httpx.Client`` that answers as a HEALTHY provider would.
+
+    🔴 NO SOCKET, NO DNS, NO KEY (§0.3). This is the idiom
+    ``tests/test_open_llm_adapter.py`` already established (``_FakeHTTPClient``), reused
+    rather than forked: the instance is its own factory, so ``httpx.Client(timeout=10.0)``
+    inside the real adapter returns this object and the adapter code under test is
+    UNMODIFIED. The endpoint every test below configures is a ``.invalid`` host (RFC 6761
+    — guaranteed never to resolve), so even a total failure of this substitution could not
+    reach a real provider.
+
+    The response it returns is a well-formed OpenAI-shaped completion carrying REAL
+    content that names the very target the adapter asked about — i.e. the best case a
+    provider can produce. That is the point: what follows is not a story about a broken
+    provider.
+    """
+
+    def __init__(self) -> None:
+        self.posts: list[dict[str, Any]] = []
+        self.last_content = ""
+
+    def __call__(self, *args: Any, **kwargs: Any) -> _MockedProviderTransport:
+        return self
+
+    def __enter__(self) -> _MockedProviderTransport:
+        return self
+
+    def __exit__(self, *exc: Any) -> bool:
+        return False
+
+    @staticmethod
+    def _target_of(payload: Any) -> str:
+        """Recover the audited path from the prompt the adapter actually assembled."""
+        for message in (payload or {}).get("messages", ()):
+            for line in str(message.get("content", "")).splitlines():
+                if line.startswith("Audit scope target: "):
+                    return line.split("Audit scope target: ", 1)[1].strip()
+        return ""
+
+    def post(self, url: str, *, json: Any = None, headers: Any = None) -> Any:
+        target = self._target_of(json)
+        self.last_content = f"{target}: the definition `add` is exercised by a real assertion."
+        self.posts.append({"url": url, "target": target})
+        content = self.last_content
+
+        class _Response:
+            @staticmethod
+            def raise_for_status() -> None:
+                return None
+
+            @staticmethod
+            def json() -> dict[str, Any]:
+                return {
+                    "model": "llama3.1:8b",
+                    "usage": {"prompt_tokens": 120, "completion_tokens": 40},
+                    "choices": [
+                        {"finish_reason": "stop", "message": {"content": content}}
+                    ],
+                }
+
+        return _Response()
+
+
+def _mount_mocked_provider(
+    monkeypatch: pytest.MonkeyPatch, *, endpoint: str = "http://deep-pass-probe.invalid"
+) -> _MockedProviderTransport:
+    """Configure a ``.invalid`` endpoint and substitute the transport. Two fences, not one."""
+    transport = _MockedProviderTransport()
+    monkeypatch.setattr(httpx, "Client", transport)
+    monkeypatch.delenv("OPENAI_BASE_URL", raising=False)
+    monkeypatch.delenv("OLLAMA_URL", raising=False)
+    monkeypatch.setenv("OLLAMA_HOST", endpoint)
+    return transport
+
+
+def test_TC_ArgusAgent_AUDIT_001_73_the_delivered_branch_is_unreachable_through_the_shipped_adapter(
+    tmp_path: Path, monkeypatch: pytest.MonkeyPatch
+) -> None:
+    """TC-ArgusAgent-AUDIT-001-73 — DF-12-2-D: the shipped adapter cannot deliver a deep read.
+
+    **This test exists to make a KNOWN GAP a measured, committed fact instead of an
+    implicit one a future reader has to re-derive.** Filed as ``DF-12-2-D``.
+
+    ``LLMRecording.structured_output`` defaults to ``()`` and NEITHER
+    ``OpenLLMAdapter._dispatch_litellm`` NOR ``._dispatch_httpx`` ever populates it — both
+    read the response's usage, model id and finish reason and DISCARD the completion
+    content. ``deep_pass._dispatch_one`` treats an empty ``structured_output`` as
+    ``empty-response`` BEFORE ``_claim_is_ast_grounded`` is ever reached. So every real
+    dispatch — success or failure — degrades, and ``delivered_count > 0`` is reachable only
+    through a test double.
+
+    **Three properties, and the order matters.**
+
+    1. **The egress path is LIVE, not inert.** The real pipeline, with no port injected,
+       really does construct the real adapter and really does hand a request to the
+       transport. Had it not, this story's wiring would be vacuous — a capability that
+       never fires is not wired — and that is the discrimination this leg makes. It fires.
+    2. **The provider's answer was GOOD and the adapter threw it away.** The transport
+       returns well-formed content naming the audited target, and the recording that comes
+       back out of the unmodified adapter carries ``structured_output == ()``. The gap is
+       the adapter's discard, not a bad response.
+    3. **The pass therefore degrades — honestly, and in the fail-SAFE direction.** The
+       outcome is ``empty-response``: no deep claim is fabricated, the file is re-graded
+       at the depth it earned and stays in the denominator. FR36's *"never produces a
+       false deep claim"* is not weakened by this gap; it is made unconditional by it.
+
+    **When DF-12-2-D is closed, THIS TEST GOES RED, and that is the design.** A guard that
+    records a gap must fail the moment the gap closes, or it becomes the next stale
+    assertion this project files a defect about. The failure messages below say so.
+    """
+    transport = _mount_mocked_provider(monkeypatch)
+    repo = _synthetic_repo(tmp_path / "shipped", modules=3)
+
+    result = run_audit_detailed(_request(repo))  # NO injected port — the LIVE path
+    outcome = result.verdict.deep_pass
+    assert outcome is not None, "the verdict must carry what the deep pass did"
+
+    # (1) The wiring is not inert: the real adapter really reached the transport.
+    assert transport.posts, (
+        "the deep pass was requested with an endpoint configured, yet NOTHING reached the "
+        "transport. The wiring would then be inert — a capability that never fires is not "
+        "'wired', and every safety property this story proves about the egress path would "
+        "be proven about a path that does not exist."
+    )
+    assert sorted(post["target"] for post in transport.posts) == [
+        "app/service.py",
+        "app/service1.py",
+        "app/service2.py",
+    ], transport.posts
+    assert all(
+        post["url"] == "http://deep-pass-probe.invalid/v1/chat/completions"
+        for post in transport.posts
+    ), transport.posts
+
+    # (2) The provider answered well and the SHIPPED adapter discarded the answer.
+    from argus.audit.open_llm_adapter import OpenLLMAdapter
+
+    adapter = OpenLLMAdapter(
+        provider_id="probe",
+        api_base="http://deep-pass-probe.invalid",
+        api_key="unused-by-a-mocked-transport",
+        use_litellm=False,
+    )
+    recording = adapter.dispatch(
+        LLMDispatchInput(target_path="app/service.py", prompt_template_version="argus-deep-v1")
+    )
+    assert transport.last_content, "the mocked provider returned no content to discard"
+    assert recording.model_checkpoint == "llama3.1:8b" and recording.finish_reason == "stop", (
+        "the dispatch did not succeed, so this test would be measuring a transport failure "
+        "rather than the structured_output gap it exists to measure"
+    )
+    assert recording.structured_output == (), (
+        "`OpenLLMAdapter` now populates `structured_output` — DF-12-2-D IS CLOSED. That is "
+        "good news and this assertion is how you find out. Close the ledger entry, re-point "
+        "this test at the real delivered outcome, and check that whatever now reaches "
+        "`structured_output` is claim-shaped and carries NO response bytes (NFR-S1: the "
+        "recording is metadata + declared claims, never raw completion text)."
+    )
+
+    # (3) The pass degrades, in the fail-SAFE direction. No fabricated depth.
+    assert outcome.requested_count == 3
+    assert outcome.delivered_count == 0, (
+        "the shipped adapter delivered a deep read — DF-12-2-D is closed. Update the "
+        "ledger entry and this guard together."
+    )
+    assert outcome.degraded_count == 3
+    assert outcome.reasons == ("empty-response",), (
+        f"expected every real dispatch to degrade as `empty-response`; got {outcome.reasons}"
+    )
+    # The credits the provider reported are still accounted (AR4 — exact-numeric string):
+    # a degraded read is not a free read, and pretending otherwise would under-report spend.
+    assert isinstance(outcome.credits_used, str) and "." not in outcome.credits_used
+    assert outcome.credits_used != "0", (
+        "a real dispatch was made and billed by the provider, yet the pass accounted zero "
+        "spend — a degradation must not erase the cost that was actually incurred"
+    )
+    # And the honest disclosure follows the outcome, never the request.
+    from argus.reports.plain_english import render_depth_meaning
+
+    text = render_depth_meaning(("coverage", "deep"), deep_pass=outcome)
+    assert "a deep read was dispatched" not in text, (
+        "the strengthened depth claim appeared for a run in which the shipped adapter "
+        "delivered nothing — this is §0.5's false deep claim, re-opened"
+    )
+
+
+def test_TC_ArgusAgent_AUDIT_001_74_structured_output_is_the_only_thing_standing_in_the_way(
+    tmp_path: Path, monkeypatch: pytest.MonkeyPatch
+) -> None:
+    """TC-ArgusAgent-AUDIT-001-74 — DF-12-2-D's POSITIVE CONTROL: the delivered branch works.
+
+    ``-73`` on its own is a one-directional observation over a path that stops early, and
+    this project's standing rule (§0.6 / AC3.3) is that such an observation is not evidence
+    without its positive direction. Two readings would otherwise be indistinguishable:
+
+    * the delivered branch is *unreachable through the adapter* — a limitation of ONE
+      module, with everything downstream of it correct and waiting; or
+    * the delivered branch is *broken*, and the adapter's discard has merely been hiding it
+      — in which case this story's wiring really would be inert and the ``wired``
+      disposition really would be an over-claim.
+
+    This leg separates them, and it does so by changing EXACTLY ONE THING. Same real
+    ``OpenLLMAdapter``, same mocked transport, same response bytes, same real pipeline
+    entry point, same repository — the only difference is that the completion the adapter
+    already received is carried onto ``structured_output`` instead of being dropped. If the
+    deep pass then delivers, the gap is one field wide and it is the adapter's, and
+    everything this story wired downstream of the port is proven to work on real
+    provider-shaped input rather than only on a purpose-built fake.
+
+    It delivers. **The wiring is reachable-and-correct but adapter-limited, NOT vacuous.**
+    """
+    transport = _mount_mocked_provider(monkeypatch)
+    repo = _synthetic_repo(tmp_path / "one-field", modules=3)
+
+    from argus.audit.open_llm_adapter import OpenLLMAdapter
+
+    class _ContentPreservingPort:
+        """The real adapter, with the one discarded step performed and nothing else.
+
+        Deliberately NOT a hand-built fake: it delegates to the shipped ``dispatch`` and
+        edits a single field of the recording that came back, so every other value on the
+        recording — the captured checkpoint (AR5), the token counts, the AR4 credit string
+        — is the real adapter's own output over the real response bytes.
+        """
+
+        def __init__(self) -> None:
+            self._adapter = OpenLLMAdapter(
+                provider_id="probe",
+                api_base="http://deep-pass-probe.invalid",
+                api_key="unused-by-a-mocked-transport",
+                use_litellm=False,
+            )
+            self.calls = 0
+
+        def dispatch(self, req: LLMDispatchInput) -> LLMRecording:
+            self.calls += 1
+            recording = self._adapter.dispatch(req)
+            return recording.model_copy(
+                update={"structured_output": (transport.last_content,)}
+            )
+
+    port = _ContentPreservingPort()
+    result = run_audit_detailed(_request(repo), deep_port=port)
+    outcome = result.verdict.deep_pass
+
+    assert outcome is not None
+    assert port.calls == 3, f"one dispatch per deeply-claimed file; got {port.calls}"
+    assert outcome.delivered_count == 3, (
+        "the ONLY change from `-73` was carrying the completion the adapter already had "
+        "onto `structured_output`, and the deep pass still did not deliver. The gap is "
+        f"then WIDER than DF-12-2-D records — reasons={outcome.reasons}. Re-measure before "
+        "trusting anything else this file asserts about the delivered branch."
+    )
+    assert outcome.degraded_count == 0 and outcome.reasons == ()
+    # The AR4 credit string is the REAL adapter's, computed from the real response usage.
+    assert outcome.credits_used != "0" and "." not in outcome.credits_used
+
+    # And the strengthened disclosure — the sentence §0.5 caught lying — is now TRUE,
+    # which is precisely the state the shipped adapter cannot currently reach.
+    from argus.reports.plain_english import render_depth_meaning
+
+    assert "a deep read was dispatched" in render_depth_meaning(
+        ("coverage", "deep"), deep_pass=outcome
     )

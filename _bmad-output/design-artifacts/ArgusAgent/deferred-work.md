@@ -3228,3 +3228,87 @@ re-taken). **CI evidence: NOT ESTABLISHED** — no CI run has executed any Epic 
     `DF-12-1-B` for this same file
   - category: maintainability
   - severity: 🟢
+
+## Deferred from: code-review of story 12-2-deep-audit-is-wired-opt-in-and-honest (2026-08-13, iteration 1)
+
+**Append-only (§3.4): nothing above this heading was edited, reordered or deleted.**
+
+- **`DF-12-2-E` — 🟢 `argus/audit/deep_pass.py::PROVIDER_ENDPOINT_VARIABLES` (3 vars) duplicates
+  `argus/audit/open_llm_adapter.py::OpenLLMAdapter.__init__`'s `_api_base` derivation
+  (`OPENAI_BASE_URL` / `OLLAMA_HOST` / `OLLAMA_URL`) as a second, hand-written literal instead of
+  importing or deriving it from the adapter.** Verified during code review: the two lists are
+  currently identical and the duplication is on the SAFE side (a variable added only to the
+  adapter's `_api_base` chain would make `resolve_provider_endpoint()` under-report configuration —
+  degrade, never fabricate) — so this is not a security defect, but it is the same "two literals
+  that can drift apart" shape `deep_pass_enabled()` / `with_deep_pass()` elsewhere in this same
+  story deliberately collapsed to one. A future change to the adapter's endpoint-variable set would
+  not be caught by any test the way `TC-ArgusAgent-AUDIT-001-62`'s `ast`-derived population catches
+  the adapter's full env-var surface.
+  - id: DF-12-2-E
+  - origin_story: 12-2-deep-audit-is-wired-opt-in-and-honest (filed at code review)
+  - owner: Engineering
+  - target_story: NONE — the next story that touches `argus/audit/deep_pass.py` or
+    `argus/audit/open_llm_adapter.py`'s endpoint resolution
+  - category: maintainability
+  - severity: 🟢
+
+- **`DF-12-2-D` — 🟡 The `delivered` branch of the deep pass is UNREACHABLE through the shipped
+  `OpenLLMAdapter`: neither `_dispatch_litellm` nor `_dispatch_httpx` ever populates
+  `LLMRecording.structured_output`.** Both methods capture the response's `model`, `usage` and
+  `finish_reason` and DISCARD the completion content, constructing `structured_output=()`
+  unconditionally (three construction sites in `argus/audit/open_llm_adapter.py`).
+  `argus/audit/deep_pass.py::_dispatch_one` requires a non-empty `structured_output` and returns
+  `REASON_EMPTY_RESPONSE` BEFORE `_claim_is_ast_grounded` is ever consulted. **Consequence,
+  measured over a mocked transport (no socket, no DNS — `.invalid` endpoint per RFC 6761):** a
+  fully successful dispatch to a healthy provider returning well-formed content yields
+  `structured_output == ()`, so EVERY real dispatch — success or failure — degrades as
+  `empty-response`, and `delivered_count > 0` is reachable only through an injected test double.
+  **This is a PRE-EXISTING limitation of `open_llm_adapter.py`** (unmodified by Story 12.2's diff;
+  independently corroborated by the pre-existing `tests/test_open_llm_adapter.py` assertion that a
+  real dispatch yields `rec.structured_output == ()`, written for NFR-S1 reasons) **made
+  load-bearing for the first time by Story 12.2's wiring.**
+
+  **It is NOT a safety hole and it is NOT a vacuous wiring — both were tested, not assumed.** The
+  egress path genuinely fires: the pipeline constructs the real adapter and the request really
+  reaches the transport (`TC-ArgusAgent-AUDIT-001-73` asserts the POSTs and their targets). What is
+  unreachable is only the FAVOURABLE outcome, so the failure polarity is the opposite of this
+  project's dominant defect class: the pass UNDER-claims rather than over-claims, and FR36's *"never
+  produces a false deep claim"* is made unconditional by the gap rather than weakened by it. The gap
+  is **one field wide and it is the adapter's**: `TC-ArgusAgent-AUDIT-001-74` is the positive control
+  — same real adapter, same mocked transport, same real pipeline entry point, the discarded
+  completion carried onto `structured_output` and NOTHING else changed — and the pass delivers, the
+  strengthened disclosure becomes true, and the AR4 credit string is the real adapter's own. So
+  everything Story 12.2 wired downstream of the port is proven correct on real provider-shaped input.
+
+  **Why it was NOT closed in Story 12.2's review round, measured rather than assumed.** Populating
+  the field honestly is not a one-line change: (a) `_build_messages` never ASKS the model for
+  structured output — there is no claim grammar and no response contract, so there is nothing
+  well-formed to parse; (b) `structured_output`'s documented contract in `argus/audit/ports.py` is
+  *claim/locator-shaped strings, NEVER raw prompt/response bytes* (NFR-S1 producer-side redaction),
+  so tipping the completion text into it is a documented contract VIOLATION rather than a fix; (c)
+  `tests/test_open_llm_adapter.py` asserts `rec.structured_output == ()` with the explicit rationale
+  *"NFR-S1 — the recording carries metadata only; no prompt/response bytes anywhere"*, so closing
+  the gap requires re-baselining a committed NFR-S1 security assertion on the product's ONLY egress
+  path; (d) a real claim format means a prompt contract, a redacting parser and a
+  `DEEP_PROMPT_TEMPLATE_VERSION` bump, which is an AR5 cache-key closure input; and (e) it could not
+  be validated — §0.3 forbids any live dispatch and CI evidence is NOT ESTABLISHED (AI-E10-1).
+  **`deep_audit.py` and `_claim_is_ast_grounded` both already name full claim-grammar grounding as
+  Story 6.2's**, so the work has an owner already and doing it here would fork it.
+
+  **Disclosed, not hidden, in four places** (the discipline `DF-12-2-B` set): the `deep_pass.py`
+  module docstring; the FR36 `_Delivery` note in `tests/test_v1_commitment_closure.py`, which is
+  where the word `wired` is asserted and where it is now explicitly scoped; a user-facing KNOWN
+  LIMITATION paragraph in `CHANGELOG.md` telling an operator not to pay a provider for depth they
+  will not get; and the two committed measurements above. **`TC-ArgusAgent-AUDIT-001-73` is designed
+  to go RED the day this entry is closed**, so the record cannot rot into a stale assertion.
+  - id: DF-12-2-D
+  - origin_story: 12-2-deep-audit-is-wired-opt-in-and-honest (filed at code review, iteration 1;
+    measured and dispositioned in the iteration-1 fix round)
+  - owner: Engineering
+  - target_story: **6-2-style claim-grammar work — the story that gives the deep pass a declared
+    claim format and a response contract**; until one is scheduled, the next story that changes
+    `argus/audit/open_llm_adapter.py`'s response handling (which is also `DF-12-2-B`'s trigger —
+    the two should be closed together, since both are about what that module returns)
+  - category: correctness
+  - severity: 🟡 (the capability is incomplete, but it fails SAFE and is now disclosed at
+    every site a user or a reader of FR36 would otherwise be misled)
