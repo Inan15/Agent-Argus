@@ -1768,7 +1768,7 @@ would be the same defect this epic exists to close, one level up.
 >
 > | Citation | Verified | Points at |
 > |---|---|---|
-> | `argus/audit/deep_audit.py:91` | ✅ exact | `class DeepAuditSeam:` |
+> | ~~`argus/audit/deep_audit.py:91`~~ → `argus/audit/deep_audit.py:98` | ❌ **WAS WRONG, corrected 2026-08-13 (Story 12.2)** | `class DeepAuditSeam:` — measured at line **98**; line 91 is inside `build_closure_from_recording`'s kwargs dict. The ✅ was never earned: `architecture.md` §E stated `:91` too, and two documents agreeing read as verification without either having executed anything. **Anchor on the text, never the line number.** |
 > | `argus/detectors/base.py:63-87` | ✅ exact | `class FindingDraft(BaseModel):` |
 > | `argus/detectors/vacuous_test.py:198` | ✅ exact | the `"test.java", "spec.rb"` tuple line |
 > | `argus/precision/replay_harness.py:87-90` | ✅ exact | the `sys.path` insert |
@@ -2214,8 +2214,13 @@ So that I can get depth when I want it without paying for it or leaking source w
 
 **Acceptance Criteria:**
 
-**Given** `DeepAuditSeam` at `argus/audit/deep_audit.py:91` is referenced only from `argus/audit/*` and
-`argus/dogfood/proof_run.py` — **never from `argus/pipeline.py`**
+**Given** ~~`DeepAuditSeam` at `argus/audit/deep_audit.py:91` is referenced only from `argus/audit/*` and
+`argus/dogfood/proof_run.py`~~ — **never from `argus/pipeline.py`**
+*(Corrected 2026-08-13 by Story 12.2, struck not deleted. Measured by execution on `2bea92f`: the
+anchor `class DeepAuditSeam:` is at line **98**, not `:91`; and the seam had **ZERO production
+callers** — the identifier appeared only in its own `class` statement, its own `__all__`, and
+`tests/test_llm_dispatch_port.py`. `argus/dogfood/proof_run.py` never imported it; its sole mention
+was a docstring saying the seam is a separate injected port NOT used. The third clause held.)*
 **When** this story completes
 **Then** the seam is reachable from the audit pipeline through an explicit opt-in, satisfying FR36.
 

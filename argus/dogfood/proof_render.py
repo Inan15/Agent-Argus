@@ -41,11 +41,18 @@ __all__ = [
 # validated deep audit" over-claim phrase is injected.
 DOGFOOD_EXTERNALIZATION_GUARD = (
     "This dogfood run is a demo-heuristic-only (Tier-A) result: the frozen pipeline "
-    "run_audit_detailed calls NO LLM (zero-token) and the AST-grounding deep-audit "
-    "seam is NOT wired in, so every finding is advisory / verdict-ineligible "
-    "(depth_supported is None). It is NOT presented as externalization or assurance "
-    "evidence, and it does NOT clear the >=80%-precision gate — that requires the human "
-    "TP/FP adjudication over these REAL findings (a documented human step, still open)."
+    "run_audit_detailed calls NO LLM (zero-token). Since 2026-08-13 (Story 12.2) the "
+    "AST-grounding deep-audit seam IS wired, but it is OFF BY DEFAULT and was NOT "
+    "engaged by this run — no --deep-audit, no dispatch, no provider contacted — so no "
+    "finding here rests on a deep read. Every finding in this run is in fact advisory / "
+    "verdict-ineligible (depth_supported is None), and that is a MEASURED property of "
+    "the Argus dogfood corpus, NOT a consequence of the seam: a verdict-BLOCKING finding "
+    "is reachable on the default zero-LLM path (argus/detectors/vacuous_test.py emits "
+    "RULE_AST with a non-None depth_supported), so this run being advisory throughout is "
+    "a fact about this repository and must never be read as a guarantee about any other. "
+    "It is NOT presented as externalization or assurance evidence, and it does NOT clear "
+    "the >=80%-precision gate — that requires the human TP/FP adjudication over these "
+    "REAL findings (a documented human step, still open)."
 )
 
 # The provenance banner this renderer stamps. ONE definition so the artifact can never

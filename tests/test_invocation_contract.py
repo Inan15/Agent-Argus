@@ -320,6 +320,20 @@ CONTRACT_REGISTRY: tuple[ContractEntry, ...] = (
         "and an operator-attributable suppression is recorded and disclosed.",
     ),
     ContractEntry(
+        spelling="--deep-audit",
+        dest="deep_audit",
+        default=False,
+        shape=SHAPE_STORE_TRUE,
+        sites=("CHANGELOG.md::### Specified: `--deep-audit`", _CLI_BLOCK),
+        notes="Story 12.2 / FR36. THE ONLY OPT-IN TO EGRESS, and the reason it is a registered "
+        "FLAG rather than a `--passes` token, an environment variable or a packaging extra is "
+        "measured, not stylistic: `--passes …,deep` was already accepted and already produced a "
+        "FALSE DEEP CLAIM; `--passes` is an exact selection, so `--passes deep` alone would "
+        "silently disable every deterministic safety pass; the `[llm]` extra gates only litellm "
+        "while httpx is a BASE dependency; and OpenLLMAdapter absorbs six environment variables. "
+        "Off by default, always (FR36). An unspecified accepted flag is `DF-AUD-APAA-E` itself.",
+    ),
+    ContractEntry(
         spelling="--coverage-scope",
         dest="coverage_scope",
         default="application",

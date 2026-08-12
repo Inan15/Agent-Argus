@@ -131,8 +131,8 @@ graded, but has no definition for the depth gate to stand on. Pinned language-by
 
 ### What the distribution contains, and what needs the git repository
 
-MEASURED from the built wheel (`argus_agent-0.1.0-py3-none-any.whl`, 78 entries) and sdist
-(`argus_agent-0.1.0.tar.gz`, 77 files), not inferred: `[tool.flit.module] name = "argus"`
+MEASURED from the built wheel (`argus_agent-0.1.0-py3-none-any.whl`, 79 entries) and sdist
+(`argus_agent-0.1.0.tar.gz`, 78 files), not inferred: `[tool.flit.module] name = "argus"`
 packages **the `argus` Python package and nothing else**. The sdist additionally carries
 `pyproject.toml`, `README.md`, `LICENSE` and `PKG-INFO`. Both figures are re-derived from a
 freshly built pair of artifacts by `TC-ArgusAgent-DOCS-001-54`, which fails if this
@@ -150,7 +150,10 @@ paragraph and the artifact ever disagree — in either direction.
 
 > **Measured limitation, stated rather than discovered later — and now measured away.** On a
 > freshly built wheel, with this repository removed from `sys.path` and one clean subprocess
-> per module, **73 of the 73 shipped modules import**. None fail.
+> per module, **74 of the 74 shipped modules import**. None fail. (74, not 73, since
+> 2026-08-13: Story 12.2 added `argus/audit/deep_pass.py`, the opt-in deep pass. The figure is
+> DERIVED from the freshly built artifact by `TC-ArgusAgent-DOCS-001-54` — *the artifact is the
+> fact* — so it moves with the tree rather than being remembered.)
 >
 > Until 2026-08-12 five did — `argus/precision/__init__.py`,
 > `argus/precision/replay_harness.py`, `argus/dogfood/proof_types.py`,

@@ -159,6 +159,15 @@ class _Delivery:
     module: str
     anchor: str
     reason: str
+    # Story 12.2 / AC7.2 — the DEDICATED seam modules a `not-built` FR would be delivered
+    # THROUGH, so the disposition can be REFUTED once they become reachable. Without it
+    # `not-built` was unrefutable in the one direction that matters: wiring FR36 turned
+    # nothing red, and the registry would have asserted "not built" about something built,
+    # forever. NOT the same as `module` (which claims delivery, and `-33` rightly forbids
+    # here): this claims only *if these become reachable, this disposition has expired*.
+    # Name ONLY modules that exist for THAT FR — a shared module going reachable proves
+    # nothing, and naming one would manufacture a false accusation.
+    seam_modules: tuple[str, ...] = ()
 
 
 # ─────────────────────────────────────────────────────────────────────────────
@@ -470,12 +479,18 @@ _REVERSE_REGISTRY: tuple[_Delivery, ...] = (
     _Delivery("FR35", "not-built", "", "",
               "Specified for V1.5 and owned by Stories 12.6/12.7 (the local agent-integration "
               "surface; `argus/mcp/**` does not exist on this tree). ⛔ Not amended by Story 10.5."),
-    _Delivery("FR36", "not-built", "", "",
-              "Specified for V1.5 and owned by Story 12.2 (the opt-in LLM-backed deep pass). The "
-              "seam modules `argus/audit/deep_audit.py`, `ports.py`, `open_llm_adapter.py` and "
-              "`minions_llm_adapter.py` exist and are unreachable from `argus.cli`, which is "
-              "consistent with the disposition rather than in tension with it: 12.2 owns delivery, "
-              "and the PRD dates FR36 to 2026-08-10b. ⛔ Not amended by Story 10.5."),
+    _Delivery("FR36", "wired", "argus/audit/deep_pass.py", "def run_deep_pass(",
+              "DELIVERED 2026-08-13 by Story 12.2. The opt-in LLM-backed deep pass is reachable "
+              "from `argus.cli` through `--deep-audit` → the `deep` token → the gated call site in "
+              "`argus/pipeline.py`, which imports this module FUNCTION-LOCALLY so the seam is in "
+              "the STATIC closure (proven by `-34` here) while staying absent from `sys.modules` on "
+              "a default run (NFR-S6, proven by TC-ArgusAgent-PIPELINE-001-10 with its positive "
+              "control `-11`). ~~Specified for V1.5 and owned by Story 12.2; the seam modules exist "
+              "and are unreachable from `argus.cli`.~~ (§3.4 struck, not deleted — superseded by "
+              "the delivery above. That `not-built` disposition made NO reachability claim, so "
+              "wiring FR36 would have left this registry asserting 'not built' about something "
+              "built, with nothing red; AC7.2 added `not_built_refutations` and it fired on this "
+              "very entry before the flip.)"),
     _Delivery("FR37", "not-built", "", "",
               "Specified for V1.5 and owned by Story 12.4 (every terminal outcome names its next "
               "action). ⛔ Not amended by Story 10.5."),
@@ -740,9 +755,9 @@ def reachability_refutations(
       this guard goes red until the disposition is updated. That red is the guard working: a
       disposition that outlives the fact it disposed is the same drift, pointing the other way.
 
-    Nothing else is refutable here. ``delivered-differently`` and ``not-built`` make no reachability
-    claim, and a walk that assigned them one would manufacture the false accusations this product
-    exists to prevent (see FR27 in the reverse registry).
+    ``delivered-differently`` still makes no reachability claim and is never refuted here; a walk
+    that assigned it one would manufacture the false accusations this product exists to prevent
+    (see FR27 in the reverse registry).
     """
     problems: list[str] = []
     for fr, disposition, module_name in entries:
@@ -755,6 +770,37 @@ def reachability_refutations(
             problems.append(
                 f"{fr}: disposed 'library-seam' but {module_name} IS reachable from "
                 f"{_ENTRY_POINT} — the seam was wired; update the disposition to 'wired'"
+            )
+    return tuple(problems)
+
+
+def not_built_refutations(
+    entries: tuple[tuple[str, tuple[str, ...]], ...], reachable: frozenset[str]
+) -> tuple[str, ...]:
+    """Refute a ``not-built`` disposition whose DEDICATED seam has become reachable (AC7.2).
+
+    ``entries`` are ``(fr, seam_module_names)`` for ``not-built`` dispositions only. Pure, so
+    `-37b` drives it over a synthetic graph exactly as the two directions above are driven.
+
+    THE HOLE THIS CLOSES. ``not-built`` makes no reachability claim — correctly, since a module's
+    mere existence proves nothing about delivery. But that left it unrefutable in the one direction
+    that matters: when the FR IS delivered nothing goes red, and the registry keeps asserting *"not
+    built"* about something built. Story 12.2 is the worked example — it wires FR36, and without
+    this direction the registry would have said FR36 was not built forever, with a green suite.
+
+    Deliberately NARROW: it fires only on modules the entry names as that FR's DEDICATED seam, so a
+    shared module going reachable cannot trigger it. An FR delivered inside an already-reachable
+    shared module names no seam and is untouched — not a licence to re-litigate any disposition.
+    """
+    problems: list[str] = []
+    for fr, seam_modules in entries:
+        live = sorted(name for name in seam_modules if name in reachable)
+        if live:
+            problems.append(
+                f"{fr}: disposed 'not-built' but its dedicated seam {live} IS reachable from "
+                f"{_ENTRY_POINT} — the FR is being delivered. A 'not-built' disposition that "
+                "outlives the delivery it disposed is a committed guard asserting the opposite "
+                "of the truth; flip it to 'wired' and name the module and anchor."
             )
     return tuple(problems)
 
@@ -961,6 +1007,21 @@ def test_a_wired_disposition_is_proven_against_the_import_closure() -> None:
         "what delivery means.\n  " + "\n  ".join(problems)
     )
 
+    # Story 12.2 / AC7.2 — the third direction. A `not-built` disposition whose DEDICATED seam
+    # has become reachable is refuted, so wiring an FR can no longer leave the registry
+    # asserting that it was never built.
+    not_built = tuple(
+        (entry.fr, entry.seam_modules)
+        for entry in _REVERSE_REGISTRY
+        if entry.disposition == "not-built"
+    )
+    stale = not_built_refutations(not_built, reachable)
+    assert not stale, (
+        "A 'not-built' disposition OUTLIVED THE DELIVERY IT DISPOSED. This is the direction that "
+        "did not exist before Story 12.2 and is exactly the rot it was added to catch.\n  "
+        + "\n  ".join(stale)
+    )
+
 
 def test_every_library_seam_is_amended_in_the_prd_and_filed_in_the_ledger() -> None:
     """TC-ArgusAgent-DOCS-001-35 — a seam the FR text still reads as delivered is the defect."""
@@ -1096,6 +1157,49 @@ def test_reachability_refutation_fires_in_both_directions_on_a_synthetic_graph()
         "Neither 'delivered-differently' nor 'not-built' makes a reachability claim, and a walk "
         "that assigned them one would manufacture a false accusation (FR27 is the worked example)."
     )
+
+
+def test_a_not_built_disposition_is_refuted_once_its_seam_becomes_reachable() -> None:
+    """TC-ArgusAgent-DOCS-001-37b — AC7.2 positive control, over the SAME synthetic graph.
+
+    Story 12.2, third direction, driven exactly as `-37` drives the first two: a refutation nobody
+    has watched fire is a refutation nobody knows is reachable.
+
+    THE HOLE IT CLOSES, verified by running the guard's own code on `2bea92f`:
+    ``reachability_refutations`` refutes `wired`-over-unreachable and `library-seam`-over-reachable
+    and NOTHING else, while `-34` only passed it entries whose `module` began with `argus/` — and
+    `-33` forbids a `not-built` entry from naming a module at all. So a `not-built` disposition was
+    unrefutable by ANY path, and wiring the FR it disposed produced no red anywhere.
+
+    Both directions are asserted: a guard that only ever rejects cannot be shown reachable, and one
+    that only ever accepts cannot be shown to bite.
+    """
+    graph: dict[str, frozenset[str]] = {
+        "pkg.cli": frozenset({"pkg.live"}),
+        "pkg.live": frozenset(),
+        "pkg.seam": frozenset(),
+    }
+    reachable = reachable_from(graph, "pkg.cli")
+
+    # HONEST: the FR is genuinely not built — its dedicated seam is unreachable, or it names
+    # no dedicated seam at all. Neither may fire.
+    honest = (("FRa", ("pkg.seam",)), ("FRb", ()))
+    assert not_built_refutations(honest, reachable) == (), (
+        "A truthful 'not-built' must NOT fire: the mere existence of a seam module proves "
+        "nothing about delivery, which is why this direction did not exist before."
+    )
+
+    # REFUTED: the dedicated seam became reachable, so the FR is being delivered.
+    delivered = (("FRa", ("pkg.seam", "pkg.live")),)
+    problems = not_built_refutations(delivered, reachable)
+    assert len(problems) == 1 and "IS reachable" in problems[0], problems
+    assert "pkg.live" in problems[0] and "pkg.seam" not in problems[0], (
+        "the refutation must name the module that ACTUALLY became reachable, not the whole "
+        f"declared seam — an imprecise accusation is the defect class here: {problems[0]}"
+    )
+
+    # And it stays silent when nothing is reachable at all (the empty-graph degenerate case).
+    assert not_built_refutations(delivered, frozenset()) == ()
 
 
 # ─────────────────────────────────────────────────────────────────────────────

@@ -11,6 +11,8 @@ pulled in by an unrelated test earlier in the session cannot mask a real leak.
 
 from __future__ import annotations
 
+import ast
+import os
 import pathlib
 import subprocess
 import sys
@@ -266,12 +268,82 @@ _MODULES_UNDER_GUARD = (
 # _LLM_FORBIDDEN_PREFIXES stays as-is for any caller wanting the strict check;
 # _PIPELINE_LLM_FORBIDDEN_PREFIXES is the pipeline-scoped set (the carve-out).
 _LLM_FORBIDDEN_PREFIXES = ("minions_core.providers", "argus.audit")
-_PIPELINE_LLM_FORBIDDEN_PREFIXES = (
-    "minions_core.providers",
-    "argus.audit.ports",
-    "argus.audit.deep_audit",
-    "argus.audit.minions_llm_adapter",
-)
+
+_PACKAGE_ROOT = pathlib.Path(__file__).resolve().parents[1] / "argus"
+
+# ─────────────────────────────────────────────────────────────────────────────
+# Story 12.2 / AC2.2 — THE POPULATIONS ARE DERIVED, NOT LISTED (AI-E10-5: *the list is
+# never the contract*).
+#
+# Both populations below used to be hand-written tuples, and both were structurally
+# blind to the change Story 12.2 makes:
+#
+#   * the FORBIDDEN set named ``ports`` / ``deep_audit`` / ``minions_llm_adapter`` and
+#     silently omitted ``open_llm_adapter`` — the module that actually performs the HTTP
+#     dispatch — so the one file in the package that can open a socket was never on the
+#     list that exists to keep sockets off the default path. A NEW ``argus/audit/*``
+#     module (this story adds ``deep_pass.py``) would likewise have leaked past.
+#   * the ENTRY-POINT set was the three-tuple ``(models, pipeline, cli)``, written before
+#     ``pipeline_persist.py`` (6.3) and ``pipeline_stages.py`` (12.1) existed. Neither was
+#     ever added, so two thirds of the pipeline surface was outside the gate.
+#
+# Deriving both from the package's real contents means a module added AFTER this story is
+# covered without anyone remembering to add it. `-12` asserts the derivation is
+# non-vacuous by GENERATING a new module and observing that it is covered with no edit
+# here at all.
+# ─────────────────────────────────────────────────────────────────────────────
+
+# The ONE `argus.audit` module the zero-token pipeline path is allowed to import: the
+# PURE, provider-free FR7 grounding validator (Story 6.2's carve-out, unchanged). It is
+# named as an EXCEPTION to a derived population rather than as a member of a listed one —
+# the difference between "everything is forbidden unless excused" and "everything is
+# allowed unless listed", which is the whole of AI-E10-5.
+_PURE_AUDIT_LEAVES = frozenset({"argus.audit.grounding"})
+
+
+def _audit_package_modules() -> frozenset[str]:
+    """Every module under ``argus/audit/**``, read off the filesystem (never listed)."""
+    found = set()
+    for path in sorted((_PACKAGE_ROOT / "audit").rglob("*.py")):
+        if "__pycache__" in path.parts:
+            continue
+        stem = path.stem
+        if stem == "__init__":
+            continue
+        found.add(f"argus.audit.{stem}")
+    return frozenset(found)
+
+
+def derive_pipeline_forbidden_prefixes() -> tuple[str, ...]:
+    """The LLM-dispatch surface the default pipeline path may not import (NFR-D2).
+
+    Every module under ``argus/audit/**`` EXCEPT the pure provider-free leaves, plus the
+    provider package prefix. Sorted, so a failure message is stable.
+
+    The ``argus.audit`` package ``__init__`` is deliberately NOT forbidden: importing the
+    permitted ``argus.audit.grounding`` necessarily loads its parent package, so banning
+    the parent would make the existing, correct 6.2 carve-out impossible to satisfy and
+    the gate would be red for a reason unrelated to egress.
+    """
+    return tuple(
+        sorted(("minions_core.providers", *(_audit_package_modules() - _PURE_AUDIT_LEAVES)))
+    )
+
+
+def derive_pipeline_entry_points() -> tuple[str, ...]:
+    """The default-path entry points the quarantine covers (AC2.2).
+
+    Derived: ``argus/cli.py``, ``argus/models.py`` and EVERY ``argus/pipeline*.py``
+    sibling — so the family that grew from one module to three without the gate noticing
+    cannot grow again unnoticed.
+    """
+    modules = {"argus.cli", "argus.models"}
+    for path in sorted(_PACKAGE_ROOT.glob("pipeline*.py")):
+        modules.add(f"argus.{path.stem}")
+    return tuple(sorted(modules))
+
+
+_PIPELINE_LLM_FORBIDDEN_PREFIXES = derive_pipeline_forbidden_prefixes()
 
 
 def _assert_clean_import(module: str) -> None:
@@ -364,20 +436,252 @@ def test_evidence_bundle_does_not_import_minions_governance_evidence() -> None:
 def test_pipeline_is_zero_token() -> None:
     """TC-ArgusAgent-PIPELINE-001-10 — the pipeline path imports NO LLM dispatch surface (NFR-D2).
 
-    Story 6.2: the pipeline now imports the PURE provider-free FR7 grounding
-    validator (``argus.audit.grounding``), so the pipeline-scoped forbidden set
-    bans providers.* + the LLM-dispatch audit modules (ports / deep_audit /
-    minions_llm_adapter) but ALLOWS the pure grounding validator. The zero-token
-    property — no LLM dispatch surface is reachable from the default verdict path —
-    is preserved (proven additionally below: the pipeline pulls grounding but NOT
-    the LLM adapter).
+    Story 6.2: the pipeline imports the PURE provider-free FR7 grounding validator
+    (``argus.audit.grounding``), so the pipeline-scoped forbidden set bans providers.* +
+    the LLM-dispatch audit modules but ALLOWS the pure grounding validator.
+
+    Story 12.2 / AC2.2: BOTH populations are now DERIVED from the package rather than
+    hand-listed, and both are asserted non-empty here — a derivation that silently
+    produced nothing would turn this gate into a no-op that passes forever.
+
+    🔴 READ THIS BEFORE TREATING THIS TEST'S GREEN AS EVIDENCE. Since Story 12.2 the
+    pipeline reaches the deep pass through a FUNCTION-LOCAL import, so on a default run
+    the import statement never executes and this gate is green BY CONSTRUCTION — for a
+    reason that has nothing to do with safety. A one-directional import-absence gate over
+    a deferred path is a guard that passes by NOT EXECUTING. Its green is evidence only
+    when read together with the POSITIVE CONTROL in
+    ``test_TC_ArgusAgent_PIPELINE_001_11_deferred_dispatch_surface_appears_only_when_opted_in``,
+    which proves the surface DOES appear when the opt-in is given.
     """
-    for module in (
-        "argus.models",
-        "argus.pipeline",
-        "argus.cli",
-    ):
+    entry_points = derive_pipeline_entry_points()
+    assert len(entry_points) >= 4, (
+        f"the entry-point derivation collapsed to {entry_points}; it must at least find "
+        "cli, models and the pipeline family"
+    )
+    assert len(_PIPELINE_LLM_FORBIDDEN_PREFIXES) >= 5, (
+        f"the forbidden-surface derivation collapsed to {_PIPELINE_LLM_FORBIDDEN_PREFIXES}"
+    )
+    # The module that can actually open a socket must be in the derived set. It was
+    # MISSING from the hand-written tuple this replaced.
+    assert "argus.audit.open_llm_adapter" in _PIPELINE_LLM_FORBIDDEN_PREFIXES
+    assert "argus.audit.grounding" not in _PIPELINE_LLM_FORBIDDEN_PREFIXES, (
+        "the pure FR7 validator is the 6.2 carve-out and must stay importable"
+    )
+
+    for module in entry_points:
         _assert_no_llm_import(module, _PIPELINE_LLM_FORBIDDEN_PREFIXES)
+
+
+def test_TC_ArgusAgent_PIPELINE_001_12_a_new_audit_module_is_covered_without_a_registry_edit() -> None:
+    """TC-ArgusAgent-PIPELINE-001-12 — AC2.2: the derivation is NON-VACUOUS, proven by generation.
+
+    Story 12.2. AI-E10-5 — *the list is never the contract*. The previous forbidden set
+    was a hand-written tuple, so a module added to ``argus/audit/`` was outside the gate
+    until somebody remembered to add it, and nothing ever went red to remind them. That
+    is not hypothetical: ``open_llm_adapter.py`` — the one module in the package that
+    performs a live HTTP dispatch — was never on it.
+
+    THE ADVERSARIAL VARIANT IS GENERATED, NOT HAND-LISTED: a real ``argus/audit/*.py``
+    module is written to disk, the derivation is re-run, and the new module must appear
+    in the forbidden population with NO edit to this file. The variant is removed in a
+    ``finally`` so a failure cannot leave the package dirty.
+
+    The count is asserted to GROW BY EXACTLY ONE, so a derivation that returned some
+    fixed superset (and would therefore "cover" anything) cannot pass either.
+    """
+    before = derive_pipeline_forbidden_prefixes()
+    probe = _PACKAGE_ROOT / "audit" / "_synthetic_egress_probe.py"
+    assert not probe.exists(), "the probe module leaked from an earlier run"
+    try:
+        probe.write_text(
+            '"""Synthetic AC2.2 probe — written and removed by a test."""\n',
+            encoding="utf-8",
+        )
+        after = derive_pipeline_forbidden_prefixes()
+    finally:
+        probe.unlink(missing_ok=True)
+        # A stale .pyc would make the module importable after the source is gone.
+        for cached in (_PACKAGE_ROOT / "audit" / "__pycache__").glob(
+            "_synthetic_egress_probe*.pyc"
+        ):
+            cached.unlink(missing_ok=True)
+
+    assert "argus.audit._synthetic_egress_probe" in after, (
+        "a NEW argus/audit module was not picked up by the derived forbidden set — the "
+        "population is not actually derived from the package"
+    )
+    assert len(after) == len(before) + 1, (
+        f"the derivation must grow by exactly one, not from {len(before)} to {len(after)}"
+    )
+    assert not probe.exists()
+
+
+def test_TC_ArgusAgent_PIPELINE_001_11_deferred_dispatch_surface_appears_only_when_opted_in(
+    tmp_path: pathlib.Path,
+) -> None:
+    """TC-ArgusAgent-PIPELINE-001-11 — AC3: the POSITIVE CONTROL for a deferred import.
+
+    Story 12.2. ``test_pipeline_is_zero_token`` above asserts that the LLM dispatch
+    surface is ABSENT after a default run. Since 12.2 wires the deep pass through a
+    function-local import, that absence is guaranteed by the fact that the import
+    statement never runs — so on its own it proves nothing about whether the pass is
+    wired at all. A gate that is green because the code it guards was never reached is
+    the deferred-import form of a vacuous guard, and this story creates that hazard on
+    purpose.
+
+    THE POSITIVE CONTROL closes it, in BOTH directions, each in a FRESH subprocess so an
+    earlier import cannot mask or manufacture either answer:
+
+    * opt-in ABSENT  → ``argus.audit.deep_audit`` / ``deep_pass`` NOT in ``sys.modules``
+      (NFR-S6: nothing leaves on the default path, and nothing is even loaded);
+    * opt-in PRESENT → they ARE in ``sys.modules`` (the wiring is real and reachable).
+
+    NO EGRESS EITHER WAY: the opted-in leg runs with NO provider endpoint configured, so
+    the pass refuses to construct an adapter and degrades. The observation is which
+    modules loaded, never a byte on a wire.
+    """
+    (tmp_path / "app").mkdir()
+    (tmp_path / "app" / "m.py").write_text(
+        "def f(x):\n    return x + 1\n", encoding="utf-8"
+    )
+
+    probe = textwrap.dedent(
+        """
+        import sys
+        from argus.cli import main
+        main(sys.argv[1:])
+        watched = ("argus.audit.deep_audit", "argus.audit.deep_pass")
+        print("LOADED:" + ",".join(sorted(m for m in watched if m in sys.modules)))
+        """
+    )
+
+    def _loaded(*argv: str) -> set[str]:
+        env = dict(os.environ)
+        # Strip any ambient provider configuration so neither leg can dispatch.
+        for name in ("OPENAI_BASE_URL", "OLLAMA_HOST", "OLLAMA_URL"):
+            env.pop(name, None)
+        proc = subprocess.run(
+            [sys.executable, "-c", probe, "audit", str(tmp_path), *argv],
+            capture_output=True,
+            text=True,
+            env=env,
+        )
+        line = [ln for ln in proc.stdout.splitlines() if ln.startswith("LOADED:")]
+        assert line, f"probe produced no marker: {proc.stdout} {proc.stderr}"
+        return {m for m in line[0][len("LOADED:") :].split(",") if m}
+
+    default_run = _loaded()
+    assert default_run == set(), (
+        "NFR-S6: a DEFAULT run loaded an LLM dispatch module — the deferred import "
+        f"executed when it must not have: {sorted(default_run)}"
+    )
+
+    opted_in = _loaded("--deep-audit")
+    assert opted_in == {"argus.audit.deep_audit", "argus.audit.deep_pass"}, (
+        "AC3 POSITIVE CONTROL FAILED: with --deep-audit given, the deep-audit seam was "
+        f"still not loaded, so the absence above proves nothing: {sorted(opted_in)}. "
+        "Either the pass is not wired, or the gate cannot see it."
+    )
+
+
+# ─────────────────────────────────────────────────────────────────────────────
+# Story 12.2 / AC2.3 — THE ENVIRONMENT IS NEVER AN OPT-IN
+# ─────────────────────────────────────────────────────────────────────────────
+
+
+def adapter_environment_variables() -> tuple[str, ...]:
+    """Every environment variable ``OpenLLMAdapter`` reads, derived by ``ast`` (AC2.3).
+
+    DERIVED FROM THE ADAPTER'S OWN SOURCE, never transcribed, because the risk this gate
+    exists to cover is precisely *someone adds a seventh variable*. A hand-copied list
+    would go stale on exactly the change that matters and would keep passing.
+
+    Walks ``argus/audit/open_llm_adapter.py`` for ``os.getenv("NAME")`` calls and returns
+    the sorted literal names.
+    """
+    source = (_PACKAGE_ROOT / "audit" / "open_llm_adapter.py").read_text(encoding="utf-8")
+    names: set[str] = set()
+    for node in ast.walk(ast.parse(source)):
+        if not isinstance(node, ast.Call) or not node.args:
+            continue
+        func = node.func
+        is_getenv = (isinstance(func, ast.Attribute) and func.attr == "getenv") or (
+            isinstance(func, ast.Name) and func.id == "getenv"
+        )
+        if is_getenv and isinstance(node.args[0], ast.Constant):
+            value = node.args[0].value
+            if isinstance(value, str):
+                names.add(value)
+    return tuple(sorted(names))
+
+
+def test_TC_ArgusAgent_AUDIT_001_62_a_live_looking_environment_is_not_an_opt_in(
+    tmp_path: pathlib.Path,
+) -> None:
+    """TC-ArgusAgent-AUDIT-001-62 — AC2.3: only the FLAG opts in. Never the environment.
+
+    Story 12.2 / FR36 / NFR-S6. MEASURED on ``2bea92f``: ``OpenLLMAdapter.__init__``
+    silently absorbs the ambient environment and defaults its API key to the literal
+    ``"mock-key"`` — with ``OLLAMA_HOST`` set, a freshly constructed adapter reports that
+    host as its ``_api_base``. So CONSTRUCTING the adapter is already a configuration
+    decision made by the environment, and any design in which the environment could cause
+    construction would be an environment-triggered egress path.
+
+    THE OBSERVABLE: which modules are resident after a run. With EVERY variable the
+    adapter reads set to a live-looking value and the opt-in ABSENT, the run must load no
+    dispatch surface at all — no adapter is constructed, so nothing can transmit.
+
+    THE POPULATION IS DERIVED (``adapter_environment_variables``), so a variable added to
+    the adapter tomorrow is covered by this gate today.
+
+    ⚠️ The values are deliberately UNROUTABLE (``.invalid`` is RFC 6761 reserved and can
+    never resolve) so that even a total failure of this gate cannot open a socket to a
+    real host. Story 12.2 §0.3: no live dispatch, ever, for any reason.
+    """
+    variables = adapter_environment_variables()
+    assert len(variables) >= 6, (
+        f"the ast derivation found only {variables}; the adapter reads more than that. "
+        "A derivation that under-counts silently narrows the gate."
+    )
+
+    (tmp_path / "app").mkdir()
+    (tmp_path / "app" / "m.py").write_text("def f():\n    return 1\n", encoding="utf-8")
+
+    env = dict(os.environ)
+    for name in variables:
+        env[name] = "http://argus-must-never-dial.invalid:11434"
+
+    probe = textwrap.dedent(
+        """
+        import sys
+        from argus.cli import main
+        main(sys.argv[1:])
+        watched = (
+            "argus.audit.deep_audit",
+            "argus.audit.deep_pass",
+            "argus.audit.open_llm_adapter",
+            "argus.audit.ports",
+            "httpx",
+        )
+        print("LOADED:" + ",".join(sorted(m for m in watched if m in sys.modules)))
+        """
+    )
+    proc = subprocess.run(
+        [sys.executable, "-c", probe, "audit", str(tmp_path)],
+        capture_output=True,
+        text=True,
+        env=env,
+    )
+    marker = [ln for ln in proc.stdout.splitlines() if ln.startswith("LOADED:")]
+    assert marker, f"probe produced no marker: {proc.stdout} {proc.stderr}"
+    loaded = {m for m in marker[0][len("LOADED:") :].split(",") if m}
+
+    assert loaded == set(), (
+        "AC2.3 VIOLATED: with every adapter environment variable set to a live-looking "
+        f"value and NO --deep-audit flag, the run loaded {sorted(loaded)}. An environment "
+        "variable must never be able to enable egress; only the operator's explicit "
+        "invocation-level act may."
+    )
 
 
 def test_grounding_validator_is_provider_free() -> None:

@@ -236,6 +236,12 @@ from argus.pipeline_stages import (
     _unit_cost,
 )
 from argus.reports.generator import generate_reports
+
+# The ONE deep-pass token (Story 12.2). Imported from its single declaration site, so the
+# flag, the pass set, the gated call site below and the disclosure cannot drift apart
+# (AR7 / §3.3 — reuse, never fork). `plain_english` is a PURE renderer with no provider
+# dependency, so this import does not touch the zero-token quarantine.
+from argus.reports.plain_english import deep_pass_enabled
 from argus.store import canonical
 from argus.store.envelope import Envelope
 from argus.store.paths import WorkspaceContainmentError
@@ -376,6 +382,8 @@ def _assemble_and_persist(
     halt_report: HaltReport,
     store_writer: ApaaStoreWriter | None,
     source_state: SourceState | None = None,
+    deep_port: object = None,
+    disclose: object = None,
 ) -> AuditResult:
     """Shared post-detection assembly + persistence (the fold both paths share).
 
@@ -387,6 +395,40 @@ def _assemble_and_persist(
     shell (it reads the LOC map + writes the ``.argus/`` tree). The verdict math / the
     persist order / the producer tokens are UNCHANGED.
     """
+    # Story 12.2 (FR36 / DN-DEEP-OPT-IN): the OPT-IN LLM-backed deep pass runs HERE,
+    # after the deterministic detect/grade stage produced the ledger entries and BEFORE
+    # the verdict fold — because its whole job is to justify (or withdraw) the
+    # `audited_deep` grades those entries claim, and a grade that is withdrawn must move
+    # the ratio the FR16 gate reads.
+    #
+    # THE IMPORT IS FUNCTION-LOCAL AND THAT IS LOAD-BEARING, NOT STYLE. `ast.walk`
+    # descends into function bodies, so the STATIC closure from `argus.cli` contains
+    # `argus.audit.deep_pass` → `argus.audit.deep_audit` (which is what proves FR36
+    # `wired` — TC-ArgusAgent-DOCS-001-34); but the statement never EXECUTES on a default
+    # run, so `argus.audit.deep_audit` stays absent from `sys.modules` and the NFR-S6
+    # zero-token quarantine holds (TC-ArgusAgent-PIPELINE-001-10). Because that green is
+    # obtained by NOT EXECUTING, it is not evidence on its own — TC-ArgusAgent-PIPELINE-001-11
+    # is the positive control that makes it one.
+    #
+    # `deep` is absent from `_ALL_PASSES`, so a bare invocation never enters this branch
+    # and a default run is byte-identical to a pre-12.2 run (AC2.4). The shape mirrors
+    # the `if "prosecutor" in request.enabled_passes:` precedent below.
+    deep_outcome = None
+    if deep_pass_enabled(request.enabled_passes):
+        from argus.audit.deep_pass import run_deep_pass
+
+        deep_result = run_deep_pass(
+            entries=tuple(entries),
+            index_entries=index.entries,
+            budget=request.budget,
+            spent_credits=halt_report.total_credits,
+            port=deep_port,  # type: ignore[arg-type]
+            disclose=disclose,
+        )
+        entries = list(deep_result.entries)
+        findings = findings + list(deep_result.findings)
+        deep_outcome = deep_result.outcome
+
     # The merged ledger (CoverageLedger.build re-sorts, so the merge order does not
     # matter — a resumed merge is the SAME sorted ledger an uninterrupted run
     # produces, AC2) is re-folded through the UNCHANGED 1.6 evaluate_verdict.
@@ -409,6 +451,7 @@ def _assemble_and_persist(
         critical_subsystems_all_deep=all_deep,
         critical_subsystems_not_deep=not_deep,
         scope_paths=scope_paths,
+        deep_pass=deep_outcome,
     )
     loc_by_file = _compute_loc_map(repo_root, source_files)
     partition_plan = _build_partition_plan(index, loc_by_file)
@@ -486,12 +529,25 @@ def run_audit_detailed(
     request: AuditRequest,
     *,
     store_writer: ApaaStoreWriter | None = None,
+    deep_port: object = None,
+    disclose: object = None,
 ) -> AuditResult:
     """Run the sequential audit pipeline → :class:`AuditResult` (verdict + locators).
 
     The IMPURE shell: it reads the FS (1.4 loader/index, source reads) and writes
     the ``.argus/`` tree (1.3 store); the pure cores it folds (ledger build, verdict
-    fold, serializer) stay pure. The Epic-1 path calls NO LLM (zero-token, NFR-D2).
+    fold, serializer) stay pure. The DEFAULT path calls NO LLM (zero-token, NFR-D2).
+
+    Story 12.2 adds two OPTIONAL keyword seams, both inert unless the operator opted in
+    with ``--deep-audit`` (FR36 — off by default, always):
+
+    * *deep_port* — an injected :class:`~argus.audit.ports.LLMDispatchPort` (AR7). Typed
+      ``object`` deliberately: annotating it with the port TYPE would require importing
+      ``argus.audit.ports`` at module scope, which is precisely the import the NFR-S6
+      zero-token quarantine forbids on this path. The seam validates it structurally.
+      Tests inject a ``FakeDispatch`` and consume zero LLM tokens (NFR-D2).
+    * *disclose* — a one-argument callable receiving the egress disclosure BEFORE the
+      first dispatch (AC2.5). The CLI passes its stderr writer.
 
     Raises:
         RepoIntakeError: the repo cannot be loaded at the pin (missing path /
@@ -567,6 +623,8 @@ def run_audit_detailed(
         halt_report=halt_report,
         store_writer=store_writer,
         source_state=source_state,
+        deep_port=deep_port,
+        disclose=disclose,
     )
 
 
@@ -574,15 +632,20 @@ def run_audit(
     request: AuditRequest,
     *,
     store_writer: ApaaStoreWriter | None = None,
+    deep_port: object = None,
+    disclose: object = None,
 ) -> AuditVerdict:
     """Run the pipeline and return the pure :class:`AuditVerdict` (FR30).
 
     The simple entry the CLI calls: wires the six stages, persists the artifacts,
     and returns the verdict the CLI reads ``exit_code`` from. See
-    :func:`run_audit_detailed` for the write locators + the full typed-error
-    contract.
+    :func:`run_audit_detailed` for the write locators, the full typed-error contract,
+    and the two Story-12.2 deep-pass seams (*deep_port* / *disclose*), which are inert
+    unless the operator opted in.
     """
-    return run_audit_detailed(request, store_writer=store_writer).verdict
+    return run_audit_detailed(
+        request, store_writer=store_writer, deep_port=deep_port, disclose=disclose
+    ).verdict
 
 
 # ─────────────────────────────────────────────────────────────────────────────

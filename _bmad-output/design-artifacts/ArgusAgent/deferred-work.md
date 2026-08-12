@@ -3062,3 +3062,169 @@ ESTABLISHED.**
     likely trigger)
   - category: maintainability
   - severity: 🟢
+
+## Deferred from: story 12-2-deep-audit-is-wired-opt-in-and-honest (2026-08-13)
+
+**Append-only (§3.4): nothing above this heading was edited, reordered or deleted.** Proven
+programmatically, not by eye — `git diff --numstat <base> HEAD -- deferred-work.md` shows **zero
+deletions**. Every figure below is **LOCAL, Windows / CPython 3.11.15**, re-derived by execution on
+this tree on 2026-08-13 under the dated risk acceptance of 2026-08-11 (carried forward, not
+re-taken). **CI evidence: NOT ESTABLISHED** — no CI run has executed any Epic 10, 11 or 12 sha.
+
+### Rulings on entries that named this story
+
+- **`DF-12-1-A` — RE-RECORDED, not closed. The trigger FIRED and is ruled on rather than ignored.**
+  Its target was *"the next story to edit the pipeline surface this file demonstrates"*, and this
+  story did edit that surface: `argus/pipeline.py` gained a gated deep-pass call site and
+  `run_audit` / `run_audit_detailed` each gained two optional keyword seams (`deep_port`,
+  `disclose`). So the trigger fired honestly and is not dodged. **It is NOT closed here, for a
+  measured reason.** `tests/test_pipeline_signature_demo.py` is still **1326** lines (re-measured
+  2026-08-13; unchanged by this story, which did not touch it). Splitting it is a refactor of the
+  load-bearing guard file that demonstrates the FR32 pipeline signature end to end over real git
+  fixtures — inside a story that adds the only egress path in the product and carries seven ACs,
+  one of which requires proving the DEFAULT path byte-identical. **Refactoring the guard that would
+  notice a pipeline regression, in the same change that modifies the pipeline, removes the witness
+  for the property this story most needs witnessed.** That is the same reasoning 12.1 gave, and it
+  is stronger here, not weaker. The exemption registry still **shrinks**
+  (`TC-ArgusAgent-MAINT-001-04` fails if the entry names a file that is gone or no longer over the
+  cap), so this cannot become dead weight. Re-targeted at a live story with a named condition.
+  - id: DF-12-1-A
+  - origin_story: 12-1-pipeline-stops-breaching-its-own-limit
+  - owner: Engineering
+  - target_story: **12-3-a-re-run-returns-the-recorded-result** — which already owns `DF-12-1-B`,
+    the sibling exemption, so both over-cap guard files are split by one story with one method
+    rather than one-at-a-time by whichever story happens to brush past them
+  - category: maintainability
+  - severity: 🟢
+
+- **`DF-12-1-E` — the trigger did NOT fire. Recorded explicitly rather than left silent.** Its
+  condition is *"the next story that adds a fourth `argus/pipeline*.py` module"*. This story added
+  **`argus/audit/deep_pass.py`**, not a fourth pipeline sibling: re-measured 2026-08-13,
+  `git ls-files -- 'argus/pipeline*.py'` is still **three** (`pipeline.py` 1007,
+  `pipeline_persist.py` 268, `pipeline_stages.py` 512). The placement followed the story's §A.1
+  recommendation for the reasons it gave and which were re-checked here: `argus/audit/` is where the
+  determinism quarantine already reasons, so the new module was INSIDE the fence AC2.2 widened
+  before it had any behaviour, whereas a fourth `pipeline*.py` sibling would have put a
+  provider-adjacent concern in the family this entry says has no layering guard. **`pipeline.py`
+  grew 944 → 1007** (+63, still 193 under the cap) — the call site, the two optional seams and their
+  reasoning. Entry unchanged and still open.
+  - id: DF-12-1-E
+  - origin_story: 12-1-pipeline-stops-breaching-its-own-limit
+  - owner: Engineering
+  - target_story: NONE — the next story that adds a fourth `argus/pipeline*.py` module (12.2 did
+    NOT; re-confirmed 2026-08-13)
+  - category: maintainability
+  - severity: 🟢
+
+- **`DF-12-1-D` — conditional trigger did NOT fire, but the HAZARD was live and was heeded.** Its
+  condition is *"the next story that edits `tests/test_module_size_ceiling.py`"*; this story did not
+  edit that file. The hazard itself, however, applied directly: the NFR-M1 sweep reads the git
+  **INDEX**, and this story adds a new `argus/**` module, so an unstaged `argus/audit/deep_pass.py`
+  would have been invisible to the sweep that governs it. **`git add`-ed early, deliberately**, and
+  the population moved **73 → 74** tracked `argus` files as a result — which is also what turned the
+  dogfood currency guards red by design and triggered the sanctioned regeneration. Entry unchanged.
+  - id: DF-12-1-D
+  - origin_story: 12-1-pipeline-stops-breaching-its-own-limit
+  - owner: Engineering
+  - target_story: NONE — the next story that edits `tests/test_module_size_ceiling.py`
+  - category: testability
+  - severity: 🟡
+
+### Ruled OUT of this story, with reasons
+
+- **`DF-10-2-A` — RULED OUT and ESCALATED. This is the THIRD consecutive story to carry it with no
+  home, and it is not a dev agent's to close.** C/C++/Ruby/Rust grammars load and ground but extract
+  zero definitions. It has no relationship to the LLM seam, egress, the opt-in, spend or honest
+  degradation — nothing in this story touches it, and it is confirmed untouched. `AI-E11-7` states
+  the need precisely: *"a fix is probably not needed … what is needed is a dated decision"* — a
+  type-(H) governance decision outside the authority of an implementing agent. **Escalated as an
+  operator-level item for the Epic-12 retrospective rather than folded in silently.** Recording it
+  as "not mine" for a third time without escalating would be the drift the ledger exists to prevent.
+  - id: DF-10-2-A
+  - owner: **OPERATOR (XAgent007)** — needs a dated decision, not an implementation
+  - target_story: NONE — **Epic-12 retrospective**, as a governance item
+  - category: governance
+  - severity: 🟡
+
+- **`DF-11-2-A` / `DF-11-2-B` and SD-4's four convergent filings — OUT.** Grammar and
+  test-name-convention surface, targeted at **12.5**. Confirmed untouched by this story: no module
+  under `argus/detectors/` was modified, and no convention table was edited.
+- **`DF-8-3-A` — OUT.** Report next-action vocabulary, deliberately re-recorded to **12.4** by Story
+  12.1 with measured reasons. This story's §A.4 fence holds: the depth-honesty disclosure sentence
+  and its predicate were changed because FR36's *"never produces a false deep claim"* is this
+  story's own requirement; nothing else in the report vocabulary was restructured.
+- **`DF-11-4-D` / `AI-E11-6` — OUT, and the caveat is discharged explicitly.** This story DID have
+  to touch `_NOTE_SECTIONS` (a new release-note section for `--deep-audit` is required by the
+  invocation-contract registry, which demands a real CHANGELOG site). **Adding a section is not the
+  same as re-opening the impact-rank question, and the rank question was not re-opened**: the new
+  entry is a PURE INSERTION placed sixth with its placement reasoned in the registry comment, and
+  **no existing section moved relative to any other**. The registry's cost/benefit question stays
+  open and stays 12.4's.
+
+### New filings
+
+- **`DF-12-2-A` — 🟡 `--passes` silently accepts unknown tokens, and `_ALL_PASSES` is a DEFAULT, not
+  a whitelist.** `argus/cli.py::_resolve_passes` calls `_split_csv(args.passes, _ALL_PASSES)`, where
+  `_ALL_PASSES` is the value used when the flag is OMITTED — it never validates. So
+  `--passes coverage,typo` runs coverage and silently ignores `typo`, and an operator who misspells
+  a pass name gets a narrower audit than they asked for with no diagnostic. This was the mechanism
+  behind the false deep claim Story 12.2 closed (`--passes coverage,deep` reached the disclosure
+  predicate with nothing wired), and **that specific harm is fixed**: the disclosure is now derived
+  from work performed, so an unknown `deep` token can no longer produce a depth claim. **The general
+  validation gap is deliberately NOT fixed here**, for two measured reasons: (a) it changes the
+  behaviour of a **LOCKED** flag for every pass, not just `deep` — a run that quietly ignored a typo
+  would start failing, which is correct but is a consumer-visible contract change; and (b)
+  `.github/workflows/argus-student-audit.yml` depends on `--passes`, and this story has **no CI
+  evidence** (§0.2, `AI-E10-1`) with which to verify a workflow-affecting change. Strict validation
+  would be defence in depth, not the remedy — the remedy landed.
+  - id: DF-12-2-A
+  - origin_story: 12-2-deep-audit-is-wired-opt-in-and-honest
+  - owner: Engineering
+  - target_story: NONE — the next story with executed CI evidence that may change a LOCKED flag's
+    accept/reject behaviour
+  - category: correctness
+  - severity: 🟡
+
+- **`DF-12-2-B` — 🔴 `OpenLLMAdapter._dispatch_httpx` FABRICATES an `LLMRecording` when no endpoint
+  is configured, and it is indistinguishable from a real dispatch at the port boundary.** Measured
+  2026-08-13 at the anchor `if not self._api_base:` with the comment *"Fake/Mock dispatch mode when
+  no live endpoint is configured"*: the branch returns `input_tokens=10`, `output_tokens=5`,
+  `credits_used` from `0.000025`, `finish_reason="stop"`. A caller cannot tell that from a real
+  response — it is a synthetic result manufactured out of an unconfigured environment. Combined with
+  `__init__` absorbing six environment variables and defaulting the API key to the literal
+  `"mock-key"`, an adapter constructed by accident produces plausible-looking depth. **Story 12.2's
+  own path is safe and that is proven** (`TC-ArgusAgent-AUDIT-001-69`): the deep pass validates
+  provider configuration BEFORE dispatch and refuses to construct an adapter when none is present
+  (§A.5 option 1), so the branch is unreachable from the verdict. **THE RESIDUAL IS REAL AND IS
+  DISCLOSED RATHER THAN HIDDEN: the adapter still fabricates for every OTHER caller**, and any
+  future caller that constructs it directly inherits the hazard. The honest fix is option (2) —
+  `_dispatch_httpx` raises `LLMDispatchError` instead of fabricating — which was NOT taken here
+  because it changes a module whose own committed tests (`tests/test_open_llm_adapter.py`,
+  `tests/test_minions_llm_adapter.py`) assert the mock-mode behaviour, i.e. a behaviour change with
+  a test-suite blast radius inside a story already carrying seven ACs.
+  - id: DF-12-2-B
+  - origin_story: 12-2-deep-audit-is-wired-opt-in-and-honest
+  - owner: Engineering
+  - target_story: NONE — the next story that may change `argus/audit/open_llm_adapter.py` behaviour
+    and re-baseline its two committed adapter test files
+  - category: correctness
+  - severity: 🔴 (the severity is about the hazard's nature, not its current reachability: no
+    production path reaches it today, and that is asserted by a committed gate)
+
+- **`DF-12-2-C` — 🟢 `tests/test_v1_commitment_closure.py` grew 1308 → 1412 lines under exemption
+  `DF-12-1-B`, so the split 12.3 owns got bigger.** AC7 required edits to this file (FR36's
+  disposition flip, the `seam_modules` field, the `not_built_refutations` direction and its
+  positive control `-37b`). They were kept as tight as the reasoning allows and the prose was
+  trimmed once specifically to reduce the growth, but the file is now **212 over** the NFR-M1 cap
+  rather than 108. **Filed rather than silently absorbed**, because `DF-12-1-B`'s estimate of the
+  work is now stale and 12.3 should size against the real number. The alternative — putting `-37b`
+  in a dedicated file — was considered and DECLINED: it is the third direction of one closure and
+  belongs beside `-36`/`-37`, and separating a positive control from the function it controls is
+  exactly how a control stops being maintained alongside it.
+  - id: DF-12-2-C
+  - origin_story: 12-2-deep-audit-is-wired-opt-in-and-honest
+  - owner: Engineering
+  - target_story: **12-3-a-re-run-returns-the-recorded-result** — the story that already owns
+    `DF-12-1-B` for this same file
+  - category: maintainability
+  - severity: 🟢

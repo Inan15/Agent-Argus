@@ -109,6 +109,28 @@ _NOTE_SECTIONS: tuple[str, ...] = (
     # while 11.3 binds only the marketplace channel, and DECLINED: a security fix on an
     # executable surface outranks a packaging fix on a non-consumer module surface.
     "### Fixed — five shipped modules could not be imported from the distribution at all",
+    # `## Unreleased` — added 2026-08-13 by Story 12.2 (FR36). A PURE INSERTION: no existing
+    # section moved relative to any other, and nothing was demoted.
+    # ⚠️ `DF-11-4-D` / `AI-E11-6` are LIVE about this registry and are targeted at Story 12.4.
+    # Adding a section is NOT the same as re-opening the impact-rank question, so this entry
+    # does exactly what the ledger asks of a story that must touch the file anyway: it is added
+    # in registry order with its placement reasoned, and the RANKING of every existing section
+    # is left entirely alone. The registry's cost/benefit question stays open for 12.4.
+    # Placed SIXTH — below every Epic-11 section — on the registry's own stated principle,
+    # *what breaks a pipeline soonest*, applied against this entry honestly rather than
+    # flatteringly. It is tempting to promote it: it introduces the ONLY code path in the
+    # product that can transmit anything off the machine, and for an assurance tool that is the
+    # kind of claim a reader wants early. DECLINED, because the principle is about what a
+    # consumer HITS, and this path is unreachable without an explicit new flag: it changes no
+    # default, no exit code, no verdict and no byte on any invocation that existed before this
+    # release. Each of the five above it can move a consumer who changed nothing — 11.1 bounds
+    # how every other claim here should be weighed, 11.4 can change an exit code on an unchanged
+    # repository, 11.2 can move any polyglot verdict, 11.3 is a security fix on an executable
+    # surface, and 11.5 turns a failing import into a working one.
+    # It is placed ABOVE the 10.3 group deliberately: both specify the invocation surface, and a
+    # consumer reading the CLI-contract sections should meet the egress opt-in before the six
+    # already-shipped flags, because it is the only one of the seven that sends anything.
+    "### Specified: `--deep-audit` — the opt-in deep pass, and the false deep claim it replaces",
     # `## Unreleased` — added 2026-08-10 by Story 10.2 (DF-AUD-APAA-D). Registered deliberately,
     # which is what this enumeration is for: each one is a consumer-visible claim someone signed
     # off. "Documented" records the `[languages]` extra, which shipped with zero README/CHANGELOG

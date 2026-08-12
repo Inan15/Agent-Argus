@@ -213,15 +213,43 @@ def test_TC_ArgusAgent_DOGFOOD_001_48_externalization_guard_moved_unchanged() ->
     be *verified* unchanged rather than assumed, so its text is pinned here in full. If a
     future edit softens the honesty language, this fails — which is the whole point of a
     red-team guard: it must be harder to weaken than to leave alone.
+
+    🔴 AMENDED 2026-08-13 by Story 12.2 (AC6.3). THE SENTENCE WAS FALSE IN TWO WAYS and
+    both are repaired by making it TRUE, never by deleting the honesty language:
+
+    * Its FACTUAL first clause — *"the AST-grounding deep-audit seam is NOT wired in"* —
+      became false the moment 12.2 wired FR36. This test going red at that moment is the
+      guard WORKING.
+    * Its CAUSAL claim — *seam not wired in, **so** every finding is advisory* — was
+      ALREADY false, before 12.2 changed anything, and no test had ever checked it.
+      Measured on ``2bea92f`` by execution: a DEFAULT ``python -m argus.cli audit`` over a
+      synthetic repository — no flags, no LLM, no cartridge harness — returned
+      ``verdict=NOT_READY_FOR_RELEASE blocking_findings=1`` and EXIT CODE 2, via
+      ``argus/detectors/vacuous_test.py``'s two-fact AST corroboration emitting a
+      ``RULE_AST`` finding with a non-``None`` ``depth_supported``. So advisory-ness was
+      never a consequence of the seam being unwired — it is a contingent property of the
+      Argus dogfood corpus. That measurement is committed as
+      ``TC-ArgusAgent-VERDICT-001-30`` so the answer cannot rot back into a guess.
+
+    The replacement says all of that, and the two honesty clauses (*"NOT presented as
+    externalization or assurance evidence"*, *"does NOT clear the >=80%-precision gate"*)
+    survive verbatim and are asserted separately below so a future rewrite cannot drop
+    them while still matching some new pinned string.
     """
     expected = (
         "This dogfood run is a demo-heuristic-only (Tier-A) result: the frozen pipeline "
-        "run_audit_detailed calls NO LLM (zero-token) and the AST-grounding deep-audit "
-        "seam is NOT wired in, so every finding is advisory / verdict-ineligible "
-        "(depth_supported is None). It is NOT presented as externalization or assurance "
-        "evidence, and it does NOT clear the >=80%-precision gate — that requires "
-        "the human TP/FP adjudication over these REAL findings (a documented human step, "
-        "still open)."
+        "run_audit_detailed calls NO LLM (zero-token). Since 2026-08-13 (Story 12.2) the "
+        "AST-grounding deep-audit seam IS wired, but it is OFF BY DEFAULT and was NOT "
+        "engaged by this run — no --deep-audit, no dispatch, no provider contacted — so no "
+        "finding here rests on a deep read. Every finding in this run is in fact advisory / "
+        "verdict-ineligible (depth_supported is None), and that is a MEASURED property of "
+        "the Argus dogfood corpus, NOT a consequence of the seam: a verdict-BLOCKING finding "
+        "is reachable on the default zero-LLM path (argus/detectors/vacuous_test.py emits "
+        "RULE_AST with a non-None depth_supported), so this run being advisory throughout is "
+        "a fact about this repository and must never be read as a guarantee about any other. "
+        "It is NOT presented as externalization or assurance evidence, and it does NOT clear "
+        "the >=80%-precision gate — that requires the human TP/FP adjudication over these "
+        "REAL findings (a documented human step, still open)."
     )
     assert proof_render.DOGFOOD_EXTERNALIZATION_GUARD == expected, (
         "the externalization guard text changed; it is the red-team honesty flag and "
@@ -241,3 +269,23 @@ def test_TC_ArgusAgent_DOGFOOD_001_48_externalization_guard_moved_unchanged() ->
         "independently validated",
     ):
         assert overclaim not in lowered, f"the guard now contains the over-claim {overclaim!r}"
+
+    # Story 12.2 / AC6.3 — the honesty language is asserted SEPARATELY from the byte pin,
+    # so a future amendment can change the wording around it but can never drop it while
+    # quietly updating the pinned string to match. These clauses are the guard's payload.
+    for load_bearing in (
+        "NOT presented as externalization or assurance evidence",
+        "does NOT clear the >=80%-precision gate",
+        "a documented human step, still open",
+    ):
+        assert load_bearing in proof_render.DOGFOOD_EXTERNALIZATION_GUARD, (
+            f"the guard lost its load-bearing honesty clause {load_bearing!r}. AC6.3: the "
+            "honesty language must survive intact or be STRENGTHENED, never softened."
+        )
+    # And the repaired sentence must not re-assert either falsehood it was amended to fix.
+    assert "seam is NOT wired in" not in proof_render.DOGFOOD_EXTERNALIZATION_GUARD, (
+        "the factual clause Story 12.2 falsified was re-introduced"
+    )
+    assert "OFF BY DEFAULT" in proof_render.DOGFOOD_EXTERNALIZATION_GUARD, (
+        "a wired egress seam must be disclosed as off-by-default, not merely as wired"
+    )

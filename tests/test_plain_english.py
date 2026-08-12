@@ -42,9 +42,25 @@ from argus.verdict.verdict_gate import (
     AuditVerdict,
     CoverageScope,
     DecisionRow,
+    DeepPassOutcome,
     Verdict,
     evaluate_verdict,
 )
+
+
+def _delivered_outcome(*, delivered: int) -> DeepPassOutcome:
+    """A deep-pass outcome that DELIVERED — the only input the strong claim may rest on.
+
+    Story 12.2 / §A.4. Built through the real frozen model so a field rename cannot
+    leave these disclosure tests asserting over a shape that no longer exists.
+    """
+    return DeepPassOutcome(
+        requested_count=delivered,
+        delivered_count=delivered,
+        degraded_count=0,
+        credits_used="0",
+    )
+
 
 # The row-1 headline is BYTE-IDENTICAL to its pre-Story-8.3 text (AC4): only row 4
 # moved. Pinned as a literal so a reword of row 4 cannot silently drag row 1 with it.
@@ -426,11 +442,78 @@ def test_depth_meaning_refuses_to_claim_comprehension_without_an_llm_pass() -> N
 
 
 def test_depth_meaning_strengthens_automatically_when_a_deep_pass_is_enabled() -> None:
-    """The disclosure is DERIVED from enabled_passes, so it cannot drift out of date."""
-    text = render_depth_meaning(("coverage", "deep"))
+    """The disclosure is DERIVED from the deep pass's OUTCOME, so it cannot drift out of date.
+
+    Story 12.2 / AC6.3 STRENGTHENED this test rather than narrowing it. It previously
+    passed ``("coverage", "deep")`` and asserted the strengthened sentence — which was
+    true of the FUNCTION and false of the RUN: the token alone flipped the wording while
+    nothing dispatched (Story 12.2 §0.5). The property the test was reaching for — *the
+    disclosure tracks what actually ran* — is unchanged and is now asserted against a
+    DELIVERED outcome, which is the only input that makes the sentence true.
+    """
+    text = render_depth_meaning(
+        ("coverage", "deep"), deep_pass=_delivered_outcome(delivered=3)
+    )
 
     assert "validated against the repository AST" in text
     assert "No language model read any source" not in text
+
+
+def test_TC_ArgusAgent_REPORT_002_20_a_requested_deep_pass_that_delivered_nothing_never_claims_one() -> None:
+    """TC-ArgusAgent-REPORT-002-20 — FR36: the tool NEVER produces a false deep claim.
+
+    Story 12.2 / AC6.3, Task 1 — landed RED on ``2bea92f`` BEFORE any wiring existed.
+
+    THE DEFECT THIS CLOSES, measured on the shipped tree: ``render_depth_meaning`` keyed
+    the strengthened sentence on the mere PRESENCE of the token ``deep`` in
+    ``enabled_passes``. ``--passes`` is not validated against ``_ALL_PASSES`` (that tuple
+    is the DEFAULT, not a whitelist), so ``argus audit <repo> --passes coverage,deep``
+    printed *"a deep read was dispatched for the file and its claim was validated against
+    the repository AST"* on a tree where ``DeepAuditSeam`` had ZERO production callers.
+
+    THE OBSERVABLE is the returned sentence. THE DEFECT MOVES IT: with the pre-story
+    predicate (``any(name in LLM_DEEP_PASSES ...)``) this assertion fails, because that
+    predicate cannot see the difference between *requested* and *delivered* — the
+    distinction the sentence is a statement about.
+
+    There are THREE honest states, not two, and the third is the one FR36 and NFR-R1
+    care about most: requested-and-not-delivered must say so out loud rather than
+    silently falling back to the no-deep-pass wording (which would be a DIFFERENT lie —
+    it would claim no deep pass was enabled when one was).
+    """
+    text = render_depth_meaning(("coverage", "deep"))
+
+    assert "a deep read was dispatched" not in text, (
+        "the strengthened claim was produced by the presence of a CSV token, with "
+        "nothing dispatched — FR36's 'never produces a false deep claim', violated"
+    )
+    assert "no deep read was completed" in text, (
+        "a requested-but-undelivered deep pass must be NAMED, not silently downgraded "
+        "to the wording of a run where no deep pass was requested at all"
+    )
+
+
+def test_TC_ArgusAgent_REPORT_002_21_the_three_disclosure_states_are_mutually_exclusive() -> None:
+    """TC-ArgusAgent-REPORT-002-21 — the disclosure is TOTAL and its states are distinct.
+
+    Story 12.2 / AC6.3. A three-state disclosure whose states are not distinguishable is
+    a two-state disclosure with extra words. Each state is generated from the real
+    predicate inputs and asserted to differ from BOTH others.
+    """
+    not_requested = render_depth_meaning(("coverage", "security"))
+    requested_undelivered = render_depth_meaning(("coverage", "deep"))
+    requested_delivered = render_depth_meaning(
+        ("coverage", "deep"), deep_pass=_delivered_outcome(delivered=1)
+    )
+
+    states = (not_requested, requested_undelivered, requested_delivered)
+    assert len(set(states)) == 3, f"the three states are not distinct: {states}"
+    # A delivered outcome attached to a run that never REQUESTED the pass cannot
+    # manufacture the claim either — the request is necessary, not merely sufficient.
+    assert (
+        render_depth_meaning(("coverage",), deep_pass=_delivered_outcome(delivered=1))
+        == not_requested
+    )
 
 
 def test_depth_meaning_is_markup_free_so_it_is_correct_on_a_terminal() -> None:

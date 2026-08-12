@@ -223,6 +223,51 @@ it closes.
 Every figure above is LOCAL, Windows / CPython 3.11.15. **CI evidence: NOT ESTABLISHED** — no CI run
 has executed this change. Nothing here is published: no tag, no release, no index upload.
 
+### Specified: `--deep-audit` — the opt-in deep pass, and the false deep claim it replaces
+
+`argus audit` now accepts **`--deep-audit`**, which enables the LLM-backed deep-audit pass (FR36).
+**It is off by default, always, and it is the only way to turn it on.** No environment variable and
+no packaging extra enables it. Without it, this release is byte-identical to the last one: same
+verdict, same exit code, same coverage figures, same report bytes, same `.argus/` bytes, and nothing
+leaves your machine.
+
+**This is the only path in Argus that can transmit anything off your machine.** When you pass the
+flag, the run states — on stderr, **before the first byte is sent** — how many files' metadata will
+be transmitted and to which provider host. What is sent is audit metadata: repo-relative file paths,
+a tier hint and a prompt-template version. File contents are not sent.
+
+**Fixed at the same time, and the reason this is one entry rather than two:** the token `deep` was
+already accepted in `--passes` and already claimed a deep read that never happened. `--passes` is
+not validated against the known pass names, so `argus audit <repo> --passes coverage,deep` printed
+
+> *What `audited_deep` means in this run: a deep read was dispatched for the file and its claim was
+> validated against the repository AST.*
+
+on a tree where nothing dispatched and the deep-audit seam had **zero callers**. The sentence was
+derived from the presence of a string in a CSV. It is now derived from what the pass actually did,
+and there are three states rather than two: not requested; requested and delivered; **requested and
+not delivered**, which now says so plainly instead of claiming depth.
+
+**Consumer impact.** If you passed `--passes …,deep` before, you were told a deep read had happened
+and it had not. You will now be told the truth, and the files that were counted `audited_deep` on
+the strength of that claim are recorded `audited_shallow` instead — they stay in the denominator,
+graded at the depth they actually earned. That can lower a deep-coverage ratio and, for that
+invocation only, change a verdict from `RELEASE_READY` to `INSUFFICIENT_COVERAGE` (exit `3`). **No
+default invocation is affected**, because `deep` is not in the default pass set and never was.
+
+**When the pass cannot run, it degrades and says so — it never fabricates.** An unreachable
+provider, an erroring provider, an empty or malformed response, a mid-run model change, an
+unconfigured provider, or a budget ceiling reached mid-pass all produce the same honest outcome: a
+recorded finding naming each file that was not deeply read, a coverage downgrade for those files,
+and a verdict that does not claim depth it did not get. Spend flows through the **existing**
+`--budget` ceiling — there is no new budget, no new threshold and no new default.
+
+**No FR16 row, threshold, boundary or exit-code mapping changed.** No network listener is added and
+no port is bound.
+
+Every figure above is LOCAL, Windows / CPython 3.11.15. **CI evidence: NOT ESTABLISHED** — no CI run
+has executed this change. Nothing here is published: no tag, no release, no index upload.
+
 ### Specified — six CLI flags that shipped in `0.1.0` accepted and specified nowhere
 
 `argus audit` has always accepted more than its published invocation contract described. Measured on
@@ -434,12 +479,17 @@ to block, and flipping the default here would pre-empt a policy decision that be
 ### Packaging: what the distribution contains
 
 `[tool.flit.module] name = "argus"` packages the `argus` Python package and nothing else. Measured on the
-built artifacts: the wheel holds 73 modules plus metadata; the sdist adds `pyproject.toml`, `README.md`,
+built artifacts: the wheel holds 74 modules plus metadata; the sdist adds `pyproject.toml`, `README.md`,
 `LICENSE` and `PKG-INFO`. The RAM workflow directories (`audit/`, `phases/`, `adapters/`, `templates/`)
 and the installer scripts are **repository-only** — see README.md for the full capability split.
 
 Measured on the built wheel with this repository removed from `sys.path`, one clean subprocess per module:
-**73 of the 73 shipped modules import.** None fail. Five did until 2026-08-12 —
+**74 of the 74 shipped modules import.** None fail. (The figure read 73 of 73 when `0.1.0` was
+written; it is DERIVED from the freshly built artifact by `TC-ArgusAgent-DOCS-001-54` — *the artifact
+is the fact* — and moved to 74 on 2026-08-13 when Story 12.2 added `argus/audit/deep_pass.py`. The
+count is restated rather than frozen precisely so it cannot go stale, which is the defect this guard
+exists to catch; nothing about the `0.1.0` release itself is amended.) Five modules did fail until
+2026-08-12 —
 `argus/precision/__init__.py`, `argus/precision/replay_harness.py`, `argus/dogfood/proof_types.py`,
 `argus/dogfood/proof_render.py` and `argus/dogfood/proof_run.py` — because the precision harness imported
 its labelled-cartridge registry from `tests/`, which is not shipped, and the other four reached that

@@ -521,7 +521,15 @@ def render_final_verdict_report(
     # honest. Printing the bare grade lets the label promise more than the pass
     # delivered — the precise over-claim this tool exists to catch in other people's
     # repositories, so it is not one it may make about itself.
-    lines.append(render_callout("NOTE", render_depth_meaning(request.enabled_passes)))
+    # Story 12.2: keyed on the deep pass's OUTCOME, carried on the verdict, so the
+    # report and the CLI's human register cannot state different things about the same
+    # run. `None` on every run that did not opt in — which is every default run.
+    lines.append(
+        render_callout(
+            "NOTE",
+            render_depth_meaning(request.enabled_passes, deep_pass=verdict.deep_pass),
+        )
+    )
     lines.append("")
 
     # ── The four arms below are EXACTLY the four FR16 rows, in the table's own order

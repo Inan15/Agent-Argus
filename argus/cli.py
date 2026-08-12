@@ -96,6 +96,22 @@ statement closest to the code, and ``tests/test_invocation_contract.py``
   suppression either of the two ``--ignore-*`` flags causes is now RECORDED as a
   non-blocking, redacted ``operator_suppressed_secret:<reason>`` finding and DISCLOSED
   on stderr. Threat model: ``architecture.md`` §G *"Suppression threat model"*.
+- ``--deep-audit`` — ``store_true``, DEFAULT ``False``. Story 12.2 / FR36. Enables the
+  LLM-backed deep-audit pass by adding the EXISTING ``deep`` pass token to
+  ``enabled_passes`` — it is a new ENTRANCE, not a new mechanism, so ``--skip-pass deep``
+  still subtracts it and the one ``deep`` vocabulary runs end to end (flag →
+  ``enabled_passes`` → ``LLM_DEEP_PASSES`` → ``render_depth_meaning``). **THIS FLAG IS
+  THE ONLY OPT-IN TO EGRESS.** It is a flag rather than a ``--passes`` token or an
+  environment variable for three measured reasons: (a) ``--passes …,deep`` was ALREADY
+  accepted and already produced a false deep claim (Story 12.2 §0.5), so making that
+  spelling the consent would collide the fix with the feature; (b) ``--passes`` is an
+  EXACT selection, so ``--passes deep`` alone silently disables every deterministic
+  safety pass — a footgun on the one flag that must be unambiguous; (c) the ``[llm]``
+  extra is NOT an egress gate (it contains only ``litellm``, while ``httpx`` is a BASE
+  dependency, so a no-extras install already carries a complete egress path), and
+  ``OpenLLMAdapter`` silently absorbs six environment variables, so neither packaging nor
+  the environment can constitute an operator act. Off, the run is byte-identical to a
+  pre-12.2 run and transmits nothing.
 - ``--coverage-scope {repository,application}`` — DEFAULT ``application``. The
   population the deep-coverage gate assesses. ⚠️ **Deliberate, documented divergence
   (Story 10.3 / DN-8): ``AuditRequest.coverage_scope`` defaults to ``repository``, so a
@@ -122,7 +138,12 @@ import sys
 from argus.detectors.secret_scan import RULE_OPERATOR_SUPPRESSED_SECRET
 from argus.models import AuditRequest
 from argus.pipeline import run_audit
-from argus.reports.plain_english import ShipReadinessError, render_ship_readiness
+from argus.reports.plain_english import (
+    ShipReadinessError,
+    deep_pass_enabled,
+    render_ship_readiness,
+    with_deep_pass,
+)
 from argus.verdict.negative_assurance import (
     INSTRUMENT_STATUS,
     render_instrument_disclosure,
@@ -137,6 +158,10 @@ _CRASH_EXIT_CODE = 1
 # The full pass set a bare invocation runs, and the reports a bare invocation renders.
 _ALL_PASSES = ("coverage", "vacuous", "security", "orphan", "prosecutor")
 _DEFAULT_REPORTS = ("final-verdict", "coverage-ledger")
+# NOTE the deep pass is deliberately ABSENT from `_ALL_PASSES`: FR36 is off by default,
+# ALWAYS, so a bare invocation must never select it. It is selected only by
+# `--deep-audit`, through `with_deep_pass` — this module never spells the token itself,
+# so the flag, the pass set and the disclosure cannot drift apart (AR7 / §3.3).
 
 
 def build_parser() -> argparse.ArgumentParser:
@@ -250,6 +275,20 @@ def build_parser() -> argparse.ArgumentParser:
         help="Secret string pattern to exclude from findings (can specify multiple).",
     )
     audit.add_argument(
+        "--deep-audit",
+        dest="deep_audit",
+        action="store_true",
+        help=(
+            "Enable the LLM-backed deep-audit pass (FR36). OFF BY DEFAULT, ALWAYS. This "
+            "is the ONLY way to enable it: no environment variable and no packaging "
+            "extra turns it on. Enabling it SENDS REPOSITORY METADATA TO A THIRD-PARTY "
+            "PROVIDER — the run states what will be transmitted and to which provider "
+            "before the first byte leaves. Without a provider endpoint configured the "
+            "pass degrades honestly (a recorded finding + a coverage downgrade) and "
+            "never fabricates a deep read."
+        ),
+    )
+    audit.add_argument(
         "--coverage-scope",
         dest="coverage_scope",
         choices=("repository", "application"),
@@ -330,8 +369,18 @@ def _resolve_passes(args: argparse.Namespace) -> tuple[str, ...]:
 
     ``--skip-pass`` subtracts from whatever ``--passes`` selected, so the two compose
     in one direction only: a skip can never re-add a pass the operator excluded.
+
+    Story 12.2: ``--deep-audit`` ADDS the existing ``deep`` token before the subtraction,
+    which is what keeps the composition one-directional in the same sense — the flag is a
+    selection, ``--skip-pass deep`` is still able to remove it, and a skip still cannot
+    re-add anything. Adding it before the subtraction rather than after is deliberate:
+    the alternative would make ``--deep-audit`` override an explicit ``--skip-pass deep``,
+    i.e. let a convenience flag silently win over an operator's explicit exclusion, on
+    the one pass where that exclusion means *do not transmit my source*.
     """
     enabled = _split_csv(args.passes, _ALL_PASSES)
+    if getattr(args, "deep_audit", False):
+        enabled = with_deep_pass(enabled)
     if not args.skip_pass:
         return enabled
     skipped = set(args.skip_pass)
@@ -395,6 +444,25 @@ def _emit_suppression_disclosure(verdict: AuditVerdict) -> None:
         f"rules: {detail}. A live production key is never suppressed by either flag.",
         file=sys.stderr,
     )
+
+
+def _emit_egress_disclosure(message: str) -> None:
+    """Disclose what will be transmitted and to whom, BEFORE the first byte (AC2.5).
+
+    Story 12.2 / FR36 / NFR-S6. The pipeline hands this callable to the deep pass, which
+    calls it BEFORE it dispatches anything — the ordering is the requirement, not the
+    presence of a sentence. A disclosure printed at the end of a run tells an operator
+    what already left; this one tells them what is about to.
+
+    STDERR, for the reason every other disclosure in this module uses: stdout is the
+    FR18/AR3 wire contract a CI step parses positionally, and appending prose to it would
+    break that.
+
+    It is UNCONDITIONAL within an opted-in run — it fires even when no provider is
+    configured and therefore nothing will be sent, because "nothing will be transmitted"
+    is exactly the fact an operator who just asked for a deep read needs to be told.
+    """
+    print(f"{_PROG}: {message}", file=sys.stderr)
 
 
 def _emit_instrument_disclosure() -> None:
@@ -481,7 +549,17 @@ def main(argv: list[str] | None = None) -> int:
     # AUDIT + WIRE CONTRACT. A failure here means no verdict reached the consumer, so
     # exit `1` is the honest answer (AR10 / NFR-R1).
     try:
-        verdict = run_audit(request)
+        # The egress disclosure sink is handed to the pipeline ONLY when the operator
+        # opted in. A default run's call is therefore EXACTLY the call it was before
+        # Story 12.2 — no new keyword, no new object — which is one fewer thing that
+        # could differ on the path AC2.4 requires to be byte-identical. It also avoids
+        # handing a callback to a run that structurally cannot use it.
+        deep_kwargs = (
+            {"disclose": _emit_egress_disclosure}
+            if deep_pass_enabled(enabled_passes)
+            else {}
+        )
+        verdict = run_audit(request, **deep_kwargs)  # type: ignore[arg-type]
         print(
             _summary_line(
                 verdict.verdict.value,

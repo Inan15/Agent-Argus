@@ -477,6 +477,12 @@ def prosecute(
         # dropping the evidence here would silently blank the report's explanation.
         critical_subsystems_not_deep=verdict.critical_subsystems_not_deep,
         scope_paths=scope_paths,
+        # Carried forward verbatim, for the same reason and by the same rule: the
+        # re-fold refines FINDINGS, not what the deep pass did. Dropping it here would
+        # silently blank the FR36 depth disclosure on every prosecuted run — i.e. a run
+        # that DID complete a deep read would stop saying so, which is the false-claim
+        # defect pointing the other way (Story 12.2).
+        deep_pass=verdict.deep_pass,
     )
 
     # ── FR19 — only ever MORE conservative: pick the higher conservatism rank ──

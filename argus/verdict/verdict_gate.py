@@ -164,6 +164,7 @@ __all__ = [
     "DecisionRow",
     "BLOCKED",
     "CoverageScope",
+    "DeepPassOutcome",
     "AuditVerdict",
     "is_verdict_blocking",
     "blocking_finding_count",
@@ -317,6 +318,82 @@ class CoverageScope(BaseModel):
         return payload
 
 
+class DeepPassOutcome(BaseModel):
+    """What the OPT-IN LLM-backed deep pass actually did — the FR36 honesty record.
+
+    ``frozen=True, extra="forbid"``, no ``float`` (AR4/AR8). Story 12.2.
+
+    Why this exists at all
+    ----------------------
+    Before Story 12.2 the depth disclosure was derived from ``enabled_passes`` — i.e.
+    from what was REQUESTED. The sentence it printed was a statement about what was
+    DELIVERED. Those differ, and the gap was an operator-visible false claim: the token
+    ``deep`` in a ``--passes`` CSV made the tool report that a deep read had been
+    dispatched and AST-validated on a tree where the seam had ZERO production callers
+    (FR36's *"it never produces a false deep claim"*, violated by the shipped tool).
+
+    This record is the OUTCOME the disclosure is now derived from. It carries counts, a
+    typed reason set and the spend — never prompt/response bytes, a provider endpoint or
+    a key (NFR-S1: there is no field that could hold them).
+
+    ``credits_used`` is a frozen exact-numeric STRING and never a ``float`` (AR4): the
+    single canonical serializer raises on a float leaf, and this is the one new path in
+    the product that carries a cost number.
+
+    THE OMIT-WHEN-UNENGAGED RULE (the byte-identity keystone — AC2.4)
+    ----------------------------------------------------------------
+    ``AuditVerdict.deep_pass`` is ``None`` unless the pass was actually requested, and
+    :meth:`AuditVerdict.to_canonical_payload` then omits the key ENTIRELY rather than
+    serializing ``null``. This is the Story-6.3/6.4 additive precedent ``coverage_scope``
+    and ``critical_subsystems_not_deep`` already follow — *only an actually-engaged
+    feature may change a byte* — so a default run's ``.argus/`` tree is BYTE-IDENTICAL to
+    a pre-12.2 run and needs no ``schema_version`` bump.
+    """
+
+    model_config = ConfigDict(frozen=True, extra="forbid")
+
+    requested_count: int = Field(
+        ..., ge=0, description="Files the deep pass targeted (the denominator of the attempt)."
+    )
+    delivered_count: int = Field(
+        ...,
+        ge=0,
+        description=(
+            "Targets for which a recording came back AND its claim was AST-grounded. "
+            "The ONLY input that may license the strengthened depth disclosure."
+        ),
+    )
+    degraded_count: int = Field(
+        ..., ge=0, description="Targets that failed, were skipped on exhaustion, or came back ungrounded."
+    )
+    reasons: tuple[str, ...] = Field(
+        default=(),
+        description=(
+            "SORTED distinct typed degradation reason codes (structured identifiers only "
+            "— never prompt/response/secret bytes or an endpoint, NFR-S1)."
+        ),
+    )
+    halted_on_exhaustion: bool = Field(
+        default=False,
+        description="The FR22 ceiling halted the pass mid-run (the remainder is `skipped`).",
+    )
+    credits_used: str = Field(
+        default="0",
+        min_length=1,
+        description="Deep-pass spend as a frozen exact-numeric string (AR4 — NEVER float).",
+    )
+
+    @property
+    def delivered(self) -> bool:
+        """Whether the pass delivered at least one AST-grounded deep read.
+
+        A property, not a field: it is derived, so it adds no key to the canonical
+        payload and cannot become a second source of truth on disk (the
+        ``is_below_floor`` precedent).
+        """
+        return self.delivered_count > 0
+
+
 class AuditVerdict(BaseModel):
     """Frozen pure verdict result the Story-1.7 pipeline consumes (FR15/FR18/M2).
 
@@ -373,6 +450,13 @@ class AuditVerdict(BaseModel):
         description=(
             "Sorted critical paths that are not audited_deep — the EVIDENCE behind a "
             "False critical_subsystems_all_deep. Empty when the clause is satisfied."
+        ),
+    )
+    deep_pass: DeepPassOutcome | None = Field(
+        default=None,
+        description=(
+            "What the opt-in LLM-backed deep pass DID (FR36), or None when it was never "
+            "requested — which is every default run. Present ⇔ the operator opted in."
         ),
     )
     exit_code: int = Field(..., description="Mapped process exit code (AR3 wire contract).")
@@ -437,6 +521,11 @@ class AuditVerdict(BaseModel):
         # hash). A `"decision_row":null` key is never emitted.
         if self.decision_row is None:
             payload.pop("decision_row", None)
+        # Story 12.2 / AC2.4 — the SAME omit-when-unengaged rule, for the same reason:
+        # the opt-in deep pass is absent from every default run, so a default run's
+        # persisted bytes are identical to a pre-12.2 run's and no schema bump is owed.
+        if self.deep_pass is None:
+            payload.pop("deep_pass", None)
         return payload
 
 
@@ -511,6 +600,7 @@ def evaluate_verdict(
     scope_paths: frozenset[str] | tuple[str, ...] | None = None,
     scope_id: str = "application",
     scope_excluded_reason: str = "test_files",
+    deep_pass: DeepPassOutcome | None = None,
 ) -> AuditVerdict:
     """Fold a coverage ledger + findings into an :class:`AuditVerdict` (PURE).
 
@@ -664,5 +754,10 @@ def evaluate_verdict(
             tuple(critical_subsystems_not_deep) if not critical_subsystems_all_deep else ()
         ),
         coverage_scope=coverage_scope,
+        # Story 12.2 / FR36 — carried, never DECIDED ON. The deep pass's effect on the
+        # verdict is already fully expressed in its INPUTS (a degraded target is graded
+        # by the existing `grade_entry` downgrade, so it moves the ratio the table
+        # already reads). No FR16 row, threshold, boundary or exit-code mapping moves.
+        deep_pass=deep_pass,
         exit_code=exit_code_for_verdict(verdict),
     )

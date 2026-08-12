@@ -40,8 +40,18 @@ presenting the bare label to a human lets the label promise more than the pass
 delivered. :func:`render_depth_meaning` states the difference in the report rather
 than leaving the reader to infer it.
 
-The disclosure is DERIVED from ``enabled_passes``, not hardcoded: when a deep
-LLM-backed pass is built and enabled, the text changes with it and cannot go stale.
+The disclosure is DERIVED from what the run actually DID, not hardcoded and — since
+Story 12.2 — not from what it was ASKED to do either: the text changes with the deep
+pass's OUTCOME and cannot go stale or over-claim.
+
+~~The disclosure is DERIVED from ``enabled_passes``, not hardcoded: when a deep
+LLM-backed pass is built and enabled, the text changes with it and cannot go stale.~~
+(§3.4 struck, not deleted — corrected 2026-08-13 by Story 12.2. Deriving it from
+``enabled_passes`` derived it from the REQUEST while the sentence stated the OUTCOME.
+Because ``--passes`` accepts unvalidated tokens, ``--passes coverage,deep`` made the
+tool report a dispatched, AST-validated deep read on a tree whose deep seam had zero
+production callers — FR36's *"never produces a false deep claim"*, violated by the
+shipped tool. See :func:`render_depth_meaning` for the three states that replace it.)
 
 The four FR16 rows this module renders (Story 8.3 / DR-11)
 ----------------------------------------------------------
@@ -77,11 +87,14 @@ from __future__ import annotations
 from argus.verdict.verdict_gate import (
     RELEASE_READY_DEEP_THRESHOLD,
     AuditVerdict,
+    DeepPassOutcome,
     Verdict,
 )
 
 __all__ = [
     "LLM_DEEP_PASSES",
+    "deep_pass_enabled",
+    "with_deep_pass",
     "ShipReadinessError",
     "render_depth_meaning",
     "render_ship_readiness",
@@ -106,30 +119,102 @@ class ShipReadinessError(ValueError):
     typed, secret-safe exit ``1``.
     """
 
-# Pass names that dispatch an LLM-backed deep read. EMPTY-in-effect today: the Epic-6
-# LLMDispatchPort + adapters exist, but no pass wires them into the pipeline, so no
-# enabled pass can currently supply comprehension-grade evidence. Adding the pass here
-# is what flips render_depth_meaning to its stronger wording — the disclosure tracks
-# what actually ran instead of drifting out of date.
+# Pass names that dispatch an LLM-backed deep read. Story 12.2 WIRED this: the token is
+# put into ``enabled_passes`` by the ``--deep-audit`` opt-in and the pipeline runs the
+# pass, so an enabled deep pass can now supply comprehension-grade evidence — and
+# ``render_depth_meaning`` reports whether it actually DID.
+#
+# ~~EMPTY-in-effect today: the Epic-6 LLMDispatchPort + adapters exist, but no pass wires
+# them into the pipeline, so no enabled pass can currently supply comprehension-grade
+# evidence. Adding the pass here is what flips render_depth_meaning to its stronger
+# wording — the disclosure tracks what actually ran instead of drifting out of date.~~
+# (§3.4 struck, not deleted — corrected 2026-08-13 by Story 12.2. The last sentence was
+# the defect in one line: membership of THIS tuple flipped the wording, and membership
+# was reachable from an unvalidated CSV token, so the disclosure tracked what was ASKED
+# FOR and not what ran.)
 LLM_DEEP_PASSES: tuple[str, ...] = ("deep",)
 
 
-def render_depth_meaning(enabled_passes: tuple[str, ...] | list[str]) -> str:
+def deep_pass_enabled(enabled_passes: tuple[str, ...] | list[str]) -> bool:
+    """Whether this run REQUESTED an LLM-backed deep read (PURE).
+
+    THE single membership predicate. `argus/cli.py`, `argus/pipeline.py` and
+    :func:`render_depth_meaning` all ask this question, and before Story 12.2 each would
+    have spelled the token itself — three literals that could drift apart on the one flag
+    that governs egress. One vocabulary, asked one way (AR7 / §3.3 — reuse, never fork).
+
+    Note this answers *requested*, never *delivered*. The whole of §0.5's defect was
+    treating the two as the same question; :func:`render_depth_meaning` needs BOTH and
+    takes the outcome separately.
+    """
+    return any(name in LLM_DEEP_PASSES for name in enabled_passes)
+
+
+def with_deep_pass(enabled_passes: tuple[str, ...] | list[str]) -> tuple[str, ...]:
+    """Return *enabled_passes* with the deep pass selected — the ``--deep-audit`` entrance.
+
+    The flag is a new ENTRANCE to the existing pass, not a new mechanism: it composes the
+    same token every other surface already understands, so the vocabulary stays single.
+    Idempotent, and it never removes anything — subtraction is ``--skip-pass``'s job, and
+    keeping the two operations separate is what preserves the LOCKED one-directional
+    composition rule (a skip can never re-add; an add must never override a skip).
+    """
+    if deep_pass_enabled(enabled_passes):
+        return tuple(enabled_passes)
+    return tuple(enabled_passes) + LLM_DEEP_PASSES[:1]
+
+
+def render_depth_meaning(
+    enabled_passes: tuple[str, ...] | list[str],
+    *,
+    deep_pass: DeepPassOutcome | None = None,
+) -> str:
     """State what ``audited_deep`` attests IN THIS RUN (PURE, one sentence-pair).
 
-    Derived from *enabled_passes* so the disclosure can never over-claim: with no
-    LLM-backed deep pass enabled, the grade attests structure + deterministic
-    detectors, and says so plainly.
+    THREE honest states, not two (Story 12.2 / §A.4). The function stays PURE and the
+    sentences are unchanged where they were already true; what changed is the PREDICATE
+    the strong sentence is derived from.
+
+    1. **Not requested** — no deep pass in *enabled_passes*. The grade attests structure
+       + deterministic detectors, and says so plainly. UNCHANGED, and it is the branch
+       every default run takes.
+    2. **Requested and DELIVERED** — ``deep_pass.delivered``. The strengthened sentence,
+       UNCHANGED, and now true by construction: ``delivered_count`` counts only targets
+       for which a recording came back AND its claim was AST-grounded, which is exactly
+       what the sentence says happened.
+    3. **Requested and NOT delivered** — the state FR36 and NFR-R1 care about most, and
+       the one that did not exist before. It is NOT the same as state 1: saying "no
+       LLM-backed deep pass was enabled" to an operator who explicitly enabled one is a
+       different falsehood, not a safe fallback.
+
+    THE DEFECT THIS CLOSES (measured on ``2bea92f``, before this story changed a line):
+    the predicate was ``any(name in LLM_DEEP_PASSES for name in enabled_passes)`` — i.e.
+    *was depth REQUESTED* — while the sentence it selected answered *was depth
+    DELIVERED*. Because ``--passes`` is an unvalidated CSV (``_ALL_PASSES`` is the
+    DEFAULT set, not a whitelist), ``argus audit <repo> --passes coverage,deep`` printed
+    *"a deep read was dispatched … validated against the repository AST"* on a tree where
+    ``DeepAuditSeam`` had ZERO production callers. That is FR36's *"it never produces a
+    false deep claim"* being violated by the shipped tool. The remedy is NOT to delete
+    the sentence — the sentence is correct — but to derive it from work performed, in the
+    same spirit as *the artifact is the fact* (``TC-ArgusAgent-DOCS-001-54``).
 
     Returned MARKUP-FREE (plain prose plus backticks, which render as-is in a
     terminal) so the same string is correct in the CLI and inside a Markdown callout.
     A caller wanting emphasis adds it; this function never embeds formatting that
     would leak asterisks onto a terminal.
     """
-    if any(name in LLM_DEEP_PASSES for name in enabled_passes):
+    if deep_pass_enabled(enabled_passes):
+        if deep_pass is not None and deep_pass.delivered:
+            return (
+                "What `audited_deep` means in this run: a deep read was dispatched for the "
+                "file and its claim was validated against the repository AST."
+            )
         return (
-            "What `audited_deep` means in this run: a deep read was dispatched for the "
-            "file and its claim was validated against the repository AST."
+            "What `audited_deep` means in this run: a deep pass was requested but no deep "
+            "read was completed, so no file is graded on comprehension. Every "
+            "`audited_deep` grade here rests on structure and the deterministic detectors "
+            "alone, and the files the deep pass could not read are recorded "
+            "`audited_shallow` rather than counted as deeply examined."
         )
     return (
         "What `audited_deep` means in this run: the file parsed cleanly, contains at "
@@ -238,7 +323,12 @@ def render_ship_readiness(
         )
 
     if enabled_passes:
-        lines.append(f"  - {render_depth_meaning(enabled_passes)}")
+        # The OUTCOME, not the request (Story 12.2 / §A.4). It travels on the verdict —
+        # the only channel that reaches both this caller and the report renderer — and
+        # is `None` on every run that did not opt in.
+        lines.append(
+            f"  - {render_depth_meaning(enabled_passes, deep_pass=verdict.deep_pass)}"
+        )
 
     next_steps: list[str] = []
     if assessed_ratio < RELEASE_READY_DEEP_THRESHOLD and scope is None:
