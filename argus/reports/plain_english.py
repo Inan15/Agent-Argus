@@ -384,24 +384,26 @@ def render_ship_readiness(
         next_steps.append(
             "repository satisfies all release gates — maintain coverage floor and monitor for blocking findings on future commits"
         )
-    elif verdict.verdict is Verdict.NOT_READY_FOR_RELEASE:
-        next_steps.append(
-            f"resolve the {verdict.blocking_finding_count} verdict-blocking finding(s) in named files before re-auditing"
-        )
-    elif verdict.verdict is Verdict.INSUFFICIENT_COVERAGE:
-        if verdict.is_below_floor:
+    else:
+        if verdict.verdict is Verdict.NOT_READY_FOR_RELEASE:
             next_steps.append(
-                f"deep coverage ratio {assessed_ratio} is below the 20% floor — add deep-auditable source definitions or tests for shallow modules"
+                f"resolve the {verdict.blocking_finding_count} verdict-blocking finding(s) in named files before re-auditing"
             )
-        elif assessed_ratio < RELEASE_READY_DEEP_THRESHOLD and scope is None:
+        elif verdict.verdict is Verdict.INSUFFICIENT_COVERAGE:
+            if verdict.is_below_floor:
+                next_steps.append(
+                    f"deep coverage ratio {assessed_ratio} is below the 20% floor — add deep-auditable source definitions or tests for shallow modules"
+                )
+            elif assessed_ratio < RELEASE_READY_DEEP_THRESHOLD and scope is not None:
+                next_steps.append(
+                    f"assessed deep coverage ratio {assessed_ratio} is below the 80% threshold ({RELEASE_READY_DEEP_THRESHOLD}) — add deep-auditable tests or definitions for application modules"
+                )
+
+        if assessed_ratio < RELEASE_READY_DEEP_THRESHOLD and scope is None and not verdict.is_below_floor:
             next_steps.append(
                 "test files are counted in this denominator and are graded shallow by "
                 "construction — `--coverage-scope application` assesses application files "
                 "only (disclosed in the verdict; the coverage floor still applies)"
-            )
-        elif assessed_ratio < RELEASE_READY_DEEP_THRESHOLD and scope is not None:
-            next_steps.append(
-                f"assessed deep coverage ratio {assessed_ratio} is below the 80% threshold ({RELEASE_READY_DEEP_THRESHOLD}) — add deep-auditable tests or definitions for application modules"
             )
 
         if not verdict.critical_subsystems_all_deep:
