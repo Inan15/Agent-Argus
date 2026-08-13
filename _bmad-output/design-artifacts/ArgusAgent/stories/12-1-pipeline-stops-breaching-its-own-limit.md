@@ -29,7 +29,7 @@ epic: 12
 
 # Story 12.1: The file everything lands in stops breaching its own limit
 
-Status: review
+Status: done
 
 <!-- Note: Validation is optional. Run validate-create-story for quality check before dev-story. -->
 
@@ -492,6 +492,48 @@ in `sprint-status.yaml` rated Low ("a prose inaccuracy only").
 **All three are RESOLVED — see Dev Agent Record → *Fix round 1*** for the re-derivation, the
 RED-first evidence and the re-run gates. A **fourth** item of the same class, **not filed by the
 review**, was found in this story's own write set and fixed with them.
+
+**Code-review verdict: PASS (iteration 2, Sonnet, narrow confirmation of fix round 1 — cap 2, not a
+full re-review).** Independently re-derived, not transcribed. **Finding 1 (byte-identity 28/29)**:
+wrote an independent AST-span extractor and ran it fresh against the git blobs `ca37283:argus/pipeline.py`,
+`HEAD:argus/pipeline.py`, `HEAD:argus/pipeline_stages.py` — reproduced **29 top-level definitions,
+16 moved / 13 retained, 0 dropped / 0 duplicated / 0 added, 28 of 29 byte-identical, sole exception
+`_assessment_scope_paths`** — exact match, no reconciliation needed. Independently confirmed the
+working-tree-vs-blob trap: a binary read of the current `argus/pipeline.py` off disk has CRLF line
+endings while the `ca37283` blob has LF, so a naive working-tree byte comparison reports **0 of 13**
+retained definitions identical — the claimed artefact is real, not asserted. Independently
+re-derived all **three replacement digests** by joining moved-then-retained blob bytes in pre-split
+file order: `e478ec09…` (15 moved), `5ce703e8…` (13 retained) and `9d72d850…` (all 28) — **all three
+match exactly**. The withdrawn `c6edd6fa…` was not re-searched across all 48 conventions (not
+necessary given the replacement digests independently reproduce). **Finding 2**: confirmed
+`tests/test_classification_word_boundary.py:648` now reads "ENUMERATED FROM THE FILESYSTEM" with
+the `DF-12-1-D` reason inline. **Finding 3 (the new guard)**: read `tests/test_pipeline_split_surface.py`
+in full and attacked it with a **self-constructed mutation outside the dev's four** (addition /
+reorder / deletion / laundering) — a **substitution**: renamed the `"resume_audit"` entry in
+`argus/pipeline.py`'s `__all__` to `"resume_audit_v2"` (same length and position, unlike any of the
+dev's four). All three new tests (`-14`/`-15`/`-16`) went RED, correctly diagnosing the surface
+mismatch; reverted with `git checkout --` and the file's sha256 round-tripped to the exact value
+recorded in Task 7 (`28f11817…`), confirmed by independent computation. Confirmed no other test in
+the repo references `pipeline.__all__`, supporting the claimed "0 of 1415 pre-existing tests saw the
+addition." **Finding 4**: confirmed `argus/pipeline_resume.py` is not named anywhere live (only a
+stale `.pyc` cache hit) and `tests/test_module_size_ceiling.py:66` now names `pipeline_stages.py`.
+**Corrections landed everywhere**: `grep -c "29 of 29"` returns 7 hits in the story file and 2 in
+`sprint-status.yaml`, and every one of them is inside a quotation of the original error (Review
+Findings text, the Fix-round narrative, or the corrected-comment history) — none asserts "29 of 29"
+as current truth. **Gates independently re-run, not carried**: `pytest -q` → **1418 passed in
+142.23s**, 0 failed/error/skipped (matches claim exactly); `mypy argus` → clean, **73** source files;
+`bandit -r argus` → **0 High / 0 Medium / 19 Low**; `python -m argus.cli audit .` →
+`verdict=RELEASE_READY deep_ratio=21/58 blocking_findings=0 assessed_deep_ratio=63/79
+scope=application held_out=95`, exit 0 — byte-identical to the claim. `git ls-files -- argus` = **73**
+(unmoved). **Write-set claim independently verified**: `git show --stat 2bea92f` touches exactly
+`sprint-status.yaml`, this story file, `tests/test_classification_word_boundary.py`,
+`tests/test_module_size_ceiling.py` and `tests/test_pipeline_split_surface.py` — no `argus/`,
+`scripts/`, `README.md`, `CHANGELOG.md`, `architecture.md` or `deferred-work.md` touched this round;
+`git diff --numstat ca37283 HEAD -- deferred-work.md` = `301 0` (unchanged this round, append-only
+still holds). **Publication fence held**: `git tag -l` empty; `origin/master` unmoved at `00c8d1b`;
+no push/tag/release/`workflow_dispatch`/index upload. All figures LOCAL, Windows/CPython 3.11.15; CI
+evidence NOT ESTABLISHED. No High/Medium finding, no unresolved `decision-needed`/`patch` item, all
+ACs met. **PASS.**
 
 ---
 
