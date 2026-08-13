@@ -17,7 +17,7 @@ epic: 12
 
 # Story 12.4: Every outcome names its next action
 
-Status: review
+Status: done
 
 <!-- Note: Validation is optional. Run validate-create-story for quality check before dev-story. -->
 
