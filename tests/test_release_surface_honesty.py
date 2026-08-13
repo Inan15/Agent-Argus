@@ -50,6 +50,8 @@ _ARTIFACT_DIR = _REPO_ROOT / "_bmad-output" / "design-artifacts" / "ArgusAgent"
 # too — so a future edit can neither quietly drop the exit-code contract nor bolt on an
 # unreviewed claim section.
 _NOTE_SECTIONS: tuple[str, ...] = (
+    # `## Unreleased` — added 2026-08-13 by Story 12.4 (FR37 / DF-11-4-D / AI-E11-6).
+    "### Specified — every terminal outcome names its next action and the ingestion boundary",
     # `## Unreleased` — added 2026-08-11 by Story 11.1 (FR34). Registered FIRST because it is
     # the claim a consumer of THIS release must read before weighing any other: the tool now
     # states its own validation status on every verdict surface. Order is pinned by `-16`, so

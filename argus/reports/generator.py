@@ -289,7 +289,22 @@ def _render_critical_blockers(
     if remaining > 0:
         lines.append(f"| … and {remaining} more | |")
     lines.append("")
+
+    crit_set = getattr(verdict, "critical_subsystems", None)
+    if crit_set is not None and getattr(crit_set, "heuristic_excluded_ineligible", None):
+        ineligible = crit_set.heuristic_excluded_ineligible
+        if ineligible:
+            ineligible_paths = ", ".join(f"`{p}`" for p in sorted(ineligible.keys())[:5])
+            lines.append(
+                f"> **Vacuous Critical Subsystem Exclusion (DF-8-3-A)**: "
+                f"{len(ineligible)} critical path(s) heuristically excluded as ungradable by construction "
+                f"(test files or 0-definition modules): {ineligible_paths}"
+                f"{' ...' if len(ineligible) > 5 else ''}."
+            )
+            lines.append("")
+
     return lines
+
 
 
 def _render_grammar_remedy(failure: GrammarFailure, counts: Counter[str]) -> str:

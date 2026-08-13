@@ -34,11 +34,16 @@ which is the whole point of enumerating it in the first place.
 
 from __future__ import annotations
 
+from typing import Iterable, Sequence
+from pathlib import Path
+
 __all__ = [
     "LANGUAGE_BY_SUFFIX",
     "AUDITABLE_SUFFIXES",
     "PYTHON_SUFFIXES",
     "language_for_suffix",
+    "derive_non_auditable_suffixes",
+    "format_ingestion_boundary",
 ]
 
 # Suffix → language token. Lower-case suffixes including the leading dot.
@@ -89,3 +94,51 @@ PYTHON_SUFFIXES: frozenset[str] = frozenset(
 def language_for_suffix(suffix: str) -> str | None:
     """Return the language token for *suffix*, or ``None`` if not auditable (PURE)."""
     return LANGUAGE_BY_SUFFIX.get(suffix.lower())
+
+
+def derive_non_auditable_suffixes(
+    file_paths: Iterable[str | Path] | None = None,
+) -> tuple[str, ...]:
+    """Derive non-auditable file extension classes present in a file collection (PURE).
+
+    Compares suffixes against AUDITABLE_SUFFIXES. Suffixes not in AUDITABLE_SUFFIXES
+    and with a non-empty extension (e.g. '.yml', '.md', '.toml') are collected and sorted.
+    If *file_paths* is None or empty, returns a default representative set of non-auditable
+    file classes present in project repositories: ('.md', '.toml', '.yml').
+    """
+    if not file_paths:
+        return (".md", ".toml", ".yml")
+
+    found: set[str] = set()
+    for p in file_paths:
+        s = Path(p).suffix.lower()
+        if s and s not in AUDITABLE_SUFFIXES:
+            found.add(s)
+
+    if not found:
+        return (".md", ".toml", ".yml")
+    return tuple(sorted(found))
+
+
+def format_ingestion_boundary(
+    non_auditable_suffixes: Iterable[str] | None = None,
+    *,
+    held_out_count: int = 0,
+    assessed_count: int = 0,
+) -> str:
+    """Format the 3-population ingestion boundary disclosure line (PURE).
+
+    Explicitly distinguishes three populations by construction (AC2 / FR37):
+    1. Never ingested: File suffixes outside AUDITABLE_SUFFIXES (e.g. .yml, .md, .toml).
+    2. Ingested but held out: Source files with auditable suffixes that were held out.
+    3. Assessed: Source files evaluated for coverage and defects.
+    """
+    suffixes = tuple(sorted(set(non_auditable_suffixes))) if non_auditable_suffixes else (".md", ".toml", ".yml")
+    suffixes_str = ", ".join(suffixes)
+    return (
+        f"Ingestion boundary: 3 populations — "
+        f"(1) Never ingested: file suffixes outside AUDITABLE_SUFFIXES ({suffixes_str}); "
+        f"(2) Ingested but held out: {held_out_count}; "
+        f"(3) Assessed: {assessed_count}"
+    )
+

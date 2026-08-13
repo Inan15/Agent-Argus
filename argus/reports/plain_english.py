@@ -91,14 +91,27 @@ from argus.verdict.verdict_gate import (
     Verdict,
 )
 
+from argus.shared.source_languages import format_ingestion_boundary, AUDITABLE_SUFFIXES
+
 __all__ = [
+    "TERMINAL_OUTCOMES",
     "LLM_DEEP_PASSES",
     "deep_pass_enabled",
     "with_deep_pass",
     "ShipReadinessError",
     "render_depth_meaning",
     "render_ship_readiness",
+    "render_audit_failed_next_action",
 ]
+
+# The four terminal outcome tokens (FR37 / AC1)
+TERMINAL_OUTCOMES: tuple[str, ...] = (
+    "RELEASE_READY",
+    "NOT_READY_FOR_RELEASE",
+    "INSUFFICIENT_COVERAGE",
+    "AUDIT_FAILED",
+)
+
 
 
 class ShipReadinessError(ValueError):
@@ -207,14 +220,16 @@ def render_depth_meaning(
         if deep_pass is not None and deep_pass.delivered:
             return (
                 "What `audited_deep` means in this run: a deep read was dispatched for the "
-                "file and its claim was validated against the repository AST."
+                "file and its claim was validated against the repository AST. (Note: deep pass "
+                "results are recomputed per run and not served from the offline stage memo store.)"
             )
         return (
             "What `audited_deep` means in this run: a deep pass was requested but no deep "
             "read was completed, so no file is graded on comprehension. Every "
             "`audited_deep` grade here rests on structure and the deterministic detectors "
             "alone, and the files the deep pass could not read are recorded "
-            "`audited_shallow` rather than counted as deeply examined."
+            "`audited_shallow` rather than counted as deeply examined. (Note: deep pass "
+            "results are recomputed per run and not served from the offline stage memo store.)"
         )
     return (
         "What `audited_deep` means in this run: the file parsed cleanly, contains at "
@@ -275,10 +290,24 @@ def _headline(verdict: AuditVerdict) -> str:
     )
 
 
+def render_audit_failed_next_action(error_message: str | None = None) -> str:
+    """Render the next action for the AUDIT_FAILED non-verdict outcome (AC1 / FR37).
+
+    AUDIT_FAILED indicates an unhandled runtime exception, setup failure, or unexpected exit.
+    """
+    detail = f": {error_message}" if error_message else ""
+    return (
+        f"audit process encountered execution failure{detail} — inspect logs/stderr, "
+        f"verify environment setup, or report unhandled exception if persistent"
+    )
+
+
 def render_ship_readiness(
     verdict: AuditVerdict,
     *,
     enabled_passes: tuple[str, ...] | list[str] = (),
+    non_auditable_suffixes: tuple[str, ...] | set[str] | list[str] | None = None,
+    degraded_conditions: tuple[object, ...] | list[object] = (),
 ) -> tuple[str, ...]:
     """Render the human-register ship-readiness block (PURE, secret-safe).
 
@@ -322,6 +351,26 @@ def render_ship_readiness(
             f"{len(verdict.critical_subsystems_not_deep)}"
         )
 
+    # Ingestion boundary 3-population disclosure (AC2 / FR37)
+    held_out_count = scope.excluded_count if scope is not None else 0
+    assessed_count = scope.assessed_total_count if scope is not None else verdict.total_count
+    lines.append(
+        f"  - {format_ingestion_boundary(non_auditable_suffixes, held_out_count=held_out_count, assessed_count=assessed_count)}"
+    )
+
+    if degraded_conditions:  # DF-10-4-B
+        lines.append(
+            f"  - Recorded degradation conditions: {len(degraded_conditions)} condition(s) recorded during analysis — check detailed findings for per-file remediation"
+        )
+
+    crit_set = getattr(verdict, "critical_subsystems", None)
+    if crit_set is not None and getattr(crit_set, "heuristic_excluded_ineligible", None):
+        ineligible_count = len(crit_set.heuristic_excluded_ineligible)
+        if ineligible_count > 0:  # DF-8-3-A
+            lines.append(
+                f"  - Vacuous critical subsystem exclusions (DF-8-3-A): {ineligible_count} critical path(s) heuristically excluded as ungradable by construction"
+            )
+
     if enabled_passes:
         # The OUTCOME, not the request (Story 12.2 / §A.4). It travels on the verdict —
         # the only channel that reaches both this caller and the report renderer — and
@@ -331,18 +380,38 @@ def render_ship_readiness(
         )
 
     next_steps: list[str] = []
-    if assessed_ratio < RELEASE_READY_DEEP_THRESHOLD and scope is None:
+    if verdict.verdict is Verdict.RELEASE_READY:
         next_steps.append(
-            "test files are counted in this denominator and are graded shallow by "
-            "construction — `--coverage-scope application` assesses application files "
-            "only (disclosed in the verdict; the coverage floor still applies)"
+            "repository satisfies all release gates — maintain coverage floor and monitor for blocking findings on future commits"
         )
-    if not verdict.critical_subsystems_all_deep:
+    elif verdict.verdict is Verdict.NOT_READY_FOR_RELEASE:
         next_steps.append(
-            "see the final-verdict report for the named critical files and their actual "
-            "depth; `--exclude-critical <path>` removes one that is not genuinely critical"
+            f"resolve the {verdict.blocking_finding_count} verdict-blocking finding(s) in named files before re-auditing"
         )
+    elif verdict.verdict is Verdict.INSUFFICIENT_COVERAGE:
+        if verdict.is_below_floor:
+            next_steps.append(
+                f"deep coverage ratio {assessed_ratio} is below the 20% floor — add deep-auditable source definitions or tests for shallow modules"
+            )
+        elif assessed_ratio < RELEASE_READY_DEEP_THRESHOLD and scope is None:
+            next_steps.append(
+                "test files are counted in this denominator and are graded shallow by "
+                "construction — `--coverage-scope application` assesses application files "
+                "only (disclosed in the verdict; the coverage floor still applies)"
+            )
+        elif assessed_ratio < RELEASE_READY_DEEP_THRESHOLD and scope is not None:
+            next_steps.append(
+                f"assessed deep coverage ratio {assessed_ratio} is below the 80% threshold ({RELEASE_READY_DEEP_THRESHOLD}) — add deep-auditable tests or definitions for application modules"
+            )
+
+        if not verdict.critical_subsystems_all_deep:
+            next_steps.append(
+                "see the final-verdict report for the named critical files and their actual "
+                "depth; `--exclude-critical <path>` removes one that is not genuinely critical"
+            )
+
     for step in next_steps:
         lines.append(f"  Next: {step}")
 
     return tuple(lines)
+

@@ -40,6 +40,16 @@ versioning intent is [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
 ## Unreleased
 
+### Specified — every terminal outcome names its next action and the ingestion boundary
+
+Argus now states, on every terminal outcome (`RELEASE_READY`, `NOT_READY_FOR_RELEASE`, `INSUFFICIENT_COVERAGE`, and the `AUDIT_FAILED` non-verdict), why that outcome was reached and the next action that changes it (FR37).
+
+**The Three-Population Ingestion-Boundary Disclosure.** Every verdict explicitly distinguishes three populations by construction: (1) Never ingested: file suffixes outside `AUDITABLE_SUFFIXES` (e.g. `.yml`, `.md`, `.toml`); (2) Ingested but held out; (3) Assessed.
+
+**Specific Unmet Gate Explanation.** `INSUFFICIENT_COVERAGE` output names the specific unmet gate — minimum floor, ratio, or critical subsystem — with measured figures and the required remediation.
+
+**FR16 Decision Table Immutable.** The verdict decision table in `argus/verdict/verdict_gate.py` is untouched.
+
 ### Disclosed — Argus now states its own validation status on every verdict surface
 
 Until this release, Argus stated a release-readiness verdict without ever stating that its own
