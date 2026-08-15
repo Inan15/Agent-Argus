@@ -867,6 +867,48 @@ shaved and no population narrowed**. Final counts: `test_invocation_contract.py`
     recorded in §4. 15. `DF-12-1-C`'s exemption re-recorded with a live date and an honest target
     rather than grown.
 
+**§7 — Review fix iteration 1 (2026-08-15): the one Low finding, resolved by NARROWING THE PROSE.**
+The finding is the story's own subject matter turned on the story: `docs/first-run.md:10-11` claimed
+*"Everything on it is checked by a test against the code, not transcribed from it"* — a published
+claim no test backs, in the epic whose purpose is eliminating exactly that, and contradicted twenty
+lines later by the page's own install caveat (*"the documented shape, not an exercised capability"*).
+
+**Two shapes were available and the choice is recorded rather than assumed.**
+- **(b) Widen the derivation until the sentence becomes true — REJECTED, and not on cost grounds: it
+  is unachievable in principle here.** The unchecked claim is the `pip install "argus-agent @
+  git+…@v0.1.0"` line, and it is unexercisable BY DESIGN in this story: tag `v0.1.0` does not exist,
+  and creating or publishing one is **Story 12.9's fence** (`epics.md:2446-2473`), which this story
+  may not cross. Exercising it would also require network egress, which the test contract forbids
+  (*offline, deterministic, no network*). A guard that "checked" it could therefore only check the
+  string's SHAPE, which is transcription wearing a test's clothes — the `_CONSOLE_SCRIPTS` defect
+  class again. Verified by execution that `extract_documented_invocations()` extracts exactly the
+  three fenced `argus …` lines from this page (`argus audit .`, `argus audit --help`,
+  `argus audit . --report-dir ./argus-reports`) and correctly does NOT touch the `pip` line.
+- **(a) Name precisely what is derived — TAKEN.** The opening now reads *"The verdict vocabulary, the
+  exit codes and every `argus …` command line on this page are checked by a test against the code,
+  not transcribed from it."* Those three are **exactly** AC1's enumerated checkable claims and
+  **exactly** what the shipped guards enforce: `TC-ArgusAgent-DOCS-001-63` (verdict vocabulary vs the
+  live `Verdict` enum), `-64` (the exit column vs `exit_code_for_verdict` + the reserved `1`), and
+  `-28`/`-39` (every fenced `argus …` line through the real `build_parser().parse_args`, with a
+  `> 0` floor from the `docs/*.md` glob). A following sentence resolves the self-contradiction the
+  reviewer found rather than leaving it: the rest is prose, and where a documented command is not an
+  exercised capability the page says so **at that command** — which is what the install caveat
+  already does, so the opening and the caveat now agree instead of contradicting.
+
+**Considered and rejected: a guard pinning the new sentence's wording.** It would assert prose
+against prose — no code observable — and would go RED on a rewording rather than on a falsehood,
+which is the unfailable/wrong-observable class §3 records twice already. The sentence's honesty is
+enforced where it can be: the three named facts each have a guard that turns RED if the page drifts
+from the code, which is the property the claim now asserts and nothing more.
+
+**Scope held.** Docs-only, four lines of prose on one page. No `argus/**` composition change, so the
+`DF-10-4-D` artifact-currency guards stay green and no dogfood regeneration is needed. No locked
+decision reopened, no test loosened, xfailed or skipped, no gate touched. Gates re-run after the
+edit: `python -m pytest -q` → **1527 passed, 0 failed, 0 errors, 0 skipped** (junit-xml:
+`tests="1527" failures="0" errors="0" skipped="0"`); `python -m mypy argus` → **Success: no issues
+found in 83 source files**; `python -m bandit -r argus -q` → **19 Low / 0 Medium / 0 High**,
+identical to the review's independently measured control count.
+
 ### Completion Notes
 
 **What shipped, in one line each.**
@@ -896,9 +938,13 @@ shaved and no population narrowed**. Final counts: `test_invocation_contract.py`
 - **AC9** — every falsified gate and document corrected, never loosened; two unfailable guards found
   and fixed with their new forms proven to bite.
 
-**Honest residuals, stated rather than left to be found.** (a) The three `DF-10-4-D` dogfood
+**Honest residuals, stated rather than left to be found.** (a) ~~The three `DF-10-4-D` dogfood
 artifact-currency guards are RED and stay RED until the commit → regenerate → commit bootstrap, which
-this story may not perform. (b) `DF-10-4-C`'s exception-CLASS payload is NOT delivered and is
+this story may not perform.~~ **SUPERSEDED 2026-08-15 (§3.4 strike-not-delete): the bootstrap was
+performed as recorded — `argus/` delta committed (`2826c51`), artifacts regenerated and committed
+separately (`6efa306`) — and all three guards are GREEN. Re-confirmed in fix iteration 1: the full
+suite is 1527 passed / 0 failed with no artifact regenerated, because this iteration changed no
+`argus/**` composition.** (b) `DF-10-4-C`'s exception-CLASS payload is NOT delivered and is
 re-recorded as unscheduled with its reason. (c) `cli.py` has 61 lines of NFR-M1 headroom and
 `test_instrument_disclosure.py` has 21. (d) `--critical-subsystem`'s unmatched-path disclosure probes
 the filesystem from `cli.py`, which is a (small) deliberate exception to *no business logic in the
@@ -945,9 +991,49 @@ about the operator's input.
 
 ### Review Findings
 
+**Review performed 2026-08-15** (adversarial code review, `bmad-code-review` workflow) against
+`git diff 2f84a0b..HEAD` (commits `2826c51` + `6efa306`). Independently re-verified by execution:
+`pytest -q` → **1527 passed, 0 failed** (junit-xml confirmed: `errors="0" failures="0" tests="1527"`,
+including the three `DF-10-4-D` dogfood-currency tests, now green after the `6efa306` regeneration
+commit); `mypy argus` → **clean, 83 files**; `bandit -r argus -q` → **19 Low / 0 Medium / 0 High**,
+matching the Dev Agent Record's claimed stashed-control count, confirming the `…_MARKER`/`…_SELECTOR`
+rename genuinely cleared B105 with no `# nosec` added. All nine ACs were independently verified by
+reading the diff and, for the highest-risk claims, by running the real CLI (`--passes securty`,
+`--skip-pass securty`, `--reports vacuous-tests`, `audit . --budget 1.5`, `--help` rendering) and
+confirming the measured behavior matches what the story claims. The false-green channel (AC3) is
+closed on every reachable path (CLI, MCP `audit_repository` — verified it drives the same
+`build_parser().parse_args`, shipped command assets, `action.yml`, the workflow file); the exit-code
+contract change (AC8) is isolated to `main()` as `build_parser().parse_args` is untouched; the new
+`pipeline.UnexpectedStageError` (AC5) is correctly excluded from the two genuinely-typed `except`
+clauses ahead of the wrap sites so it cannot misclassify a real `RepoIntakeError`/`SourceStateError`/
+`WorkspaceContainmentError`; the four `run_audit_detailed` monkeypatch sites (DN-4) are all updated
+correctly; the NFR-M1 split (`tests/test_help_contract.py`) drops no assertion and narrows no
+population (verified: positive control `-53` proves the guard bites, `-54`'s exact-substring
+assertions render live via `argus audit --help`); the `DF-12-1-C` exemption re-record and the
+`DF-8-4-D`/`DF-10-4-C` ledger closures are append-only and cross-consistent with the test registry.
+
+- [x] [Review][Patch] **RESOLVED 2026-08-15 (fix iteration 1) — see Debug Log §7.** `docs/first-run.md`'s opening claim overclaims what AC1 actually derives
+  [docs/first-run.md:10-11]. The page states *"Everything on it is checked by a test against the
+  code, not transcribed from it"* — but the page's own install section, twenty lines below, admits
+  the opposite of its own leading claim: *"⚠️ This command does not resolve today... It is the
+  documented shape, not an exercised capability"* (docs/first-run.md:30-33). Verified by execution
+  that `tests/invocation_sources.py::extract_documented_invocations()` only extracts the three
+  `argus …` command lines from this page (`argus audit .`, `argus audit --help`,
+  `argus audit . --report-dir ./argus-reports`) — the `pip install` line is correctly NOT parsed
+  or checked by any test, exactly as the page's own caveat says. AC1 itself only commits to three
+  specific checkable facts being derived (verdict vocabulary, exit codes, `argus …` command lines) —
+  not literally "everything" — so this is the page's own prose overclaiming its own certainty, which
+  is a minor irony in a story about the tool not overclaiming. Low severity: no functional or
+  security impact, and the enumerated AC1 facts are genuinely all derived by test as verified above.
+  Suggested fix: reword the opening sentence to name what is actually checked, e.g. *"The verdict
+  vocabulary, the exit codes and every `argus …` command line on this page are checked by a test
+  against the code, not transcribed from it."*
+
 ## Change Log
 
 | Date | Change |
 |---|---|
+| 2026-08-15 | **Code-review findings addressed (`bmad-dev-story`, fix iteration 1) — 1 of 1 resolved. Status `in-progress` → `review`.** The single Low `[Review][Patch]` finding was the story's own subject turned on the story: `docs/first-run.md:10-11` published *"Everything on it is checked by a test against the code, not transcribed from it"* — a claim no test backs, contradicted twenty lines later by the page's own install caveat. **Resolved by narrowing the prose to what the guards actually enforce** (Debug Log §7): the opening now names the verdict vocabulary, the exit codes and every `argus …` command line — exactly AC1's three enumerated checkable claims and exactly what `TC-ArgusAgent-DOCS-001-63`, `-64` and `-28`/`-39` derive from the live `Verdict` enum, `exit_code_for_verdict` and the real `build_parser().parse_args` — and a following sentence states that the rest is prose and that a documented-but-unexercised command is flagged **at that command**, so the opening and the install caveat now agree instead of contradicting. **Widening the derivation instead was rejected on principle, not cost:** the unchecked claim is the `pip install …@v0.1.0` line, whose tag is **Story 12.9's fence** to create and whose resolution needs network egress the test contract forbids — a guard could only have checked its SHAPE, which is transcription wearing a test's clothes. A guard pinning the new sentence was also rejected: it would assert prose against prose and go RED on a rewording rather than on a falsehood. Docs-only, four lines, one page; no `argus/**` composition change, so the `DF-10-4-D` artifact-currency guards stayed green with no regeneration. Gates: `pytest -q` **1527 passed / 0 failed / 0 errors / 0 skipped**; `mypy argus` clean (83 files); `bandit -r argus -q` **19 Low / 0 Medium / 0 High**, control-matched. Nothing loosened, xfailed or skipped; **published nothing** (12.9's fence). |
 | 2026-08-15 | **Story 12.8 implemented (`bmad-dev-story`). Status `ready-for-dev` → `review`.** The load-bearing delivery is AC3's: `--passes` / `--skip-pass` / `--reports` now REFUSE an unknown token inside `parse_args` against the one definition of each, so `--passes securty` — measured on `2f84a0b` returning `RELEASE_READY` **exit 0** over a run in which **every detector pass was silently disabled** — is a typed refusal instead of a false green. `generator.py` gained the single `RENDERED_REPORT_TYPES` constant AC3 requires (there was none, which is why nothing could validate a report token, and why this repository's own `argus-student-audit.yml:48` shipped `vacuous-tests`), and the four copy-pasted render branches became one loop over it. **AC8:** an argparse usage error now returns the reserved `1` in `main()` only, so a typo no longer publishes `verdict=NOT_READY_FOR_RELEASE assessed=true` through `action.yml`; `--help` still exits `0` and `build_parser().parse_args` is byte-identical. **AC4/AC5:** FR37's `render_audit_failed_next_action` has production callers for the first time — both CLI arms and the second invocation surface — dispatching per typed class and raising on an unregistered one; `DF-8-4-D` is **CLOSED at the wrap site** by `pipeline.UnexpectedStageError`, because `pipeline.py` was pre-disguising internal defects as expected `PipelineError`s and a CLI-only split could not have told them apart. **AC6:** the NFR-S1 absolute-host-path leak at `source_state.py:122` is gone, pinned as a property over both streams in every spelling a path can wear. **AC7:** 12.5's handover is wired — the grammar downgrade reaches the DEFAULT run from the SAME renderer via an additive `AuditResult` field, nothing new persisted; `DF-10-4-C`'s surface half is closed and its class-payload half re-recorded with a reason. **AC1/AC2:** `docs/first-run.md` ships, linked and with every checkable claim derived by test, and every argument's `--help` states its live default. **Two guards that could not fail as written were corrected with their new forms proven to bite**, and `TC-ArgusAgent-REPORT-002-31`'s floor was re-derived (not lowered) after the render loop. NFR-M1 forced 12.7's cohesion-split remedy: `tests/test_help_contract.py`, no line shaved, no population narrowed. Gates: `pytest` 1524 passed / **3 failed, all three the known `DF-10-4-D` artifact-currency class** awaiting the commit-then-regenerate bootstrap; `mypy argus` clean (83 files); `bandit` control-matched with **zero new findings** after two constants were renamed off the `…_TOKEN` suffix rather than suppressed. **Published nothing** (12.9's fence). |
+| 2026-08-15 | **Code review complete (`bmad-code-review`). Status `review` → `in-progress`.** Verdict: **concerns**. Independently re-verified: `pytest -q` 1527 passed / 0 failed (the three `DF-10-4-D` dogfood-currency tests are green post-`6efa306`); `mypy argus` clean; `bandit -r argus -q` 19 Low / 0 Medium / 0 High, matching the claimed stashed-control count with no `# nosec`. The false-green closure (AC3), the exit-code contract change (AC8, confirmed `main()`-only via `build_parser().parse_args` byte-identity), `pipeline.UnexpectedStageError`'s wrap-site placement (AC5), the NFR-S1 property (AC6), the four DN-4 monkeypatch-site updates, and the NFR-M1 cohesion split were all independently verified by reading the diff and by execution (`--passes securty`, `--reports vacuous-tests`, `--budget 1.5`, `--help`) — no loosened gate, no fifth exit code, no re-merged split found anywhere hunted. One Low finding: `docs/first-run.md`'s opening line claims *"everything on it is checked by a test"*, which the page's own install-command caveat twenty lines later contradicts (that command is explicitly NOT exercised). No functional, security or AC impact — a one-line reword. Written to Review Findings as `[Review][Patch]`. |
 | 2026-08-15 | Story 12.8 created (`bmad-create-story`). Scope: **the operator-facing explanation surface** — a first-run page, `--help` parity, and operator-error diagnosis — measured by **executing the real CLI** on `2f84a0b` rather than from the epic's prose. **Four of the epic's premises were found false and one partly false.** `docs/` holds a **BMad tooling stub**, not an integrator README, and nothing links to it. Two of the four operator errors the epic names are **already handled well** (`--deep-audit` with no provider, `--strict` refusals) and must not be rebuilt; *missing grammar* renders only into a report that needs `--report-dir`, which is precisely what 12.5 handed over by name. **Eight operator-error surfaces are entirely SILENT**, and one of them is a false-green channel: `--passes securty` disables every detector pass, prints nothing, and returns `RELEASE_READY` exit 0. **`render_audit_failed_next_action`, shipped by 12.4 for FR37, has ZERO production callers** — the CLI's two failure arms print a cause and stop. **`source_state.py:122` leaks the absolute host path** into the stderr line whose own docstring promises it never will. **`DF-8-4-D`'s arm has moved to `cli.py:758` and there are now THREE such arms, not two**, and the split alone cannot close it because `pipeline.py` already pre-disguises internal defects as typed `PipelineError`s. **Absorbed with a recorded reason (AC8): an argparse usage error exits `2`, which `action.yml:129` publishes as `verdict=NOT_READY_FOR_RELEASE assessed=true` — a typo fabricates an assessment for a run that never happened**, at the one surface whose sibling (`mcp/server.py:107`) already rules a parse rejection is not a verdict. Owns `DF-8-4-D` and `DF-10-4-C`; **cites and does not build** `DF-3-4-A` (resume), `DF-10-5-C` (evidence export) and `DF-12-7-A` (more hosts), all unscheduled. Status → `ready-for-dev`. |

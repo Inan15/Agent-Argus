@@ -7,8 +7,10 @@
 
 **This page is repository documentation.** It is *not* packaged in the wheel — the
 distribution ships `argus/**` only — so it lives here, in the git repository, and the link
-from [`README.md`](../README.md) is how you reach it. Everything on it is checked by a test
-against the code, not transcribed from it.
+from [`README.md`](../README.md) is how you reach it. The verdict vocabulary, the exit codes
+and every `argus …` command line on this page are checked by a test against the code, not
+transcribed from it. The rest is prose: where a command is documented but is not an exercised
+capability, this page says so at that command rather than here.
 
 It covers exactly four things: install, your first audit, reading the ledger, and what each
 verdict means. For the full integration surface — CI, the GitHub Action, the report types,
