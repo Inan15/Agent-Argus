@@ -696,3 +696,243 @@ def test_TC_ArgusAgent_RELEASE_001_19_a_bad_tag_is_refused_before_anything_else_
 
     # And the refusal is enforced on the real phases too, not only in validate-tag mode.
     assert rp.main(["--tag", "not-a-tag", "--phase", "pre-build"]) == 1
+
+
+# ─────────────────────────────────────────────────────────────────────────────────────
+# Story 12.9 / AC7 — the edge cases, REHEARSED on the channel that actually ships
+#
+# `epics.md:2471-2473` asks for E1..E6 to be re-proven *"against the index channel"*. The
+# index channel DOES NOT SHIP, and that is not this story's preference but a locked decision
+# restated in four places (`README.md`, `release.yml:24-29`, `architecture.md` §I,
+# `sprint-status.yaml:350` = Story 9.2 / D1-D13): an index publish is permanently
+# irreversible, needs a credential this repository cannot prove exists, and is an operator
+# decision taken with credentials in hand. `epics.md:2465` is PERMISSIVE ("may ship"), not
+# mandatory. So the AC is ANSWERED rather than missed (Story 12.9 / DN-1): E1..E6 are
+# re-proven against the channel that ships — the tag + GitHub Release channel — through the
+# real CLI, over a real local build, in a rehearsal that PUBLISHES NOTHING.
+#
+# `-03`..`-08` already give each handler a refusing and a non-refusing case as pure calls.
+# This is the different job: it drives `main()` end to end, the way `release.yml` does, and
+# asserts the printed REPORT covers every enumerated member — a rehearsal that exercised four
+# of six and passed is the AI-E8-6 defect that all five Epic-8 stories shipped.
+# ─────────────────────────────────────────────────────────────────────────────────────
+
+_REPORT_LINE = __import__("re").compile(
+    r"^  (?P<case>E\d) .*?\s(?P<status>REFUSE|UNKNOWN|ok)(?P<note> \(not reachable[^)]*\))?$"
+)
+
+
+def _rehearse(
+    capsys: pytest.CaptureFixture[str], argv: list[str]
+) -> tuple[int, dict[str, str], str]:
+    """Run the preflight CLI and read the outcome it PRINTED for each enumerated member.
+
+    The report is the surface an operator and a workflow log actually read, so the rehearsal
+    is asserted against it rather than against the return values — a check that clears
+    internally while printing something else is the defect class this project keeps finding.
+    """
+    code = rp.main(argv)
+    out = capsys.readouterr().out
+    outcomes: dict[str, str] = {}
+    for line in out.splitlines():
+        match = _REPORT_LINE.match(line.rstrip())
+        if match:
+            outcomes[match.group("case")] = match.group("status")
+    return code, outcomes, out
+
+
+def _rehearsal_repo(tmp_path: Path) -> Path:
+    """A disposable git repository to rehearse against.
+
+    ⚠️ The tag below is created in a THROWAWAY FIXTURE repository under ``tmp_path``. No tag
+    is created in, and nothing is pushed from, this repository at any point — Story 12.9 /
+    AC9 fences those acts and this rehearsal does not touch them. The fixture exists so E1's
+    and E2's real states are reachable deterministically instead of depending on whatever the
+    developer's working tree happens to look like.
+    """
+    import shutil
+    import subprocess
+
+    repo = tmp_path / "rehearsal-repo"
+    repo.mkdir()
+    shutil.copyfile(_REPO_ROOT / "pyproject.toml", repo / "pyproject.toml")
+
+    def git(*args: str) -> None:
+        done = subprocess.run(
+            ["git", "-C", str(repo), *args], capture_output=True, text=True
+        )
+        assert done.returncode == 0, f"git {args}: {done.stderr}"
+
+    git("init")
+    git("config", "user.email", "rehearsal@argus.test")
+    git("config", "user.name", "ArgusAgent Rehearsal")
+    git("add", "-A")
+    git("commit", "-m", "rehearsal fixture")
+    git("tag", "v0.1.0")
+    return repo
+
+
+def test_TC_ArgusAgent_RELEASE_001_29_every_enumerated_edge_case_is_rehearsed(
+    tmp_path: Path,
+    capsys: pytest.CaptureFixture[str],
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    """TC-ArgusAgent-RELEASE-001-29 — Story 12.9 / AC7: the rehearsal covers ALL SIX, by closure.
+
+    OBSERVABLE: the status the preflight PRINTS for each enumerated member across
+    ``--phase validate-tag`` / ``pre-build`` / ``post-build``, driven over a real local build.
+
+    The population is derived from ``RELEASE_EDGE_CASE_IDS`` and the floor is *every* member —
+    not a sample. ``E4``'s three-valuedness is exercised in all three states, and ``UNKNOWN``
+    is asserted never to become ``ok``: *a guard that cannot observe is not a guard*.
+
+    Offline: ``_published_release_tags`` is INJECTED rather than allowed to shell out to
+    ``gh``, which would put a network call in the suite. The live read was taken separately,
+    read-only, and recorded in the story's Dev Agent Record — it is evidence, not a test
+    dependency.
+    """
+    from tests.test_built_distribution import _distribution
+
+    dist = _distribution()
+    repo = _rehearsal_repo(tmp_path)
+    covered: set[str] = set()
+
+    # ── phase 1: validate-tag. Refuses a crafted value before anything else runs. ──
+    assert rp.main(["--phase", "validate-tag", "--tag", "v0.1.0"]) == 0
+    assert "expected v<major>.<minor>.<patch> shape" in capsys.readouterr().out
+    assert rp.main(["--phase", "validate-tag", "--tag", 'v0.1.0"; id #']) == 1
+    assert "RELEASE REFUSED" in capsys.readouterr().out
+
+    # ── phase 2: pre-build over the clean fixture, with the release list ASKED and empty ──
+    monkeypatch.setattr(rp, "_published_release_tags", lambda root: ())
+    code, outcomes, _ = _rehearse(
+        capsys, ["--phase", "pre-build", "--tag", "v0.1.0", "--repo-root", str(repo)]
+    )
+    covered |= set(outcomes)
+    assert code == 0, "a clean fixture at the matching version was refused"
+    assert outcomes == {"E1": "ok", "E2": "ok", "E3": "ok", "E4": "ok", "E5": "ok"}, outcomes
+
+    # ── E1 refuses a dirty tree (the same fixture, dirtied) ──
+    (repo / "pyproject.toml").write_text(
+        (repo / "pyproject.toml").read_text(encoding="utf-8") + "\n# dirty\n",
+        encoding="utf-8",
+    )
+    code, outcomes, out = _rehearse(
+        capsys, ["--phase", "pre-build", "--tag", "v0.1.0", "--repo-root", str(repo)]
+    )
+    assert code == 1 and outcomes["E1"] == "REFUSE", outcomes
+    assert "RELEASE REFUSED" in out and "pyproject.toml" in out
+    import subprocess
+
+    subprocess.run(["git", "-C", str(repo), "checkout", "--", "."], check=True)
+
+    # ── E2 refuses re-creating an existing tag. This is the member CI_UNREACHABLE says the
+    # WORKFLOW cannot reach; it is reachable LOCALLY, and Story 12.9 exercises it here rather
+    # than leaving a five-story-old "unreachable" claim standing unexamined. ──
+    code, outcomes, out = _rehearse(
+        capsys,
+        [
+            "--phase", "pre-build", "--tag", "v0.1.0",
+            "--repo-root", str(repo), "--creating-tag",
+        ],
+    )
+    assert code == 1 and outcomes["E2"] == "REFUSE", outcomes
+    assert "already exists in this repository" in out
+    assert "not reachable from this workflow" in out, (
+        "the report no longer prints E2's reachability disclosure next to it, so the "
+        "enumeration reads as more active than it is"
+    )
+
+    # ── E4's THREE outcomes, all of them, and UNKNOWN is never a clearance ──
+    monkeypatch.setattr(rp, "_published_release_tags", lambda root: ("v0.1.0",))
+    code, outcomes, out = _rehearse(
+        capsys, ["--phase", "pre-build", "--tag", "v0.1.0", "--repo-root", str(repo)]
+    )
+    assert code == 1 and outcomes["E4"] == "REFUSE" and "a release already exists" in out
+
+    monkeypatch.setattr(rp, "_published_release_tags", lambda root: None)
+    code, outcomes, out = _rehearse(
+        capsys, ["--phase", "pre-build", "--tag", "v0.1.0", "--repo-root", str(repo)]
+    )
+    assert outcomes["E4"] == "UNKNOWN", outcomes
+    assert code == 0, "an unobservable E4 must not fail the run; it must not clear it either"
+    assert "NOT EVALUATED" in out and "not a clearance" in out, (
+        "E4 could not observe the published-release list and the report did not say so. "
+        "Printing `ok` for a question it never got to put is the exact defect Story 9.2's "
+        "review found on this workflow."
+    )
+    assert not [
+        line
+        for line in out.splitlines()
+        if line.startswith("  E4") and line.rstrip().endswith("ok")
+    ], "E4 printed `ok` on the report line for a question it could not put"
+
+    # ── E5 refuses a tag/version mismatch ──
+    monkeypatch.setattr(rp, "_published_release_tags", lambda root: ())
+    code, outcomes, out = _rehearse(
+        capsys, ["--phase", "pre-build", "--tag", "v9.9.9", "--repo-root", str(repo)]
+    )
+    assert code == 1 and outcomes["E5"] == "REFUSE", outcomes
+    assert "pyproject.toml states" in out
+
+    # ── phase 3: post-build over the REAL local build, then over an empty directory ──
+    code, outcomes, out = _rehearse(
+        capsys,
+        [
+            "--phase", "post-build", "--tag", "v0.1.0",
+            "--repo-root", str(repo), "--dist-dir", str(dist.wheel.parent),
+        ],
+    )
+    covered |= set(outcomes)
+    assert code == 0 and outcomes == {"E6": "ok"}, outcomes
+    assert dist.wheel.is_file() and dist.sdist.is_file()
+
+    empty = tmp_path / "empty-dist"
+    empty.mkdir()
+    code, outcomes, out = _rehearse(
+        capsys,
+        [
+            "--phase", "post-build", "--tag", "v0.1.0",
+            "--repo-root", str(repo), "--dist-dir", str(empty),
+        ],
+    )
+    assert code == 1 and outcomes["E6"] == "REFUSE" and "no artifact at all" in out
+
+    # ── THE FLOOR: every enumerated member was actually exercised through the CLI ──
+    assert covered == set(rp.RELEASE_EDGE_CASE_IDS), (
+        "the rehearsal did not cover every enumerated release edge case. A rehearsal "
+        f"narrower than its own AC is a breach, not a satisfaction (AI-E8-6): covered "
+        f"{sorted(covered)}, enumerated {sorted(rp.RELEASE_EDGE_CASE_IDS)}."
+    )
+    # ...and NOTHING was published. The rehearsal never creates a tag in this repository,
+    # never pushes and never calls `gh release create`; the only tag it touches lives in a
+    # throwaway fixture under tmp_path.
+    assert rp._git(_REPO_ROOT, "tag", "-l") == "", (
+        "a tag exists in THIS repository. The rehearsal must publish nothing (AC8/AC9)."
+    )
+
+
+def test_TC_ArgusAgent_RELEASE_001_30_e2s_unreachability_note_is_re_decided_with_a_date() -> None:
+    """TC-ArgusAgent-RELEASE-001-30 — Story 12.9 / AC7: the disclosure was RE-EXAMINED, not inherited.
+
+    OBSERVABLE: ``CI_UNREACHABLE["E2"]``'s text.
+
+    ``-18`` pins that the disclosure is TRUE of the workflow. This pins that it was re-decided
+    rather than carried forward unread: Story 12.9 is the first story that can reach E2
+    locally, it did (``-29``), and the note now records the date of that re-examination and
+    distinguishes the two reachabilities instead of implying the case is dead.
+    """
+    note = rp.CI_UNREACHABLE["E2"]
+    for required, why in (
+        ("2026-08-15", "the date the claim was re-examined"),
+        ("Story 12.9", "who re-examined it"),
+        ("TC-ArgusAgent-RELEASE-001-29", "the rehearsal that exercised it locally"),
+        ("local-tooling guard", "what the member actually is"),
+    ):
+        assert required in note, (
+            f"CI_UNREACHABLE['E2'] does not state {required!r} — {why}. A five-story-old "
+            "'unreachable' claim standing unexamined in the story that publishes is exactly "
+            "what AC7 asked to be re-decided."
+        )
+    # The claim it makes about the WORKFLOW is still true, and still checked by -18.
+    assert "--creating-tag" not in _WORKFLOW.read_text(encoding="utf-8")

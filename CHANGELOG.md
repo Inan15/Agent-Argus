@@ -20,13 +20,47 @@ versioning intent is [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 > not *exercised* — nobody has run this install against a real tag. Creating and pushing the tag is
 > an operator step this repository deliberately did not take.
 >
-> **What is proven and what is not, stated separately.** The build was proven **locally**: `python -m
-> build` produced `argus_agent-0.1.0.tar.gz` and `argus_agent-0.1.0-py3-none-any.whl`, the wheel was
-> installed into a fresh virtualenv with the repository absent from `sys.path`, and `argus --help` and
-> `argus audit <fixture-repo>` both ran to completion there. The **workflow itself is committed and has
+> **What is proven and what is not, stated separately.**
+>
+> ~~The build was proven **locally**: `python -m build` produced `argus_agent-0.1.0.tar.gz` and
+> `argus_agent-0.1.0-py3-none-any.whl`, the wheel was installed into a fresh virtualenv with the
+> repository absent from `sys.path`, and `argus --help` and `argus audit <fixture-repo>` both ran to
+> completion there.~~
+>
+> 🔴 **CORRECTED 2026-08-15 by Story 12.9 / AC1.** Struck above rather than deleted (§3.4 evidence
+> immutability). That claim was true **by hand** on 2026-08-08 and **no committed guard held it** — and
+> the distribution has since gained `argus-mcp` (12.6), three packaged command assets (12.7), nine
+> grammar dependencies (12.5) and a changed exit-code contract (12.8). A published claim with no test is
+> what this repository files as a defect, so it is now held by a guard and the guard is named here:
+> **`tests/test_installed_artifact.py` (`TC-ArgusAgent-RELEASE-001-25`..`-28`)** builds the sdist and
+> wheel, installs the **wheel into a fresh environment**, refuses unless `argus` resolves from inside
+> that environment (`PROBE-INVALID`), and then exercises the artifact: **every** `[project.scripts]`
+> alias — derived by closure over the table, so a fifth is covered with no edit — `argus --help` and
+> `argus audit --help`, a **fixture audit to a real verdict** whose stdout summary line parses and whose
+> exit code matches the AR3 map, and a **real MCP JSON-RPC exchange over stdio through the installed
+> `argus-mcp` shim** (absent from the old claim entirely). What it does **not** test is stated with it:
+> the dependencies resolve from the machine rather than from an index, because the test contract is
+> offline.
+>
+> The **workflow itself is committed and has
 > never executed** — it was added on a feature branch and no tag exists in this repository yet — so
 > there is no Actions run id and no release URL to cite. Nothing in this file states or implies that a
 > release has been published; when one is, this paragraph gets a URL.
+>
+> **The release status, DERIVED rather than typed** (Story 12.9 / AC2). One function —
+> `scripts/release_notes.py::derive_release_status` — computes it from the observed run, the sha that
+> run covers, its conclusion and the commit being released; `TC-ArgusAgent-DOCS-001-25` asserts this
+> file and `README.md` carry exactly that value, and the same function renders it into the GitHub
+> Release note, so the three cannot disagree.
+
+CI evidence: NOT ESTABLISHED. No executed gate covers the commit being released — the most recent
+`audit-ci.yml` run is run 31341363300, which covers sha 00c8d1b, 34 commits behind the commit being
+released and therefore evidences a different tree; a run id quoted without the sha it covers is a
+half-truth, so it is named here as SUPERSEDED rather than cited. Observed 2026-08-15 through the GitHub
+API. The human step that would establish one, and the only one: push `master` to `origin` and let
+`audit-ci.yml` run to success on the released commit, then re-derive this sentence from that run. A
+local `pytest`/`mypy`/`bandit` run is necessary, not sufficient, and is recorded as LOCAL
+(architecture.md §H).
 >
 > **The VCS pin is INTERIM.** Its exit condition is named in
 > [Resolving `argus-agent`](#resolving-argus-agent) below, so "interim" has an end rather than becoming
@@ -607,6 +641,38 @@ that **participated** in the audited build, so the key stays a function of the a
 host's installed packages. `CACHE_KEY_SCHEMA_VERSION` is bumped `"2"` → `"3"`; `AstIndex.schema_version`
 `"1"` → `"2"`. Both changes are additive — `grammar_version` is retained.
 
+### Changed — the release note and the release status are generated from their sources, and the status is NOT ESTABLISHED
+
+**Nothing a pipeline can trip over.** No default, no exit code, no verdict, no threshold and no
+`stdout` byte moves. What changes is what this release says about itself, and how it comes to say it.
+
+**The GitHub Release note is generated, not typed.** It used to be a string literal inside a `run:`
+block in `.github/workflows/release.yml`, and that literal hand-transcribed three pinned facts: the
+exit-code wire contract, the install command, and a *paraphrase* of the instrument disclosure. When the
+previous release changed what exit `2` can mean, the literal did not move — nothing could see it. The
+body is now rendered by `scripts/release_notes.py`, which derives the version from `pyproject.toml`, the
+exit-code map from `argus/verdict/verdict_gate.py` plus the reserved code in `argus/cli.py`, the
+disclosure from `argus/verdict/negative_assurance.py` in its canonical form, and the install command
+from the tag. `TC-ArgusAgent-DOCS-001-67`/`-68` render it and assert every claim against the live
+constant, in both directions.
+
+**The release status is derived and, today, `NOT ESTABLISHED`.** One function computes it from the
+observed CI run, the sha that run covers, its conclusion and the commit being released; `README.md`,
+this file and the release note all render that one value. The honest answer at this commit is stated in
+the preamble at the top of this file: no executed gate covers the commit being released. That is a
+first-class recordable state, not a gap.
+
+**The install caveats now track the real tag state on every surface that carries them.** The guard that
+holds *"this command does not resolve today"* used to read `README.md` alone while the pin also appears
+in this file and in `docs/first-run.md`. It is now a closure over every registered release surface, so
+the day the tag exists all four pins are reported at once instead of two of them silently becoming
+false.
+
+**The repository's visibility has been measured, and it changes what the documented install costs you.**
+See *Resolving `argus-agent`* below: it is **private**, so the pinned install cannot resolve without a
+read credential — with or without the tag. Both documents previously said the visibility had never been
+checked.
+
 ---
 
 ## 0.1.0 — 2026-08-08
@@ -624,9 +690,17 @@ is unchanged by this release.
 |---|---|
 | **Dependency string** | `argus-agent @ git+https://github.com/Inan15/Agent-Argus.git@v0.1.0` — ⚠️ **does not resolve yet: tag `v0.1.0` has not been created or pushed** (`git tag -l` is empty at this commit). Prepared, not exercised. |
 | **Index** | none — `argus-agent` is on no package index |
-| **Authentication** | **none required if and only if the repository is public.** ⚠️ Visibility was NOT measured when this line was written; open the URL signed out to check. If it is private, the consuming CI needs a read token and must carry it in the URL. |
+| **Authentication** | **none required if and only if the repository is public.** ~~⚠️ Visibility was NOT measured when this line was written; open the URL signed out to check. If it is private, the consuming CI needs a read token and must carry it in the URL.~~ 🔴 **CORRECTED 2026-08-15 (Story 12.9 / AC4)** — struck, not deleted (§3.4). It has been measured, and the correction is the paragraph directly below this table. |
 | **Status** | **INTERIM.** A git ref is not an immutable index artifact: it depends on the repository staying reachable and the tag staying put. |
-| **Exit condition** | When `argus-agent` is claimed on PyPI **and** a PyPI Trusted Publisher (OIDC) is configured for this repository, the publish step is added directly to `.github/workflows/release.yml` — trusted publishing cannot be used from inside a *reusable* workflow — with `permissions: id-token: write` and **no stored token**, and the pin above is replaced by a plain index install of the distribution name. |
+| **Exit condition** | When `argus-agent` is claimed on PyPI **and** a PyPI Trusted Publisher (OIDC) is configured for this repository, the publish step is added directly to `.github/workflows/release.yml` — trusted publishing cannot be used from inside a *reusable* workflow — with `permissions: id-token: write` and **no stored token**, and the pin above is replaced by a plain index install of the distribution name. **RE-AFFIRMED 2026-08-15 (Story 12.9 / DN-1):** the index channel still does not ship and no publish was attempted; this condition is restated with a date so *"interim"* keeps a named end rather than becoming permanent by silence. |
+
+Repository visibility, MEASURED 2026-08-15 by `gh repo view Inan15/Agent-Argus --json
+visibility,isPrivate` -> `PRIVATE` / `isPrivate: true`. What that costs a consumer, stated plainly:
+while it stays private the pinned install cannot resolve for anybody — tag or no tag — without a read
+credential carried in the URL (`git+https://<credential>@github.com/...`), and a GitHub Release on a
+private repository is not publicly resolvable either. Making the repository public is an outward-facing
+operator act that has not been taken. This is a dated measurement, not a standing claim: re-run the
+command above before relying on it.
 
 PyPI publication is deliberately **not** attempted here: a released name+version on an index can never
 be replaced, which makes it an operator decision taken with credentials in hand, not a change a release

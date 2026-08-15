@@ -49,9 +49,36 @@ class that turned run ``31322881580`` red.
 from __future__ import annotations
 
 import re
+import subprocess
+import sys
 from pathlib import Path
 
 _REPO_ROOT = Path(__file__).resolve().parents[1]
+if str(_REPO_ROOT / "scripts") not in sys.path:
+    sys.path.insert(0, str(_REPO_ROOT / "scripts"))
+
+import release_notes as rn  # noqa: E402
+
+# The consumer-facing surfaces, IMPORTED from the registry that owns them rather than
+# re-listed here (Story 12.9 / AC2). This is the decision the AC demanded be recorded:
+# `-24`/`-25` are NEW ASSERTIONS IN THIS FILE that reuse this file's derivation
+# (`_status_assertions` / `_executed_gate_citations`) over an IMPORTED population — rather
+# than widening `_STATUS_DOCUMENTS`, which is the planning-record population with its own
+# glob closure, or copying the regexes into the surface-honesty file.
+#
+# Why this shape and not the other two:
+#   * widening `_STATUS_DOCUMENTS` would put `README.md` and `.github/workflows/release.yml`
+#     under `-22`'s glob closure, which resolves `sprint-change-proposal-*.md` /
+#     `epic-*-retro-*.md` under the ARTIFACT directory — a population they are not in, so
+#     `-22` would have to grow a second closure with a second meaning inside one constant;
+#   * copying the regexes into `tests/test_release_surface_honesty.py` would give this rule
+#     two implementations, which is the fork AR7 forbids and the class this project has
+#     recorded four times.
+# The two files keep their SEPARATE marker vocabularies for the reason recorded at :7-15 —
+# they are policy, and two guards sharing one mutable policy table is tighter coupling than
+# fifteen duplicated lines of policy is duplication. Only the POPULATION is shared, and it
+# is shared by import, from the one place that owns it.
+from tests.test_release_surface_honesty import _RELEASE_SURFACES  # noqa: E402
 _ARTIFACT_DIR = _REPO_ROOT / "_bmad-output" / "design-artifacts" / "ArgusAgent"
 _ARCHITECTURE = _ARTIFACT_DIR / "architecture.md"
 _DEFERRED_WORK = _ARTIFACT_DIR / "deferred-work.md"
@@ -108,7 +135,91 @@ _EXCLUDED_BY_DESIGN: dict[str, str] = {
         "governing one. architecture.md is instead asserted POSITIVELY by -23, which requires "
         "the rule prose to be present, so the (a)-half of AC2 cannot be silently deleted."
     ),
+    # Added 2026-08-15 by Story 12.9 / AC2, closing a MEASURED hole rather than describing a
+    # decision: README.md, CHANGELOG.md, .github/workflows/release.yml and the GitHub Release
+    # notes were never excluded from this rule with a reason — they were simply OUTSIDE it,
+    # because `_STATUS_DOCUMENTS` above is change-proposals and retrospectives only. The
+    # release note is the single most read status-asserting document this project will ever
+    # publish and nothing checked it. They are no longer outside: `-24` scans every registered
+    # release surface with this file's own derivation, and `-25` pins the derived statement.
+    "README.md / CHANGELOG.md / release.yml / the release-note body": (
+        "NOT excluded — moved INSIDE the rule by Story 12.9. They are governed by -24 and -25 "
+        "over the `_RELEASE_SURFACES` registry imported above rather than by `_STATUS_DOCUMENTS`, "
+        "because they are consumer surfaces rather than planning records and they are enumerated "
+        "and closed by `TC-ArgusAgent-DOCS-001-18` in the file that owns them. This entry exists "
+        "so a reader of this table finds where the rule reaches them instead of concluding they "
+        "escaped it."
+    ),
 }
+
+# Two reasons that apply to a whole class of surface, named once because the class is the
+# reason: repeating them per path would invite them to drift into three different reasons for
+# one decision.
+_COMMAND_ASSET_REASON = (
+    "a packaged assistant command asset. It is an instruction sheet an agent reads before "
+    "invoking the tool, it makes no claim about the project's release status, and it is "
+    "written into a consumer's own configuration directory rather than published as a "
+    "record. Its disclosure obligation is held by TC-ArgusAgent-ASSETS-001-06."
+)
+_DOGFOOD_REASON = (
+    "a regenerated dogfood EVIDENCE artifact, not a status record: it reports what one "
+    "self-audit run measured, and `TC-ArgusAgent-DOCS-001-19` separately asserts it keeps "
+    "the honesty language that bounds how that evidence may be read."
+)
+
+# Registered release surfaces that are SCANNED for unevidenced status claims but are not
+# required to CARRY the derived status statement, each with the reason. A surface that
+# neither carries the statement nor appears here fails `-25`, so "it just does not say
+# anything about the release" can never be an unrecorded default.
+_STATUS_STATEMENT_NOT_REQUIRED: dict[str, str] = {
+    "action.yml": (
+        "the composite action's own contract surface: it describes inputs, outputs and the "
+        "exit-code map for one CI step, and it is consumed by a workflow rather than read as "
+        "a project status. Its FR34 disclosure obligation is separately held by "
+        "TC-ArgusAgent-DOCS-001-47 over `_DISCLOSURE_SURFACES`."
+    ),
+    "pyproject.toml": (
+        "package metadata. `[project].description` is a ONE-LINE index summary where a "
+        "multi-sentence status paragraph cannot go; the same constraint that made the FR34 "
+        "disclosure carry a `short` form there applies to this statement, and a truncated "
+        "status sentence would be exactly the half-truth this rule exists to stop."
+    ),
+    ".github/workflows/release.yml": (
+        "the workflow no longer types any release fact: Story 12.9 / AC3 moved the release "
+        "note body out of its `run:` literal into `scripts/release_notes.py`, which renders "
+        "the derived statement into the note at release time. Carrying a second copy in a "
+        "YAML comment would re-create the transcription this story removed."
+    ),
+    "docs/first-run.md": (
+        "an orientation page for a first-time reader — install, first audit, reading the "
+        "ledger, what each verdict means. It states the tag caveat where a reader meets it "
+        "and points at README.md for the full one; a project-wide CI-evidence paragraph on "
+        "it would be answering a question a first-time reader has not yet asked."
+    ),
+    "scripts/release_notes.py": (
+        "it is the GENERATOR: it defines the derivation and the recorded observation the "
+        "statement is computed from, and renders that value onto every other surface. "
+        "Requiring it to also carry a rendered copy of its own output would be precisely the "
+        "transcription this module exists to remove, and the copy could then disagree with "
+        "the function beside it."
+    ),
+    "docs/README.md": (
+        "a BMad tooling stub, not a consumer document. It is registered as a release surface "
+        "only so that a SECOND page dropped into `docs/` is red rather than invisible "
+        "(Story 12.8 / DN-1), and it asserts nothing about a release."
+    ),
+    "argus/assets/commands/argus-audit.md": _COMMAND_ASSET_REASON,
+    "argus/assets/commands/argus-audit-report.md": _COMMAND_ASSET_REASON,
+    "argus/assets/commands/argus-audit-security.md": _COMMAND_ASSET_REASON,
+    "_bmad-output/design-artifacts/ArgusAgent/minions-dogfood-proof.md": _DOGFOOD_REASON,
+    "_bmad-output/design-artifacts/ArgusAgent/minions-dogfood-partition-plan.md": _DOGFOOD_REASON,
+    "_bmad-output/design-artifacts/ArgusAgent/minions-dogfood-budget-plan.md": _DOGFOOD_REASON,
+}
+
+# The surfaces that DO state the project's release status, and therefore must render the
+# derived statement verbatim. Two, and they are the two a stranger actually reads: README.md
+# is the PyPI page body (`readme = "README.md"`), CHANGELOG.md is the release note.
+_STATUS_STATEMENT_REQUIRED: tuple[str, ...] = ("README.md", "CHANGELOG.md")
 
 # Affirmative assertions that the PROJECT is ready to be released. Deliberately narrow and
 # measured against the real corpus rather than guessed: a wide list ("release status",
@@ -162,6 +273,29 @@ _QUALIFIER_MARKERS: tuple[str, ...] = (
 )
 
 _NOT_ESTABLISHED_MARKER = "not established"
+
+# Markers that DISQUALIFY a sentence from being read as a citation, even though it carries a
+# run id and a sha in the same breath.
+#
+# ⚠️ FOUND BY MEASUREMENT 2026-08-15 (Story 12.9 / AC2), and it is a real defect rather than
+# noise: the honest `NOT ESTABLISHED` statement this story derives NAMES the superseded run
+# WITH the sha it covers — it has to, because a run id quoted without its sha is the
+# half-truth `architecture.md:614-616` uses that exact run id to illustrate. So the most
+# scrupulous sentence this project can write parsed as a well-formed citation, and any
+# surface carrying it would have had every OTHER unevidenced status claim on it excused by a
+# citation that was never offered.
+#
+# This makes the reader STRICTER, never looser — the correct direction, because a citation
+# here EXCUSES a claim, so recognising fewer of them can only tighten the rule. Adding one of
+# these markers to your own sentence therefore costs you the excuse rather than buying one;
+# there is no loophole in this direction. `-25b` is the positive control both ways.
+_CITATION_DENIAL_MARKERS: tuple[str, ...] = (
+    "not established",
+    "superseded",
+    "does not cover",
+    "no executed gate",
+    "half-truth",
+)
 
 # A GitHub Actions run, either as a URL or as a bare id introduced by the word "run".
 _RUN_URL_RE = re.compile(r"github\.com/[\w.-]+/[\w.-]+/actions/runs/(\d{6,})")
@@ -274,6 +408,8 @@ def _executed_gate_citations(text: str) -> list[tuple[str, str]]:
     """
     found: list[tuple[str, str]] = []
     for sentence in _split_sentences(text.lower()):
+        if any(marker in sentence for marker in _CITATION_DENIAL_MARKERS):
+            continue
         run_ids = _RUN_URL_RE.findall(sentence) + _RUN_ID_RE.findall(sentence)
         if run_ids and _SHA_RE.search(sentence):
             found.extend((run_id, sentence) for run_id in run_ids)
@@ -522,6 +658,24 @@ def test_TC_ArgusAgent_DOCS_001_21b_the_claim_detector_actually_bites() -> None:
         "916 PASSED, 1 SKIPPED, 0 FAILED locally on commit 00c8d1b."
     ), "a LOCAL run with a sha but no executed gate was accepted as a citation"
 
+    # A run NAMED AS SUPERSEDED is not a citation, even though it carries its sha — which it
+    # must, because a run id without one is the half-truth this rule exists to stop. Added
+    # 2026-08-15 by Story 12.9 / AC2 after the composed rule was measured excusing claims on
+    # the strength of the honest NOT ESTABLISHED sentence itself.
+    for disqualified in (
+        "run 31341363300 covers sha 00c8d1b and is named here as superseded rather than "
+        "cited",
+        "ci evidence: not established — run 31341363300 (00c8d1b) does not cover this tree",
+    ):
+        assert not _executed_gate_citations(disqualified), (
+            "a sentence that names a run as superseded / not established was read as a "
+            f"CITATION, which would excuse every other claim on that surface: {disqualified!r}"
+        )
+    # ...and the ordinary citation still is one, so the disqualifier did not swallow the rule.
+    assert _executed_gate_citations(
+        "Run 31341363300 concluded success at sha 00c8d1b with 3/3 legs green."
+    )
+
 
 def test_TC_ArgusAgent_DOCS_001_22_the_status_document_set_is_closed() -> None:
     """TC-ArgusAgent-DOCS-001-22 — Story 10.1/AC3.2+3.3: a new proposal cannot escape by being new.
@@ -613,3 +767,253 @@ def test_TC_ArgusAgent_DOCS_001_23_the_rule_exists_in_prose_and_names_its_guard(
         "architecture.md §Enforcement must state what the guard actually fails on — a status "
         "claim carrying neither a citation nor a NOT ESTABLISHED marker."
     )
+
+
+# ─────────────────────────────────────────────────────────────────────────────────────
+# Story 12.9 / AC2 — the rule reaches the surfaces a STRANGER reads, and the status is DERIVED
+#
+# MEASURED on `de05dec`: `_STATUS_DOCUMENTS` above covers `sprint-change-proposal-*.md` and
+# `epic-*-retro-*.md` only. `README.md`, `CHANGELOG.md`, `.github/workflows/release.yml` and
+# the GitHub Release notes were not excluded with a reason — they were simply OUTSIDE this
+# guard. The release note is the single most read status-asserting document this project will
+# ever publish, and nothing checked it.
+#
+# Two assertions close that, and they are deliberately different jobs. `-24` applies the
+# EXISTING rule (cite, or record NOT ESTABLISHED) to the imported release-surface population.
+# `-25` closes the second half of the AC — the citation is DERIVED, never transcribed: one
+# named function computes the statement, and every surface that states a release status
+# renders THAT value rather than a sentence somebody typed.
+# ─────────────────────────────────────────────────────────────────────────────────────
+
+# The sha the derivation is asked about. It is HEAD, read from git, not a literal: pinning a
+# sha here would make the guard describe a tree that has moved on, which is the staleness
+# this whole rule exists to prevent.
+def _head_sha() -> str:
+    done = subprocess.run(
+        ["git", "rev-parse", "HEAD"],
+        cwd=str(_REPO_ROOT),
+        capture_output=True,
+        text=True,
+    )
+    return done.stdout.strip() if done.returncode == 0 else ""
+
+
+def test_TC_ArgusAgent_DOCS_001_24_every_release_surface_cites_or_records_not_established() -> None:
+    """TC-ArgusAgent-DOCS-001-24 — Story 12.9 / AC2: the rule reaches the consumer surfaces.
+
+    OBSERVABLE: live, first-person release-status claims on the registered release surfaces,
+    and whether the surface carrying one also cites an executed gate (a run id together with
+    the sha it covers) or records the status as NOT ESTABLISHED in that claim's own sentence.
+
+    Same rule as `-21`, same derivation, different population — imported from the registry
+    that owns it, not re-listed. Non-vacuity is asserted directly and twice, because this
+    guard passes by finding nothing: the population must be non-empty AND the scan must have
+    classified real sentences. A registry of unreadable files would otherwise satisfy every
+    assertion below without reading a word.
+    """
+    assert _RELEASE_SURFACES, "the release-surface registry is empty — the guard scans nothing"
+
+    scanned = 0
+    classified = 0
+    for rel in _RELEASE_SURFACES:
+        path = _REPO_ROOT / rel
+        assert path.is_file(), f"registered release surface is missing: {rel}"
+        text = path.read_text(encoding="utf-8")
+        scanned += 1
+        classified += len(_split_sentences(text))
+
+        assertions = _status_assertions(text)
+        if not assertions:
+            continue
+        citations = _executed_gate_citations(text)
+        for claim, sentence in assertions:
+            if _NOT_ESTABLISHED_MARKER in sentence:
+                continue
+            assert citations, (
+                f"{rel} ASSERTS a release status without citing an executed gate.\n"
+                f"  claim   : {claim!r}\n"
+                f"  sentence: {sentence[:300]!r}\n"
+                "  fix     : CORRECT the sentence — cite the audit-ci.yml run that covers "
+                "this tree as 'run <id> (<sha>, N/N legs)', or record the status as NOT "
+                "ESTABLISHED — or add an `_EXCLUDED_BY_DESIGN` entry with a stated reason. "
+                "Do NOT trim `_STATUS_CLAIMS`, widen `_DENIAL_MARKERS` or narrow the "
+                "population: that vocabulary was measured against the real corpus, and "
+                "loosening it to silence a hit is how this guard stops guarding (-21b)."
+            )
+
+    assert scanned > 0, "no release surface was scanned"
+    assert classified > 0, (
+        f"the {scanned} registered release surfaces parsed to {classified} sentences — the "
+        "splitter is broken and every assertion above is vacuous"
+    )
+
+
+def test_TC_ArgusAgent_DOCS_001_25_the_release_status_is_derived_not_transcribed() -> None:
+    """TC-ArgusAgent-DOCS-001-25 — Story 12.9 / AC2: ONE derivation, rendered everywhere.
+
+    OBSERVABLE: the statement `release_notes.derive_release_status` produces for the commit
+    being released, and whether the surfaces that state a release status carry exactly that
+    text.
+
+    This is the story's title, mechanised. A surface that hand-types a run id, a sha or a
+    status is the transcription class AI-E9-7 forbids and is what made `DF-AUD-APAA-C`
+    possible, so the surfaces render the derived value and this asserts they do — in both
+    directions:
+
+    * with the RECORDED observation the status must be NOT ESTABLISHED, and the recorded run
+      must NOT cover HEAD. The day `master` is pushed and `audit-ci.yml` runs to success on
+      the released commit, the recorded observation is replaced, the derivation returns a
+      citation, the statement changes, and every surface goes RED until it is re-rendered.
+      That red is the guard working (AC9's ordering).
+    * fed an observation that DOES cover the released sha, the same function must produce a
+      real citation carrying the run id AND its sha — a derivation that can only ever say
+      NOT ESTABLISHED would be a constant wearing a function's clothes.
+    """
+    head = _head_sha()
+    assert re.fullmatch(r"[0-9a-f]{40}", head), (
+        f"could not read HEAD ({head!r}); this guard cannot ask whether the recorded gate "
+        "run covers the commit being released, and must not pass while it cannot look"
+    )
+
+    status = rn.derive_release_status(rn.RECORDED_GATE_OBSERVATION, head)
+    assert not status.established, (
+        "the recorded gate observation now covers HEAD and reports success, so the release "
+        "status is no longer NOT ESTABLISHED. That is not a failure — it is the transition "
+        "this guard exists to force: re-derive the statement, replace it on every surface in "
+        f"{list(_STATUS_STATEMENT_REQUIRED)}, and update CHANGELOG.md's honesty preamble "
+        "with the release URL (Story 12.9 / AC9)."
+    )
+    assert rn.NOT_ESTABLISHED in status.statement
+    # The superseded run is NAMED with its sha — a run id without one is the half-truth
+    # `architecture.md:614-616` uses this very run id to illustrate.
+    assert rn.RECORDED_GATE_OBSERVATION.run_id in status.statement
+    assert rn.RECORDED_GATE_OBSERVATION.run_sha in status.statement
+    assert "SUPERSEDED" in status.statement, (
+        "the statement quotes a run id without saying what it is; naming it as superseded is "
+        "what stops the sentence from reading as a citation"
+    )
+    assert "push `master`" in status.statement, (
+        "the statement does not name the exact human step that would establish a citation"
+    )
+
+    # Every surface that states a release status renders THAT value, byte for byte.
+    for rel in _STATUS_STATEMENT_REQUIRED:
+        assert rel in _RELEASE_SURFACES, (
+            f"{rel} is required to carry the derived status but is not a registered release "
+            "surface; the two registries have drifted"
+        )
+        text = _flatten((_REPO_ROOT / rel).read_text(encoding="utf-8"))
+        assert _flatten(status.statement) in text, (
+            f"{rel} does not carry the derived release-status statement. Render it — do not "
+            f"retype it, and do not paraphrase it. Expected:\n\n{status.statement}"
+        )
+
+    # Every registered surface either carries the statement or has a recorded reason not to.
+    unaccounted = sorted(
+        rel
+        for rel in _RELEASE_SURFACES
+        if rel not in _STATUS_STATEMENT_REQUIRED
+        and rel not in _STATUS_STATEMENT_NOT_REQUIRED
+    )
+    assert not unaccounted, (
+        f"release surface(s) neither carry the derived status statement nor record why they "
+        f"do not: {unaccounted}. Silence about a release status on a consumer surface is a "
+        "decision; make it one."
+    )
+    for surface, reason in _STATUS_STATEMENT_NOT_REQUIRED.items():
+        assert surface in _RELEASE_SURFACES, (
+            f"{surface!r} is exempted from carrying the status statement but is not a "
+            "registered release surface — the exemption describes a file the rule never "
+            "reached, which proves nothing"
+        )
+        assert len(reason.split()) >= 12, (
+            f"exemption {surface!r} has no substantive reason recorded (the -22 rule)"
+        )
+
+    # ── the other direction: the derivation can and does produce a real citation ──
+    established = rn.derive_release_status(
+        rn.GateObservation(
+            run_id="99999999999",
+            run_sha=head,
+            conclusion="success",
+            legs="3/3",
+            workflow="audit-ci.yml",
+            measured_on="2026-08-15",
+        ),
+        head,
+    )
+    assert established.established, (
+        "a run that covers the released sha and concluded success did NOT establish the "
+        "status — the derivation can only ever say NOT ESTABLISHED, which makes it a "
+        "constant rather than a derivation"
+    )
+    assert "99999999999" in established.statement and head[:7] in established.statement, (
+        "the established citation does not carry BOTH the run id and the sha it covers, "
+        "which is the whole content of the rule (architecture.md §H, DN-3)"
+    )
+    assert rn.NOT_ESTABLISHED not in established.statement
+    # And that citation must satisfy THIS FILE's own citation reader — the two halves of the
+    # rule are held to each other rather than each being graded by its own author.
+    assert _executed_gate_citations(established.statement), (
+        "the derivation emitted a 'citation' that `_executed_gate_citations` does not "
+        "recognise as one; the generator and the guard disagree about what a citation is"
+    )
+
+    # A run that covers the sha but did NOT succeed is not a citation either.
+    failed = rn.derive_release_status(
+        rn.GateObservation(
+            run_id="99999999999",
+            run_sha=head,
+            conclusion="failure",
+            legs="2/3",
+            workflow="audit-ci.yml",
+            measured_on="2026-08-15",
+        ),
+        head,
+    )
+    assert not failed.established and rn.NOT_ESTABLISHED in failed.statement, (
+        "a FAILED run covering the released commit was accepted as evidence of readiness — "
+        "that is DF-AUD-APAA-C with the sha filled in"
+    )
+
+
+def test_TC_ArgusAgent_DOCS_001_25b_the_release_surface_scan_actually_bites() -> None:
+    """TC-ArgusAgent-DOCS-001-25b — Story 12.9 / AC2: positive control, on a REAL surface.
+
+    MEASURED on `de05dec`: every registered release surface produces ZERO live status claims
+    today, so `-24` passes by finding nothing — and a guard that passes by finding nothing
+    proves nothing until it has been shown to find something. The strongest available control
+    is the real corpus with the real defect planted in it: `README.md`'s own bytes, plus the
+    verbatim historical sentence from `sprint-change-proposal-2026-07-28.md:63`.
+
+    `-21b` is the same control over the planning-record population; this is deliberately not
+    a copy of it — it runs the detector over a surface that is really on disk, which is the
+    only way to show that the scan reaches these files at all.
+    """
+    readme = (_REPO_ROOT / "README.md").read_text(encoding="utf-8")
+    assert not _status_assertions(readme), (
+        "README.md now asserts a release status; resolve it as a finding (cite, or record "
+        "NOT ESTABLISHED), never by loosening the detector"
+    )
+
+    planted = readme + (
+        "\n\n## Release status\n\n"
+        "- **Release Status**: Upgraded from `NEEDS TARGETED REWORK` to **READY FOR "
+        "RELEASE**!\n"
+    )
+    caught = _status_assertions(planted)
+    assert caught, (
+        "an uncited affirmative release-status claim planted on a REAL release surface was "
+        "not caught. The detector does not reach these files, and `-24` is vacuous."
+    )
+    assert {claim for claim, _ in caught} == {"ready for release"}
+    assert not _executed_gate_citations(planted), (
+        "README.md was read as citing an executed gate; it cites none, so the planted claim "
+        "would have been excused by a citation that does not exist"
+    )
+
+    # And the honest sentence this story actually writes must NOT be flagged — asserted
+    # verbatim against the real derived statement rather than against a paraphrase of it.
+    assert not _status_assertions(
+        rn.derive_release_status(rn.RECORDED_GATE_OBSERVATION, _head_sha()).statement
+    ), "the derived NOT ESTABLISHED statement was flagged as an unevidenced status claim"

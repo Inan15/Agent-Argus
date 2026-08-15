@@ -29,10 +29,24 @@ pip install "argus-agent @ git+https://github.com/Inan15/Agent-Argus.git@v0.1.0"
 `argus-agent` is not on a package index. The command above resolves it straight from this
 repository at a tag.
 
-> ⚠️ **This command does not resolve today.** Tag `v0.1.0` has not been created or pushed, so
-> `pip` cannot find the ref and the install fails. It is the documented shape, not an
-> exercised capability. `README.md` carries the full caveat, including what a private
-> repository costs a consumer's CI.
+> ⚠️ **This command does not resolve today.** Tag `v0.1.0` has not been created or pushed
+> (`git tag -l` is empty at this commit), so `pip` cannot find the ref and the install
+> fails. It is the documented shape, not an exercised capability. `README.md` carries the
+> full caveat.
+
+**And it would not resolve even with the tag**, which this page used to leave to `README.md`
+and now states where you meet the command (Story 12.9 / AC4):
+
+Repository visibility, MEASURED 2026-08-15 by `gh repo view Inan15/Agent-Argus --json
+visibility,isPrivate` -> `PRIVATE` / `isPrivate: true`. What that costs a consumer, stated
+plainly: while it stays private the pinned install cannot resolve for anybody — tag or no
+tag — without a read credential carried in the URL
+(`git+https://<credential>@github.com/...`), and a GitHub Release on a private repository is
+not publicly resolvable either. Making the repository public is an outward-facing operator
+act that has not been taken. This is a dated measurement, not a standing claim: re-run the
+command above before relying on it.
+
+Until then, the form that works today is a clone plus `pip install -e .`.
 
 Every supported language grammar is in the default install. If a grammar is missing or will
 not load, the run says so on stderr and names the package that would fix it — a lower

@@ -3675,3 +3675,98 @@ once and left looking open*.
   - id: DF-12-1-C (annotated here, NOT re-filed — the original entry above is byte-intact)
   - owner: **Engineering** (unchanged)
   - target_story: **NONE — unscheduled; the split is owed and belongs to a story that says so**
+
+---
+
+## Story 12.9 — the release is staged, and its status cites the gate (2026-08-15)
+
+**Append-only, as always (§3.4 evidence immutability).** Nothing above this line was edited: the diff
+for this story against `deferred-work.md` is `+n / -0`, verified programmatically
+(`git diff --numstat -- _bmad-output/design-artifacts/ArgusAgent/deferred-work.md`).
+
+### Closed by this story
+
+- **`DF-10-3-A` — CLOSED 2026-08-15. argparse's usage exit code no longer collides with the BLOCKED
+  verdict code.** The entry (filed by Story 10.3, owner **Engineering Lead**) offered three candidate
+  resolutions and chose none, the first being *"map usage errors onto the reserved crash code `1`"*.
+  **Story 12.8 / AC8 shipped exactly that first resolution** — and the ledger was never told, because
+  the entry names *this* story rather than 12.8, so it was invisible to the story that fixed it. It
+  therefore stood OPEN at `de05dec` describing a defect that no longer existed.
+  **VERIFIED BY EXECUTION before closing, not on this story's say-so** (2026-08-15, `de05dec`, LOCAL):
+
+  ```
+  $ python -m argus.cli            -> exit 1
+  $ python -m argus.cli audit --nosuchflag .   -> exit 1
+  argus: the command line was rejected by the parser (see the usage message above), so NO audit ran
+  and NO verdict was produced — exit 1 is the reserved 'no verdict' code, never a verdict.
+  ```
+
+  The mapping lives in `main()` only; `build_parser().parse_args` is byte-identical, so nothing that
+  embeds the parser changed behaviour. `action.yml:110-135` carries the corrected map comment.
+  `docs/first-run.md`'s exit table states the reserved `1` and is DERIVED from `exit_code_for_verdict`
+  by `TC-ArgusAgent-DOCS-001-64`, so the published contract cannot drift back. Story 12.9's own
+  `scripts/release_notes.py` now derives the same map into the GitHub Release note
+  (`TC-ArgusAgent-DOCS-001-67`), which closes the last surface that transcribed it by hand.
+  **What is NOT closed:** nothing. The two alternatives the entry listed (a distinct usage code outside
+  `{0,1,2,3}`; documenting the collision and making consumers disambiguate) were not taken and are not
+  needed — the chosen remedy removes the collision rather than describing it.
+  - id: DF-10-3-A
+  - owner: **Engineering Lead** (unchanged)
+  - status: **CLOSED 2026-08-15** — remedy delivered by Story 12.8 / AC8, verified by execution here
+  - target_story: **CORRECTED, append-only.** The entry above reads
+    `12-9-publishing-and-release-surface`, which **is not a story key this tracker has**. The key is
+    **`12-9-release-is-published-and-cites-its-gate`**, and the remedy in fact landed in
+    **`12-8-the-tool-explains-itself`**. The original string is left byte-intact above; a ledger that
+    names a story id the tracker does not have is how a deferral becomes nobody's (AI-E9-8), and that
+    is precisely what happened to this entry.
+
+### Filed by this story
+
+- **`DF-12-9-A`** — **the seven outward-facing publication acts are staged, enumerated and NOT
+  performed.** Story 12.9 built, proved, derived, guarded and documented the release and then HALTED:
+  every act that reaches outside this working tree needs an explicit human authorisation naming that
+  act, and none was given. Filed **once**, here, with a named human — the AC9 table in the story file
+  is the detail, this is the ledger's single pointer to it, and it is deliberately not also implied
+  anywhere else (12.7's rule: *a gap filed twice is a gap that gets closed once and left looking
+  open*). The acts, with blast radius: (1) `git push origin master` — 34 commits, reversible only by
+  force-push, and the ONLY thing that can turn the release status from `NOT ESTABLISHED` into a
+  citation; (2) `git tag v0.1.0` — local, reversible; (3) `git push origin v0.1.0` — effectively
+  irreversible, triggers `release.yml`; (4) the GitHub Release — irreversible in effect; (5) making the
+  repository public — irreversible in effect, 34 commits of history and every planning artifact become
+  world-readable; (6) a Marketplace listing — **DN-2: not performed**, blocked by (5) rather than by
+  Story 11.3, which is `done`; (7) a PyPI/index publish — **DN-1: out of scope**, permanently
+  irreversible and a locked decision restated in four places.
+  **Ordering is binding and is already delivered:** the tag-state guard
+  (`TC-ArgusAgent-DOCS-001-55`/`-55b`) was widened to every registered release surface BEFORE any tag
+  exists, so act (2)/(3) turns all four pins on three surfaces RED at once instead of converting two
+  of them into published falsehoods invisibly.
+  - id: DF-12-9-A
+  - owner: **Engineering Lead** (the human who holds the credentials; `release.yml`'s own header
+    records that a publish *"is an operator decision taken with credentials in hand — not a decision a
+    story author may take unilaterally"*)
+  - target_story: **NONE — unscheduled; Engineering Lead to authorise act-by-act.** Deliberately not
+    asserted onto a story id (AI-E9-8): these are operator acts, not development work, and inventing a
+    story for them would move an authorisation decision into a backlog. The Epic-12 retrospective is
+    the next scheduled moment a human reads this file.
+  - category: governance
+  - severity: 🟡
+
+### Re-stated, NOT re-filed — cited by this story and still open
+
+- **`DF-3-4-A`** (resume has no CLI entrance). Cited, untouched. 12.7 recorded *"stays open and is NOT
+  re-filed"*, 12.8 cited it again, and this story does the same: building a `--resume` entrance would
+  be an unscheduled capability addition inside the story that publishes.
+- **`DF-10-5-C`** (FR29 evidence export needs a CLI surface, `target_story: NONE — unscheduled;
+  Governance Owner to schedule`). Cited, untouched. An `argus evidence-bundle` sub-command is a
+  capability addition, and this story adds none.
+- **`DF-12-7-A`** (the assistant-host registry ships one verified member). Cited, untouched, still
+  unscheduled. Registering further hosts is 12.7 / DN-2's decision and is not reopened here.
+- **`DF-10-3-B`** (built-in secret suppressions are not disclosed) and **`DF-10-3-C`**
+  (`--ignore-pattern` matches by bare substring). Both cited, both untouched, both still
+  `target_story: NONE — unscheduled`. `DF-10-3-B`'s own text names *"the Epic-12 report-quality
+  surface"* as a candidate home and deliberately declines to assert a story id; this story does not
+  assert one for it either, and does not absorb it merely because it happened to be reading the same
+  region of this file while closing `DF-10-3-A`.
+- **`DF-10-4-D`** (the dogfood artifact-currency bootstrap). Cited because Story 12.9 had to decide
+  whether it applied: it does **not** — `argus/**` is **byte-unchanged** by this story (DN-7, verified
+  by `git diff --stat -- argus`), so no regeneration is owed and none was performed.

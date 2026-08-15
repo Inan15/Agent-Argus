@@ -634,16 +634,51 @@ these terms; this is a specification, not a security review of Argus at large.
   **Minions-side removal surface** and belong to handoff **H1**, not to this repository. Original text
   struck rather than deleted (§3.4 evidence immutability).
 
-**Shipped package, measured in place 2026-08-10b:**
+**Shipped package, ~~measured in place 2026-08-10b~~ — SUPERSEDED, see the corrected table below:**
 
 | | |
 |---|---|
 | Distribution | **`argus-agent` 0.1.0**, module `argus`, flit backend |
 | Python | `>=3.10` |
-| Console scripts | `argus`, `argus-agent`, `repo-audit` — all → `argus.cli:main` |
-| Base deps | `pydantic>=2.0` · `jsonschema>=4.0` · `radon>=4.1.0` · `httpx>=0.24.0` · `tree-sitter>=0.25.0,<0.26` · `tree-sitter-python>=0.25.0,<0.26` |
-| Extras | `[dev]` · `[llm]` (`litellm>=1.0.0`) · `[languages]` (9 grammars) |
-| Grounded languages | **10** — Python (base) + 9 via `[languages]` |
+| ~~Console scripts~~ | ~~`argus`, `argus-agent`, `repo-audit` — all → `argus.cli:main`~~ |
+| ~~Base deps~~ | ~~`pydantic>=2.0` · `jsonschema>=4.0` · `radon>=4.1.0` · `httpx>=0.24.0` · `tree-sitter>=0.25.0,<0.26` · `tree-sitter-python>=0.25.0,<0.26`~~ |
+| ~~Extras~~ | ~~`[dev]` · `[llm]` (`litellm>=1.0.0`) · `[languages]` (9 grammars)~~ |
+| ~~Grounded languages~~ | ~~**10** — Python (base) + 9 via `[languages]`~~ |
+
+🔴 **CORRECTED 2026-08-15 by Story 12.9 / AC6.1 — four cells above were measurably STALE at
+`de05dec`.** Struck, not deleted (§3.4 evidence immutability). This is the architecture's own statement
+of *what the release contains*, and Story 12.9 is the release story, so a stale one here is the kind of
+published falsehood the Epic-11 retrospective §4.4 filed. What moved, and when: **Story 12.6** added a
+fourth console script (`argus-mcp`), and **Story 12.5** promoted the nine non-Python grammars into the
+base dependencies under NFR-P3, which made `[languages]` a backward-compatibility **alias** rather than
+a feature and made *"Python (base) + 9 via `[languages]`"* false in both halves.
+
+**Shipped package, measured in place 2026-08-15 (`de05dec`), and now held by a guard:**
+
+| | |
+|---|---|
+| Distribution | **`argus-agent` 0.1.0**, module `argus`, flit backend |
+| Python | `>=3.10` |
+| Console scripts | **4** — `argus`, `argus-agent`, `repo-audit` → `argus.cli:main`; `argus-mcp` → `argus.mcp.server:main` (Story 12.6 / FR35) |
+| Base deps | `pydantic>=2.0` · `jsonschema>=4.0` · `radon>=4.1.0` · `httpx>=0.24.0` · `tree-sitter>=0.25.0,<0.26` · **all ten** tree-sitter grammars (`-python`, `-javascript`, `-typescript`, `-go`, `-rust`, `-java`, `-c`, `-cpp`, `-ruby`, `-php`) |
+| Extras | `[dev]` · `[llm]` (`litellm>=1.0.0`) · `[languages]` — **a retained backward-compatibility ALIAS, not a feature**: every line in it is already an ordinary dependency, so it adds nothing to an install (Story 12.5 / NFR-P3) |
+| Grounded languages | **10**, all in the DEFAULT install — `pip install argus-agent` grounds every language the tool claims to support |
+
+**A form a guard can hold, which is why this table is now shaped as it is.** Each cell above is derived
+from `pyproject.toml` and the live registry by `tests/test_installed_artifact.py`
+(`TC-ArgusAgent-DOCS-001-72`), in both directions: a fifth console script, an eleventh grammar or a
+promoted/demoted extra turns that guard RED rather than leaving this paragraph quietly wrong for two
+epics, which is exactly what happened between 2026-08-10b and 2026-08-15.
+
+**Index channel, exit condition RE-AFFIRMED 2026-08-15 (Story 12.9 / DN-1).** `argus-agent` still ships
+to **no package index** and no publish was attempted. The reasoning is unchanged and is recorded in four
+places (`README.md`, `.github/workflows/release.yml`'s header, `CHANGELOG.md`'s *Resolving
+`argus-agent`* table, and Story 9.2 / D1-D13): an index publish is **permanently irreversible**, needs a
+credential this repository cannot prove exists, and is an operator decision taken with credentials in
+hand. `epics.md:2465` is **permissive** (*the index channel "may ship independently"*), not mandatory.
+The named exit condition — the distribution name claimed on PyPI **and** a Trusted Publisher (OIDC)
+configured for this repository — is restated here **with a date** so *"interim"* keeps an end rather
+than becoming permanent by silence.
 
 ~~🚩 **The `tree-sitter <0.26` upper bound is LOAD-BEARING, not hygiene.** On `0.26.0` the cartridge
 self-audit flips `NOT_READY_FOR_RELEASE` → `RELEASE_READY` because AST corroboration stops firing —

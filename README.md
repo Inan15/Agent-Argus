@@ -71,12 +71,27 @@ dependencies = [
 > ⚠️ Unresolvable until `v0.1.0` exists, for the same reason as above.
 
 **Authentication.** No credential is required **if and only if**
-`github.com/Inan15/Agent-Argus` is a public repository. If it is private, a consumer's CI
-needs a token with read access to it and must rewrite the URL to carry that token (for
-example `git+https://${TOKEN}@github.com/...`). ⚠️ **This repository's visibility was not
-measured when this line was written** — no network call was made from the working tree —
-so treat "public" as the thing to CHECK, not as a stated fact. Open the URL above: if it
-loads while signed out, no credential is needed.
+`github.com/Inan15/Agent-Argus` is a public repository.
+
+~~⚠️ **This repository's visibility was not measured when this line was written** — no
+network call was made from the working tree — so treat "public" as the thing to CHECK, not
+as a stated fact. Open the URL above: if it loads while signed out, no credential is
+needed.~~
+
+🔴 **CORRECTED 2026-08-15 by Story 12.9 / AC4 — it has now been measured, and it is the
+worse case.** Struck above rather than deleted (§3.4 evidence immutability). The sentence
+below is the single source of this fact; `TC-ArgusAgent-DOCS-001-71` asserts it appears
+verbatim here, in `CHANGELOG.md` and in `docs/first-run.md`, so the three cannot drift the
+way they drifted while all three admitted they had never looked:
+
+Repository visibility, MEASURED 2026-08-15 by `gh repo view Inan15/Agent-Argus --json
+visibility,isPrivate` -> `PRIVATE` / `isPrivate: true`. What that costs a consumer, stated
+plainly: while it stays private the pinned install cannot resolve for anybody — tag or no
+tag — without a read credential carried in the URL
+(`git+https://<credential>@github.com/...`), and a GitHub Release on a private repository is
+not publicly resolvable either. Making the repository public is an outward-facing operator
+act that has not been taken. This is a dated measurement, not a standing claim: re-run the
+command above before relying on it.
 
 **This pin is INTERIM.** It resolves a git ref rather than an immutable index artifact,
 which means it depends on the repository staying reachable and the tag staying put (the
@@ -91,7 +106,29 @@ under one named condition:
 
 Publishing to PyPI is deliberately **not** attempted by the current workflow: a released
 name+version on an index can never be replaced, which makes it an operator decision taken
-with credentials in hand.
+with credentials in hand. **Re-affirmed 2026-08-15 (Story 12.9 / DN-1):** still not
+attempted, and the exit condition above still has a named end rather than becoming permanent
+by silence.
+
+### Release status: what evidence backs this, stated rather than implied
+
+A release status here cites an executed gate — a GitHub Actions run **together with the sha
+that run covers** — or it records `NOT ESTABLISHED`, which is a first-class recordable state
+and not a gap (`architecture.md` §H, Story 10.1). The sentence below is **derived**, not
+typed: `scripts/release_notes.py::derive_release_status` computes it from the observed run,
+its sha, its conclusion and the commit being released, and
+`TC-ArgusAgent-DOCS-001-25` asserts that this file and `CHANGELOG.md` carry exactly that
+value. The same function renders it into the GitHub Release note, so the three cannot
+disagree.
+
+CI evidence: NOT ESTABLISHED. No executed gate covers the commit being released — the most
+recent `audit-ci.yml` run is run 31341363300, which covers sha 00c8d1b, 34 commits behind
+the commit being released and therefore evidences a different tree; a run id quoted without
+the sha it covers is a half-truth, so it is named here as SUPERSEDED rather than cited.
+Observed 2026-08-15 through the GitHub API. The human step that would establish one, and the
+only one: push `master` to `origin` and let `audit-ci.yml` run to success on the released
+commit, then re-derive this sentence from that run. A local `pytest`/`mypy`/`bandit` run is
+necessary, not sufficient, and is recorded as LOCAL (architecture.md §H).
 
 ### Auditing a non-Python repository: nothing extra to install
 

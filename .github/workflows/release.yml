@@ -155,6 +155,36 @@ jobs:
           if-no-files-found: error
           retention-days: 90
 
+      - name: Generate the release note body (it types no fact)
+        # CORRECTED 2026-08-15 by Story 12.9 / AC3. This step used to be a hand-typed
+        # string literal inside the `gh release create` script below, and that literal
+        # transcribed THREE pinned facts — the AR3 exit-code contract, the install command
+        # and a PARAPHRASE of the FR34 disclosure. Story 12.8 changed what exit `2` can
+        # mean and the literal did not move, because nothing could see it:
+        # `_RELEASE_SURFACES` puts this file inside `-17`'s OVER-claim scan, and no guard
+        # checked whether what it said was TRUE.
+        #
+        # Every claim in the body is now DERIVED by `scripts/release_notes.py` from the one
+        # source of each fact — the version from pyproject.toml, the exit-code map from
+        # `argus/verdict/verdict_gate.py` plus `argus/cli.py`'s reserved code, the FR34
+        # disclosure from `argus/verdict/negative_assurance.py` in its canonical form, the
+        # install command from the tag, and the RELEASE STATUS from the single derivation
+        # that either cites a sha-scoped executed gate or records NOT ESTABLISHED
+        # (architecture.md §H / Story 10.1). `tests/test_release_note_body.py` renders this
+        # body and asserts each claim against the live constants in both directions.
+        #
+        # The generator is stdlib-only and does NOT import `argus`, exactly like
+        # `release_preflight.py`: it runs on a bare runner and must not depend on a
+        # successful install of the thing being released (Story 12.9 / DN-4).
+        #
+        # `$TAG` stays bound through `env:` and quoted — never interpolated into this body.
+        env:
+          TAG: ${{ steps.resolve.outputs.tag }}
+        run: |
+          set -euo pipefail
+          python scripts/release_notes.py --tag "$TAG" --out release-note.md
+          cat release-note.md
+
       - name: Create the GitHub Release and attach both artifacts
         env:
           GH_TOKEN: ${{ github.token }}
@@ -170,21 +200,10 @@ jobs:
           # evidence than an independent-repository run; it is never presented as
           # external validation and the >=80%-precision gate remains PROVISIONAL, cleared
           # only by a human TP/FP adjudication that has not taken place (Story 9.2 /
-          # AC12, SD-2).
+          # AC12, SD-2). That sentence is now rendered BY the generator above from the
+          # single-sourced disclosure constant rather than paraphrased here.
           gh release create "$TAG" \
             --title "argus-agent $TAG" \
             --verify-tag \
-            --notes "Source distribution and wheel for \`argus-agent\` $TAG.
-
-          Install directly from this repository at this tag:
-
-              pip install \"argus-agent @ git+https://github.com/Inan15/Agent-Argus.git@$TAG\"
-
-          The exit-code wire contract is UNCHANGED by this release: 0=RELEASE_READY,
-          2=NOT_READY_FOR_RELEASE, 3=INSUFFICIENT_COVERAGE, 1=typed audit failure (no
-          verdict produced). See CHANGELOG.md for the full consumer contract.
-
-          This release makes no assurance claim about Argus itself. Argus's dogfood run
-          is a self-audit and is not independent corroboration; the >=80%-precision
-          externalization gate is PROVISIONAL and is not cleared." \
+            --notes-file release-note.md \
             dist/*

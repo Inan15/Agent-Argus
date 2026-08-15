@@ -238,6 +238,28 @@ _NOTE_SECTIONS: tuple[str, ...] = (
     "### Documented — the `[languages]` extra, which shipped undocumented",
     "### Fixed — TypeScript and PHP were reported as missing grammars they already had",
     "### Changed — the memoization cache key now names the grammar that actually parsed",
+    # `## Unreleased` — added 2026-08-15 by Story 12.9 (AC2 + AC3). A PURE INSERTION: no
+    # existing section moved relative to any other, and nothing was demoted.
+    # Placed LAST among the Unreleased sections, and the placement is the DECISION this
+    # registry's comment above demands rather than a default. PROMOTION WAS CONSIDERED AND
+    # DECLINED, on the honest reading rather than the flattering one.
+    # The argument for promoting it is real and tempting: it is the entry that states whether
+    # ANY claim in this note is backed by an executed gate, and a reader who weighs the other
+    # sections arguably needs that frame first — the same ground 11.1's instrument disclosure
+    # holds first place on.
+    # It is declined because the registry's stated principle is *what a consumer of THIS
+    # release HITS*, and 12.2's egress entry was declined promotion under exactly that test:
+    # it *"changes no default, no exit code, no verdict and no byte on any invocation that
+    # existed before this release"*. That sentence is true of this entry word for word. Every
+    # section above it can move something a consumer observes — 12.8 can change an exit code
+    # on an unchanged repository, 12.5/12.6/12.7 change what `pip install` puts on their disk,
+    # 11.x can move a verdict or a coverage number — while this one changes what the release
+    # SAYS ABOUT ITSELF and nothing a pipeline can trip over. Applying the principle one way
+    # to a transmit path and another way to a governance statement would make it decorative.
+    # The frame this entry provides is not deferred by the placement either: the honesty
+    # preamble at the head of this file carries the same derived status sentence, so a reader
+    # meets it before any section at all.
+    "### Changed — the release note and the release status are generated from their sources, and the status is NOT ESTABLISHED",
     "### Resolving `argus-agent`",
     "### Version: one value, one source",
     "### Behaviour: the composite action distinguishes a crash from an assessment",
@@ -295,6 +317,21 @@ _RELEASE_SURFACES: tuple[str, ...] = (
     # failure mode. Registering both is what makes the pattern below honest.
     "docs/first-run.md",
     "docs/README.md",
+    # Registered 2026-08-15 by Story 12.9 (AC3). This module RENDERS the GitHub Release note
+    # body and the published release-status sentence, so the sentences a stranger reads on the
+    # Release page and in `README.md`/`CHANGELOG.md` are committed HERE. It is the most
+    # consumer-facing non-document file in the tree: an over-claim landing in it is published
+    # on every surface at once, which no other member of this registry can do.
+    # Registered INDIVIDUALLY and matched by an exact pattern below, which is `-18`'s design:
+    # a directory-wide `scripts/*.py` glob was CONSIDERED AND DECLINED because `scripts/`
+    # holds release machinery and maintenance tooling that publishes nothing (the preflight,
+    # the dogfood regenerator), and a pattern that drags them in would force four unrelated
+    # registry entries whose only content would be "this is not a publication surface" — the
+    # exemption-by-attrition shape `_PRESERVED_RECORD` exists to avoid. The RENDERED body is
+    # separately held to this same over-claim rule by
+    # `tests/test_release_note_body.py::TC-ArgusAgent-DOCS-001-67`, which is the half a file
+    # scan cannot reach.
+    "scripts/release_notes.py",
 )
 
 # Globs that resolve to every file that COULD be such a surface. Anything they find which
@@ -317,6 +354,11 @@ _RELEASE_SURFACE_PATTERNS: tuple[str, ...] = (
     # `docs/first-run.md`, so a SECOND consumer-facing page dropped into `docs/` is RED until
     # somebody decides it is honest, which is exactly what `-18` exists for.
     "docs/*.md",
+    # Added 2026-08-15 by Story 12.9, WITH the registry entry above — both, for 12.7's
+    # recorded reason: *a registry entry no pattern resolves proves nothing, and a pattern
+    # with no registry lets anything through*. Exact rather than directory-wide, for the
+    # reason recorded beside the registry entry.
+    "scripts/release_notes.py",
 )
 
 # The preserved, frozen Story-7.2 independent run matches the dogfood glob but is NOT a

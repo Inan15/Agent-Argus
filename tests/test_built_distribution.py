@@ -157,6 +157,29 @@ def unevaluable_build_tooling(
     )
 
 
+def console_script_aliases() -> dict[str, str]:
+    """Every ``[project.scripts]`` alias -> its target, DERIVED from ``pyproject.toml``.
+
+    PROMOTED to a public helper 2026-08-15 by Story 12.9 / AC1 (12.6 / DN-7: *need a helper?
+    promote it; never reach through a ``_``-prefixed API, and never copy it*). ``-56`` had
+    this derivation inline and ``tests/test_installed_artifact.py`` needs the identical
+    closure to exercise every alias from a fresh environment. Two copies of *what the
+    distribution's entry points are* is the ``_CONSOLE_SCRIPTS`` recognizer-that-stopped-
+    recognizing class this project has now recorded four times, so there is one.
+
+    A closure, not a list: a FIFTH alias is covered by every caller with no edit here.
+    """
+    scripts = re.search(
+        r"^\[project\.scripts\]\n((?:.+\n)+?)\n",
+        (_REPO_ROOT / "pyproject.toml").read_text(encoding="utf-8"),
+        re.MULTILINE,
+    )
+    assert scripts, "pyproject.toml declares no [project.scripts] table"
+    aliases = dict(re.findall(r'^(\S+)\s*=\s*"([^"]+)"', scripts.group(1), re.MULTILINE))
+    assert aliases, "no console alias parsed out of [project.scripts]"
+    return aliases
+
+
 def _module_is_installed(name: str) -> bool:
     try:
         return importlib.util.find_spec(name) is not None
@@ -579,8 +602,111 @@ def _released_versions() -> tuple[str, ...] | None:
     )
 
 
+# How the tag state was established, stated ON the surface that leans on it. A caveat that
+# says only *that* it holds cannot be checked by the reader it is written for.
+_TAG_STATE_EVIDENCE = "`git tag -l` is empty at this commit"
+
+# The workflow's own tag-state claim (Story 12.9 / AC6.2). `release.yml`'s header states it
+# is *"COMMITTED AND HAS NEVER EXECUTED"*, which is TRUE at this commit and becomes false the
+# moment a tag is pushed — the same rot, in the same two directions, on a surface that is not
+# a pin. AC6.2 asked for it to be MECHANISED rather than hand-fixed a second time, so it is
+# folded into the one tag-state rule instead of getting a second guard (AR7).
+_NEVER_EXECUTED_SURFACE = ".github/workflows/release.yml"
+_NEVER_EXECUTED_CLAIM = "COMMITTED AND HAS NEVER EXECUTED"
+
+
+@dataclass(frozen=True)
+class TagStateReport:
+    """What the tag-state rule found, plus the two figures that stop it passing over nothing."""
+
+    violations: tuple[str, ...]
+    surfaces_with_pins: int
+    pins_found: int
+
+
+def tag_state_violations(texts: dict[str, str], tags: tuple[str, ...]) -> TagStateReport:
+    """The tag-state rule, as a PURE function of the surfaces and the tag list.
+
+    WIDENED 2026-08-15 by Story 12.9 / AC4 + DN-6. Both directions are retained VERBATIM from
+    Story 11.5's ``-55``; only the population changed, and it became a closure. Pure so the
+    tag-present direction can be exercised through this seam — **a guard is never tested by
+    creating a real tag** (Story 12.9 / AC9 fences that act).
+
+    The rule, unchanged: while no ``v*.*.*`` tag exists every pinned VCS install command must
+    carry a caveat saying it does not resolve, and the surface must say HOW that was
+    established; the moment a tag exists every such caveat is the NEW falsehood and must be
+    removed deliberately rather than shipped stale.
+    """
+    violations: list[str] = []
+    surfaces_with_pins = 0
+    pins_found = 0
+
+    for rel, text in sorted(texts.items()):
+        lines = text.splitlines()
+        pins = [i for i, line in enumerate(lines) if _VERSION_PIN.search(line)]
+        if not pins:
+            continue
+        surfaces_with_pins += 1
+        pins_found += len(pins)
+
+        for index in pins:
+            window = " ".join(lines[index : index + _CAVEAT_WINDOW]).lower()
+            caveated = any(marker in window for marker in _CAVEAT_MARKERS)
+            if tags and caveated:
+                violations.append(
+                    f"{rel}:{index + 1} still says the pinned install does not resolve, but "
+                    f"{sorted(tags)} exist(s). The caveat is now the falsehood — remove it."
+                )
+            elif not tags and not caveated:
+                violations.append(
+                    f"{rel}:{index + 1} publishes `{lines[index].strip()}` with no caveat "
+                    f"within {_CAVEAT_WINDOW} lines, and `git tag -l` lists no v*.*.* tag, "
+                    "so that command cannot resolve for any reader."
+                )
+        if not tags and _TAG_STATE_EVIDENCE not in text:
+            violations.append(
+                f"{rel} carries {len(pins)} tag-pinned install command(s) but never states "
+                f"HOW the tag state was established ({_TAG_STATE_EVIDENCE!r}). A caveat that "
+                "says only THAT it holds cannot be checked by the reader it is written for."
+            )
+
+    workflow = texts.get(_NEVER_EXECUTED_SURFACE)
+    if workflow is not None:
+        claimed = _NEVER_EXECUTED_CLAIM in workflow
+        if tags and claimed:
+            violations.append(
+                f"{_NEVER_EXECUTED_SURFACE} still states it is {_NEVER_EXECUTED_CLAIM!r} "
+                f"while {sorted(tags)} exist(s) — the tag triggers this workflow, so that "
+                "sentence is now the falsehood. Correct it in the same change that "
+                "falsified it (Story 12.9 / AC6.2)."
+            )
+        elif not tags and not claimed:
+            violations.append(
+                f"{_NEVER_EXECUTED_SURFACE} no longer states that it is "
+                f"{_NEVER_EXECUTED_CLAIM!r} while `git tag -l` is still empty. A workflow "
+                "that has never run and does not say so reads as one that has."
+            )
+
+    return TagStateReport(tuple(violations), surfaces_with_pins, pins_found)
+
+
+def _release_surface_texts() -> dict[str, str]:
+    """Every registered release surface's text — the CLOSURE the rule runs over.
+
+    Imported from the registry that owns it rather than hard-coded, which is the entire
+    correction: a FIFTH pin on a FOURTH surface is covered here with no edit.
+    """
+    from tests.test_release_surface_honesty import _RELEASE_SURFACES
+
+    return {
+        rel: (_REPO_ROOT / rel).read_text(encoding="utf-8")
+        for rel in _RELEASE_SURFACES
+        if (_REPO_ROOT / rel).is_file()
+    }
+
+
 def test_TC_ArgusAgent_DOCS_001_55_the_interim_install_caveat_tracks_the_real_tag_state() -> None:
-    """TC-ArgusAgent-DOCS-001-55 — AC4.2: mechanised, so it cannot rot in EITHER direction.
+    """TC-ArgusAgent-DOCS-001-55 — AC4.2 / Story 12.9 AC4: mechanised, and now over ALL of them.
 
     Story 10.x corrected this sentence by hand. A hand correction is true for exactly as
     long as nobody changes the world it describes — and the day an operator pushes
@@ -588,6 +714,19 @@ def test_TC_ArgusAgent_DOCS_001_55_the_interim_install_caveat_tracks_the_real_ta
     one true. So: while no ``v*.*.*`` tag exists every pinned VCS install command must
     carry the caveat; the moment one exists this goes RED so the caveat is removed
     deliberately rather than shipped stale.
+
+    ⚠️ **WIDENED 2026-08-15 by Story 12.9 / AC4, and recorded here rather than fixed
+    quietly.** As written this test read ``_README`` **and nothing else** — while the pin
+    appears on THREE tracked consumer surfaces: ``README.md`` (3 pins), ``CHANGELOG.md`` (2)
+    and ``docs/first-run.md`` (1, added by **Story 12.8, after this guard was written**).
+    So the transition it was built to make safe would have turned it RED for README's pins —
+    correct and intended — while three further caveats on two other surfaces silently became
+    published falsehoods. That is 11.5's own stated failure mode, reopened by a file it could
+    not have known about, and it is exactly what 12.8 left pointed at Story 12.9.
+
+    The population is now a CLOSURE over the registered release surfaces with both
+    non-vacuity floors, so a fifth pin on a fourth surface is covered with **no edit** here.
+    ``-55b`` exercises both directions through the pure seam, without creating a tag.
     """
     tags = _released_versions()
     if tags is None:  # pragma: no cover - environment without git
@@ -596,34 +735,94 @@ def test_TC_ArgusAgent_DOCS_001_55_the_interim_install_caveat_tracks_the_real_ta
                 rp.Unevaluable(
                     "E2",
                     "`git tag --list` could not be run, so the tag state is unknown and "
-                    "the README caveat was NOT checked.",
+                    "the interim-install caveats were NOT checked.",
                 )
             )
         )
 
-    lines = _README.read_text(encoding="utf-8").splitlines()
-    pins = [i for i, line in enumerate(lines) if _VERSION_PIN.search(line)]
-    assert pins, "README no longer shows the tag-pinned VCS install command at all"
+    report = tag_state_violations(_release_surface_texts(), tags)
 
-    for index in pins:
-        window = " ".join(lines[index : index + _CAVEAT_WINDOW]).lower()
-        caveated = any(marker in window for marker in _CAVEAT_MARKERS)
-        if tags:
-            assert not caveated, (
-                f"README line {index + 1} still says the pinned install does not resolve, "
-                f"but {sorted(tags)} exist(s). The caveat is now the falsehood — remove it."
-            )
-        else:
-            assert caveated, (
-                f"README line {index + 1} publishes `{lines[index].strip()}` with no "
-                f"caveat within {_CAVEAT_WINDOW} lines, and `git tag -l` lists no "
-                "v*.*.* tag, so that command cannot resolve for any reader."
-            )
+    # NON-VACUITY, both floors (E.3). Without these the rule is satisfied by a corpus that
+    # shows no install command at all — which is how a guard stops guarding by attrition.
+    assert report.surfaces_with_pins > 0, (
+        "no registered release surface shows a tag-pinned VCS install command any more. "
+        "Either the documented install route was deleted rather than corrected, or the pin "
+        "pattern stopped matching it — and either way this guard is holding nothing."
+    )
+    assert report.pins_found > 0, "the pin closure found zero pins"
 
-    if not tags:
-        assert "`git tag -l` is empty at this commit" in "\n".join(lines), (
-            "the caveat must say HOW it was established, not merely that it holds"
+    assert not report.violations, "\n".join(report.violations)
+
+
+def test_TC_ArgusAgent_DOCS_001_55b_the_tag_state_rule_bites_in_both_directions() -> None:
+    """TC-ArgusAgent-DOCS-001-55b — Story 12.9 / AC4: the positive control, through the seam.
+
+    OBSERVABLE: what :func:`tag_state_violations` reports for the REAL surface texts under a
+    simulated tag state.
+
+    Both directions are exercised on the committed corpus, because both are branches that
+    only run "once the tag exists" — the never-executed-branch class this project has now
+    recorded FOUR times. The tag state is simulated through the function's own parameter;
+    **no real tag is created**, which is Story 12.9 / AC9's fence and also the only honest
+    way to test a guard about tags.
+    """
+    texts = _release_surface_texts()
+
+    # Direction 1 — no tag, a caveat DELETED. Today that deletion is invisible on
+    # CHANGELOG.md and docs/first-run.md; that invisibility is the defect this widening
+    # closes, so it is demonstrated on those two files specifically.
+    for rel in ("CHANGELOG.md", "docs/first-run.md"):
+        assert rel in texts, f"{rel} is not a registered release surface any more"
+        stripped = dict(texts)
+        text = stripped[rel]
+        for marker in ("does not resolve", "Unresolvable", "does not resolve yet"):
+            text = re.sub(marker, "resolves", text, flags=re.IGNORECASE)
+        stripped[rel] = text
+        report = tag_state_violations(stripped, ())
+        assert any(rel in violation for violation in report.violations), (
+            f"deleting the interim caveat from {rel} was INVISIBLE to the tag-state rule. "
+            "That is precisely the hole Story 12.9 / AC4 closes: `-55` read README.md only, "
+            f"and {rel} carries a pin it could not see."
         )
+
+    # Direction 2 — the tag EXISTS. Every caveat now on disk is the falsehood, and the
+    # workflow's "HAS NEVER EXECUTED" header is one too. The transition must be reported for
+    # EVERY pin-carrying surface, not just the first.
+    released = tag_state_violations(texts, ("v0.1.0",))
+    assert released.violations, (
+        "with `v0.1.0` present, not one of the caveats on disk was reported as a falsehood. "
+        "The tag that makes the documented install command true makes every 'does not "
+        "resolve' sentence false, and a guard that misses that ships the lie."
+    )
+    flagged = {violation.split(":")[0].split(" ")[0] for violation in released.violations}
+    for rel in ("README.md", "CHANGELOG.md", "docs/first-run.md"):
+        assert any(rel in violation for violation in released.violations), (
+            f"{rel} carries a pin with a caveat and was NOT reported when the tag exists; "
+            f"reported surfaces were {sorted(flagged)}"
+        )
+    assert any(_NEVER_EXECUTED_SURFACE in v for v in released.violations), (
+        f"{_NEVER_EXECUTED_SURFACE} still claims it has never executed while a tag exists, "
+        "and the rule did not say so. AC6.2 requires that header to be corrected in the same "
+        "change that falsifies it."
+    )
+
+    # And the honest states are NOT flagged, in both directions — otherwise this rule could
+    # never be satisfied and would be deleted by the third person to hit it.
+    assert not tag_state_violations(texts, ()).violations
+    no_caveats = {
+        rel: re.sub(
+            r"does not resolve|unresolvable|tag does not exist",
+            "resolves",
+            text,
+            flags=re.IGNORECASE,
+        ).replace(_NEVER_EXECUTED_CLAIM, "has now executed")
+        for rel, text in texts.items()
+    }
+    assert not tag_state_violations(no_caveats, ("v0.1.0",)).violations, (
+        "with the tag present and every caveat removed the rule still objects, so the "
+        "post-release state it demands is unreachable: "
+        f"{tag_state_violations(no_caveats, ('v0.1.0',)).violations}"
+    )
 
 
 # ─────────────────────────────────────────────────────────────────────────────
@@ -676,17 +875,7 @@ def test_TC_ArgusAgent_DOCS_001_56_documented_commands_are_marked_until_they_shi
     dist = _distribution()
     readme = _README.read_text(encoding="utf-8")
 
-    scripts = re.search(
-        r"^\[project\.scripts\]\n((?:.+\n)+?)\n", (_REPO_ROOT / "pyproject.toml").read_text(
-            encoding="utf-8"
-        ),
-        re.MULTILINE,
-    )
-    assert scripts, "pyproject.toml declares no [project.scripts] table"
-    aliases = dict(
-        re.findall(r'^(\S+)\s*=\s*"([^"]+)"', scripts.group(1), re.MULTILINE)
-    )
-    assert aliases, "no console alias parsed out of [project.scripts]"
+    aliases = console_script_aliases()
 
     # What README claims it installs must be what pyproject declares — a closure, so a
     # fourth alias (or a renamed one) fails here rather than drifting quietly.

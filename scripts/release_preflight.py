@@ -101,7 +101,13 @@ CI_UNREACHABLE: dict[str, str] = {
         "path is started BY the tag, and the workflow_dispatch input requires a tag that "
         "already exists), so .github/workflows/release.yml never passes --creating-tag "
         "and this check cannot fire in CI. It still fires for an operator running the "
-        "preflight locally before creating a tag by hand."
+        "preflight locally before creating a tag by hand. "
+        "RE-EXAMINED 2026-08-15 by Story 12.9 / AC7 rather than inherited: the workflow "
+        "half is UNCHANGED and still true (neither trigger creates a tag), and the local "
+        "half is no longer merely asserted — TC-ArgusAgent-RELEASE-001-29 now DRIVES this "
+        "check to a refusal through the CLI against a disposable fixture repository that "
+        "has the tag, so 'unreachable in CI' can no longer be read as 'never runs'. The "
+        "two reachabilities are different questions and this note now answers both."
     ),
 }
 
