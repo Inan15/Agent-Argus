@@ -106,7 +106,15 @@ _EXEMPT_BY_DESIGN: dict[str, _Exemption] = {
         reason=(
             "1308 lines at 2026-08-12. The Story 10.5 delivery-closure guard: two static closures "
             "over prd.md and the argus/** import graph. Same reason as above — a restructuring "
-            "story must not refactor the guard that would notice if it broke something."
+            "story must not refactor the guard that would notice if it broke something. "
+            "RE-MEASURED 2026-08-15: 1685 lines, and the growth is recorded rather than left to be "
+            "discovered. Every story since has had to amend a disposition REASON in the reverse "
+            "registry — that is the file's design, since a disposition without a reason is a label "
+            "— and 12.6 added the largest single one (FR35's, which had to state both what was "
+            "delivered and the 12.7 half that was not, or the entry would over-claim the FR). The "
+            "exemption still holds for its original reason and the split is still owed; the honest "
+            "note is that this file grows with every epic and the eventual split is the registries "
+            "moving to their own module, not the closures being rewritten."
         ),
         dated="2026-08-12",
         owner="Engineering",

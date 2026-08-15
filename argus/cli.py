@@ -150,9 +150,33 @@ from argus.verdict.negative_assurance import (
 )
 from argus.verdict.verdict_gate import AuditVerdict
 
-__all__ = ["build_parser", "main"]
+# PUBLIC SURFACE. `build_parser` and `main` were the whole of it until 2026-08-15, when
+# Story 12.6 PROMOTED five names that were previously `_`-prefixed. The promotion is the
+# point, not an incidental tidy-up: a SECOND invocation surface now projects argv onto the
+# same `AuditRequest`, and the only two ways to give it that projection are to reuse this
+# one or to write a second. A rule implemented twice drifts in one of the two — Story 11.3
+# / DN-2 promoted `executable_line_numbers` for exactly this reason — and the rule at stake
+# here is the one that decides WHICH POPULATION gets assessed (`--coverage-scope` defaults
+# to `application` here while `AuditRequest.coverage_scope` defaults to `repository`, the
+# announced Story 10.3 / DN-8 divergence). A copy of that projection would silently assess
+# a different population and could return a different verdict on an unchanged repository.
+# Reaching through an `_`-prefixed name would have been the same coupling without the
+# promise, so the names are public, documented, and covered by the parity guard.
+__all__ = [
+    "PROG",
+    "build_parser",
+    "build_request",
+    "emit_egress_disclosure",
+    "harden_output_streams",
+    "main",
+    "resolve_passes",
+    "summary_line",
+]
 
-_PROG = "argus"
+# The one program token every message this tool prints is prefixed with. Public since
+# 2026-08-15 (Story 12.6) so a second surface reports a failure in the SAME words rather
+# than spelling the prefix a second time.
+PROG = "argus"
 # Exit code reserved for a fatal/typed pipeline error (AR3 — the crash code).
 _CRASH_EXIT_CODE = 1
 # The full pass set a bare invocation runs, and the reports a bare invocation renders.
@@ -167,7 +191,7 @@ _DEFAULT_REPORTS = ("final-verdict", "coverage-ledger")
 def build_parser() -> argparse.ArgumentParser:
     """Build the LOCKED stdlib-``argparse`` parser (AR2 — zero new dependency)."""
     parser = argparse.ArgumentParser(
-        prog=_PROG,
+        prog=PROG,
         description="ArgusAgent — coverage-grounded release-readiness auditor (headless).",
     )
     subparsers = parser.add_subparsers(dest="command", required=True)
@@ -307,13 +331,17 @@ def build_parser() -> argparse.ArgumentParser:
     return parser
 
 
-def _summary_line(
+def summary_line(
     verdict_token: str,
     deep_ratio: object,
     blocking: int,
     scope: object = None,
 ) -> str:
     """A secret-safe machine-readable summary (NFR-S1 — no source/secret/abs-path).
+
+    PUBLIC since 2026-08-15 (Story 12.6) — see the ``__all__`` note above. The shape below
+    is the FROZEN FR18/AR3 wire contract; a second surface that described the same run in
+    different words would be a second contract, so it renders this one.
 
     Emits ``verdict=<TOKEN> deep_ratio=<num/den> blocking_findings=<n>`` — the
     verdict token + the exact ``Fraction`` deep-ratio (``num/den``, never a float)
@@ -335,7 +363,7 @@ def _summary_line(
     return line
 
 
-def _harden_output_streams() -> None:
+def harden_output_streams(*streams: object) -> None:
     """Make the output streams tolerate characters the console cannot encode.
 
     The HUMAN register is full of em dashes (every ship-readiness headline carries
@@ -344,8 +372,14 @@ def _harden_output_streams() -> None:
     ``UnicodeEncodeError``, which is a ``ValueError``. PROSE MUST NEVER BE THE THING
     THAT FAILS A RUN: degrade the un-encodable characters instead, so a completed
     audit reports its own verdict rather than the terminal's limitation.
+
+    PUBLIC since 2026-08-15 (Story 12.6) — see the ``__all__`` note above. Called with no
+    arguments it hardens the process streams, exactly as it always did. A caller that owns
+    its own streams passes them, which is what lets a second invocation surface inherit
+    this defence instead of forking a second copy of it (AR7). A stream that cannot be
+    reconfigured — an in-memory buffer, a non-text stream — is skipped, not an error.
     """
-    for stream in (sys.stdout, sys.stderr):
+    for stream in streams or (sys.stdout, sys.stderr):
         try:
             stream.reconfigure(errors="backslashreplace")  # type: ignore[union-attr]
         except (AttributeError, ValueError):  # pragma: no cover - non-reconfigurable stream
@@ -364,8 +398,11 @@ def _split_csv(raw: str | None, default: tuple[str, ...]) -> tuple[str, ...]:
     return tuple(item.strip() for item in raw.split(",") if item.strip())
 
 
-def _resolve_passes(args: argparse.Namespace) -> tuple[str, ...]:
+def resolve_passes(args: argparse.Namespace) -> tuple[str, ...]:
     """Resolve ``--passes`` / ``--skip-pass`` into the enabled pass tuple.
+
+    PUBLIC since 2026-08-15 (Story 12.6) — see the ``__all__`` note above. Pure: it reads
+    a parsed namespace and returns a tuple; it prints nothing and touches no filesystem.
 
     ``--skip-pass`` subtracts from whatever ``--passes`` selected, so the two compose
     in one direction only: a skip can never re-add a pass the operator excluded.
@@ -387,13 +424,21 @@ def _resolve_passes(args: argparse.Namespace) -> tuple[str, ...]:
     return tuple(name for name in enabled if name not in skipped)
 
 
-def _build_request(
+def build_request(
     args: argparse.Namespace, enabled_passes: tuple[str, ...]
 ) -> AuditRequest:
     """Project the parsed namespace onto the frozen ``AuditRequest`` (FR30).
 
     Pure translation — every ``or ()`` here is argparse's ``append`` default (``None``)
     being normalised to the empty tuple the model requires, NOT a policy decision.
+
+    PUBLIC since 2026-08-15 (Story 12.6) — see the ``__all__`` note above. This function
+    is THE reason the promotion happened: it is where the parser's defaults become the
+    request's values, so a surface that reuses it inherits the CLI's defaults BY
+    CONSTRUCTION and a surface that constructs ``AuditRequest(...)`` itself inherits the
+    model's instead. On ``coverage_scope`` those two answers differ, deliberately and by
+    announcement (Story 10.3 / DN-8), which means the copy would assess a different
+    population and could report a different verdict for an unchanged repository.
     """
     return AuditRequest(
         repo_path=args.repo,
@@ -440,13 +485,13 @@ def _emit_suppression_disclosure(verdict: AuditVerdict) -> None:
         else f"{suppressed} were — they are recorded as `{RULE_OPERATOR_SUPPRESSED_SECRET}:*`"
     )
     print(
-        f"{_PROG}: security findings suppressed by your --ignore-path/--ignore-pattern "
+        f"{PROG}: security findings suppressed by your --ignore-path/--ignore-pattern "
         f"rules: {detail}. A live production key is never suppressed by either flag.",
         file=sys.stderr,
     )
 
 
-def _emit_egress_disclosure(message: str) -> None:
+def emit_egress_disclosure(message: str) -> None:
     """Disclose what will be transmitted and to whom, BEFORE the first byte (AC2.5).
 
     Story 12.2 / FR36 / NFR-S6. The pipeline hands this callable to the deep pass, which
@@ -461,8 +506,15 @@ def _emit_egress_disclosure(message: str) -> None:
     It is UNCONDITIONAL within an opted-in run — it fires even when no provider is
     configured and therefore nothing will be sent, because "nothing will be transmitted"
     is exactly the fact an operator who just asked for a deep read needs to be told.
+
+    PUBLIC since 2026-08-15 (Story 12.6) — see the ``__all__`` note above. A second
+    invocation surface hands the pipeline THIS callable, not a lookalike: the egress
+    consent channel and the sentence that discloses it stay single, which is Story 12.2's
+    stated contract. It writes to ``sys.stderr`` at call time, so a caller that has
+    rebound that stream (a stdio protocol adapter must) receives it on its own stream
+    without this function knowing anything about that caller.
     """
-    print(f"{_PROG}: {message}", file=sys.stderr)
+    print(f"{PROG}: {message}", file=sys.stderr)
 
 
 def _emit_instrument_disclosure() -> None:
@@ -492,7 +544,7 @@ def _emit_instrument_disclosure() -> None:
     second copy: the listing surfaces are compared against it rather than transcribed.
     """
     print(
-        f"{_PROG}: {render_instrument_disclosure(INSTRUMENT_STATUS)}",
+        f"{PROG}: {render_instrument_disclosure(INSTRUMENT_STATUS)}",
         file=sys.stderr,
     )
 
@@ -525,10 +577,10 @@ def _emit_ship_readiness(
         for line in render_ship_readiness(verdict, enabled_passes=enabled_passes):
             print(line, file=sys.stderr)
     except ShipReadinessError as exc:
-        print(f"{_PROG}: audit failed: {exc}", file=sys.stderr)
+        print(f"{PROG}: audit failed: {exc}", file=sys.stderr)
         return _CRASH_EXIT_CODE
     except ValueError as exc:
-        print(f"{_PROG}: ship-readiness not rendered: {exc}", file=sys.stderr)
+        print(f"{PROG}: ship-readiness not rendered: {exc}", file=sys.stderr)
     return None
 
 
@@ -540,11 +592,11 @@ def main(argv: list[str] | None = None) -> int:
     on a TYPED pipeline failure (with a secret-safe stderr line). NO business logic
     lives here — all audit logic is in ``pipeline.py`` + the reused modules.
     """
-    _harden_output_streams()
+    harden_output_streams()
 
     args = build_parser().parse_args(argv)
-    enabled_passes = _resolve_passes(args)
-    request = _build_request(args, enabled_passes)
+    enabled_passes = resolve_passes(args)
+    request = build_request(args, enabled_passes)
 
     # AUDIT + WIRE CONTRACT. A failure here means no verdict reached the consumer, so
     # exit `1` is the honest answer (AR10 / NFR-R1).
@@ -555,13 +607,13 @@ def main(argv: list[str] | None = None) -> int:
         # could differ on the path AC2.4 requires to be byte-identical. It also avoids
         # handing a callback to a run that structurally cannot use it.
         deep_kwargs = (
-            {"disclose": _emit_egress_disclosure}
+            {"disclose": emit_egress_disclosure}
             if deep_pass_enabled(enabled_passes)
             else {}
         )
         verdict = run_audit(request, **deep_kwargs)  # type: ignore[arg-type]
         print(
-            _summary_line(
+            summary_line(
                 verdict.verdict.value,
                 verdict.deep_ratio,
                 verdict.blocking_finding_count,
@@ -572,7 +624,7 @@ def main(argv: list[str] | None = None) -> int:
         # RepoIntakeError / WorkspaceContainmentError / CanonicalSerializationError
         # / PipelineError are all ValueError subclasses — TYPED, secret-safe (AR10).
         # The message names the typed reason only, never source / an absolute path.
-        print(f"{_PROG}: audit failed: {exc}", file=sys.stderr)
+        print(f"{PROG}: audit failed: {exc}", file=sys.stderr)
         return _CRASH_EXIT_CODE
 
     readiness_failure = _emit_ship_readiness(verdict, enabled_passes)

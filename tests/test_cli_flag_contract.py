@@ -46,7 +46,7 @@ def _namespace(*argv: str):
 def _request(*argv: str):
     """argv → the frozen ``AuditRequest``, through the real translation path."""
     args = _namespace(*argv)
-    return cli._build_request(args, cli._resolve_passes(args))
+    return cli.build_request(args, cli.resolve_passes(args))
 
 
 # ─────────────────────────────────────────────────────────────────────────────

@@ -474,7 +474,42 @@ def locked_contract_block() -> str:
 # block (README:178-190, Story 12.7's, DN-9) are all correctly OUT; README's terminal invocation,
 # action.yml's and argus-student-audit.yml's are all correctly IN.
 
-_CONSOLE_SCRIPTS = ("argus", "argus-agent", "repo-audit")
+# DERIVED from `[project.scripts]`, never hand-listed — corrected 2026-08-15 by Story 12.6.
+# It was the three-tuple `("argus", "argus-agent", "repo-audit")` until this story added a
+# FOURTH alias, and nothing here would have noticed: `_CONSOLE_SCRIPTS` is the recognizer
+# for "is this line a documented invocation of something we ship", so a shipped script
+# missing from it makes every command line a consumer copies for that script INVISIBLE to
+# `-28`. That is a guard narrowing itself silently, which is the class AI-E11-1 clause (iii)
+# names — the population is closed over the distribution metadata, so the next alias is
+# covered the day it is declared and not the day somebody remembers this file.
+#
+# The TARGET matters as well as the name: the three CLI aliases all resolve to
+# `argus.cli:main` and their command lines are parsed by `build_parser`, while `argus-mcp`
+# resolves to `argus.mcp.server:main`, whose entire input is a JSON-RPC stream on stdin and
+# which accepts NO arguments. Handing an `argus-mcp` line to the CLI parser would report a
+# usage error for a command that is correct, so `parse_failure` dispatches on the target
+# (below) rather than assuming one parser for every script this distribution ships.
+_CLI_ENTRY_TARGET = "argus.cli:main"
+_MCP_ENTRY_TARGET = "argus.mcp.server:main"
+
+
+def console_script_targets() -> dict[str, str]:
+    """``{alias: target}`` read off ``pyproject.toml [project.scripts]`` (PURE).
+
+    Raises rather than returning an empty mapping if the table cannot be located: an empty
+    recognizer makes every documented invocation invisible and `-28` would pass over
+    nothing at all.
+    """
+    text = _read("pyproject.toml")
+    match = re.search(r"^\[project\.scripts\]\n(.*?)(?=\n\[|\Z)", text, re.S | re.M)
+    assert match, "pyproject.toml declares no [project.scripts] table"
+    found = dict(re.findall(r'^([\w.-]+)\s*=\s*"([^"]+)"', match.group(1), re.M))
+    assert found, "no console alias parsed out of [project.scripts]"
+    return found
+
+
+_CONSOLE_SCRIPT_TARGETS = console_script_targets()
+_CONSOLE_SCRIPTS = tuple(sorted(_CONSOLE_SCRIPT_TARGETS))
 
 _INVOCATION_SOURCES = ("README.md", "action.yml")
 _WORKFLOW_GLOB = ".github/workflows/*.yml"
@@ -658,6 +693,20 @@ def parse_failure(command: str) -> str | None:
         argv = shlex.split(substituted, posix=True)
     except ValueError as exc:  # unbalanced quotes in the documented line
         return f"could not tokenise: {exc}"
+
+    # Which parser judges the line is decided by the alias's TARGET, not assumed (Story
+    # 12.6). `argus-mcp` takes no arguments at all — its input is the message stream — so
+    # for it the contract is "the documented line is the bare command", and a documented
+    # `argus-mcp --something` is a failure here rather than a false green.
+    target = _CONSOLE_SCRIPT_TARGETS.get(argv[0] if argv else "", _CLI_ENTRY_TARGET)
+    if target == _MCP_ENTRY_TARGET:
+        if len(argv) > 1:
+            return (
+                f"`{argv[0]}` accepts no arguments (its input is a JSON-RPC stream on "
+                f"stdin) and this line passes {argv[1:]}"
+            )
+        return None
+
     parser = cli.build_parser()
     parser.exit_on_error = False
     try:

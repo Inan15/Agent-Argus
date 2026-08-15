@@ -151,16 +151,20 @@ graded, but has no definition for the depth gate to stand on. Pinned language-by
 
 ### What the distribution contains, and what needs the git repository
 
-MEASURED from the built wheel (`argus_agent-0.1.0-py3-none-any.whl`, 80 entries) and sdist
-(`argus_agent-0.1.0.tar.gz`, 79 files), not inferred: `[tool.flit.module] name = "argus"`
+MEASURED from the built wheel (`argus_agent-0.1.0-py3-none-any.whl`, 83 entries) and sdist
+(`argus_agent-0.1.0.tar.gz`, 82 files), not inferred: `[tool.flit.module] name = "argus"`
 packages **the `argus` Python package and nothing else**. The sdist additionally carries
 `pyproject.toml`, `README.md`, `LICENSE` and `PKG-INFO`. Both figures are re-derived from a
 freshly built pair of artifacts by `TC-ArgusAgent-DOCS-001-54`, which fails if this
-paragraph and the artifact ever disagree — in either direction.
+paragraph and the artifact ever disagree — in either direction. **This paragraph is the one
+place this README states those two numbers**; everything else below refers to it rather
+than restating them, because two remembered statements of one measurement is how they came
+to contradict each other (see the struck sentence under [Slash Commands](#-slash-commands--usage)).
 
 | Capability | From the installed distribution | Needs the git repository |
 |---|---|---|
-| `argus` / `argus-agent` / `repo-audit` console scripts | ✅ | |
+| `argus` / `argus-agent` / `repo-audit` console scripts (all three run `argus.cli:main`) | ✅ | |
+| `argus-mcp` console script (`argus.mcp.server:main`) — the same audit over MCP on stdin/stdout | ✅ | |
 | `argus audit <repo>` — the full deterministic audit, verdict and exit-code contract | ✅ | |
 | Report generation (`--report-dir`) | ✅ | |
 | The RAM workflow framework — `audit/`, `phases/`, `adapters/`, `templates/` | ❌ **not packaged** — these are sibling top-level directories, not part of the `argus` module | ✅ |
@@ -170,9 +174,11 @@ paragraph and the artifact ever disagree — in either direction.
 
 > **Measured limitation, stated rather than discovered later — and now measured away.** On a
 > freshly built wheel, with this repository removed from `sys.path` and one clean subprocess
-> per module, **75 of the 75 shipped modules import**. None fail. (75, not 74, since
-> 2026-08-13: Story 12.3 added `argus/cache/stage_memo.py`, the production call site that wires
-> the FR27/NFR-D1 memoization store; 74, not 73, since Story 12.2 added
+> per module, **78 of the 78 shipped modules import**. None fail. (78, not 75, since
+> 2026-08-15: Story 12.6 added `argus/mcp/` — `__init__.py`, `protocol.py` and `server.py`, the
+> MCP stdio adapter behind the `argus-mcp` entry point; 75, not 74, since 2026-08-13, when
+> Story 12.3 added `argus/cache/stage_memo.py`, the production call site that wires the
+> FR27/NFR-D1 memoization store; 74, not 73, since Story 12.2 added
 > `argus/audit/deep_pass.py`, the opt-in deep pass. The figure is DERIVED from the freshly built
 > artifact by `TC-ArgusAgent-DOCS-001-54` — *the artifact is the fact* — so it moves with the
 > tree rather than being remembered.)
@@ -220,11 +226,40 @@ pip install -e .
 ## 💻 Slash Commands & Usage
 
 **What `pip install argus-agent` actually installs — measured on the built wheel, not assumed.**
-Three console aliases, and nothing else: `argus`, `argus-agent` and `repo-audit`, all three
-entry points for `argus.cli:main`. The wheel carries **zero data assets** (77 entries = 72
-`argus/**` modules + 5 `dist-info` files), so the distribution contains no command file, no
-skill manifest and no registration mechanism of any kind. **Installing it registers no slash
-command in any assistant.**
+Four console aliases across two entry points, and nothing else: `argus`, `argus-agent` and
+`repo-audit`, all three entry points for `argus.cli:main`; and `argus-mcp`, which is
+`argus.mcp.server:main`. The wheel carries **zero data assets** — every entry in it is either
+an `argus/**` module or a `dist-info` metadata file, and the entry count is stated once, in
+[What the distribution contains](#what-the-distribution-contains-and-what-needs-the-git-repository)
+above — so the distribution contains no command file, no skill manifest and no registration
+mechanism of any kind. **Installing it registers no slash command in any assistant.**
+
+> *Corrected 2026-08-15 (Story 12.6).* This paragraph previously read ~~*"Three console
+> aliases, and nothing else … The wheel carries **zero data assets** (77 entries = 72
+> `argus/**` modules + 5 `dist-info` files)"*~~. Both halves were wrong by the time you read
+> them: a fourth alias now ships, and the entry arithmetic **contradicted the pinned figure
+> two sections above it before this story touched anything** — that paragraph said 80 entries
+> while this one said 77. Only the first was pinned by `TC-ArgusAgent-DOCS-001-54`, so the
+> second rotted silently, which is the published-figure defect class this repository has now
+> filed three times (Epic 9, Epic 11, here). The remedy is not a corrected second number: it
+> is that this paragraph no longer states one. One measurement, one place, one pin.
+
+**Using it from a coding agent (`argus-mcp`).** The `argus-mcp` alias starts an
+[MCP](https://modelcontextprotocol.io) server that speaks JSON-RPC 2.0 over **stdin/stdout
+only** — it binds no port, opens no listener, and accepts no key, token or account. It
+publishes exactly one tool, `audit_repository`, whose arguments are the `argus audit` flags and
+whose result is the same verdict, exit code and coverage figures the command line returns for
+the same arguments. Configure it as a stdio server in your assistant:
+
+```json
+{"mcpServers": {"argus": {"command": "argus-mcp", "args": []}}}
+```
+
+It takes no arguments; its entire input is the message stream, and it exits when stdin closes:
+
+```bash
+argus-mcp
+```
 
 > 🚧 **FORTHCOMING — documented ahead of delivery, owned by Story 12.7 / FR35.** The seven
 > commands below are the shape the vendor adapters are being built to, not a capability the

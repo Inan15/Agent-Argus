@@ -13,10 +13,19 @@ Package & distribution
 ----------------------
 This package is ``argus/`` in the standalone **Agent-Argus** repository. It is
 declared by ``pyproject.toml`` as the distribution ``argus-agent``, with the
-optional extras ``dev`` / ``llm`` / ``languages`` and three console scripts that
-all resolve to :func:`argus.cli.main`::
+optional extras ``dev`` / ``llm`` / ``languages`` and **four** console scripts
+across **two entry points**::
 
-    argus  ·  argus-agent  ·  repo-audit
+    argus  ·  argus-agent  ·  repo-audit   → argus.cli:main
+    argus-mcp                              → argus.mcp.server:main
+
+~~and three console scripts that all resolve to :func:`argus.cli.main`~~ — struck
+2026-08-15 (Story 12.6 / FR35), not deleted: it was true until this distribution
+gained a second entry point. The three CLI aliases are unchanged; ``argus-mcp``
+serves the SAME audit over JSON-RPC on stdin/stdout so an agent can invoke it and
+read the verdict without a human relaying it. Both entry points build the same
+``AuditRequest`` and consume the same ``AuditVerdict`` — there is no second
+decision path, and no capability reachable through one and not the other.
 
 It installs and runs **with no Minions package present** — ArgusAgent imports
 nothing from a host product and depends on no monorepo layout.

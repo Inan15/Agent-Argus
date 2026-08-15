@@ -77,6 +77,7 @@ from tests.test_release_surface_honesty import (  # noqa: E402
 # from source text with `ast` and NEVER executes `import argus` — a runtime walk would be
 # defeated by lazy imports and would perturb the coverage figure.
 from tests.test_v1_commitment_closure import (  # noqa: E402
+    _ENTRY_POINTS,
     build_import_graph,
     reachable_from,
 )
@@ -155,13 +156,51 @@ _NOTE_SECTION = (
     "### Disclosed — Argus now states its own validation status on every verdict surface"
 )
 
-# MCP surfaces registered as carrying the disclosure. EMPTY TODAY, deliberately: measured
-# 2026-08-11, `mcp|model.context.protocol` has ZERO hits across `argus/`, `pyproject.toml`
-# and `action.yml`. FR35 / Story 12.6 builds that surface; 11.1 must NOT build it. When
-# 12.6 lands, `-49` goes RED until the new surface is registered here AND carries the
-# disclosure — which is what "the disclosure reaches the MCP surface" can honestly mean in
-# a story that must not create one.
-_MCP_DISCLOSURE_SURFACES: tuple[str, ...] = ()
+# MCP surfaces registered as carrying the disclosure.
+#
+# ~~EMPTY TODAY, deliberately: measured 2026-08-11, `mcp|model.context.protocol` has ZERO
+# hits across `argus/`, `pyproject.toml` and `action.yml`. FR35 / Story 12.6 builds that
+# surface; 11.1 must NOT build it.~~ (§3.4 struck, not deleted.) POPULATED 2026-08-15 by
+# Story 12.6, which built it. `-49` was RED on the first commit of `argus/mcp/__init__.py`,
+# exactly as designed — that red was the guard working.
+#
+# Each entry is a file the MCP scan resolves. They discharge FR34 in two different ways and
+# the assertion below derives which, rather than taking a per-file declaration:
+#
+#   * `pyproject.toml` — a LISTING surface, already registered in `_DISCLOSURE_SURFACES`
+#     above as the `short` form. It became an MCP hit because `[project.scripts]` now names
+#     `argus-mcp`; it carries the disclosure TEXT, and `-47`/`-51` already assert that.
+#   * `argus/__init__.py`, `argus/mcp/__init__.py` — package docstrings that name the new
+#     alias and the adapter. Neither renders a verdict, so neither owes a disclosure; the
+#     derived rule below says so mechanically instead of taking that on trust.
+#   * `argus/mcp/protocol.py` — renders BOTH the `tools/list` description and every
+#     verdict-bearing tool result, and routes both through the disclosure helper.
+#   * `argus/mcp/server.py` — the stdin→stdout shell. It renders no verdict text itself;
+#     it calls `protocol`.
+_MCP_DISCLOSURE_SURFACES: tuple[str, ...] = (
+    "argus/__init__.py",
+    "argus/mcp/__init__.py",
+    "argus/mcp/protocol.py",
+    "argus/mcp/server.py",
+    "pyproject.toml",
+)
+
+# The verdict-render vocabulary the routing closure is derived from: the two helpers by
+# which any surface in this repository describes a verdict in words. A function that calls
+# either is describing a verdict and therefore owes the FR34 disclosure; a function that
+# calls neither owes nothing. Deriving the obligation this way is what makes `-49` a
+# CLOSURE rather than a list — a SECOND verdict-rendering function added to an MCP surface
+# without the disclosure turns it red with no edit here, which is `-31`'s device
+# (`unrouted_write_text_calls`) applied to this seam.
+_VERDICT_RENDER_CALLS: tuple[str, ...] = ("summary_line", "render_ship_readiness")
+_DISCLOSURE_RENDERER = "render_instrument_disclosure"
+
+# Non-vacuity floor for `-49`'s registered-surface loop (E.3). At least one function across
+# the registered surfaces must actually render a verdict AND route it through the helper; a
+# rename or a module move that emptied both sets would otherwise leave the loop green while
+# proving nothing at all — which is the state the loop was in before 2026-08-15, when it
+# carried `# pragma: no cover - empty until 12.6` and had never executed.
+_MIN_MCP_DISCLOSURE_ROUTES = 1
 
 _MCP_PATTERN = re.compile(r"mcp|model.context.protocol", re.IGNORECASE)
 
@@ -312,6 +351,37 @@ def mcp_surface_tokens(candidates: dict[str, str]) -> tuple[str, ...]:
         if _MCP_PATTERN.search(label) or _MCP_PATTERN.search(candidates[label]):
             hits.append(label)
     return tuple(hits)
+
+
+def functions_calling(source: str, names: tuple[str, ...]) -> frozenset[str]:
+    """Every function in *source* that CALLS one of *names* (PURE, ``ast``).
+
+    The analyzer behind `-49`'s corrected registered-surface closure, and it is the same
+    device `-31` uses on ``generate_reports``: parse the module and ask which functions
+    ROUTE through a named helper, rather than asking whether a string appears anywhere in
+    the file.
+
+    A nested function is attributed to itself, which is what makes the closure honest: a
+    verdict renderer hidden inside another function still owes the disclosure.
+    """
+    found: set[str] = set()
+    for node in ast.walk(ast.parse(source)):
+        if not isinstance(node, (ast.FunctionDef, ast.AsyncFunctionDef)):
+            continue
+        for call in ast.walk(node):
+            if not isinstance(call, ast.Call):
+                continue
+            func = call.func
+            called = (
+                func.id
+                if isinstance(func, ast.Name)
+                else func.attr
+                if isinstance(func, ast.Attribute)
+                else ""
+            )
+            if called in names:
+                found.add(node.name)
+    return frozenset(found)
 
 
 def _package_sources() -> dict[str, str]:
@@ -471,7 +541,18 @@ def test_TC_ArgusAgent_DOCS_001_45_the_precision_harness_is_not_on_the_user_path
     )
 
     harness = "argus.precision.replay_harness"
-    for entry in ("argus.cli", "argus.reports.generator", "argus.verdict.negative_assurance"):
+    # The entry-point half of this list is DERIVED from `[project.scripts]` (Story 12.6),
+    # not written down: the hazard is "a user-facing start-up path reaches the harness", and
+    # on 2026-08-15 this distribution gained a SECOND console entry point. A hand-written
+    # list would have gone on checking `argus.cli` and left the new start-up path — the one
+    # an agent host launches — entirely outside the guard.
+    entry_points = (
+        *_ENTRY_POINTS,
+        "argus.reports.generator",
+        "argus.verdict.negative_assurance",
+    )
+    assert len(entry_points) >= 4, "the entry-point derivation collapsed"
+    for entry in entry_points:
         reachable = reachable_from(graph, entry)
         assert harness not in reachable, (
             f"{harness} became reachable from {entry}. Its module-level sys.path insert + "
@@ -602,6 +683,33 @@ def test_TC_ArgusAgent_DOCS_001_49_no_mcp_surface_escapes_the_disclosure() -> No
     So the AC is satisfied by the CLOSURE, not by the surface: when 12.6 adds an MCP entry
     point, module or extra, this goes RED until that surface is registered in
     ``_MCP_DISCLOSURE_SURFACES`` *and* carries the disclosure.
+
+    ⚠️ **CORRECTED 2026-08-15 by Story 12.6, and recorded rather than fixed quietly.** The
+    registered-surface loop below had NEVER EXECUTED — it carried
+    ``# pragma: no cover - empty until 12.6`` over an empty registry — and as written it
+    asserted that the literal short disclosure text was a SUBSTRING OF THE REGISTERED
+    MODULE'S SOURCE. Satisfying that would have required pasting a transcribed copy of the
+    constant into ``argus/mcp/**``: the exact AI-E9-7 drift the FR34 regime exists to
+    prevent, demanded by the guard that exists to prevent it, and the same *"guard whose
+    observable is wrong"* class Epic 11 produced five times (retro §3.1). It was written in
+    good faith for a surface nobody could see yet, and it was wrong about the one thing
+    that mattered: FR34 asks a code surface to ROUTE its verdict through the helper, not to
+    contain the sentence.
+
+    The corrected assertion is therefore three things, all derived:
+
+    1. **No transcription.** No registered Python module may contain the constant's text at
+       all. The old assertion demanded the opposite.
+    2. **Routing, by ``ast``.** Every function on a registered surface that renders a
+       verdict — derived as *"calls something in ``_VERDICT_RENDER_CALLS``"*, not declared
+       per file — must also call ``render_instrument_disclosure``. This is `-31`'s
+       ``unrouted_write_text_calls`` device at this seam, so a SECOND verdict-rendering
+       function added later without the disclosure turns this red with no edit here.
+    3. **A listing surface discharges by carrying the text**, which is what a
+       ``pyproject.toml`` description can do and a Python module must not.
+
+    Plus a non-vacuity floor, because a loop that walks source goes green by finding
+    nothing — which is precisely how it spent its first four days.
     """
     candidates = dict(_package_sources())
     for extra in ("pyproject.toml", "action.yml"):
@@ -619,10 +727,61 @@ def test_TC_ArgusAgent_DOCS_001_49_no_mcp_surface_escapes_the_disclosure() -> No
         "and make it emit render_instrument_disclosure(INSTRUMENT_STATUS) — THIS RED IS THE "
         "GUARD WORKING."
     )
-    for registered in _MCP_DISCLOSURE_SURFACES:  # pragma: no cover - empty until 12.6
-        assert render_instrument_disclosure(INSTRUMENT_STATUS, short=True) in candidates[
-            registered
-        ]
+    assert _MCP_DISCLOSURE_SURFACES, (
+        "the MCP registry was emptied while MCP surfaces exist on the tree; the loop below "
+        "would then prove nothing"
+    )
+    listing_surfaces = {surface.path for surface in _DISCLOSURE_SURFACES}
+    full = render_instrument_disclosure(INSTRUMENT_STATUS)
+    short = render_instrument_disclosure(INSTRUMENT_STATUS, short=True)
+    routed_total = 0
+
+    for registered in _MCP_DISCLOSURE_SURFACES:
+        assert registered in candidates, (
+            f"{registered} is registered as an MCP disclosure surface but the scan no "
+            "longer resolves it — a registry entry the population cannot see proves nothing"
+        )
+        source = candidates[registered]
+
+        if registered in listing_surfaces:
+            # A one-line listing field: it CARRIES the text, compared against the constant
+            # (`-47`/`-51` hold this too; asserted here so the hand-off cannot be silently
+            # broken from either side).
+            assert short in source, (
+                f"{registered} is a registered listing surface and no longer carries the "
+                "disclosure"
+            )
+            continue
+
+        assert registered.endswith(".py"), (
+            f"{registered} is neither a Python module nor a registered listing surface, so "
+            "this closure has no way to say how it discharges FR34. Register it in "
+            "_DISCLOSURE_SURFACES too, or make it a module."
+        )
+        for text in (full, short):
+            assert text not in source, (
+                f"{registered} TRANSCRIBES the instrument-status constant. AI-E9-7: never "
+                "publish a prose copy of a pinned constant — it goes stale the day Epic 13 "
+                "clears the precision gate, and the surface then publishes a disclosure "
+                "the tool has retired. Call render_instrument_disclosure(INSTRUMENT_STATUS)."
+            )
+        renders_verdict = functions_calling(source, _VERDICT_RENDER_CALLS)
+        routes_disclosure = functions_calling(source, (_DISCLOSURE_RENDERER,))
+        unrouted = sorted(renders_verdict - routes_disclosure)
+        assert not unrouted, (
+            f"{registered}: {unrouted} render a verdict and do NOT route it through "
+            f"{_DISCLOSURE_RENDERER}. FR34: no verdict surface ships without the "
+            "disclosure. Add the call; do not paste the text."
+        )
+        routed_total += len(renders_verdict & routes_disclosure)
+
+    assert routed_total >= _MIN_MCP_DISCLOSURE_ROUTES, (
+        f"no registered MCP surface renders a verdict at all ({routed_total} routed "
+        f"function(s), floor {_MIN_MCP_DISCLOSURE_ROUTES}). Either the renderers were "
+        "renamed out of _VERDICT_RENDER_CALLS or the surface stopped emitting verdicts — "
+        "and this loop is back to proving nothing, which is the state it was corrected out "
+        "of on 2026-08-15."
+    )
 
 
 def test_TC_ArgusAgent_DOCS_001_50_the_disclosure_is_two_sided_presence_and_no_over_claim() -> None:
@@ -933,3 +1092,40 @@ def test_TC_ArgusAgent_REPORT_002_32_the_write_point_closure_fires_on_a_fifth_re
         "argus/cli.py",
     )
     assert mcp_surface_tokens({"argus/cli.py": "def main(): ..."}) == ()
+
+    # The ROUTING analyzer `-49` was corrected onto (Story 12.6), both directions, over
+    # SYNTHETIC source only. The correction replaced an assertion that would have DEMANDED
+    # a transcribed copy of the constant, so its control has to show that routing — and
+    # only routing — satisfies it.
+    honest = (
+        "def render_result(v):\n"
+        "    lines = [summary_line(v)]\n"
+        "    lines.extend(render_ship_readiness(v))\n"
+        "    lines.append(render_instrument_disclosure(INSTRUMENT_STATUS))\n"
+        "    return lines\n"
+    )
+    assert functions_calling(honest, _VERDICT_RENDER_CALLS) == {"render_result"}
+    assert functions_calling(honest, (_DISCLOSURE_RENDERER,)) == {"render_result"}
+    assert not (
+        functions_calling(honest, _VERDICT_RENDER_CALLS)
+        - functions_calling(honest, (_DISCLOSURE_RENDERER,))
+    )
+
+    # A SECOND verdict renderer added later without the disclosure — the drift the closure
+    # exists to catch, and the reason it is derived rather than declared per file.
+    smuggled_surface = honest + (
+        "\n\ndef render_short_result(v):\n    return summary_line(v)\n"
+    )
+    assert functions_calling(smuggled_surface, _VERDICT_RENDER_CALLS) - functions_calling(
+        smuggled_surface, (_DISCLOSURE_RENDERER,)
+    ) == {"render_short_result"}, "the routing closure stopped catching an unrouted verdict"
+
+    # A module that renders no verdict owes nothing, and the closure says so rather than
+    # demanding a disclosure from a package marker.
+    assert functions_calling("VERSION = '1'\n", _VERDICT_RENDER_CALLS) == frozenset()
+
+    # A method call spelled through an attribute is still a call — a renderer reached as
+    # `protocol.summary_line(...)` must not slip past.
+    assert functions_calling(
+        "def f(v):\n    return mod.summary_line(v)\n", _VERDICT_RENDER_CALLS
+    ) == {"f"}

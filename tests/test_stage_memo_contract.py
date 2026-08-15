@@ -433,14 +433,19 @@ def test_TC_ArgusAgent_CACHE_001_95_story_5_3_active_invalidation_is_ruled_out_o
     import sys
 
     sys.path.insert(0, "tests")
+    # `_ENTRY_POINTS` / `reachable_from_any` since 2026-08-15 (Story 12.6): this
+    # distribution ships TWO entry points and the reachability question this ruling rests on
+    # is "does ANY production entry point reach it", so the union is the only reading that
+    # keeps the ruling honest. Taking `argus.cli` alone would have left the exclusion true
+    # by measuring the wrong graph — which is the failure this import was written to avoid.
     from test_v1_commitment_closure import (  # noqa: PLC0415
-        _ENTRY_POINT,
+        _ENTRY_POINTS,
         _PACKAGE_ROOT,
         build_import_graph,
-        reachable_from,
+        reachable_from_any,
     )
 
-    reachable = reachable_from(build_import_graph(_PACKAGE_ROOT), _ENTRY_POINT)
+    reachable = reachable_from_any(build_import_graph(_PACKAGE_ROOT), _ENTRY_POINTS)
     assert "argus.cache.memo_store" in reachable, (
         "argus.cache.memo_store must be REACHABLE — that flip is this story's AC1.1 and the "
         "premise for everything else here"

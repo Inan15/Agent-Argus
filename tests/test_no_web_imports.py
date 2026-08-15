@@ -266,6 +266,24 @@ _MODULES_UNDER_GUARD = (
     # provider module through a future edit. Extend the guard (do NOT fork) per AI-E5-7.
     "argus.dogfood.proof_types",
     "argus.dogfood.proof_render",
+    # Story 12.6 / FR35 — the MCP stdio adapter. THIS IS THE GATE THAT DECIDED THE
+    # ARCHITECTURE, not one that merely observes it: the official `mcp` Python SDK declares
+    # `starlette`, `uvicorn` and `sse-starlette` as REQUIRED dependencies (it carries its
+    # HTTP server transports in the base package, not behind an extra), so adopting it
+    # would have put a web server into this distribution's dependency tree and turned this
+    # very gate red. The JSON-RPC layer is hand-rolled from the standard library instead,
+    # which is what keeps ADR #20 ("downstream of the HTTP/A2A boundary — takes no A2A
+    # token, registers no route") true by construction rather than by discipline.
+    # `protocol` is the PURE message layer and `server` the IMPURE stdin→stdout shell, so
+    # both are added to the import-isolation coverage but only the split itself is a
+    # purity claim (mirroring how pipeline_persist.py and store/writer.py are treated).
+    # A stronger, adapter-specific gate lives beside them in tests/test_mcp_server.py
+    # (`-04` bans `socket`/`http`/`ssl`/`asyncio` outright over `argus/mcp/**`, and `-05`
+    # observes the REAL process opening no listener) — this registry is the standing
+    # web-stack quarantine every module joins. Extend the guard (do NOT fork) per AI-E3-6.
+    "argus.mcp",
+    "argus.mcp.protocol",
+    "argus.mcp.server",
 )
 
 # Story 1.7 — the Epic-1 verdict path is ZERO-LLM-token (NFR-D2). The pipeline /

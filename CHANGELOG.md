@@ -72,6 +72,45 @@ No verdict, exit code, threshold or decision-table row changes. On a machine whe
 already installed — including CI, which sets `ARGUS_REQUIRE_LANGUAGE_GRAMMARS=1` — the output is
 unchanged.
 
+### Added — `argus-mcp`, so a coding agent can run the audit and read the verdict itself
+
+The distribution now ships a **fourth console alias**, `argus-mcp` → `argus.mcp.server:main`, beside the
+three that all run `argus.cli:main`. It is an [MCP](https://modelcontextprotocol.io) server speaking
+JSON-RPC 2.0 over **stdin/stdout only**, publishing exactly one tool — `audit_repository` — so the loop
+that wrote the code can contain something that checks it, without a human relaying the result.
+
+**Same distribution, same version, same release workflow, and no new dependency.** The JSON-RPC layer is
+written against the standard library. The official `mcp` Python SDK was measured and refused: it declares
+`starlette`, `uvicorn` and `sse-starlette` as *required* dependencies, because it carries its HTTP server
+transports in the base package. Installing it would have put a web server into this distribution's
+dependency tree and broken the `argus.* ⊬ fastapi/uvicorn/starlette` isolation gate this project has
+enforced since Epic 1. The cost of hand-rolling, stated: Argus owns that protocol code and tracks spec
+revisions itself.
+
+**What it does not do, so you can plan around it.** It binds no port and opens no listener. It accepts
+and stores no key, token or account. It exposes **no capability the command line lacks** — the same
+request, the same pipeline, the same permission boundary — and it publishes no tool but the one. A
+`notifications/cancelled` is accepted and consumed but **cannot interrupt an audit already running**: the
+server is single-threaded by design and reads the next message only after the current audit completes.
+That limitation is stated in the tool description itself, not only here.
+
+**The verdict is the CLI's, by construction rather than by care.** The tool's input schema is *derived*
+from the CLI's own argument parser, and a call is turned back into an argv and handed to that same
+parser, so every CLI default governs this surface too — including the announced `--coverage-scope`
+divergence documented under *Known divergence* below, which is precisely what an adapter that built its
+own request would have got wrong. Same repository, same commit, same verdict, same exit code, pinned by
+test. Both protocol eras are served: the `initialize` handshake for hosts shipping today, and the
+stateless `server/discover` revision for newer ones.
+
+`deep_audit` is exposed here exactly as `--deep-audit` is on the command line — off by default, always,
+still the only opt-in to egress, and still disclosing what will be transmitted before the first byte
+leaves. Every verdict this surface returns carries the instrument-status disclosure below, and so does
+the tool description, which an agent reads *before* it can decide to call the tool.
+
+**This is half of FR35.** The packaged assistant command assets — the `/audit …` commands README marks
+FORTHCOMING — are not in this release, and the wheel still ships zero data assets. Nothing here is
+published: no tag, no release, no index upload.
+
 ### Specified — every terminal outcome names its next action and the ingestion boundary
 
 Argus now states, on every terminal outcome (`RELEASE_READY`, `NOT_READY_FOR_RELEASE`, `INSUFFICIENT_COVERAGE`, and the `AUDIT_FAILED` non-verdict), why that outcome was reached and the next action that changes it (FR37).
@@ -535,16 +574,17 @@ to block, and flipping the default here would pre-empt a policy decision that be
 ### Packaging: what the distribution contains
 
 `[tool.flit.module] name = "argus"` packages the `argus` Python package and nothing else. Measured on the
-built artifacts: the wheel holds 75 modules plus metadata; the sdist adds `pyproject.toml`, `README.md`,
+built artifacts: the wheel holds 78 modules plus metadata; the sdist adds `pyproject.toml`, `README.md`,
 `LICENSE` and `PKG-INFO`. The RAM workflow directories (`audit/`, `phases/`, `adapters/`, `templates/`)
 and the installer scripts are **repository-only** — see README.md for the full capability split.
 
 Measured on the built wheel with this repository removed from `sys.path`, one clean subprocess per module:
-**75 of the 75 shipped modules import.** None fail. (The figure read 73 of 73 when `0.1.0` was
+**78 of the 78 shipped modules import.** None fail. (The figure read 73 of 73 when `0.1.0` was
 written; it is DERIVED from the freshly built artifact by `TC-ArgusAgent-DOCS-001-54` — *the artifact
 is the fact* — and moved to 74 on 2026-08-13 when Story 12.2 added `argus/audit/deep_pass.py`, then
 to 75 later the same day when Story 12.3 added `argus/cache/stage_memo.py`, the production call site
-that wires the FR27/NFR-D1 memoization store. The
+that wires the FR27/NFR-D1 memoization store, then to 78 on 2026-08-15 when Story 12.6 added the
+three-module `argus/mcp/` stdio adapter behind the `argus-mcp` entry point. The
 count is restated rather than frozen precisely so it cannot go stale, which is the defect this guard
 exists to catch; nothing about the `0.1.0` release itself is amended.) Five modules did fail until
 2026-08-12 —

@@ -113,6 +113,14 @@ languages = [
 argus = "argus.cli:main"
 argus-agent = "argus.cli:main"
 repo-audit = "argus.cli:main"
+# ── The FR35 agent-integration entry point (Story 12.6, 2026-08-15) ──
+# EXACTLY ONE new alias, in the SAME distribution: same version, same release workflow,
+# same gate evidence. It is not a separate channel, not a new extra, and it adds NO
+# dependency — the JSON-RPC layer is stdlib-only, because the official `mcp` SDK declares
+# `starlette`/`uvicorn`/`sse-starlette` as REQUIRED and would break the
+# `argus.* ⊬ fastapi/uvicorn/starlette` isolation gate (ADR #20) that this surface's own
+# constraints require to keep passing. It speaks stdio only: no port is bound.
+argus-mcp = "argus.mcp.server:main"
 
 [tool.pytest.ini_options]
 minversion = "7.0"

@@ -1,6 +1,6 @@
 # Story 12.5: The default install grounds the languages it claims
 
-Status: review
+Status: done
 
 <!-- Note: Validation is optional. Run validate-create-story for quality check before dev-story. -->
 
@@ -274,6 +274,72 @@ an assertion"*, and a red that names its own remedy is worth more than a green t
 - `tests/test_default_install_languages.py` (DELETED: superseded by `TC-ArgusAgent-DOCS-001-61` in the AC4-named home)
 - `_bmad-output/design-artifacts/ArgusAgent/stories/12-5-default-install-grounds-languages-it-claims.md` (UPDATE: tasks, Dev Agent Record, Change Log, Status)
 - `_bmad-output/design-artifacts/ArgusAgent/sprint-status.yaml` (UPDATE: 12-5 → in-progress → review)
+
+### Review Findings
+
+**code-review 12-5 iteration 1 (Sonnet 5): review → done. VERDICT: PASS.**
+
+Scope reviewed: `git diff 41b8024..HEAD` across both commits (`c355e85` implementation,
+`54b96d7` dogfood regeneration) — `pyproject.toml`, `uv.lock`, `argus/reports/generator.py`,
+`argus/reports/plain_english.py`, `README.md`, `CHANGELOG.md`, `architecture.md`,
+`tests/test_grammar_runtime_validation.py`, `tests/test_release_surface_honesty.py`,
+`tests/test_spec_claim_scope.py`, and the three regenerated dogfood artifacts.
+
+Independently re-derived on disk, not transcribed:
+- `python -m pytest -q` → **1477 passed, 0 failed, 0 error, 0 skipped**, exit 0 (run twice).
+  Includes `tests/test_dogfood_plan.py` / `tests/test_dogfood_proof.py`, both GREEN now that
+  the second (dogfood-regeneration) commit has landed — the two artifact-currency guards the
+  Dev Agent Record flagged as blocked-on-commit are confirmed cleared.
+- `python -m mypy argus` → `Success: no issues found in 75 source files`.
+- `python -m bandit -r argus -q` → **19 Low / 0 Medium / 0 High** — matches the claimed
+  baseline exactly.
+- `uv lock --check` → resolved 81 packages, lock file consistent (not stale).
+- Line counts re-measured, all under the NFR-M1 1200 cap: `generator.py` 909,
+  `plain_english.py` 543, `test_grammar_runtime_validation.py` 1148,
+  `test_spec_claim_scope.py` 607, `test_release_surface_honesty.py` 483, `architecture.md`
+  1121.
+
+AC-by-AC verification:
+- **AC1/AC3 (pyproject.toml)**: confirmed the 9 non-Python grammars sit in
+  `[project.dependencies]` and the `[languages]` alias is pinned **specifier-for-specifier
+  identical** to the same 9 lines in `dependencies` (diffed by hand, both blocks). No install
+  path regressed — `uv lock --check` passes and `uv.lock` carries the 9 grammars as
+  unconditional dependencies alongside their `extra == 'languages'`-marked duplicates.
+- **AC2 (downgrade disclosure)**: read `_render_grammar_downgrade_section` and
+  `_render_readability_warning` side by side. Confirmed the mutual-exclusivity claim holds on
+  every reachable path: when nothing parsed, only 10.4's callout fires; when something parsed
+  and at least one file was grammar-downgraded, only the new section fires; when something
+  parsed and nothing was grammar-downgraded, **neither** fires (both correctly return `[]`) —
+  which is correct behavior, not a bug (there is nothing to disclose). Note: the Dev Agent
+  Record's and `sprint-status.yaml`'s prose says "exactly one of the two renders per run,"
+  which is a minor overclaim (the accurate invariant, and the one the `generator.py:597-599`
+  code comment itself states, is "at most one / never both") — dismissed as noise: it appears
+  only in internal dev-record prose, never in README/CHANGELOG/architecture.md (which
+  correctly say "mutually exclusive" / struck-and-resolved), so no reader-facing claim is
+  wrong. `tests/test_grammar_runtime_validation.py::-35/-36` exercise the total-failure,
+  partial-failure, no-failure and mixed-cause paths; classification is single-sourced through
+  `classify_reason`/`grammar_package_for` in both `generator.py` and `plain_english.py`, never
+  re-derived by token-slicing.
+- **AC4 (test consolidation)**: confirmed no `tests/test_default_install_languages.py` exists
+  anywhere in git history (`git log --all -- tests/test_default_install_languages.py` is
+  empty) — it was an untracked partial-start artifact, never committed, so nothing was lost in
+  the fold. Its coverage is present and strengthened in
+  `tests/test_grammar_runtime_validation.py::test_the_default_install_grounds_every_language_it_claims`
+  (`TC-ArgusAgent-DOCS-001-61`), which derives its expected set from
+  `GRAMMAR_PACKAGE_BY_LANGUAGE` rather than hand-listing languages.
+- **architecture.md restoration**: confirmed both ⚠️ open-decision paragraphs (§L446/§L1071 in
+  the pre-change tree) are present in **struck form** (`~~…~~`) with a dated, reasoned
+  resolution beside each, per §3.4 evidence immutability — not deleted.
+- **`argus/cli.py` scope boundary**: `git diff 41b8024..HEAD -- argus/cli.py` is empty
+  (confirmed untouched). Checked `epics.md:2431` directly: Story 12.8's AC explicitly reads
+  *"an operator error (bad path, unreadable repo, **missing grammar**, absent key under the
+  deep pass) … the message names the cause and the fix"* — the scoping claim is accurate,
+  this CLI surface is Story 12.8's by name, not this story's.
+
+No High or Medium severity issue found. No unresolved `decision-needed` or `patch` item. All
+four ACs independently verified met. Core delivery, safety properties (NFR-S1 markup-free /
+secret-safe human-register sentences, exhaustive-with-raise classification, deterministic
+ordering) and every measured claim hold under independent re-derivation.
 
 ## Change Log
 

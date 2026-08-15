@@ -78,7 +78,39 @@ _LEDGER = _ARTIFACT_DIR / "deferred-work.md"
 _PACKAGE_ROOT = _REPO_ROOT / "argus"
 
 _GUARD_FILE = "tests/test_v1_commitment_closure.py"
-_ENTRY_POINT = "argus.cli"
+
+
+def console_entry_modules(pyproject: str) -> tuple[str, ...]:
+    """Every MODULE that ``[project.scripts]`` names as an entry point (PURE).
+
+    CORRECTED 2026-08-15 by Story 12.6. This file used to carry
+    ``_ENTRY_POINT = "argus.cli"`` and asserted, in prose at its own non-vacuity floor,
+    *"It is the ONLY entry point — pyproject.toml ships three console aliases and all three
+    are argus.cli:main"*. Story 12.6 shipped a FOURTH alias, ``argus-mcp =
+    argus.mcp.server:main``, and **that sentence became false with nothing red** — the
+    reachability walk simply went on being computed from one of the two entry points, so
+    every `wired` disposition in this file was being proven against a graph that no longer
+    described the product. A hand-written entry point is a fact about the distribution
+    stored in the wrong place; this reads it from the distribution metadata, so the next
+    entry point is covered on the day it is declared (AI-E11-1 clause (iii): the population
+    is a closure, never a hand-list).
+
+    Returns the module halves of the ``module:function`` targets, deduplicated and sorted.
+    An empty result is impossible-by-assertion at `-39`, because a walk from no entry point
+    reaches nothing and every reachability assertion here would pass vacuously.
+    """
+    match = re.search(r"^\[project\.scripts\]\n(.*?)(?=\n\[|\Z)", pyproject, re.S | re.M)
+    if match is None:
+        return ()
+    targets = re.findall(r'^[\w.-]+\s*=\s*"([^"]+)"', match.group(1), re.M)
+    return tuple(sorted({target.split(":", 1)[0] for target in targets}))
+
+
+_ENTRY_POINTS: tuple[str, ...] = console_entry_modules(
+    (_REPO_ROOT / "pyproject.toml").read_text(encoding="utf-8")
+)
+#: How the entry-point set is named in a failure message. A set, because there are two.
+_ENTRY_POINT_LABEL = " ∪ ".join(_ENTRY_POINTS) or "<no entry point>"
 
 # The date this story's dispositions were taken and its amendments landed. Every amendment this
 # guard pins must carry it, so a future reader can tell a 10.5 edit from an older one.
@@ -101,13 +133,20 @@ _MIN_CLAIM_ATOMS = 15
 # count itself is pinned exactly by `-32`'s both-direction closure against the registry.
 _MIN_FR_IDS = 30
 
-# Measured 2026-08-11: 72 modules under `argus/`, 318 intra-package import edges (submodule edges
-# plus the ancestor-package edges a submodule import implies), 53 modules reachable from
-# `argus.cli`. Floors sit ~25% low: a package split may move modules between files, but a walk that
-# finds 40 modules or 100 edges has stopped seeing the package.
-_MIN_PACKAGE_MODULES = 55
-_MIN_IMPORT_EDGES = 150
-_MIN_REACHABLE_MODULES = 35
+# RE-MEASURED 2026-08-15 by Story 12.6 against the tree it produced, because the reachability
+# population changed shape: the walk now starts from the SET of `[project.scripts]` entry modules
+# (`argus.cli` ∪ `argus.mcp.server`) rather than from `argus.cli` alone. Measured on that tree: 78
+# modules under `argus/`, 390 intra-package import edges (submodule edges plus the ancestor-package
+# edges a submodule import implies), 63 modules reachable from the union — of which 60 are reachable
+# from `argus.cli` by itself, so the second entry point adds exactly the three `argus.mcp.*` modules
+# and NO existing seam. (Previously measured 2026-08-11: 72 / 318 / 53 from `argus.cli` alone.)
+# Floors still sit ~25% low, and they RISE with the measurement rather than being left where they
+# were: a floor that stops tracking the tree is a floor that stops meaning anything. A package split
+# may move modules between files, but a walk that finds 57 modules or 280 edges has stopped seeing
+# the package.
+_MIN_PACKAGE_MODULES = 58
+_MIN_IMPORT_EDGES = 290
+_MIN_REACHABLE_MODULES = 47
 
 # ─────────────────────────────────────────────────────────────────────────────
 # The two CLOSED disposition vocabularies (Story 10.5 DN-4). A hit that fits none of these is a
@@ -484,9 +523,32 @@ _REVERSE_REGISTRY: tuple[_Delivery, ...] = (
               "Specified for V1.5 and owned by Story 11.1 (mandatory self-disclosure of "
               "unvalidated precision). ⛔ Not amended by Story 10.5: the PRD already dates it and "
               "the plan already names its story."),
-    _Delivery("FR35", "not-built", "", "",
-              "Specified for V1.5 and owned by Stories 12.6/12.7 (the local agent-integration "
-              "surface; `argus/mcp/**` does not exist on this tree). ⛔ Not amended by Story 10.5."),
+    _Delivery("FR35", "wired", "argus/mcp/server.py", "def serve(",
+              "DELIVERED IN PART 2026-08-15 by Story 12.6, and the SCOPE OF `wired` IS STATED SO "
+              "IT CANNOT BE OVER-READ — this is the disposition's load-bearing half here. What is "
+              "delivered: a coding agent can invoke the audit and consume the verdict through a "
+              "local agent-integration surface with no human relaying it. `pyproject.toml` ships "
+              "`argus-mcp = argus.mcp.server:main` in the SAME distribution, this module's "
+              "stdin→stdout loop speaks JSON-RPC 2.0 over stdio in both protocol eras, and its one "
+              "`audit_repository` tool reaches `run_audit` through `argus.cli`'s OWN request "
+              "projection, so the surface is reachable from a declared entry point and the verdict "
+              "is the CLI's by construction (`TC-ArgusAgent-MCP-001-07`). Reachability is proven "
+              "by `-34` above against the union closure, which from this date starts at the SET of "
+              "`[project.scripts]` entry modules rather than at `argus.cli` alone. WHAT IS NOT "
+              "DELIVERED, named so this entry does not over-claim the FR: the PACKAGED ASSISTANT "
+              "COMMAND ASSETS — the `/audit …` command files and any registration mechanism — are "
+              "**Story 12.7's**, the wheel still ships ZERO data assets, and installing this "
+              "distribution registers no slash command in any assistant "
+              "(`TC-ArgusAgent-DOCS-001-56` holds that gap open with its FORTHCOMING marker, which "
+              "this story deliberately did NOT remove). Publishing anything at all is Story "
+              "12.9's. ~~Specified for V1.5 and owned by Stories 12.6/12.7 (the local "
+              "agent-integration surface; `argus/mcp/**` does not exist on this tree). ⛔ Not "
+              "amended by Story 10.5.~~ (§3.4 struck, not deleted — superseded by the delivery "
+              "above. ⚠️ That `not-built` entry named NO `seam_modules`, so `not_built_refutations` "
+              "could not fire on it: this registry would have gone on asserting FR35 was not built, "
+              "behind a fully green suite, exactly as it would have for FR36 before Story 12.2 "
+              "added that direction. Nothing mechanical caught this one; it was caught because "
+              "Story 12.6's own §0 re-measurement wrote the premise down and checked it.)"),
     _Delivery("FR36", "wired", "argus/audit/deep_pass.py", "def run_deep_pass(",
               "DELIVERED 2026-08-13 by Story 12.2. The opt-in LLM-backed deep pass is reachable "
               "from `argus.cli` through `--deep-audit` → the `deep` token → the gated call site in "
@@ -736,6 +798,28 @@ def reachable_from(graph: dict[str, frozenset[str]], entry: str) -> frozenset[st
     return frozenset(seen)
 
 
+def reachable_from_any(
+    graph: dict[str, frozenset[str]], entries: tuple[str, ...]
+) -> frozenset[str]:
+    """The UNION of the closures from every entry point (Story 12.6).
+
+    Delivery means *a production call site reaches it*, and from 2026-08-15 this
+    distribution ships two entry points rather than one. Taking the union is the only
+    reading that keeps the rule's meaning: a module reached from the second entry point is
+    reached in production, so a `library-seam` disposition over it would be false — and a
+    module reached from neither is a seam however many entry points exist.
+
+    Deliberately the UNION and not the intersection. An intersection would refute a `wired`
+    claim for every module the CLI reaches and the adapter does not, which is most of the
+    product, and would manufacture exactly the false accusations this file exists to
+    prevent.
+    """
+    seen: set[str] = set()
+    for entry in entries:
+        seen |= reachable_from(graph, entry)
+    return frozenset(seen)
+
+
 _STRIKE_SPAN = re.compile(r"~~(.+?)~~", re.S)
 
 
@@ -779,12 +863,12 @@ def reachability_refutations(
         if disposition == "wired" and module_name not in reachable:
             problems.append(
                 f"{fr}: disposed 'wired' but {module_name} is NOT in the import closure from "
-                f"{_ENTRY_POINT} — a wired claim is proven, never asserted"
+                f"{_ENTRY_POINT_LABEL} — a wired claim is proven, never asserted"
             )
         if disposition == "library-seam" and module_name in reachable:
             problems.append(
                 f"{fr}: disposed 'library-seam' but {module_name} IS reachable from "
-                f"{_ENTRY_POINT} — the seam was wired; update the disposition to 'wired'"
+                f"{_ENTRY_POINT_LABEL} — the seam was wired; update the disposition to 'wired'"
             )
     return tuple(problems)
 
@@ -813,7 +897,7 @@ def not_built_refutations(
         if live:
             problems.append(
                 f"{fr}: disposed 'not-built' but its dedicated seam {live} IS reachable from "
-                f"{_ENTRY_POINT} — the FR is being delivered. A 'not-built' disposition that "
+                f"{_ENTRY_POINT_LABEL} — the FR is being delivered. A 'not-built' disposition that "
                 "outlives the delivery it disposed is a committed guard asserting the opposite "
                 "of the truth; flip it to 'wired' and name the module and anchor."
             )
@@ -871,7 +955,7 @@ def delivered_differently_refutations(
         if claims:
             problems.append(
                 f"{fr}: disposed 'delivered-differently', and its REASON still claims {claims} — "
-                f"but {module_name} IS reachable from {_ENTRY_POINT}, so that claim is FALSE. "
+                f"but {module_name} IS reachable from {_ENTRY_POINT_LABEL}, so that claim is FALSE. "
                 "The label makes no reachability claim; the reason did, and it outlived the fact "
                 "it disposed. Re-derive the disposition (a seam that has been wired is 'wired') "
                 "rather than editing the sentence until it stops matching."
@@ -1049,7 +1133,7 @@ def test_every_delivery_disposition_is_vocabulary_and_names_where_the_gap_goes()
 def test_a_wired_disposition_is_proven_against_the_import_closure() -> None:
     """TC-ArgusAgent-DOCS-001-34 — `wired` is PROVEN, never asserted. Retires 'maps to a module'."""
     graph = build_import_graph(_PACKAGE_ROOT)
-    reachable = reachable_from(graph, _ENTRY_POINT)
+    reachable = reachable_from_any(graph, _ENTRY_POINTS)
 
     for entry in _REVERSE_REGISTRY:
         if not entry.module:
@@ -1466,25 +1550,45 @@ def test_neither_closure_can_pass_by_finding_nothing() -> None:
 
     graph = build_import_graph(_PACKAGE_ROOT)
     edges = sum(len(targets) for targets in graph.values())
-    reachable = reachable_from(graph, _ENTRY_POINT)
+    reachable = reachable_from_any(graph, _ENTRY_POINTS)
     assert len(graph) >= _MIN_PACKAGE_MODULES, (
         f"Only {len(graph)} modules found under {_PACKAGE_ROOT.name}/ (floor "
-        f"{_MIN_PACKAGE_MODULES}, measured 72). The package moved or was renamed, and every "
-        "reachability assertion in this file has quietly stopped testing anything."
+        f"{_MIN_PACKAGE_MODULES}, measured 78 on 2026-08-15). The package moved or was renamed, "
+        "and every reachability assertion in this file has quietly stopped testing anything."
     )
     assert edges >= _MIN_IMPORT_EDGES, (
-        f"Only {edges} import edges resolved (floor {_MIN_IMPORT_EDGES}, measured 318). Either "
-        "the import style changed or the resolver silently stopped resolving."
+        f"Only {edges} import edges resolved (floor {_MIN_IMPORT_EDGES}, measured 390 on "
+        "2026-08-15). Either the import style changed or the resolver silently stopped resolving."
     )
     assert len(reachable) >= _MIN_REACHABLE_MODULES, (
-        f"Only {len(reachable)} modules reachable from {_ENTRY_POINT} (floor "
-        f"{_MIN_REACHABLE_MODULES}, measured 53). If the entry point moved, every 'wired' "
-        "disposition here is being proven against the wrong graph."
+        f"Only {len(reachable)} modules reachable from {_ENTRY_POINT_LABEL} (floor "
+        f"{_MIN_REACHABLE_MODULES}, measured 63 on 2026-08-15). If an entry point moved, every "
+        "'wired' disposition here is being proven against the wrong graph."
     )
-    assert _ENTRY_POINT in graph, (
-        f"{_ENTRY_POINT} is not in the graph. It is the ONLY entry point — pyproject.toml ships "
-        "three console aliases and all three are argus.cli:main. If that changed, this guard's "
-        "definition of delivery changed with it."
+    # THE ENTRY-POINT SET IS DERIVED, and its derivation is asserted non-vacuous.
+    # ~~It is the ONLY entry point — pyproject.toml ships three console aliases and all three
+    # are argus.cli:main.~~ (§3.4 struck, not deleted — that sentence was TRUE when it was
+    # written on 2026-08-11 and was made FALSE on 2026-08-15 by Story 12.6's `argus-mcp =
+    # argus.mcp.server:main`. It is the exact rot class this file exists to catch, arriving in
+    # this file's own prose, and nothing was red when it happened: the walk kept resolving
+    # `argus.cli`, so the floors held and the sentence just stopped being true. Replaced by the
+    # closure below rather than by a corrected sentence, because a corrected sentence would rot
+    # again on the fifth alias.)
+    assert _ENTRY_POINTS, (
+        "No entry point was derived from pyproject.toml [project.scripts]. A walk from no "
+        "entry point reaches nothing, so every 'wired' disposition here would pass vacuously "
+        "and every 'library-seam' one would be unrefutable. Fix the derivation; never fall "
+        "back to a hand-written entry point."
+    )
+    missing_entries = [name for name in _ENTRY_POINTS if name not in graph]
+    assert not missing_entries, (
+        f"{missing_entries} are declared in [project.scripts] but are not modules under "
+        f"{_PACKAGE_ROOT.name}/. A console alias pointing at a module that does not exist "
+        "installs cleanly and fails on a consumer's first run."
+    )
+    assert reachable >= reachable_from(graph, _ENTRY_POINTS[0]), (
+        "the union closure lost ground against a single entry point's closure, which means "
+        "reachable_from_any stopped taking the union"
     )
 
 

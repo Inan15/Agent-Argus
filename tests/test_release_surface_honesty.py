@@ -64,6 +64,28 @@ _NOTE_SECTIONS: tuple[str, ...] = (
     # much to trust the answer, which is a question that arises after there is one. Everything
     # below it can move a verdict, an exit code or a claim; this one moves what the product IS.
     "### Fixed — the default install now grounds every language the tool claims to support",
+    # `## Unreleased` — added 2026-08-15 by Story 12.6 (FR35). A PURE INSERTION: no existing
+    # section moved relative to any other, and nothing was demoted.
+    # Placed SECOND, and the placement is the DECISION this registry's comment above demands
+    # rather than a default. It is NOT placed first: 12.5's entry stays there on its own
+    # recorded ground — it is the only entry that changes what `pip install` puts on a
+    # consumer's disk before Argus has run at all — and this entry is the second such, which
+    # is exactly why it sits directly beneath it rather than anywhere else. Applying the
+    # registry's stated principle literally, *what a consumer of THIS release hits first*:
+    # this adds a FOURTH CONSOLE ALIAS to the distribution, so like 12.5's it is encountered
+    # at install time rather than at verdict time, and it is the only other entry in the note
+    # that changes the answer to "what did I just install".
+    # It is placed ABOVE 11.1's instrument disclosure, and that promotion was not taken
+    # lightly, because 11.1 has held first place on the ground that it bounds how a consumer
+    # should weigh every other claim in this note. Two things reconcile it. First, this entry
+    # does not compete with that role: the new surface CARRIES 11.1's disclosure — in every
+    # tool result and in the tool description an agent reads before calling — so a reader who
+    # meets this section has already been handed the caveat rather than had it deferred.
+    # Second, the reader most affected is a NEW KIND of reader: an autonomous agent's
+    # operator, who needs to know a second entry point now exists in their supply chain
+    # before they need to know how far the instrument has been validated. Everything below
+    # can move a verdict, an exit code or a claim; these first two move what the product IS.
+    "### Added — `argus-mcp`, so a coding agent can run the audit and read the verdict itself",
     # `## Unreleased` — added 2026-08-13 by Story 12.4 (FR37 / DF-11-4-D / AI-E11-6).
     "### Specified — every terminal outcome names its next action and the ingestion boundary",
     # `## Unreleased` — added 2026-08-11 by Story 11.1 (FR34). Registered FIRST because it is

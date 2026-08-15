@@ -221,15 +221,15 @@ def test_TC_ArgusAgent_AUDIT_001_61_the_opt_in_flag_is_what_requests_the_pass(
 
     default_args = build_parser().parse_args(["audit", "/repo"])
     assert default_args.deep_audit is False, "FR36: off by default, always"
-    assert "deep" not in cli._resolve_passes(default_args)
+    assert "deep" not in cli.resolve_passes(default_args)
 
     opted_in = build_parser().parse_args(["audit", "/repo", "--deep-audit"])
-    assert "deep" in cli._resolve_passes(opted_in)
+    assert "deep" in cli.resolve_passes(opted_in)
 
     subtracted = build_parser().parse_args(
         ["audit", "/repo", "--deep-audit", "--skip-pass", "deep"]
     )
-    assert "deep" not in cli._resolve_passes(subtracted), (
+    assert "deep" not in cli.resolve_passes(subtracted), (
         "--skip-pass must still be able to subtract the token the flag added; a skip "
         "can never re-add a pass, but it must always be able to remove one"
     )
