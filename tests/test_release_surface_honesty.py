@@ -39,7 +39,11 @@ Epic-8 stories shipped a guard narrower than its own AC by omitting this half.
 
 from __future__ import annotations
 
+import re
 from pathlib import Path
+
+from argus.reports.plain_english import TERMINAL_OUTCOMES
+from argus.verdict.verdict_gate import Verdict, exit_code_for_verdict
 
 _REPO_ROOT = Path(__file__).resolve().parents[1]
 _CHANGELOG = _REPO_ROOT / "CHANGELOG.md"
@@ -50,6 +54,27 @@ _ARTIFACT_DIR = _REPO_ROOT / "_bmad-output" / "design-artifacts" / "ArgusAgent"
 # too — so a future edit can neither quietly drop the exit-code contract nor bolt on an
 # unreviewed claim section.
 _NOTE_SECTIONS: tuple[str, ...] = (
+    # `## Unreleased` — added 2026-08-15 by Story 12.8 (AC3 + AC8). A PURE INSERTION: no existing
+    # section moved relative to any other, and nothing was demoted.
+    # Placed FIRST, and the placement is the DECISION this registry's comment above demands rather
+    # than a default. The registry's stated principle is *what a consumer of THIS release hits
+    # first*, and the three entries below it — 12.5's grammars, 12.6's fourth alias, 12.7's data
+    # files and second sub-command — each won their places on the ground that they change what a
+    # consumer HAS before Argus has run at all. This one is promoted above all three on a stronger
+    # reading of the same principle, and the promotion was not taken lightly.
+    # It is the ONLY entry in the whole note that can BREAK AN EXISTING PIPELINE ON AN UNCHANGED
+    # REPOSITORY, in two directions at once: a `--passes` / `--skip-pass` / `--reports` token that
+    # was silently ignored now fails the run, and an invocation the parser rejects now exits `1`
+    # where it exited `2`. A consumer meets an install-time change when they choose to upgrade;
+    # they meet this one in a red pipeline they did not touch. It is also the only entry that
+    # REMOVES A FALSE STATEMENT THE TOOL WAS MAKING ABOUT THEIR CODE — a typo used to publish
+    # `NOT_READY_FOR_RELEASE assessed=true` for a run that never happened, and `--passes <typo>`
+    # used to publish `RELEASE_READY` for a run that examined nothing — so a reader who weighs any
+    # other claim in this note needs this one first to know whether a past verdict meant anything.
+    # It sits ABOVE 11.1's instrument disclosure for the reason 12.5's, 12.6's and 12.7's do, and
+    # without competing with it: 11.1 bounds how far to trust a verdict the tool DID produce, while
+    # this section is about verdicts it should never have produced at all.
+    "### Changed — a mistyped invocation is refused, and no longer publishes a verdict",
     # `## Unreleased` — added 2026-08-15 by Story 12.5 (NFR-P3). A PURE INSERTION: no existing
     # section moved relative to any other, and nothing was demoted.
     # Placed FIRST, and the placement is the DECISION this registry's comment above demands
@@ -257,6 +282,19 @@ _RELEASE_SURFACES: tuple[str, ...] = (
     "argus/assets/commands/argus-audit.md",
     "argus/assets/commands/argus-audit-report.md",
     "argus/assets/commands/argus-audit-security.md",
+    # Registered 2026-08-15 by Story 12.8 (AC1). `docs/first-run.md` is the FIRST document a
+    # reader with no prior exposure meets — install, first audit, reading the ledger, what each
+    # verdict means — and it makes claims about verdicts, exit codes and command lines. A page
+    # that states what `RELEASE_READY` means is a verdict surface in the sense `-17` cares
+    # about, so it is scanned for over-claims like every other.
+    # `docs/README.md` is registered ALONGSIDE it, deliberately. It is a BMad tooling stub
+    # rather than a consumer document, but Story 12.8 / DN-1 put a consumer page in that
+    # directory and recorded the co-tenancy THERE so a later reader does not "tidy" the page
+    # away; a directory-wide pattern is the only shape that makes a SECOND page red rather than
+    # invisible, and a pattern that resolves a file no registry entry covers is `-18`'s whole
+    # failure mode. Registering both is what makes the pattern below honest.
+    "docs/first-run.md",
+    "docs/README.md",
 )
 
 # Globs that resolve to every file that COULD be such a surface. Anything they find which
@@ -273,6 +311,12 @@ _RELEASE_SURFACE_PATTERNS: tuple[str, ...] = (
     # surface class this story adds — which is exactly the shape of the `_CONSOLE_SCRIPTS` and
     # `_ENTRY_POINT` defects Story 12.6 found twice: a recognizer that quietly stops recognizing.
     "argus/assets/commands/*.md",
+    # Added 2026-08-15 by Story 12.8, WITH the two registry entries above — both, for 12.7's
+    # recorded reason: *a registry entry no pattern resolves proves nothing, and a pattern with
+    # no registry lets anything through*. The glob is directory-wide rather than
+    # `docs/first-run.md`, so a SECOND consumer-facing page dropped into `docs/` is RED until
+    # somebody decides it is honest, which is exactly what `-18` exists for.
+    "docs/*.md",
 )
 
 # The preserved, frozen Story-7.2 independent run matches the dogfood glob but is NOT a
@@ -547,3 +591,204 @@ def test_TC_ArgusAgent_DOCS_001_19_provisional_gate_language_survives_regenerati
     ):
         plan_text = (_ARTIFACT_DIR / name).read_text(encoding="utf-8")
         assert "SELF-scoped plan" in plan_text, f"{name} lost its subject-honesty clause"
+
+
+# ─────────────────────────────────────────────────────────────────────────────────────
+# Story 12.8 / AC1 — the first-run page: REACHABLE, and every checkable claim DERIVED
+#
+# `epics.md:2421-2425` asked for a first-run page. What it assumed — that `docs/` already held
+# an integrator-shaped README — was measured FALSE on `2f84a0b`: `docs/README.md` is a 642-byte
+# BMad tooling stub ending *"Currently empty apart from this file"*, the integrator-shaped
+# README is the ROOT one, and `README.md` contained ZERO occurrences of `docs/`, so nothing
+# linked there at all. Reachability is therefore part of the delivery, not a nicety — and the
+# page does NOT ship in the wheel (`flit_core` packages `argus/**` only), so the README link is
+# its whole delivery mechanism.
+#
+# Every FACTUAL claim on it is derived by the guards below rather than transcribed (AI-E9-7):
+# a fourth `Verdict` member, a changed exit code or a moved command line turns them RED rather
+# than leaving the page quietly stale.
+# ─────────────────────────────────────────────────────────────────────────────────────
+
+_FIRST_RUN = _REPO_ROOT / "docs" / "first-run.md"
+_README = _REPO_ROOT / "README.md"
+
+
+def test_TC_ArgusAgent_DOCS_001_62_the_first_run_page_is_reachable_and_says_what_it_is() -> None:
+    """TC-ArgusAgent-DOCS-001-62 — Story 12.8 / AC1: an unlinked page is not a first-run surface.
+
+    Three facts, and the first is the one the epic's premise got wrong. (a) The page exists.
+    (b) `README.md` LINKS it, and the link target resolves to a file that is really there — a
+    link is only a delivery mechanism if it lands. (c) The page states plainly that it is
+    repository documentation, because it is NOT in the wheel and a reader who `pip install`ed
+    the distribution will not find it on their disk.
+    """
+    assert _FIRST_RUN.is_file(), "docs/first-run.md is missing — AC1's whole delivery"
+    page = _FIRST_RUN.read_text(encoding="utf-8")
+    readme = _README.read_text(encoding="utf-8")
+
+    links = re.findall(r"\]\((docs/[^)]+\.md)\)", readme)
+    assert "docs/first-run.md" in links, (
+        "README.md does not link docs/first-run.md. Measured on 2f84a0b, README contained ZERO "
+        f"occurrences of 'docs/' — an unreachable page is not a first-run surface. Found: {links}"
+    )
+    for target in links:
+        assert (_REPO_ROOT / target).is_file(), (
+            f"README.md links {target!r}, which resolves to nothing. A link that does not land "
+            "is worse than no link: it sends the reader somewhere that does not exist, which is "
+            "the exact failure FR37 is written against."
+        )
+
+    assert "not packaged in the wheel" in page or "not* packaged in the wheel" in page, (
+        "the page does not say it is repository documentation. A reader who installed the "
+        "distribution and cannot find this file has been told nothing about why."
+    )
+
+
+def test_TC_ArgusAgent_DOCS_001_63_the_verdict_vocabulary_on_the_page_is_derived() -> None:
+    """TC-ArgusAgent-DOCS-001-63 — Story 12.8 / AC1: a fourth verdict turns this RED, not stale.
+
+    The page's verdict table is a transcription risk of exactly the class AI-E9-7 names: a
+    prose copy of a pinned constant. So the constant is the authority — `Verdict`
+    (`argus/verdict/verdict_gate.py`) — and the page is checked against it in BOTH directions:
+    every member must appear, and the page may name no token that is not a member. Adding a
+    fourth `Verdict` member makes this fail rather than leaving a published page quietly
+    incomplete.
+    """
+    page = _FIRST_RUN.read_text(encoding="utf-8")
+    members = {member.value for member in Verdict}
+    assert len(members) >= 3, "the Verdict enum collapsed; this comparison would be vacuous"
+
+    missing = sorted(token for token in members if token not in page)
+    assert not missing, (
+        f"docs/first-run.md does not name verdict member(s) {missing}. The page tells a "
+        "first-time reader what each verdict means; one it does not mention is one they meet "
+        "for the first time in a red CI log."
+    )
+    # Direction two: no INVENTED token. A verdict token is SCREAMING_SNAKE_CASE — the
+    # underscore is what makes the pattern a verdict-shape rather than "any shouted word", and
+    # it is the corrected form: a first draft matched `[A-Z][A-Z_]{5,}` and flagged `README`,
+    # which is a guard failing on the wrong observable. `AUDIT_FAILED` is admitted because it
+    # is `plain_english.TERMINAL_OUTCOMES`' fourth member — a real, published non-verdict
+    # outcome token — and it is read from that tuple rather than typed here.
+    allowed = members | set(TERMINAL_OUTCOMES)
+    shaped = set(re.findall(r"\b[A-Z]+(?:_[A-Z]+)+\b", page))
+    invented = sorted(word for word in shaped if word not in allowed)
+    assert not invented, (
+        f"docs/first-run.md names verdict-shaped token(s) the gate cannot produce: {invented}. "
+        "A published page naming an outcome the tool cannot emit teaches a reader to expect "
+        "something they will never see."
+    )
+    # Positive control: the corrected pattern still catches a real invented token.
+    assert re.findall(r"\b[A-Z]+(?:_[A-Z]+)+\b", "the verdict was PROBABLY_FINE") == [
+        "PROBABLY_FINE"
+    ], "the verdict-shape pattern stopped matching a verdict-shaped token"
+    assert not re.findall(r"\b[A-Z]+(?:_[A-Z]+)+\b", "see README for details")
+
+
+def test_TC_ArgusAgent_DOCS_001_64_the_exit_codes_on_the_page_are_the_AR3_mapping() -> None:
+    """TC-ArgusAgent-DOCS-001-64 — Story 12.8 / AC1: the exit-code table is DERIVED.
+
+    An exit code is the one fact a CI consumer acts on without reading anything else, and a
+    published page stating the wrong one is the worst kind of stale. The authority is
+    `exit_code_for_verdict` plus AR3's reserved `1`, and the page's table row for each verdict
+    must carry the code that function actually returns — read from the row, not from anywhere
+    on the page, so a correct code sitting beside the wrong verdict is still RED.
+    """
+    page = _FIRST_RUN.read_text(encoding="utf-8")
+    rows = [line for line in page.splitlines() if line.startswith("| ")]
+    assert rows, "the page has no table at all"
+
+    checked = 0
+    for member in Verdict:
+        code = exit_code_for_verdict(member)
+        matching = [row for row in rows if member.value in row]
+        assert len(matching) == 1, (
+            f"expected exactly one table row naming {member.value}, found {len(matching)}"
+        )
+        assert f"`{code}`" in matching[0], (
+            f"docs/first-run.md states the wrong exit code for {member.value}: the AR3 map "
+            f"returns {code} and the row reads {matching[0]!r}"
+        )
+        checked += 1
+    assert checked == len(Verdict) >= 3
+
+    # AR3's reserved crash code, which is NOT a verdict and must be stated as such.
+    reserved_row = [row for row in rows if "`1`" in row and "no verdict" in row]
+    assert reserved_row, (
+        "the page does not state that exit 1 is the reserved 'no verdict produced' code. It is "
+        "the code a usage error and every typed failure now return (Story 12.8 / AC8), and a "
+        "consumer who reads it as a verdict has been handed a fabricated assessment."
+    )
+    assert set(re.findall(r"^\| .*?\| `(\d)` \|", page, re.M)) == {
+        str(exit_code_for_verdict(m)) for m in Verdict
+    } | {"1"}, "the page's exit-code column is not exactly the AR3 wire contract"
+
+
+def test_TC_ArgusAgent_DOCS_001_65_no_diagnosis_sends_the_user_to_the_page() -> None:
+    """TC-ArgusAgent-DOCS-001-65 — Story 12.8 / AC1: the page must not become where the answer lives.
+
+    FR37 is explicit — *"the next action is present in the tool's own output. A user with no
+    colleague and no internal wiki must not be sent elsewhere to interpret a verdict."* A
+    first-run page is an orientation surface; the moment a diagnosis says *"see
+    docs/first-run.md"* it has become the wiki FR37 forbids, and it is one that does not ship
+    in the wheel, so the reader may not even have it.
+
+    Asserted over the SOURCE of every module that renders a user-facing message, so it holds
+    for messages this story did not write as well as the ones it did.
+    """
+    package_root = _REPO_ROOT / "argus"
+    surfaces = [
+        package_root / "cli.py",
+        package_root / "reports" / "plain_english.py",
+        package_root / "reports" / "generator.py",
+        package_root / "intake" / "source_state.py",
+        package_root / "intake" / "repo_loader.py",
+        package_root / "pipeline.py",
+        package_root / "mcp" / "server.py",
+    ]
+    assert all(path.is_file() for path in surfaces), "a diagnosis surface moved; fix this list"
+
+    # The observable is the PATH, not the bare phrase. A first draft searched for `first-run`
+    # and flagged `argus/pipeline.py`, which uses *"a first-run / no-prior-state signal"* about
+    # the resume seam — a guard firing on unrelated prose is a guard that gets deleted by the
+    # third person to hit it. What FR37 forbids is a message CITING the page, and a citation
+    # carries the path.
+    pointer = "docs/first-run.md"
+    offenders = [
+        str(path.relative_to(_REPO_ROOT)).replace("\\", "/")
+        for path in surfaces
+        if pointer in path.read_text(encoding="utf-8")
+    ]
+    assert not offenders, (
+        f"{offenders} point the user at {pointer}. FR37 requires the next action to be IN the "
+        "tool's own output; a page that is not in the wheel cannot be where the answer lives. "
+        "State the answer, do not cite the page."
+    )
+    # Positive control — the narrowed observable still catches the thing it exists to catch,
+    # and is not satisfied by the fact that nobody happens to have written it.
+    synthetic = 'print(f"{PROG}: coverage below the floor — see docs/first-run.md")'
+    assert pointer in synthetic, "the detector no longer recognises a real citation"
+
+
+def test_TC_ArgusAgent_DOCS_001_66_the_docs_readme_no_longer_claims_the_folder_is_empty() -> None:
+    """TC-ArgusAgent-DOCS-001-66 — Story 12.8 / AC1: a false sentence is STRUCK, not deleted.
+
+    `docs/README.md` ended *"Currently empty apart from this file."* That became false the
+    moment `first-run.md` landed beside it. §3.4 evidence immutability says supersede and
+    strike, never erase — so the sentence must still be legible, wearing `~~`, with the
+    correction beside it, and the deliberate co-tenancy DN-1 records must be named so a later
+    reader does not "tidy" a consumer-facing page out of a tooling directory.
+    """
+    text = (_REPO_ROOT / "docs" / "README.md").read_text(encoding="utf-8")
+
+    assert "Currently empty apart from this file" in text, (
+        "the superseded sentence was DELETED rather than struck (§3.4 evidence immutability)"
+    )
+    assert "~~Currently empty apart from this file.~~" in text, (
+        "the sentence is still asserted rather than struck — it is false and reads as current"
+    )
+    assert "first-run.md" in text, "the correction does not name what is actually in the folder"
+    assert "CONSUMER-FACING" in text, (
+        "the co-tenancy DN-1 records is not stated, so the next reader has no reason not to "
+        "move a product surface into the planning tree"
+    )

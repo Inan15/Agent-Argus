@@ -27,6 +27,8 @@ assertions would report every guard twice.
 from __future__ import annotations
 
 import argparse
+import contextlib
+import io
 import re
 import shlex
 from dataclasses import dataclass
@@ -112,6 +114,14 @@ _WORKFLOW_GLOB = ".github/workflows/*.yml"
 # The shipped command-asset tree (Story 12.7 / FR35). BY GLOB — the whole point of AC3 is that a
 # rename or a move must turn `-39` RED rather than silently shrinking `-28`'s corpus to nothing.
 _ASSET_GLOB = "argus/assets/commands/*.md"
+# The consumer-facing documentation directory (Story 12.8 / AC1 / AC9.3). BY GLOB, for the reason
+# stated one line up and because it is the whole delivery of the first-run page: `docs/first-run.md`
+# is where a reader with no prior exposure copies their FIRST `argus …` command line from, so a
+# command that does not parse costs exactly the user this project's persona is written about
+# (PRD Journey 6). `-39` carries a `> 0` floor requiring at least one extracted invocation to come
+# from this glob, so a rename, a move, or a page that stops carrying a fenced invocation turns RED
+# rather than quietly shrinking the corpus back to what it was.
+_DOCS_GLOB = "docs/*.md"
 
 # `${{ github.sha }}`, `$TAG`, `<repo>` — a documented placeholder is a value, not a parse error.
 _PLACEHOLDER_RE = re.compile(r"\$\{\{[^}]*\}\}|\$\{[^}]*\}|\$[A-Za-z_][A-Za-z0-9_]*|<[^>\s]+>")
@@ -249,6 +259,7 @@ def extract_documented_invocations() -> tuple[DocumentedInvocation, ...]:
     files = [_REPO_ROOT / name for name in _INVOCATION_SOURCES]
     files.extend(sorted(_REPO_ROOT.glob(_WORKFLOW_GLOB)))
     files.extend(sorted(_REPO_ROOT.glob(_ASSET_GLOB)))
+    files.extend(sorted(_REPO_ROOT.glob(_DOCS_GLOB)))
     found: list[DocumentedInvocation] = []
     for path in files:
         if not path.exists():
@@ -309,9 +320,23 @@ def parse_failure(command: str) -> str | None:
 
     parser = cli.build_parser()
     parser.exit_on_error = False
+    # `--help` writes the whole help block to stdout; a guard is not a place for that, and
+    # swallowing it is what lets a documented `argus audit --help` be checked like any other
+    # line rather than excluded from the corpus.
+    sink = io.StringIO()
     try:
-        parser.parse_args(argv[1:])
+        with contextlib.redirect_stdout(sink):
+            parser.parse_args(argv[1:])
     except SystemExit as exc:
+        # CORRECTED 2026-08-15 by Story 12.8 / AC1. `SystemExit(0)` is argparse ACCEPTING the
+        # line and printing help — the exact opposite of what the old message asserted
+        # ("argparse rejected the documented command line"). Reading it as a rejection made
+        # this guard structurally unable to admit a documented `--help` invocation, and
+        # `docs/first-run.md` documents two of them: the whole point of that page is to show a
+        # reader how to ask the tool what it accepts. The check is NOT loosened — a usage error
+        # still exits `2`, and `2` is still a failure here.
+        if exc.code in (0, None):
+            return None
         return f"SystemExit {exc.code} — argparse rejected the documented command line"
     except argparse.ArgumentError as exc:
         return f"ArgumentError: {exc}"

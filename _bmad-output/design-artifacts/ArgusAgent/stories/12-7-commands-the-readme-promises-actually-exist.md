@@ -4,7 +4,7 @@ baseline_commit: ddeb30d4ade70a3745426416f2ea2b6c3d179cf9
 
 # Story 12.7: The commands the README promises actually exist
 
-Status: review
+Status: done
 
 <!-- Note: Validation is optional. Run validate-create-story for quality check before dev-story. -->
 
@@ -854,9 +854,63 @@ was added).
 
 ### Review Findings
 
+**Code review (`bmad-code-review`, adversarial: Blind Hunter + Edge Case Hunter + Acceptance Auditor
+against every AC), 2026-08-15.** Reviewed `git diff ddeb30d..HEAD` (`bf861e7` + `2f84a0b`), independently
+re-verified rather than trusted:
+
+- **Gates re-run, not re-read:** `pytest -q` → **1505 passed, 0 failed** (both commits applied, so the
+  `DF-10-4-D` two-step is confirmed complete — the six artifact-currency reds this story's dev pass
+  reported are gone). `mypy argus` → clean, 83 files. `bandit -r argus -q` → 19 LOW, and a fresh
+  `git archive HEAD argus` control run reproduces the identical 19 LOW / same distribution (B105×6,
+  B404×4, B603×5, B607×4); `bandit -r argus/commands argus/assets -q` → **zero findings** in the new
+  file-writing surface.
+- **Packaging (AC1) proven against a real build, not the test's word:** ran `python -m build`; all
+  three `.md` assets are present in BOTH the built wheel (91 entries) and the built sdist (90 files),
+  matching README's re-derived figures exactly. `pyproject.toml` untouched, confirmed.
+- **Deletion honesty (risk #1):** no live reference to `adapters/**` remains anywhere in `.py`/`.sh`/
+  `.ps1`/`.toml`/`.yaml`; every remaining mention is struck-not-deleted historical record. All three
+  installer scripts delegate to `argus install-commands` and contain no copy verb (`cp`, `Copy-Item`,
+  etc.) on a live line. `resume`/`subsystem`/`repo`/`architecture` removals correctly cite `DF-3-4-A` /
+  `DF-10-5-C` / Story 12.8 rather than silently vanishing; `DF-11-5-C` closed and `DF-3-4-A` left
+  untouched (append-only) in `deferred-work.md`.
+- **Three guards, reasoned about rather than trusted (risk #2):** `-56`'s delivered branch now asserts
+  set equality in both directions with a non-vacuity floor and no early `return` — reasoned through the
+  cited attack (deleting the README's commands while the wheel still ships assets) and confirmed the
+  `assert published` floor catches it. `derive_arguments`'s default is now `None` = closure over every
+  `_SubParsersAction.choices` member, confirmed at all five production call sites (only the three
+  synthetic-parser positive controls still pass `"audit"` deliberately). `SECURITY-001-30` now closes
+  over every tracked `.py` file (`_repository_python_sources()`), not one named file.
+- **Test-file split (risk #3):** assert-count diff old→new: 33 asserts in the pre-split file vs. 35 (in
+  `test_invocation_contract.py`) + 2 (in `invocation_sources.py`) = 37 post-split — nothing dropped, more
+  added. All 9 original `test_` functions present unchanged by name in the post-split file. Both files
+  now sit under the 1200-line NFR-M1 ceiling (968 / 319).
+- **DN-7/FR34 disclosure (risk #6):** grepped every asset under `argus/assets/**` for the rendered
+  disclosure text (`"independently validated"`) — absent from every committed file. Drove the *real*
+  `install_commands()` into a fixture `tmp_path`: the disclosure text is present in all three written
+  files. No `mcp`/`model context protocol` token anywhere under `argus/commands/**` or `argus/assets/**`;
+  `argus/cli.py` names the transport, not the protocol, matching DN-8's ruling.
+- **Set-equality (risk #7):** README, `audit/commands.md` and `audit/skill.md` now publish the identical
+  derived set (`/argus-audit`, `/argus-audit-security`, `/argus-audit-report`); `test_command_assets.py`
+  derives all three from `argus/assets/commands/**` × the host registry and asserts equality both
+  directions over a scanned (not declared) surface population. Wheel/sdist entry-count paragraph
+  (`README.md:154-156`) is the one place those figures are stated, confirmed against the real build.
+- **Installer correctness (risk #5):** `install-commands` is a sub-command (`subparsers.add_parser`),
+  not a fifth `[project.scripts]` alias — confirmed only four aliases remain, unchanged targets.
+  Containment tested and reasoned through both halves (pure name-validation pre-join, impure realpath
+  re-check post-join catching a symlinked `commands/` dir); `--remove` is keyed on the marker, not the
+  file name (adversarial variant: a same-named user file survives and is left un-overwritten); no
+  absolute host path in any rendered message (asserted and independently re-checked); "no host detected"
+  exits `1` (DN-12, executed directly via `cli.main`).
+- **No unresolved `decision-needed` or `patch` findings.** No High/Medium issues found. No gate was
+  loosened — three were corrected and reasoned about, and the correction reasoning is recorded in both
+  the test docstrings and this story's Dev Agent Record, matching AC5/AC7's requirement.
+
+Verdict: **PASS.** Status → `done`.
+
 ## Change Log
 
 | Date | Change |
 |---|---|
+| 2026-08-15 | **Code review (`bmad-code-review`) — PASS.** Status → `done`. Independently re-ran the full gate set (pytest 1505/1505 green — both commits applied, so the `DF-10-4-D` two-step's six reds are gone; `mypy` clean; `bandit` 19 LOW identical to a fresh control, zero in the new modules) and built a real wheel + sdist to confirm all three command assets ship in both (91 / 90 entries, matching the README's stated figures). Reasoned through the three corrected guards (`-56`, `derive_arguments`, `SECURITY-001-30`) against the attacks they exist to catch, confirmed no live reference to the deleted `adapters/**` remains, confirmed the FR34 disclosure is rendered-not-committed by driving the real installer into a fixture directory, and confirmed the invocation-contract split dropped no assertion (33 → 37, all 9 original tests present unchanged). No `decision-needed`/`patch`/High/Medium findings. See Review Findings above for the full verification trail. |
 | 2026-08-15 | **Implemented (`dev-story`, RESUMED after a transport-killed run). Status → `review`.** FR35's second half ships: the command assets are packaged as DATA under `argus/assets/commands/**` (in the built **wheel and sdist** — `flit_core` needed no configuration, verified by execution), and `argus install-commands [--host …] [--dest …] [--dry-run] [--remove]` is the ONE step that places and removes them — a **second sub-command** on the existing entry point (DN-1), with a PURE fold in `argus/commands/installer.py` over a CLOSED, verification-gated host registry in `argus/commands/hosts.py`, and a thin impure write. **Inherited from the killed run** (judged, not trusted): the package shape, the three assets and the host registry were KEPT; the two format markers were promoted from prose to constants so the installer could not spell them a second time, the installer module itself was written from scratch, and everything was staged so the sdist carries it. `install.sh` / `install.ps1` / `uninstall.sh` now DELEGATE and copy nothing; `adapters/**` (six stubs, one publishing an invocation the parser rejects) is removed with its record struck-not-deleted (DN-10). Three published lists reconciled to set-equality with what ships (`README.md` 7, `audit/commands.md` 10, `audit/skill.md` 6 → the same three, derived by test), the 12-vs-8-vs-4 report figures corrected, the seven-host sentence corrected to the one verified host, and the FORTHCOMING marker removed. **Two never-executed guards CORRECTED rather than satisfied**: `-56`'s delivered branch (it returned after one assertion, so it could have been passed by deleting the commands from the README) now asserts set equality both ways with non-vacuity floors and no `pragma`; `derive_arguments` (audit-scoped at all five call sites, so this story's four flags would have been accepted and specified nowhere) is now a closure over every sub-command, with a collision check. A third, found on the way: `SECURITY-001-30`'s single-resolver claim was file-scoped and is now repository-scoped. New verification area `TC-ArgusAgent-ASSETS-001-01..-13` in `tests/test_command_assets.py`. `tests/test_invocation_contract.py` crossed the NFR-M1 ceiling and was split along its own cohesion boundary into `tests/invocation_sources.py` with every import path preserved. Gates: `mypy argus` clean (83 files); `bandit -r argus` identical to a stashed-`argus/` control (19 LOW, no new finding, none in the new modules, no suppression); `pytest` **1499 passed / 6 failed**, the six being the ONE `DF-10-4-D` artifact-currency class awaiting the commit-then-regenerate bootstrap (the remedy script was run and refused by design). Nothing published, nothing committed, nothing loosened. |
 | 2026-08-15 | Story 12.7 created (`bmad-create-story`). Scope: **FR35 half two** — packaged assistant command assets under `argus/assets/commands/`, a documented install step that actually places them (`argus install-commands`, DN-1), proof that every shipped command resolves through the **real** parser, and set-equality between what ships and what is published. Premises re-measured on `ddeb30d`: the epic's line-number citations are stale and its *"three console aliases"* is now four (12.6); **the premise "no registration mechanism exists" is true of the distribution but false of the repository** — `install.sh` / `install.ps1` / `uninstall.sh` and six `adapters/**` stubs exist, and both installers copy Claude Code assets *beside* the `commands/` directory they create, so the shipped mechanism is broken rather than absent. **Three published command lists measured and found to disagree** (README 7 / `audit/commands.md` 10 / `audit/skill.md` 6), four of the seven README commands cannot resolve to any invocation (`repo`, `architecture`, `subsystem`, `resume` — the last two already filed as `DF-3-4-A` / fenced to 12.8), a seventh host (RooCode) is claimed with no adapter at all, and the report count is published as 12, 8 and 4 in one repository. **Two never-executed guards named for correction**: `-56`'s delivered-state branch returns after one assertion (so nothing would hold set equality once assets ship) and `derive_arguments` is scoped to the `audit` sub-command alone (so a second sub-command's flags would be specified nowhere). Status → `ready-for-dev`. |

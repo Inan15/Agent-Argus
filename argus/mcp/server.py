@@ -56,7 +56,10 @@ from argus.cli import (
 )
 from argus.mcp import protocol
 from argus.pipeline import run_audit
-from argus.reports.plain_english import deep_pass_enabled
+from argus.reports.plain_english import (
+    deep_pass_enabled,
+    render_audit_failed_next_action,
+)
 
 __all__ = ["main", "serve"]
 
@@ -132,9 +135,20 @@ def _tool_call_payload(
             # PipelineError / ShipReadinessError are all ValueError subclasses — TYPED and
             # secret-safe (AR10). The wording is the CLI's, character for character, so the
             # two surfaces cannot describe one failure differently.
+            #
+            # Story 12.8 / AC4 / AC6 / DN-7: that parity now covers the FAILURE path's SECOND
+            # line as well — FR37's next action, selected by the SAME typed-class dispatch the
+            # CLI uses, from the SAME pure renderer. An agent handed only a cause has to guess
+            # what to do; an agent handed a cause plus "this is a bug in Argus, not a problem
+            # with your repository" does not act on the repository. A message added on one
+            # surface and not the other is a fork (12.6's contract, unweakened).
             return protocol.response_payload(
                 invocation.request_id,
-                protocol.tool_result(f"{PROG}: audit failed: {exc}", is_error=True),
+                protocol.tool_result(
+                    f"{PROG}: audit failed: {exc}\n"
+                    f"{PROG}: {render_audit_failed_next_action(cause=exc)}",
+                    is_error=True,
+                ),
             )
 
     return protocol.response_payload(

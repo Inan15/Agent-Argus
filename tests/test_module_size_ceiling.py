@@ -124,12 +124,22 @@ _EXEMPT_BY_DESIGN: dict[str, _Exemption] = {
     "tests/test_grammar_diagnosis.py": _Exemption(
         reason=(
             "1203 lines at 2026-08-12 — three lines over. The Story 10.4 grammar-diagnosis guard, "
-            "including the `ast` closure over the loader's control flow. Same reason as above."
+            "including the `ast` closure over the loader's control flow. Same reason as above. "
+            "RE-RECORDED 2026-08-15 by Story 12.8, because the entry had become ORPHANED and an "
+            "exemption nobody owns is a hole rather than a decision: its target story "
+            "`12-5-default-install-grounds-languages-it-claims` is `done` and did not perform the "
+            "split, so the clause that was meant to retire this entry can never fire. Story 12.8 "
+            "needed a CLI-level grammar-downgrade guard and DECLINED to add it here — it is homed "
+            "in `tests/test_cli.py` beside the other operator-diagnosis guards, which is also "
+            "where it cohesively belongs — so this file is UNCHANGED at 1203 lines and the "
+            "exemption did not grow. It is still owed: the split is a mechanical one (the four "
+            "simulated failure modes and their seam installer are a self-contained half), and it "
+            "belongs to a story that says so rather than to whichever story next needs a line."
         ),
-        dated="2026-08-12",
+        dated="2026-08-15",
         owner="Engineering",
         deferred_work_id="DF-12-1-C",
-        target_story="12-5-default-install-grounds-languages-it-claims",
+        target_story="NONE — unscheduled; the split is owed and belongs to a story that says so",
     ),
 }
 

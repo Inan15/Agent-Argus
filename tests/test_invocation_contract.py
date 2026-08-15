@@ -161,9 +161,15 @@ def derive_arguments(
     """Every accepted argument, keyed by spelling (PURE). ``None`` = EVERY sub-command.
 
     Uses argparse private API (``_subparsers`` / ``_group_actions`` / ``_actions``) — see the module
-    docstring's failure mode 4 and ``-39``, which is the countermeasure. ``-h/--help`` is excluded:
+    docstring's failure mode 4 and ``-39``, which is the countermeasure. ~~``-h/--help`` is excluded:
     it is argparse's own, is not part of the product's invocation contract, and its prose is Story
-    12.8's. A positional is keyed by its ``dest``.
+    12.8's.~~ (§3.4 struck, not deleted — corrected 2026-08-15 by Story 12.8 / AC9.2. The exclusion
+    of the ``-h`` ACTION stands unchanged and for its first reason: it is argparse's own and no
+    contract site specifies it. The final clause became half false the moment 12.8 landed —
+    ``--help``'s PROSE is now under contract, in ``-52``/``-53``/``-54`` below, which hold every
+    argument's rendered help against the live ``action.default`` and against three
+    operator-consequence facts. What is excluded here is the ``-h`` action itself; what is NOT
+    excluded any more is the help TEXT of everything else.) A positional is keyed by its ``dest``.
 
     The default is the CLOSURE (see :func:`subcommands`): a sub-command added to ``build_parser``
     brings its flags into ``-35``/``-37``/``-38`` with no edit here, which is the only arrangement
@@ -201,6 +207,40 @@ def derive_arguments(
                     subcommands=(*(seen.subcommands if seen else ()), name),
                 )
     return derived
+
+
+def live_actions(
+    parser: argparse.ArgumentParser, subcommand: str | None = None
+) -> dict[str, argparse.Action]:
+    """Every accepted argument as the LIVE ``argparse.Action`` object, keyed by spelling (PURE).
+
+    Story 12.8. :func:`derive_arguments` projects an action onto the four facts the CONTRACT
+    registry talks about (spelling, dest, default, shape); some guards need the action ITSELF —
+    ``-36`` reads ``action.type.accepted`` to build a legal sample for a closed-vocabulary flag,
+    and ``-52`` reads the rendered help text. Both are answers only the live object holds.
+
+    It is a SECOND PROJECTION of the same walk, never a second walk: the closure over
+    sub-commands, the ``_HelpAction`` exclusion and the key are identical to
+    :func:`derive_arguments`'s, and ``-39``'s non-vacuity floors are asserted over the union, so
+    the two cannot come to disagree about which arguments exist.
+    """
+    found: dict[str, argparse.Action] = {}
+    for subparsers_action in [
+        action
+        for action in parser._actions  # noqa: SLF001 - argparse exposes no public walk
+        if isinstance(action, argparse._SubParsersAction)  # noqa: SLF001 - same
+    ]:
+        for name, sub in subparsers_action.choices.items():
+            if subcommand is not None and name != subcommand:
+                continue
+            if not isinstance(sub, argparse.ArgumentParser):
+                continue
+            for action in sub._actions:  # noqa: SLF001 - same
+                if isinstance(action, argparse._HelpAction):  # noqa: SLF001 - same
+                    continue
+                spelling = action.option_strings[0] if action.option_strings else action.dest
+                found[spelling] = action
+    return found
 
 
 def conflicting_arguments(parser: argparse.ArgumentParser) -> tuple[str, ...]:
@@ -608,6 +648,7 @@ from tests.invocation_sources import (  # noqa: E402,F401 - re-export, import pa
     _CLI_ENTRY_TARGET,
     _CONSOLE_SCRIPT_TARGETS,
     _CONSOLE_SCRIPTS,
+    _DOCS_GLOB,
     _INVOCATION_SOURCES,
     _MCP_ENTRY_TARGET,
     _PLACEHOLDER,
@@ -655,6 +696,16 @@ def test_TC_ArgusAgent_CLI_001_36_every_registered_spelling_actually_parses() ->
 
     Story 10.3 / AC6.3. A spelling can be present in the argparse walk and still be unusable; the
     only honest proof that the contract names a REAL flag is to hand it to the real parser.
+
+    ⚠️ **The sample value is DERIVED for a CLOSED-VOCABULARY flag** (added 2026-08-15 by Story
+    12.8 / AC3). ``--passes``, ``--skip-pass`` and ``--reports`` now refuse a token outside a
+    finite, code-defined set — a typo on ``--passes`` used to disable every detector pass
+    silently and still return ``RELEASE_READY`` — so the fixed placeholder ``"x"`` stopped being
+    a legal value for them. It is replaced by the flag's OWN first accepted token, read off the
+    live parser (``action.type.accepted``, exposed by ``cli.ClosedVocabulary`` for exactly this),
+    and NOT by a hand-list here: a second list of *"what is a valid --passes value"* is the
+    ``_CONSOLE_SCRIPTS`` defect class this project has recorded four times. A future
+    closed-vocabulary flag is therefore covered by this guard with no edit.
     """
     sample_for_shape = {
         SHAPE_VALUE: ["x"],
@@ -663,11 +714,15 @@ def test_TC_ArgusAgent_CLI_001_36_every_registered_spelling_actually_parses() ->
         SHAPE_CHOICE: None,  # filled from the registry's own choices
         SHAPE_STORE_TRUE: [],
     }
+    parser = cli.build_parser()
+    accepted_by_spelling = {
+        spelling: tuple(getattr(action.type, "accepted", ()))
+        for spelling, action in live_actions(parser).items()
+    }
     # The sub-command a flag belongs to, and that sub-command's required positionals, are DERIVED
     # from the live parser rather than hand-typed (Story 12.7). The prefix used to be the literal
     # `"argus audit . "`, which was correct only while there was exactly one sub-command — the
     # same single-surface assumption `derive_arguments` carried, in a second place.
-    parser = cli.build_parser()
     derived = derive_arguments(parser)
     positionals_by_subcommand = {
         name: [
@@ -683,6 +738,8 @@ def test_TC_ArgusAgent_CLI_001_36_every_registered_spelling_actually_parses() ->
             continue
         if entry.shape == SHAPE_CHOICE:
             value = [entry.choices[0]] if entry.choices else ["x"]
+        elif accepted_by_spelling.get(entry.spelling):
+            value = [accepted_by_spelling[entry.spelling][0]]
         else:
             value = list(sample_for_shape[entry.shape] or [])
         accepting = derived[entry.spelling].subcommands
@@ -815,6 +872,17 @@ def test_TC_ArgusAgent_CLI_001_39_the_guard_is_not_vacuous() -> None:
         f"({_ASSET_GLOB!r}). Either the tree moved, the assets stopped carrying a fenced `argus "
         "…` invocation, or the glob stopped matching — in every case `-28` has quietly stopped "
         "checking the one surface Story 12.7 added it for."
+    )
+    # Story 12.8 / AC1 + AC9.3 — the same `> 0` floor on the corpus's newest member. The
+    # first-run page is where a reader with no prior exposure copies their FIRST command line
+    # from, so a page that stops carrying a parseable `argus …` invocation, or a glob that stops
+    # matching it, must be RED rather than a silently smaller corpus.
+    from_docs = [s for s in sources if s.startswith("docs/")]
+    assert from_docs, (
+        f"NO documented invocation was extracted from {_DOCS_GLOB!r}. Either docs/first-run.md "
+        "moved, it stopped carrying a fenced `argus …` command line, or the glob stopped "
+        "matching — in every case the first command a new user copies is no longer checked "
+        "against the real parser."
     )
 
 

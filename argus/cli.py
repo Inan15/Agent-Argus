@@ -14,14 +14,58 @@ never source / secret bytes / an absolute host path).
 THIN WIRING ONLY (CLAUDE.md §3.1 spirit / NFR-M1)
 -------------------------------------------------
 ``main(argv=None) -> int`` parses the LOCKED invocation contract into an
-:class:`~argus.models.AuditRequest`, calls ``pipeline.run_audit``,
+:class:`~argus.models.AuditRequest`, calls ``pipeline.run_audit_detailed``,
 prints a secret-safe machine-readable summary to stdout, and RETURNS the 1.6
-``AuditVerdict.exit_code`` (``0``/``2``/``3``). A TYPED pipeline failure
-(``RepoIntakeError`` / ``WorkspaceContainmentError`` / ``CanonicalSerializationError``
-/ ``PipelineError`` / any ``ValueError``) is mapped to a secret-safe stderr line +
-return ``1`` (the reserved crash code, AR3/AR10) — never a Python traceback to the
-user. ``main`` is testable WITHOUT a real ``sys.exit`` (it returns the code); the
-console wrapper does ``sys.exit(main())``.
+``AuditVerdict.exit_code`` (``0``/``2``/``3``).
+
+~~A TYPED pipeline failure (``RepoIntakeError`` / ``WorkspaceContainmentError`` /
+``CanonicalSerializationError`` / ``PipelineError`` / any ``ValueError``) is mapped to a
+secret-safe stderr line + return ``1`` (the reserved crash code, AR3/AR10) — never a Python
+traceback to the user.~~ (§3.4 struck, not deleted — corrected 2026-08-15 by Story 12.8 /
+AC5, closing ``DF-8-4-D``. The paragraph was accurate about the CATCH and false about what
+the user was told, in two ways that compounded. First, *"any ``ValueError``"* is not a fifth
+member of a list of four typed subclasses: it is the CATCH-ALL that swallows them, and
+Pydantic's ``ValidationError`` — an internal defect — is a ``ValueError`` subclass, so a bug
+in Argus was reported to the operator in the same words as an expected refusal. Second, and
+this is why splitting THIS arm alone could not have closed it: ``pipeline.py``'s four stage
+wraps already converted **any** unexpected exception into a ``PipelineError``, which the
+list above enumerates as expected — so an internal defect arrived here PRE-DISGUISED and no
+``except`` precision on this side could tell the two apart.)
+
+**What ships.** Every failure below returns ``1`` — the reserved *no verdict was produced*
+code — and no failure ever prints a Python traceback (AR3 is frozen; there is no fifth wire
+code). The DISTINCTION is carried in the MESSAGE, which is what ``DF-8-4-D`` asked for:
+
+- an EXPECTED, typed refusal — ``RepoIntakeError`` / ``SourceStateError`` (the repository or
+  the pin), ``WorkspaceContainmentError``, ``CanonicalSerializationError``,
+  ``PipelineError`` / ``ResumeStateError`` — prints the typed reason **and the operator
+  action that changes it** (FR37: the next action is in the tool's own output);
+- an INTERNAL DEFECT — ``pipeline.UnexpectedStageError`` (the stage wraps, which now carry
+  the distinction from the wrap site), ``ShipReadinessError``, or any OTHER ``ValueError``
+  reaching this module — prints the stable ``INTERNAL DEFECT`` token, says plainly that this
+  is a bug in Argus rather than a problem with the user's repository, and names where to
+  report it. It carries the exception CLASS, never ``str(exc)`` (``DF-10-4-C`` / NFR-S1).
+
+The per-cause wording is ``reports/plain_english.render_audit_failed_next_action``, which
+Story 12.4 shipped for FR37 and which had ZERO production callers until this story wired it.
+It is EXTENDED, never duplicated (AR7) — the same words reach the CLI's audit arm, the CLI's
+ship-readiness arm and the SECOND invocation surface's failure arm (the argv-free stdio
+transport adapter Story 12.6 added; named by transport rather than protocol for the reason
+recorded in the ``__all__`` note below — its token would make this module an unregistered
+disclosure surface for ``tests/test_instrument_disclosure.py``'s ``-49`` closure).
+
+**A USAGE error is not a verdict** (Story 12.8 / AC8). ``argparse`` exits ``2``, and
+``action.yml`` publishes ``2`` as ``verdict=NOT_READY_FOR_RELEASE assessed=true`` — so until
+2026-08-15 a typo (``--budget 1.5``, ``argus bogus``, a bare ``argus``) fabricated an
+assessment for a run that never happened. ``main`` now maps a parser rejection to the same
+reserved ``1``, which ``action.yml`` already renders as ``AUDIT_FAILED`` / ``assessed=false``.
+``--help`` / ``-h`` still exits ``0``, untouched. The mapping lives in ``main`` and NEVER in
+``build_parser`` or a parser subclass (DN-5), so ``build_parser().parse_args`` stays
+byte-identical for every guard that drives it and for the second invocation surface, which
+already ruled that a parse rejection is not a verdict.
+
+``main`` is testable WITHOUT a real ``sys.exit`` (it returns the code); the console wrapper
+does ``sys.exit(main())``.
 
 The LOCKED CLI contract (frozen + documented per the story)
 -----------------------------------------------------------
@@ -173,6 +217,31 @@ source of truth; this prose is checked against it by ``TC-ArgusAgent-CLI-001-35`
 (equality, both directions) and ``-37`` (defaults and shapes). A flag added to the
 parser without a contract site turns those red — that is the guard working.
 
+**So are the defaults in ``--help``** (added 2026-08-15 by Story 12.8 / AC2 / DN-2).
+``build_parser`` installs ``argparse.ArgumentDefaultsHelpFormatter`` on every sub-parser, so
+each argument's rendered help ends with the default the parser ACTUALLY holds. It is a
+formatter rather than a sentence per flag because a hand-typed default is a transcription of
+a pinned value — the class AI-E9-7 forbids and the exact drift ``-35``/``-37`` exist to close,
+one layer out — and because a future flag inherits it with no edit anywhere.
+``TC-ArgusAgent-CLI-001-52`` compares the rendered text against the live ``action.default``
+over the SAME closure ``-35``/``-37``/``-38`` walk, so the two cannot drift. Three help
+strings additionally carry the operator-consequence fact their contract paragraph above
+already records — ``--reports`` is inert without ``--report-dir``; ``--ignore-pattern``
+matches by bare substring; neither ``--ignore-*`` can suppress a live production key —
+because omitting it is what costs a user a run.
+
+**Three flags name a CLOSED, code-defined vocabulary and now REFUSE an unknown token**
+(Story 12.8 / AC3 / DN-3): ``--passes``, ``--skip-pass`` and ``--reports``. The refusal
+fires inside ``parse_args`` — so ``TC-ArgusAgent-DOCS-001-28`` catches a bad token in every
+committed invocation automatically — and the accepted set is DERIVED from the one definition
+of each (``_ALL_PASSES`` + ``plain_english.LLM_DEEP_PASSES``;
+``reports/generator.ACCEPTED_REPORT_TOKENS``), never a second hand-list. Measured on
+``2f84a0b``, ``--passes securty`` silently disabled EVERY detector pass and still returned
+``RELEASE_READY`` exit ``0``: a false green opened by a typo, on the flag whose whole purpose
+is selecting safety passes. The OPEN vocabularies — ``--critical-subsystem`` /
+``--exclude-critical``, which take paths — are DISCLOSED on stderr instead of refused, because
+designating a subtree absent from this partition is legal.
+
 The CLI is a developer-tool invocation contract (argv / stdout / exit-code), NOT a
 UI (CLAUDE.md §3.7) — no HTML/CSS/JS, no web surface. ArgusAgent is downstream of the
 HTTP/A2A boundary (it takes no token, registers no route — AR9).
@@ -182,14 +251,25 @@ from __future__ import annotations
 
 import argparse
 import sys
+from pathlib import Path
 
 from argus.detectors.secret_scan import RULE_OPERATOR_SUPPRESSED_SECRET
 from argus.models import AuditRequest
-from argus.pipeline import run_audit
+from argus.pipeline import run_audit_detailed
+# The ONE definition of which report types exist (Story 12.8 / AC3). Before it, the
+# renderer's vocabulary was four inline `if` literals with no constant naming them, which
+# is why nothing could validate a `--reports` token: there was nothing to validate against.
+from argus.reports.generator import ACCEPTED_REPORT_TOKENS
 from argus.reports.plain_english import (
+    LLM_DEEP_PASSES,
     ShipReadinessError,
     deep_pass_enabled,
+    render_audit_failed_next_action,
+    render_grammar_downgrade_summary,
+    render_inert_reports_disclosure,
     render_ship_readiness,
+    render_unmatched_designation_disclosure,
+    render_usage_error_next_action,
     with_deep_pass,
 )
 from argus.verdict.negative_assurance import (
@@ -212,6 +292,7 @@ from argus.verdict.verdict_gate import AuditVerdict
 # promise, so the names are public, documented, and covered by the parity guard.
 __all__ = [
     "PROG",
+    "ClosedVocabulary",
     "build_parser",
     "build_request",
     "emit_egress_disclosure",
@@ -235,18 +316,90 @@ _DEFAULT_REPORTS = ("final-verdict", "coverage-ledger")
 # `--deep-audit`, through `with_deep_pass` — this module never spells the token itself,
 # so the flag, the pass set and the disclosure cannot drift apart (AR7 / §3.3).
 
+# Every pass token the tool HAS, as opposed to the ones a bare run SELECTS (Story 12.8 /
+# AC3). Composed from the two existing definitions rather than re-typed: `_ALL_PASSES`
+# above, and `LLM_DEEP_PASSES` — the deep token's existing home in `plain_english`, which
+# is why the `--deep-audit` opt-in and this validator cannot come to disagree about the
+# spelling of `deep`. `--skip-pass deep` stays meaningful, which is Story 12.2's contract.
+_ACCEPTED_PASSES: tuple[str, ...] = _ALL_PASSES + LLM_DEEP_PASSES
+
+
+class ClosedVocabulary:
+    """An argparse ``type=`` that REFUSES a token outside a closed, code-defined set.
+
+    Story 12.8 / AC3 / DN-3. Three flags (``--passes``, ``--skip-pass``, ``--reports``) name
+    members of finite sets defined in code, so an unmatched token is unambiguously a mistake
+    and refusal is the honest answer. Measured on ``2f84a0b``, all three accepted anything:
+    ``--passes securty`` made every membership test in ``pipeline_stages`` false, so EVERY
+    detector pass was silently disabled and the run could only report zero blocking
+    findings — a false-green channel opened by a typo, exit ``0``, with no message anywhere.
+
+    **It is a ``type=`` callable and therefore fires INSIDE ``parse_args``**, which is the
+    load-bearing choice rather than a convenience: ``TC-ArgusAgent-DOCS-001-28`` drives every
+    committed invocation through the real ``build_parser().parse_args``, so from this change
+    on, a bad token in README, ``action.yml``, a workflow or a shipped command asset is RED
+    at edit time instead of silent at audit time. (It caught one immediately:
+    ``.github/workflows/argus-student-audit.yml`` requested the report type
+    ``vacuous-tests``, which does not exist.)
+
+    The value is returned UNCHANGED, so ``args.passes`` / ``args.reports`` stay the raw
+    strings ``build_request`` splits and ``-37``'s derived shapes and defaults are untouched.
+    The accepted set is passed in from its ONE definition; this function holds no list.
+
+    *hint* completes the message: the four exemplars already in the tree name a cause AND an
+    act that changes it, and ``install-commands --host nosuch`` (Story 12.7) is the model
+    for the refusal shape — *"unknown --host value(s) […]; this build supports […]"*.
+
+    **It is a CLASS with a public ``accepted`` attribute rather than a closure**, so the
+    accepted set is INTROSPECTABLE off the live parser (``action.type.accepted``).
+    ``TC-ArgusAgent-CLI-001-36`` drives every registered spelling through the real parser with
+    a sample value, and a fixed placeholder (``"x"``) is not a legal value for a closed
+    vocabulary — so without this attribute that guard would have to hand-list a valid token
+    per flag, which is the second hand-list AR7 forbids and the instrument this project has
+    now found wrong four times. Reading it off the parser means a FUTURE closed-vocabulary
+    flag is covered with no edit to the guard.
+    """
+
+    def __init__(
+        self, flag: str, accepted: tuple[str, ...], *, csv: bool, hint: str
+    ) -> None:
+        self.flag = flag
+        #: The live accepted set — introspected by the contract guards; never re-typed.
+        self.accepted = accepted
+        self.csv = csv
+        self.hint = hint
+
+    def __call__(self, raw: str) -> str:
+        tokens = [t.strip() for t in raw.split(",")] if self.csv else [raw.strip()]
+        unknown = [t for t in tokens if t and t not in self.accepted]
+        if unknown:
+            raise argparse.ArgumentTypeError(
+                f"unknown {self.flag} value(s) {unknown}; this build supports "
+                f"{list(self.accepted)}. {self.hint}"
+            )
+        return raw
+
 
 def build_parser() -> argparse.ArgumentParser:
-    """Build the LOCKED stdlib-``argparse`` parser (AR2 — zero new dependency)."""
+    """Build the LOCKED stdlib-``argparse`` parser (AR2 — zero new dependency).
+
+    ``ArgumentDefaultsHelpFormatter`` is installed on the top-level parser and on every
+    sub-parser (Story 12.8 / AC2 / DN-2), so every argument's rendered help ends with the
+    default the parser ACTUALLY holds — derived, never transcribed. Argparse appends nothing
+    to a POSITIONAL, which is correct and is the recorded decision for ``repo``: it is
+    required, and "the default of a required argument" is not a fact that exists.
+    """
     parser = argparse.ArgumentParser(
         prog=PROG,
         description="ArgusAgent — coverage-grounded release-readiness auditor (headless).",
+        formatter_class=argparse.ArgumentDefaultsHelpFormatter,
     )
     subparsers = parser.add_subparsers(dest="command", required=True)
 
     audit = subparsers.add_parser(
         "audit",
         help="Audit a repository @ a pinned commit and emit a verdict + exit code.",
+        formatter_class=argparse.ArgumentDefaultsHelpFormatter,
     )
     audit.add_argument("repo", help="Path to the repository to audit.")
     audit.add_argument(
@@ -310,7 +463,21 @@ def build_parser() -> argparse.ArgumentParser:
         "--passes",
         dest="passes",
         default=None,
-        help="Comma-separated audit passes to run (e.g. 'coverage,security,orphan,vacuous,prosecutor'). Default: all.",
+        type=ClosedVocabulary(
+            "--passes",
+            _ACCEPTED_PASSES,
+            csv=True,
+            hint=(
+                "Correct the token, or omit --passes to run every deterministic pass — an "
+                "unrecognised one used to disable every pass silently and still return a "
+                "verdict."
+            ),
+        ),
+        help=(
+            "Comma-separated audit passes to run (e.g. "
+            "'coverage,security,orphan,vacuous,prosecutor'). Omitted runs every "
+            "deterministic pass; an unknown token is refused, never ignored."
+        ),
     )
     audit.add_argument(
         "--skip-pass",
@@ -318,33 +485,65 @@ def build_parser() -> argparse.ArgumentParser:
         action="append",
         default=None,
         metavar="PASS",
-        help="Audit pass to skip (e.g. '--skip-pass security'). Repeatable.",
+        type=ClosedVocabulary(
+            "--skip-pass",
+            _ACCEPTED_PASSES,
+            csv=False,
+            hint="Correct the token, or drop --skip-pass to run the selected passes.",
+        ),
+        help=(
+            "Audit pass to skip (e.g. '--skip-pass security'). Repeatable. Subtracts from "
+            "whatever --passes selected; a skip can never re-add a pass you excluded."
+        ),
     )
     audit.add_argument(
         "--reports",
         dest="reports",
         default=None,
-        help="Comma-separated report types to render (e.g. 'final-verdict,coverage-ledger,security-review').",
+        type=ClosedVocabulary(
+            "--reports",
+            ACCEPTED_REPORT_TOKENS,
+            csv=True,
+            hint="Correct the token, or omit --reports for the default selection.",
+        ),
+        help=(
+            "Comma-separated report types to render (e.g. "
+            "'final-verdict,coverage-ledger,security-review'). INERT WITHOUT --report-dir: "
+            "reports are only written when an output directory is set, so --reports alone "
+            "renders nothing. An unknown token is refused, never ignored."
+        ),
     )
     audit.add_argument(
         "--report-dir",
         dest="report_dir",
         default="",
-        help="Output directory path for generated Markdown reports.",
+        help=(
+            "Output directory path for generated Markdown reports. Empty renders nothing; "
+            "this is the switch that makes --reports do anything."
+        ),
     )
     audit.add_argument(
         "--ignore-path",
         action="append",
         dest="ignore_paths",
         default=[],
-        help="Path glob pattern to ignore / treat as mock fixture (can specify multiple).",
+        help=(
+            "Path glob pattern to ignore / treat as mock fixture (can specify multiple). "
+            "IT CANNOT SUPPRESS A HIGH-CONFIDENCE LIVE PRODUCTION KEY — the Live-Key "
+            "Safeguard is evaluated first, and every suppression is recorded and disclosed."
+        ),
     )
     audit.add_argument(
         "--ignore-pattern",
         action="append",
         dest="ignore_patterns",
         default=[],
-        help="Secret string pattern to exclude from findings (can specify multiple).",
+        help=(
+            "Secret string pattern to exclude from findings (can specify multiple). "
+            "MATCHED BY BARE SUBSTRING, so a short pattern is a wide net. IT CANNOT "
+            "SUPPRESS A HIGH-CONFIDENCE LIVE PRODUCTION KEY — the Live-Key Safeguard is "
+            "evaluated first, and every suppression is recorded and disclosed."
+        ),
     )
     audit.add_argument(
         "--deep-audit",
@@ -390,6 +589,7 @@ def build_parser() -> argparse.ArgumentParser:
             "Place the packaged assistant command assets into a supported assistant's "
             "configuration directory, or remove them again with --remove."
         ),
+        formatter_class=argparse.ArgumentDefaultsHelpFormatter,
     )
     install.add_argument(
         "--host",
@@ -674,11 +874,132 @@ def _emit_ship_readiness(
         for line in render_ship_readiness(verdict, enabled_passes=enabled_passes):
             print(line, file=sys.stderr)
     except ShipReadinessError as exc:
-        print(f"{PROG}: audit failed: {exc}", file=sys.stderr)
+        _emit_audit_failure(exc)
         return _CRASH_EXIT_CODE
     except ValueError as exc:
         print(f"{PROG}: ship-readiness not rendered: {exc}", file=sys.stderr)
     return None
+
+
+def _emit_audit_failure(exc: BaseException) -> None:
+    """Print the ONE failure vocabulary: the typed cause, then FR37's next action.
+
+    Story 12.8 / AC4 / DN-7. Three surfaces print an audit failure — this module's audit
+    arm, this module's ship-readiness arm and the second invocation surface's — and 12.6 made it the
+    contract that they say the SAME words, character for character, so the two surfaces
+    cannot describe one failure differently. This is the function that makes that true of the
+    failure path as well as of the success path, and it is why the second line comes from
+    ``plain_english.render_audit_failed_next_action`` — the renderer Story 12.4 shipped for
+    FR37 and which had zero production callers until now — rather than from a sentence
+    written here.
+
+    TWO lines, not one, and the split is deliberate: the first is the typed CAUSE (which
+    since this story also carries the operator act that changes it, for the causes an
+    operator CAN change), the second is the class-level next action, which is where the
+    ``INTERNAL DEFECT`` token lands for a failure no repository change can clear. A CI log
+    scraper keys on the token; a human reads the sentence.
+
+    Secret-safe (NFR-S1): every string it prints is either a typed message the raising layer
+    already made repository-relative, or a pure constant. It never touches ``str`` of an
+    unexpected exception and never resolves a path.
+    """
+    print(f"{PROG}: audit failed: {exc}", file=sys.stderr)
+    print(f"{PROG}: {render_audit_failed_next_action(cause=exc)}", file=sys.stderr)
+
+
+def _emit_grammar_downgrade(reasons: tuple[str, ...]) -> None:
+    """Say WHY files were downgraded by a grammar failure, on the DEFAULT run (Story 12.8/AC7).
+
+    NFR-P3's second clause, ``DF-10-4-C``, and the handover Story 12.5 wrote by name:
+    *"``render_grammar_downgrade_summary`` is the function 12.8 wires"*. Measured on
+    ``2f84a0b`` that renderer had exactly ONE production caller —
+    ``reports/generator.py``, inside the report path, which runs only when ``--report-dir``
+    is set. So on the invocation almost everyone runs, a downgraded grammar was invisible:
+    the operator saw a lower ratio and no reason, which reads as a judgement about their
+    code rather than about the toolchain that could not read it.
+
+    ONE renderer, TWO callers. The sentences are NOT copied here and the tokens are NOT
+    re-classified by prefix at this call site — ``grammar_status.classify_reason`` did that
+    once, in the pipeline, and that module's docstring records exactly what a second prefix
+    guess costs (a silent skip, or telling someone to
+    ``pip install tree-sitter-entrypoint_missing_go``).
+
+    STDERR and silent when there is nothing to say: unlike the FR34 and suppression
+    disclosures, this one describes a CONDITION rather than a policy, so "no grammar failed"
+    is fully carried by the coverage numbers already printed above it.
+    """
+    for sentence in render_grammar_downgrade_summary(reasons):
+        print(f"{PROG}: {sentence}", file=sys.stderr)
+
+
+def _emit_selection_disclosures(
+    args: argparse.Namespace, request: AuditRequest
+) -> None:
+    """Disclose the OPEN-vocabulary operator inputs that quietly did nothing (Story 12.8/AC3).
+
+    DN-3 draws the line: a CLOSED, code-defined vocabulary (``--passes``, ``--skip-pass``,
+    ``--reports``) is REFUSED inside ``parse_args``, because an unmatched token there is
+    unambiguously a mistake. These two are OPEN and are DISCLOSED instead:
+
+    * ``--reports`` with no ``--report-dir`` — legal and simply INERT. Refusing it would
+      break a caller that sets the flag unconditionally and the directory conditionally;
+    * ``--critical-subsystem`` / ``--exclude-critical`` — they take PATHS, so refusing one
+      that matches nothing would break the legitimate case of designating a subtree absent
+      from this partition. Measured, though, the silence is expensive: on ``2f84a0b``
+      ``--critical-subsystem does/not/exist`` moved the verdict from ``RELEASE_READY``
+      (exit 0) to ``INSUFFICIENT_COVERAGE`` (exit 3) and named nothing.
+
+    The precedent is this project's own ``_emit_suppression_disclosure`` (Story 10.3 /
+    AC4.3) and so is the register: STDERR, because stdout is the FR18/AR3 wire contract a CI
+    step parses positionally.
+
+    The existence probe is repository-root-relative and its RESULT is all that leaves this
+    function — the disclosure echoes the operator's own argv spelling, never a resolved
+    absolute path (NFR-S1).
+    """
+    if request.enabled_reports and not request.report_dir and args.reports:
+        print(
+            f"{PROG}: {render_inert_reports_disclosure(request.enabled_reports)}",
+            file=sys.stderr,
+        )
+
+    root = Path(request.repo_path)
+    for flag, designated in (
+        ("--critical-subsystem", request.critical_paths),
+        ("--exclude-critical", request.excluded_critical_paths),
+    ):
+        unmatched = tuple(
+            path for path in designated if not _designation_matches(root, path)
+        )
+        if unmatched:
+            print(
+                f"{PROG}: {render_unmatched_designation_disclosure(flag, unmatched)}",
+                file=sys.stderr,
+            )
+
+
+def _designation_matches(root: Path, designated: str) -> bool:
+    """Does *designated* name anything in the audited tree? (Story 12.8 / AC3)
+
+    All three accepted spellings count, because ``--exclude-critical``'s own contract
+    paragraph accepts all three: an exact path, a directory prefix that clears a subtree,
+    and a glob. ``Path.exists`` answers the first two (a directory prefix IS a directory)
+    and ``Path.glob`` answers the third — and answers the first two as well, so the two
+    probes are belt-and-braces rather than a partition.
+
+    FAILS OPEN, deliberately: any error resolving the operator's own string (an absolute
+    spelling, a ``..``, a pattern this host's ``glob`` rejects) returns ``True`` — "matched",
+    hence NO disclosure. A disclosure engine that can itself fail would otherwise turn a
+    resolution quirk into a false accusation about the operator's input, and a wrong
+    disclosure is worse than none. Nothing here changes the audit; only whether a sentence
+    is printed.
+    """
+    try:
+        if (root / designated).exists():
+            return True
+        return any(root.glob(designated))
+    except (OSError, ValueError, IndexError, NotImplementedError):
+        return True
 
 
 def _run_install_commands(args: argparse.Namespace) -> int:
@@ -705,7 +1026,13 @@ def _run_install_commands(args: argparse.Namespace) -> int:
             remove=args.remove,
         )
     except ValueError as exc:
+        # ~~Authoring new diagnosis prose is Story 12.8's fence.~~ (§3.4 struck, not deleted
+        # — 2026-08-15. That fence is now spent: the failure carries FR37's next action from
+        # the SAME renderer the audit arm uses, so `install-commands` cannot describe a
+        # typed failure differently from `audit` (DN-7). The cause line keeps its own
+        # sub-command prefix, which is the only part that legitimately differs.)
         print(f"{PROG}: install-commands failed: {exc}", file=sys.stderr)
+        print(f"{PROG}: {render_audit_failed_next_action(cause=exc)}", file=sys.stderr)
         return _CRASH_EXIT_CODE
     for line in render_outcome(outcome):
         print(line)
@@ -723,10 +1050,25 @@ def main(argv: list[str] | None = None) -> int:
     Since 2026-08-15 (Story 12.7) it dispatches on the sub-command. The dispatch sits ABOVE
     everything audit-specific and returns, so an ``audit`` invocation executes exactly the
     statements it executed before — same order, same calls, same bytes on both streams.
+
+    Story 12.8 / AC8: a PARSER rejection is mapped here, and ONLY here (DN-5). See the module
+    docstring — argparse's exit ``2`` was published by ``action.yml`` as a real verdict, so a
+    typo produced an assessment for a run that never happened. ``build_parser().parse_args``
+    is untouched, which is what keeps ``-28``, ``-35``..``-40``,
+    ``tests/test_cli_flag_contract.py``, ``tests/invocation_sources.py`` and
+    the second invocation surface — which deliberately catches the parser's ``SystemExit`` as a
+    NON-verdict — working exactly as they did.
     """
     harden_output_streams()
 
-    args = build_parser().parse_args(argv)
+    try:
+        args = build_parser().parse_args(argv)
+    except SystemExit as exc:
+        if exc.code in (0, None):
+            raise  # `--help` / `-h` succeeded and printed; exit 0, untouched.
+        print(f"{PROG}: {render_usage_error_next_action()}", file=sys.stderr)
+        return _CRASH_EXIT_CODE
+
     if args.command == "install-commands":
         return _run_install_commands(args)
 
@@ -746,7 +1088,12 @@ def main(argv: list[str] | None = None) -> int:
             if deep_pass_enabled(enabled_passes)
             else {}
         )
-        verdict = run_audit(request, **deep_kwargs)  # type: ignore[arg-type]
+        # `run_audit_detailed` rather than `run_audit` since 2026-08-15 (Story 12.8 / AC7 /
+        # DN-4): the grammar-downgrade diagnosis rides on `AuditResult`, and `run_audit` is a
+        # thin wrapper that returns `run_audit_detailed(...).verdict`, so the pipeline call
+        # itself is byte-identical and nothing about the audit changed.
+        result = run_audit_detailed(request, **deep_kwargs)  # type: ignore[arg-type]
+        verdict = result.verdict
         print(
             summary_line(
                 verdict.verdict.value,
@@ -756,10 +1103,11 @@ def main(argv: list[str] | None = None) -> int:
             )
         )
     except ValueError as exc:
-        # RepoIntakeError / WorkspaceContainmentError / CanonicalSerializationError
-        # / PipelineError are all ValueError subclasses — TYPED, secret-safe (AR10).
-        # The message names the typed reason only, never source / an absolute path.
-        print(f"{PROG}: audit failed: {exc}", file=sys.stderr)
+        # TYPED and secret-safe (AR10). Which typed class it is decides the SECOND line —
+        # an expected refusal names the act that clears it, an internal defect says plainly
+        # that no such act exists and where to report it (`DF-8-4-D`; see the module
+        # docstring). Never source, never an absolute host path, never a traceback.
+        _emit_audit_failure(exc)
         return _CRASH_EXIT_CODE
 
     readiness_failure = _emit_ship_readiness(verdict, enabled_passes)
@@ -776,7 +1124,11 @@ def main(argv: list[str] | None = None) -> int:
         return readiness_failure
 
     # AFTER the human register, deliberately: `Ship-readiness: …` is the headline and stays
-    # the first line an operator sees on stderr (pinned by tests/test_cli.py).
+    # the first line an operator sees on stderr (pinned by tests/test_cli.py). Every
+    # disclosure below is subject to that ordering rule for the same reason — the block
+    # above states the verdict, and these state what shaped it.
+    _emit_grammar_downgrade(result.grammar_downgrade_reasons)
+    _emit_selection_disclosures(args, request)
     _emit_suppression_disclosure(verdict)
     _emit_instrument_disclosure()
 

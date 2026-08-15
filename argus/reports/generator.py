@@ -9,6 +9,7 @@ from __future__ import annotations
 from collections import Counter
 from fractions import Fraction
 from pathlib import Path
+from typing import Callable
 
 from argus.ledger.coverage_ledger import CoverageDepth, CoverageLedger
 from argus.ledger.coverage_report import build_coverage_report, render_text as render_coverage_text
@@ -49,11 +50,43 @@ from argus.verdict.verdict_gate import (
 )
 
 __all__ = [
+    "ACCEPTED_REPORT_TOKENS",
+    "ALL_REPORTS_SELECTOR",
+    "RENDERED_REPORT_TYPES",
     "generate_reports",
     "render_final_verdict_report",
     "render_security_review_report",
     "render_architecture_review_report",
 ]
+
+# ── The ONE definition of "which report types exist" (Story 12.8 / AC3) ──────────
+#
+# Until 2026-08-15 this vocabulary was spelled ONLY as four inline `if "…" in enabled_set`
+# literals inside `generate_reports`, with no constant naming them anywhere. That is why
+# nothing in the tool could validate a `--reports` token: there was nothing to validate
+# against. The measured cost was not hypothetical — this repository's own committed
+# workflow (`.github/workflows/argus-student-audit.yml`) requested `vacuous-tests`, which
+# is not a rendered type, and the run silently rendered three reports instead of four and
+# said nothing about the fourth.
+#
+# `cli.py` derives BOTH the refusal message and the accepted set from this tuple, so the
+# renderer and the validator cannot drift (AR7 / architecture §3.3 — reuse, never fork).
+# The declaration ORDER is the render order (AR4 determinism), and it is the order the
+# four `if` blocks had before this change, so a run's written artifacts are unchanged.
+#: The report types ``generate_reports`` actually renders. One file each, ``<token>.md``.
+RENDERED_REPORT_TYPES: tuple[str, ...] = (
+    "final-verdict",
+    "coverage-ledger",
+    "security-review",
+    "architecture-review",
+)
+#: The meta-selector choosing every rendered type. It renders no file of its own.
+#: Named ``…_SELECTOR`` rather than ``…_TOKEN`` for the reason recorded beside
+#: ``plain_english.INTERNAL_DEFECT_MARKER``: ``bandit``'s ``B105`` fires on any constant whose
+#: name contains ``token``, and a rename is cheaper than this repository's first ``# nosec``.
+ALL_REPORTS_SELECTOR = "all"
+#: Everything ``--reports`` accepts — the rendered types plus the meta-token.
+ACCEPTED_REPORT_TOKENS: tuple[str, ...] = RENDERED_REPORT_TYPES + (ALL_REPORTS_SELECTOR,)
 
 
 _MAX_LISTED_CRITICAL_BLOCKERS = 20
@@ -871,6 +904,12 @@ def generate_reports(
     """Generate requested Markdown end-user reports and write to *output_dir*.
 
     Returns a dict mapping report keys (e.g. ``"final-verdict"``) to written file paths.
+
+    The selection walks :data:`RENDERED_REPORT_TYPES` rather than four hand-written ``if``
+    blocks (Story 12.8 / AC3). Behaviour is unchanged — same four types, same order, same
+    ``<token>.md`` file names, same bytes — but the vocabulary now has ONE definition, which
+    is what lets ``cli.py`` refuse an unknown ``--reports`` token against the set the
+    renderer actually honours instead of against a second hand-list (AR7).
     """
     out_path = Path(output_dir)
     out_path.mkdir(parents=True, exist_ok=True)
@@ -878,32 +917,24 @@ def generate_reports(
 
     enabled_set = set(request.enabled_reports)
 
-    if "final-verdict" in enabled_set or "all" in enabled_set:
-        content = render_final_verdict_report(
+    # One entry per member of RENDERED_REPORT_TYPES. A member with no renderer raises
+    # ``KeyError`` on the run that would have needed it rather than writing nothing and
+    # saying nothing — the failure mode this whole change exists to remove.
+    renderers: dict[str, Callable[[], str]] = {
+        "final-verdict": lambda: render_final_verdict_report(
             request, verdict, ledger, len(findings),
             source_state=source_state, ast_index=ast_index,
-        )
-        dest = out_path / "final-verdict.md"
-        dest.write_text(_with_instrument_disclosure(content), encoding="utf-8")
-        generated["final-verdict"] = dest
+        ),
+        "coverage-ledger": lambda: render_coverage_text(build_coverage_report(ledger)),
+        "security-review": lambda: render_security_review_report(request, findings),
+        "architecture-review": lambda: render_architecture_review_report(request, findings),
+    }
 
-    if "coverage-ledger" in enabled_set or "all" in enabled_set:
-        cov_report = build_coverage_report(ledger)
-        content = render_coverage_text(cov_report)
-        dest = out_path / "coverage-ledger.md"
-        dest.write_text(_with_instrument_disclosure(content), encoding="utf-8")
-        generated["coverage-ledger"] = dest
-
-    if "security-review" in enabled_set or "all" in enabled_set:
-        content = render_security_review_report(request, findings)
-        dest = out_path / "security-review.md"
-        dest.write_text(_with_instrument_disclosure(content), encoding="utf-8")
-        generated["security-review"] = dest
-
-    if "architecture-review" in enabled_set or "all" in enabled_set:
-        content = render_architecture_review_report(request, findings)
-        dest = out_path / "architecture-review.md"
-        dest.write_text(_with_instrument_disclosure(content), encoding="utf-8")
-        generated["architecture-review"] = dest
+    for token in RENDERED_REPORT_TYPES:
+        if token not in enabled_set and ALL_REPORTS_SELECTOR not in enabled_set:
+            continue
+        dest = out_path / f"{token}.md"
+        dest.write_text(_with_instrument_disclosure(renderers[token]()), encoding="utf-8")
+        generated[token] = dest
 
     return generated

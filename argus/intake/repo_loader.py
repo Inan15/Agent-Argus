@@ -59,6 +59,32 @@ _SOURCE_SUFFIXES: frozenset[str] = AUDITABLE_SUFFIXES
 
 _GIT_TIMEOUT_SECONDS = 30
 
+# ── The operator FIX clauses, defined ONCE (Story 12.8 / AC3) ────────────────────
+#
+# Every message on this layer already named a CAUSE; measured on ``2f84a0b``, four of them
+# named no action that would change it (`epics.md:2431-2433` requires both). The clauses
+# live here — the module ``intake/source_state.py`` already imports for ``RepoIntakeError``
+# — because BOTH intake producers raise the same three conditions, and two answers to one
+# mistake is exactly the fork AR7 / architecture §3.3 forbids. The VOICE is copied from the
+# two best messages the tree already had (``--strict requires a git repository … Drop
+# --strict to audit the directory as-is.``): name what is wrong, then name the act that
+# changes it, in one sentence each.
+#: An explicitly named ``--commit`` that git cannot resolve.
+UNRESOLVED_COMMIT_FIX = (
+    "Pass a ref, tag or SHA this repository actually has (`git rev-parse <ref>` resolves "
+    "it), or omit --commit to audit HEAD."
+)
+#: The git binary is not on PATH.
+GIT_MISSING_FIX = (
+    "Install git and put it on PATH, or audit a directory without git metadata (Argus then "
+    "records that it audited a directory rather than a commit)."
+)
+#: ``HEAD`` is not the pinned commit under ``--strict``.
+PIN_DRIFT_FIX = (
+    "Check out the pinned commit, or drop --strict to audit the working tree as-is (the run "
+    "then records which state it examined)."
+)
+
 
 class RepoIntakeError(ValueError):
     """Raised when a repo cannot be loaded at the requested pin (AR10 typed failure).
@@ -114,14 +140,23 @@ def _run_git(repo_root: Path, *args: str, strip_output: bool = True) -> str:
             timeout=_GIT_TIMEOUT_SECONDS,
         )
     except FileNotFoundError as exc:  # git binary unavailable
-        raise RepoIntakeError("git executable not found on PATH") from exc
+        raise RepoIntakeError(f"git executable not found on PATH. {GIT_MISSING_FIX}") from exc
     except subprocess.TimeoutExpired as exc:
-        raise RepoIntakeError(f"git {' '.join(args)} timed out") from exc
-    if proc.returncode != 0:
-        stderr = proc.stderr.decode("utf-8", errors="replace").strip()
         raise RepoIntakeError(
-            f"git {' '.join(args)} failed (exit {proc.returncode}): "
-            f"{stderr or 'no stderr'}"
+            f"git {' '.join(args)} timed out after {_GIT_TIMEOUT_SECONDS}s. Re-run; if it "
+            f"repeats, check that the repository is not on a stalled network mount."
+        ) from exc
+    if proc.returncode != 0:
+        # NFR-S1 (Story 12.8 / AC6): git's stderr is NOT interpolated. It routinely carries
+        # absolute host paths (`fatal: not a git repository (or any of the parent
+        # directories): /home/<name>/...`), and this message reaches the user on stderr
+        # through the CLI's failure arm. The EXIT CODE plus the git sub-command is the
+        # typed reason; the operator can reproduce the full text themselves with the
+        # command named in the fix, on their own machine, where the path is not a leak.
+        raise RepoIntakeError(
+            f"git {' '.join(args)} failed (exit {proc.returncode}). Run "
+            f"`git {' '.join(args)}` in the repository to see git's own message; a "
+            f"non-git directory is audited as-is when --strict is not set."
         )
     stdout = proc.stdout.decode("utf-8", errors="replace")
     return stdout if not strip_output else stdout.strip()
@@ -178,20 +213,29 @@ def load_repo_at_commit(repo_path: str | Path, commit: str) -> RepoIntake:
     """
     root = Path(repo_path)
     if not root.exists():
-        raise RepoIntakeError(f"repo path does not exist: {root.name!r}")
+        raise RepoIntakeError(
+            f"repo path does not exist: {root.name!r}. Check the path you passed to "
+            f"`argus audit` and re-run."
+        )
     if not root.is_dir():
-        raise RepoIntakeError(f"repo path is not a directory: {root.name!r}")
+        raise RepoIntakeError(
+            f"repo path is not a directory: {root.name!r}. Pass the repository's root "
+            f"directory rather than a file inside it, and re-run."
+        )
 
     # 1. Resolve the requested pin to a full SHA (short SHA / ref / tag all work).
     resolved = _run_git(root, "rev-parse", "--verify", f"{commit}^{{commit}}")
     if not resolved:
-        raise RepoIntakeError(f"commit {commit!r} did not resolve to a SHA")
+        raise RepoIntakeError(
+            f"commit {commit!r} did not resolve to a SHA. {UNRESOLVED_COMMIT_FIX}"
+        )
 
     # 2. HEAD must BE the pin.
     head = _run_git(root, "rev-parse", "HEAD")
     if head != resolved:
         raise RepoIntakeError(
-            f"working tree drift: HEAD ({head[:12]}) != pinned commit ({resolved[:12]})"
+            f"working tree drift: HEAD ({head[:12]}) != pinned commit "
+            f"({resolved[:12]}). {PIN_DRIFT_FIX}"
         )
 
     # 3. The working tree must be clean relative to that commit.
@@ -199,7 +243,8 @@ def load_repo_at_commit(repo_path: str | Path, commit: str) -> RepoIntake:
     if porcelain:
         raise RepoIntakeError(
             "working tree drift: uncommitted changes present "
-            "(git status --porcelain is non-empty)"
+            "(git status --porcelain is non-empty). Commit or stash them, or audit "
+            "without --strict to assess the working tree as-is."
         )
 
     # 4. Enumerate tracked source files (committed state), sorted (AR11).

@@ -120,6 +120,26 @@ runs:
         # remove. An unmapped FUTURE exit code hit the same `else` and would have done
         # the same thing, which is why the catch-all is a failure token and not a guess.
         #
+        # ── WHAT `2` MEANS, AND WHAT IT CANNOT MEAN (Story 12.8 / AC8, 2026-08-15) ──
+        # This comment reasoned at length about `1` and the catch-all and said NOTHING about a
+        # USAGE error, and that silence was load-bearing: until 2026-08-15 every argparse usage
+        # error exited `2` — `argus audit . --budget 1.5`, `argus bogus`, a bare `argus` — and
+        # this map published `2` as `verdict=NOT_READY_FOR_RELEASE assessed=true`. A TYPO
+        # therefore produced a fabricated assessment of a repository for a run that never
+        # happened, which is the same class of over-claim the paragraph above removed from `1`,
+        # arriving through the one arm nobody had looked at.
+        #
+        # `argus.cli:main` now maps a parser rejection to `1` — the reserved *no verdict was
+        # produced* code — so BOTH halves of the wire contract are honest here with no change
+        # to this file's logic and no fifth exit code (AR3 is frozen; NFR-M2 is additive-only).
+        # The binding statement, restated so the next reader does not have to infer it:
+        #
+        #   `2` means, and can only mean, THE AUDIT RAN AND FOUND AT LEAST ONE VERDICT-BLOCKING
+        #   FINDING. It is never emitted for a command line the parser refused.
+        #
+        # `--help` / `-h` still exits `0` and is not mapped, so a workflow smoke-testing the
+        # command is unaffected.
+        #
         # `assessed` is published separately so a consuming workflow can distinguish
         # "the audit ran and says X" from "the audit did not run" without string-matching.
         case "$EXIT_CODE" in

@@ -112,15 +112,21 @@ from argus.shared.grammar_status import (
 )
 
 __all__ = [
+    "ARGUS_ISSUE_TRACKER",
+    "INTERNAL_DEFECT_MARKER",
     "TERMINAL_OUTCOMES",
+    "TYPED_FAILURE_CLASSES",
     "LLM_DEEP_PASSES",
     "deep_pass_enabled",
     "with_deep_pass",
     "ShipReadinessError",
     "render_depth_meaning",
     "render_grammar_downgrade_summary",
+    "render_inert_reports_disclosure",
     "render_ship_readiness",
     "render_audit_failed_next_action",
+    "render_unmatched_designation_disclosure",
+    "render_usage_error_next_action",
 ]
 
 # The four terminal outcome tokens (FR37 / AC1)
@@ -414,16 +420,225 @@ def _headline(verdict: AuditVerdict) -> str:
     )
 
 
-def render_audit_failed_next_action(error_message: str | None = None) -> str:
-    """Render the next action for the AUDIT_FAILED non-verdict outcome (AC1 / FR37).
+def render_audit_failed_next_action(
+    error_message: str | None = None, *, cause: BaseException | None = None
+) -> str:
+    """Render the next action for the AUDIT_FAILED non-verdict outcome (FR37).
 
-    AUDIT_FAILED indicates an unhandled runtime exception, setup failure, or unexpected exit.
+    Story 12.4 shipped this function for the FR37 terminal-outcome enumeration and it
+    acquired **zero production callers** — measured on ``2f84a0b``: its own ``__all__`` and
+    one test, while both CLI failure arms printed a cause and stopped. Story 12.8 wires it,
+    and it is EXTENDED rather than replaced: a parallel next-action renderer beside the
+    shipped one is a defect, not a delivery (AR7 / architecture §3.3).
+
+    Two modes, and the split is the whole design:
+
+    * *cause* omitted — the AUDIT_FAILED **fallback**, byte-identical to what 12.4 shipped.
+      This is the terminal-outcome sense: an outcome token with no exception object behind it.
+    * *cause* supplied — the **per-cause** remedy, selected by TYPED CLASS from
+      :data:`TYPED_FAILURE_CLASSES`. A ``RepoIntakeError`` for a missing path must not be
+      answered with *"report an unhandled exception"*; that is a remedy which cannot work.
+
+    Dispatch walks ``type(cause).__mro__`` and takes the FIRST registered class, so a
+    subclass always beats its base and no arm can shadow a more specific one by ordering.
+
+    ⚠️ **Dispatch is by class NAME, deliberately.** This module is PURE (AR8) and is
+    imported BY ``argus/pipeline.py``, so importing the pipeline's or the intake layer's
+    exception classes here would invert that arrow and create an import cycle. The names
+    are enumerated in :data:`TYPED_FAILURE_CLASSES` and
+    ``tests/test_outcome_next_action_contract.py`` closes over the real classes to prove the
+    enumeration still matches the tree — an unenumerated typed failure turns that guard RED,
+    which is the ``TERMINAL_OUTCOMES`` device applied at this seam.
+
+    Raises:
+        ValueError: *cause* is an exception no registered class matches. Registered
+            ``ValueError`` is what makes the dispatch TOTAL over everything the CLI's
+            ``except ValueError`` arms can catch, so this raise is reachable only from a
+            caller handing over something else — and it is LOUD rather than falling through
+            to a neighbour's remedy (``DF-10-4-E``'s lesson, the shape ``_downgrade_sentence``
+            above already uses).
     """
-    detail = f": {error_message}" if error_message else ""
-    return (
-        f"audit process encountered execution failure{detail} — inspect logs/stderr, "
-        f"verify environment setup, or report unhandled exception if persistent"
+    if cause is None:
+        detail = f": {error_message}" if error_message else ""
+        return (
+            f"audit process encountered execution failure{detail} — inspect logs/stderr, "
+            f"verify environment setup, or report unhandled exception if persistent"
+        )
+    for klass in type(cause).__mro__:
+        remedy = _NEXT_ACTION_BY_CLASS.get(klass.__name__)
+        if remedy is not None:
+            return remedy
+    raise ValueError(
+        f"no operator next action is registered for {type(cause).__name__} (mro: "
+        f"{[k.__name__ for k in type(cause).__mro__]}). Every typed failure that can reach "
+        "a user surface must name ITS OWN next action: falling through to another class's "
+        "would tell the operator to do something that cannot help them. Register it in "
+        "TYPED_FAILURE_CLASSES (argus/reports/plain_english.py)."
     )
+
+
+def render_usage_error_next_action() -> str:
+    """The next action for an invocation the PARSER rejected (Story 12.8 / AC8, PURE).
+
+    argparse has already printed the cause (its usage message) on stderr. What it does not
+    say — and what a consumer of the exit code cannot otherwise know — is that **no audit
+    ran and no verdict exists**. Before this, an argparse usage error exited ``2``, which
+    ``action.yml`` publishes as ``verdict=NOT_READY_FOR_RELEASE assessed=true``: a typo
+    fabricated an assessment for a run that never happened. The remedy is the tool's own
+    output, never a wiki (FR37) — ``--help`` is where the accepted surface is stated, and
+    since Story 12.8 it states every argument's live default too.
+    """
+    return (
+        "the command line was rejected by the parser (see the usage message above), so NO "
+        "audit ran and NO verdict was produced — exit 1 is the reserved 'no verdict' code, "
+        "never a verdict. Correct the invocation and re-run; `argus audit --help` and "
+        "`argus install-commands --help` list every accepted argument with its default."
+    )
+
+
+def render_inert_reports_disclosure(reports: tuple[str, ...] | list[str]) -> str:
+    """Disclose that ``--reports`` selected types nothing will render (Story 12.8 / AC3, PURE).
+
+    DN-3: this is DISCLOSED, not refused. The combination is legal — a caller that sets
+    ``--reports`` unconditionally and ``--report-dir`` conditionally is doing nothing wrong —
+    it is simply INERT, and measured on ``2f84a0b`` it produced no file and no word about it.
+    Refusing it would break that caller; staying silent costs the operator the run.
+
+    The register is ``_emit_suppression_disclosure``'s (Story 10.3 / AC4.3) and so is the
+    reason: a disclosure an operator can act on is one that names what did NOT happen.
+    """
+    return (
+        f"--reports selected {list(reports)} but --report-dir is not set, so NO report file "
+        f"was written. Add --report-dir <dir> to render them, or drop --reports; the verdict "
+        f"and the ship-readiness block above are unaffected."
+    )
+
+
+def render_unmatched_designation_disclosure(flag: str, paths: tuple[str, ...] | list[str]) -> str:
+    """Disclose designated paths that are not in the audited tree (Story 12.8 / AC3, PURE).
+
+    DN-3: ``--critical-subsystem`` / ``--exclude-critical`` take PATHS, an OPEN vocabulary,
+    so an unmatched value is disclosed rather than refused — refusing would break the
+    legitimate case of designating a subtree that is absent from this partition.
+
+    It is worth disclosing because the measured effect is not cosmetic: on ``2f84a0b``,
+    ``--critical-subsystem does/not/exist`` moved the verdict from ``RELEASE_READY`` (exit 0)
+    to ``INSUFFICIENT_COVERAGE`` (exit 3) and printed *"Critical files not examined deeply: 1"*
+    for a path that does not exist, with nothing anywhere naming the typo.
+
+    Repository-RELATIVE spellings only — they are the operator's own argv values and are
+    echoed as given, never resolved against the host filesystem (NFR-S1).
+    """
+    return (
+        f"{flag} named {list(paths)}, which no file or directory in the audited repository "
+        f"matches. The designation still applies — a path absent from this partition is "
+        f"legal — but it can only be counted as NOT examined deeply, so check the spelling "
+        f"if you meant a path that is present."
+    )
+
+
+#: The stable, distinguishable marker an INTERNAL DEFECT carries on stderr (``DF-8-4-D``).
+#: Grep-able on purpose: it is what lets an operator, a CI log scraper and a maintainer tell
+#: *"Argus is broken"* apart from *"your repository did not meet a gate"*.
+#:
+#: Named ``…_MARKER`` rather than the house ``…_TOKEN`` suffix, deliberately: ``bandit``'s
+#: ``B105`` (hardcoded-password) fires on any constant whose NAME contains ``token``, and the
+#: project gate for this story is a stashed-``argus/`` control run proving NO NEW finding. A
+#: rename costs nothing here, while the alternative — this repository's FIRST ``# nosec`` — adds
+#: a suppression mechanism that is easy to reach for the second time. Recorded rather than done
+#: quietly, because it is a deliberate departure from the naming the tree uses elsewhere
+#: (``CORE_RUNTIME_TOKEN``, ``RUNTIME_UNVALIDATED_TOKEN``), whose own B105 hits predate this.
+INTERNAL_DEFECT_MARKER = "INTERNAL DEFECT"
+
+#: Where a defect is reported. One constant; never re-typed into a message.
+ARGUS_ISSUE_TRACKER = "https://github.com/Inan15/Agent-Argus/issues"
+
+_INTERNAL_DEFECT_NEXT_ACTION = (
+    f"{INTERNAL_DEFECT_MARKER} — this is a bug in Argus, not a problem with your repository, "
+    f"and re-running will not change it. No verdict was produced. Please report it at "
+    f"{ARGUS_ISSUE_TRACKER}, quoting the typed line above: it names the failing stage and "
+    f"the exception CLASS only, so it carries no path, no source and no secret."
+)
+
+_INTAKE_NEXT_ACTION = (
+    "the repository could not be read at the state you asked for, so nothing was assessed "
+    "and no `.argus/` state was written. Correct the path or the `--commit` pin named above "
+    "and re-run; `--strict` is what requires a git repository and a clean tree, so dropping "
+    "it audits whatever is on disk and records which state that was."
+)
+
+#: The TYPED failure vocabulary that can reach a user surface, enumerated the way
+#: ``TERMINAL_OUTCOMES`` enumerates verdicts (Story 12.8 / AC4). Every member has its OWN
+#: next action below; a typed class added to ``argus/**`` and not added here turns
+#: ``TC-ArgusAgent-REPORT-003-08`` RED rather than silently inheriting a neighbour's remedy.
+TYPED_FAILURE_CLASSES: tuple[str, ...] = (
+    "SourceStateError",
+    "RepoIntakeError",
+    "ResumeStateError",
+    "UnexpectedStageError",
+    "PipelineError",
+    "WorkspaceContainmentError",
+    "CanonicalSerializationError",
+    "ShipReadinessError",
+    "UnknownHostError",
+    "ContainmentError",
+    "CommandInstallError",
+    "ValueError",
+)
+
+_NEXT_ACTION_BY_CLASS: dict[str, str] = {
+    # Intake: the operator's own input is wrong and the operator can fix it.
+    "SourceStateError": _INTAKE_NEXT_ACTION,
+    "RepoIntakeError": _INTAKE_NEXT_ACTION,
+    "ResumeStateError": (
+        "the prior `.argus/` state cannot be resumed from, and Argus will never resume from "
+        "state it cannot verify. Run a fresh audit; if the state is corrupt or was written by "
+        "an older version, remove or move the `.argus/` directory first."
+    ),
+    # An EXPECTED degradation: a stage refused, and the stage plus the typed reason are on
+    # the line above. Distinct from the arm below it, which is the whole of `DF-8-4-D`.
+    "PipelineError": (
+        "a pipeline stage did not complete, so NO verdict was produced (exit 1 is the "
+        "reserved 'no verdict' code). The failing stage and the typed reason are named above "
+        "— re-run once, and if it repeats report it with that line."
+    ),
+    "WorkspaceContainmentError": (
+        "a write was refused because it would have left the `.argus/` workspace, and Argus "
+        "writes nowhere else. Run the audit from the repository root you intend to audit; "
+        "nothing outside the workspace was written."
+    ),
+    "CanonicalSerializationError": (
+        "the run produced a payload that could not be canonically serialised, so nothing was "
+        f"persisted and no verdict was produced. Re-run once; if it repeats, report it at "
+        f"{ARGUS_ISSUE_TRACKER} with the typed line above."
+    ),
+    # ── `argus install-commands` (Story 12.7 / FR35) ─────────────────────────────
+    # Its typed failures are OPERATOR errors, not defects, and they are enumerated for
+    # exactly that reason: without their own arms they would inherit the base-`ValueError`
+    # remedy below and an unregistered `--host` would be reported as a bug in Argus.
+    "UnknownHostError": (
+        "name a host this build registers, or omit --host to place the commands in every "
+        "registered host whose configuration directory is detected. Nothing was written."
+    ),
+    "ContainmentError": (
+        "the step refused a write that would have left the destination root, and Argus "
+        "writes nowhere else. Check --dest (and whether the host's configuration directory "
+        "is a symlink); nothing was written."
+    ),
+    "CommandInstallError": (
+        "the command assets could not be placed as asked. The typed reason is above; "
+        "correct it and re-run, or use --dry-run to see the whole plan without writing."
+    ),
+    # ── The three INTERNAL-DEFECT arms (`DF-8-4-D`) ───────────────────────────────
+    # An unexpected exception inside a stage, a verdict the FR16 gate cannot produce, and any
+    # OTHER `ValueError` reaching the CLI (Pydantic's `ValidationError` is the entry's own
+    # stated example) are all one thing from the operator's side: Argus is broken. They are
+    # NOT a fallthrough to a neighbour's remedy — this IS their remedy, and it is the only
+    # honest one, because no change to the repository or the invocation can clear them.
+    "UnexpectedStageError": _INTERNAL_DEFECT_NEXT_ACTION,
+    "ShipReadinessError": _INTERNAL_DEFECT_NEXT_ACTION,
+    "ValueError": _INTERNAL_DEFECT_NEXT_ACTION,
+}
 
 
 def render_ship_readiness(

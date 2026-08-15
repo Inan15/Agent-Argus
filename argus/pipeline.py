@@ -244,6 +244,11 @@ from argus.reports.generator import generate_reports
 # (AR7 / §3.3 — reuse, never fork). `plain_english` is a PURE renderer with no provider
 # dependency, so this import does not touch the zero-token quarantine.
 from argus.reports.plain_english import deep_pass_enabled
+
+# The ONE grammar-failure classifier (Story 10.4 / DN-3). Imported for the pure fold that
+# puts the downgraded-file population on `AuditResult` (Story 12.8 / AC7) — a `startswith`
+# at this call site is the defect that module's docstring names.
+from argus.shared.grammar_status import downgrade_reasons
 from argus.store import canonical
 from argus.store.envelope import Envelope
 from argus.store.paths import WorkspaceContainmentError
@@ -256,6 +261,18 @@ from argus.verdict.negative_assurance import (
 from argus.verdict.prosecutor import prosecute
 from argus.verdict.verdict_gate import AuditVerdict, evaluate_verdict
 
+# ⚠️ `UnexpectedStageError` (Story 12.8 / AC5) is DELIBERATELY ABSENT from this list, and the
+# absence is a decision rather than an oversight. `__all__` here is a FROZEN pin: Story 12.1
+# promised across the `pipeline_stages` extraction that the published import surface did not
+# move, and `tests/test_pipeline_split_surface.py` (`-14`/`-15`/`-16`) holds it against the
+# IMMUTABLE pre-split blob `ca37283:argus/pipeline.py` — so the pin cannot accommodate an
+# addition without being re-anchored, which would be a second, unrelated published-surface
+# change taken inside a story whose DN-6 states it adds explanation and not surface. The
+# class is fully importable (`from argus.pipeline import UnexpectedStageError`; `__all__`
+# governs only `import *`), documented at its own definition and in `argus/cli.py`'s contract
+# block, and ENUMERATED where the enumeration is load-bearing — `plain_english
+# .TYPED_FAILURE_CLASSES`, which `TC-ArgusAgent-REPORT-003-08` closes over the real classes to
+# keep honest. Widening this list is the right move for a story that says so.
 __all__ = [
     "PipelineError",
     "ResumeStateError",
@@ -295,6 +312,35 @@ class PipelineError(ValueError):
     rather than letting a bare Python traceback escape. The message names the
     failing STAGE + the typed reason only — never an absolute host path, never
     source / secret bytes (NFR-S1).
+    """
+
+
+class UnexpectedStageError(PipelineError):
+    """An UNEXPECTED exception inside a stage — an Argus defect, not a degradation (``DF-8-4-D``).
+
+    Story 12.8 / AC5. The entry was filed against ``cli.py``'s ``except ValueError`` arm, and
+    the measured trap is that splitting THAT arm alone cannot close it: the four wrap sites in
+    this module already converted **any** unexpected exception into a ``PipelineError``, which
+    is one of the typed classes the CLI's own comment enumerates as an EXPECTED degradation. So
+    an internal defect arrived at the CLI **pre-disguised**, and no amount of ``except``
+    precision downstream could tell it apart from a stage that refused for a good reason.
+
+    The distinction is therefore carried FROM THE WRAP SITE, which is the only place that
+    still knows the difference. This subclass is the smallest honest mechanism:
+
+    * it is a ``PipelineError``, so every existing ``except PipelineError`` / ``except
+      ValueError`` handler catches it exactly as before — nothing downstream changes shape;
+    * it changes NO exit code. Both stay ``1`` (AR3 is frozen; AR7 — reuse, never fork). The
+      distinction lives in the MESSAGE, which is what the ledger entry asks for;
+    * it carries ``type(exc).__name__`` and **never** ``str(exc)`` — ``DF-10-4-C``'s rule and
+      NFR-S1's, because ``str(OSError)`` is ``[Errno 13] Permission denied: '<absolute host
+      path>'``.
+
+    The alternative considered and rejected (recorded in the story's Dev Agent Record): a
+    boolean/flag attribute on ``PipelineError`` set at the wrap sites. It needs no new class,
+    but an attribute is invisible to ``except``, so every consumer would have to remember to
+    read it — and a distinction a caller can forget to check is the one that goes back to
+    being silent. A type is checked by the language.
     """
 
 
@@ -341,6 +387,19 @@ class AuditResult:
     halt-report/floor-report bytes, AC6). It is an additive optional field
     (default-preserving — the ``floor_report`` precedent).
 
+    Story 12.8 (NFR-P3 / ``DF-10-4-C`` / AC7): ``grammar_downgrade_reasons`` carries the
+    recorded ``parse_failure_reason`` TOKENS of the files a grammar failure downgraded, so
+    the CLI can render ``plain_english.render_grammar_downgrade_summary`` on a DEFAULT run.
+    Before it, that sentence had exactly one production caller — the report renderer, which
+    runs only when ``--report-dir`` is set — so an operator on a default invocation saw a
+    lower coverage ratio and NO reason for it, which reads as a judgement about their code.
+    It rides HERE and not on ``AuditVerdict`` deliberately (DN-4): the verdict is the frozen,
+    PERSISTED FR18/AR3 contract and a field there costs a schema bump; this class is
+    explicitly *a thin value holder (NOT a persisted model)* and already carries three
+    optional additive fields added by Stories 3.3, 4.1 and 4.3 by exactly this reasoning.
+    **Nothing new is persisted** — the tokens are already on the AST index this is derived
+    from, and the exception MESSAGE is never carried (10.4 / DN-5, NFR-S1).
+
     Story 4.3 (FR29): ``coverage_report`` is the additive, PURE 2.2
     :class:`CoverageReport` (per-file depth states + per-depth counts + exact-%)
     built from the merged ledger in the SHARED ``_assemble_and_persist`` fold. Like
@@ -355,6 +414,7 @@ class AuditResult:
         "floor_report",
         "negative_assurance",
         "coverage_report",
+        "grammar_downgrade_reasons",
     )
 
     def __init__(
@@ -364,12 +424,14 @@ class AuditResult:
         floor_report: InsufficientCoverageFloorReport | None = None,
         negative_assurance: NegativeAssuranceVerdict | None = None,
         coverage_report: CoverageReport | None = None,
+        grammar_downgrade_reasons: tuple[str, ...] = (),
     ) -> None:
         self.verdict = verdict
         self.locators = locators
         self.floor_report = floor_report
         self.negative_assurance = negative_assurance
         self.coverage_report = coverage_report
+        self.grammar_downgrade_reasons = grammar_downgrade_reasons
 
 
 def _assemble_and_persist(
@@ -523,6 +585,11 @@ def _assemble_and_persist(
         floor_report=floor_report,
         negative_assurance=negative_assurance,
         coverage_report=build_coverage_report(ledger),
+        # Story 12.8 / AC7 — DERIVED from the index this run already built, persisted
+        # nowhere, and classified by the ONE classifier (`grammar_status.classify_reason`).
+        # This is the channel 12.5 left open by name: the downgrade sentence existed and
+        # only the report renderer could reach it, so a default run said nothing.
+        grammar_downgrade_reasons=downgrade_reasons(index.entries),
     )
 
 
@@ -572,7 +639,7 @@ def run_audit_detailed(
     except (RepoIntakeError, SourceStateError):
         raise  # already typed (AR10) — the CLI maps it to exit 1
     except Exception as exc:  # noqa: BLE001 — wrap as a TYPED fatal (never a bare raise)
-        raise PipelineError(f"intake stage failed: {type(exc).__name__}") from exc
+        raise UnexpectedStageError(f"intake stage failed: {type(exc).__name__}") from exc
 
     repo_root = Path(request.repo_path)
 
@@ -647,7 +714,7 @@ def run_audit_detailed(
     except (WorkspaceContainmentError, RepoIntakeError):
         raise
     except Exception as exc:  # noqa: BLE001 — wrap unexpected failures as TYPED (AR10)
-        raise PipelineError(f"analysis stage failed: {type(exc).__name__}") from exc
+        raise UnexpectedStageError(f"analysis stage failed: {type(exc).__name__}") from exc
 
     return _assemble_and_persist(
         request=request,
@@ -870,7 +937,7 @@ def resume_audit_detailed(
     except RepoIntakeError:
         raise
     except Exception as exc:  # noqa: BLE001 — wrap as a TYPED fatal (never a bare raise)
-        raise PipelineError(f"intake stage failed: {type(exc).__name__}") from exc
+        raise UnexpectedStageError(f"intake stage failed: {type(exc).__name__}") from exc
 
     repo_root = Path(request.repo_path)
     reader = store_reader if store_reader is not None else ApaaStoreReader(repo_root)
@@ -980,7 +1047,7 @@ def resume_audit_detailed(
     except (WorkspaceContainmentError, RepoIntakeError):
         raise
     except Exception as exc:  # noqa: BLE001 — wrap unexpected failures as TYPED (AR10)
-        raise PipelineError(f"resume analysis stage failed: {type(exc).__name__}") from exc
+        raise UnexpectedStageError(f"resume analysis stage failed: {type(exc).__name__}") from exc
 
     # Provenance for the RENDERED reports only. A fresh run resolves this and passes
     # it; the resume path omitted it, so a resumed run's report silently dropped the

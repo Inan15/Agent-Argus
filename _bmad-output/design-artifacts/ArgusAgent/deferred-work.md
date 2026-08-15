@@ -3583,3 +3583,95 @@ premise, confirmed). Closure probe re-run against the guard's own builder: **74*
     hold a stale copy
   - category: documentation-accuracy (FR34 expiry on a placed artifact)
   - severity: 🟢
+
+---
+
+## Story 12.8 closures + dispositions — 2026-08-15
+
+Appended by Story 12.8 (`12-8-the-tool-explains-itself`).
+**Append-only (§3.4): nothing above this heading was edited, reordered or deleted.** `git diff --numstat`
+on this file is `+n / -0`. Two entries this story OWNS are dispositioned below; three it CITES are
+restated without being re-filed, per 12.7's recorded rule — *a gap filed twice is a gap that gets closed
+once and left looking open*.
+
+### Closed by this story
+
+- **`DF-8-4-D` — CLOSED 2026-08-15. An internal defect is now distinguishable from an expected
+  degradation.** The entry's own coordinates were stale and its mechanism was **wider than recorded**;
+  both are stated rather than quietly fixed. It cited `argus/cli.py:295-299`, corrected once to
+  `:368-372`; on `2f84a0b` the audit arm was at **`:758`**, and there were **THREE** base-`ValueError`
+  arms in `cli.py` (`:679` ship-readiness, `:707` `install-commands` — added by 12.7 and therefore
+  invisible to the 2026-08-10 citation audit — and `:758` audit) plus a fourth in `argus/mcp/server.py`.
+  The remedy anchors on TEXT, not on a line number (`epics.md:1771`).
+  **The entry's suggested close — *"catch the named subclasses explicitly"* — would NOT have closed it,
+  and this is the finding worth recording.** Measured: `argus/pipeline.py`'s four stage wraps already
+  converted **any** unexpected exception into `PipelineError(f"… stage failed: {type(exc).__name__}")`,
+  and `PipelineError` is one of the classes `cli.py`'s own comment enumerates as an EXPECTED typed
+  degradation. An internal defect therefore arrived at the CLI **pre-disguised**, and no amount of
+  `except` precision on the CLI side could have told the two apart. The distinction is carried **from the
+  wrap site** by a new `pipeline.UnexpectedStageError` (a `PipelineError` subclass, so every existing
+  handler catches it unchanged), and the renderer dispatches on typed class.
+  **What ships:** a stable `INTERNAL DEFECT` marker on stderr saying plainly that this is a bug in Argus
+  rather than a problem with the user's repository, plus where to report it; the exception **CLASS**
+  only, never `str(exc)` (`DF-10-4-C`'s rule and NFR-S1's); exit **`1` for both**, because AR3 is frozen
+  and the distinction belongs in the message, which is what this entry asked for.
+  **Pinned in BOTH directions** by `TC-ArgusAgent-CLI-001-60`: a real missing repo path must NOT print
+  the marker, and a real `pydantic.ValidationError` injected at the REAL intake seam — so it travels the
+  real wrap — MUST. Neither direction alone is a guard. The enumeration itself is closed over the tree by
+  `TC-ArgusAgent-REPORT-003-08`..`-10`.
+  - status: **CLOSED 2026-08-15** — remedy delivered, entry's coordinates and mechanism corrected in
+    place, and the un-closable form of the suggested close recorded rather than silently improved on
+
+- **`DF-10-4-C` — PARTIALLY CLOSED 2026-08-15; the remaining half is RE-RECORDED with a reason, not
+  carried forward silently.** The entry has two halves and they had different fates.
+  **CLOSED — the surface.** The entry's own conclusion was that the diagnosis *"belongs on the surface
+  that renders it"*, and Story 12.5 handed the function over by name. Measured on `2f84a0b`,
+  `render_grammar_downgrade_summary` had exactly ONE production caller — `reports/generator.py:516`,
+  inside the report path, which runs only when `--report-dir` is set — so on the DEFAULT invocation a
+  downgraded grammar was invisible and the operator saw a lower ratio with no reason for it. It now
+  reaches the default run's stderr from the SAME renderer (one renderer, two callers; the tokens are
+  classified once, by `grammar_status.classify_reason`, and never re-classified by a second prefix
+  guess). The plumbing is an additive optional `AuditResult` field — a thin value holder, NOT a persisted
+  model — so **nothing new is persisted, no schema bumped and no verdict field added**; 10.4 / DN-5's
+  double refusal stands. Proven at the real `importlib.import_module` seam with no `--report-dir`
+  (`TC-ArgusAgent-CLI-001-63`), with the negative direction pinned by `-64`.
+  **STILL OPEN — the exception CLASS behind a grammar-load failure** (`ValueError` vs `TypeError` vs
+  `OSError`), with the reason stated so this is a disposition and not a drift. The recorded
+  `parse_failure_reason` token carries the ARM (`grammar_load_failed_rust`), which is the distinction
+  10.4 deliberately built and which the shipped remedy already acts on. Carrying the raw Python exception
+  class as well needs a channel from `ast_index`'s loader to the renderer that does not go through the
+  persisted `AstIndex` — and the only such channel is a SECOND diagnosis path running beside
+  `parse_failure_reason`, which is the fork AR7 forbids and precisely what
+  `argus/shared/grammar_status.py`'s docstring warns about. It is not blocked by this story; it is
+  unfunded by any evidence that an operator needs it, and the honest record is that nobody has measured
+  a case where the arm was insufficient.
+  - id: DF-10-4-C
+  - owner: **Engineering Lead** (unchanged)
+  - target_story: **NONE — unscheduled.** The surface half is delivered; the class-payload half needs a
+    story that also decides the second-channel question, and re-targeting it at a hypothetical future
+    story would be the evaporation the Epic-8 retrospective §5 described
+  - category: capability
+  - severity: 🟢
+
+### Re-stated, NOT re-filed — cited by this story and still open
+
+- **`DF-3-4-A`** (resume has no CLI entrance) and **`DF-10-5-C`** (FR29 evidence export needs a CLI
+  surface). Story 12.8 is *"the CLI surface"* story and both entries point at it, so the temptation to
+  absorb them was real and is declined on the record. `DF-3-4-A` stays open under its existing owner —
+  12.7 removed the published `/audit resume` command citing it and recorded *"stays open and is NOT
+  re-filed"*, and this story CITES it for the same reason. `DF-10-5-C` names *"Story 12.8 (the CLI
+  surface)"* as **where** such a sub-command would go, not as its owner, and leaves it `target_story:
+  NONE — unscheduled; Governance Owner to schedule`; building it would be an unscheduled capability
+  addition, which DN-6 (*this story adds explanation, not surface*) forbids. Neither is re-filed.
+- **`DF-12-7-A`** (the host registry ships one verified member). Cited, untouched, still unscheduled.
+- **`DF-12-1-C`** — noted rather than re-filed: its `target_story` names `12-5-…`, a story that is `done`
+  and did not perform the split, so the `tests/test_grammar_diagnosis.py` exemption is ORPHANED. Story
+  12.8 did NOT grow it — the CLI grammar-downgrade guard is homed in `tests/test_cli.py` beside the other
+  diagnosis guards, deliberately, so an exemption nobody owns does not get larger — and the registry
+  entry's reason is amended in place to say so. Its exemption's target is re-recorded as
+  `NONE — unscheduled; the split is owed and belongs to a story that says so` — the same string the registry now carries, because
+  `TC-ArgusAgent-MAINT-001-04` requires the two to agree and a target pointing at a completed story is
+  a clause that can never fire.
+  - id: DF-12-1-C (annotated here, NOT re-filed — the original entry above is byte-intact)
+  - owner: **Engineering** (unchanged)
+  - target_story: **NONE — unscheduled; the split is owed and belongs to a story that says so**

@@ -40,6 +40,44 @@ versioning intent is [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
 ## Unreleased
 
+### Changed — a mistyped invocation is refused, and no longer publishes a verdict
+
+**Read this if you consume `argus`'s exit code, or pass `--passes` / `--skip-pass` / `--reports`.**
+Two behaviour changes on a published surface, both in the same direction: the tool now refuses an
+invocation it cannot honour instead of running a reduced audit and reporting the result as a normal
+one.
+
+**1. An unknown `--passes`, `--skip-pass` or `--reports` token is now refused.** It used to be
+accepted and silently ignored. Measured on the shipped tool: `argus audit <repo> --passes securty`
+disabled **every** detector pass — the pipeline's membership tests simply never matched — and
+returned `verdict=RELEASE_READY`, exit `0`, with no message of any kind. One transposed letter
+turned the flag that selects the safety passes into a switch that turned them all off, and the run
+looked clean because it had looked at nothing. `--reports` had the same shape and a live instance:
+this repository's own CI workflow requested the report type `vacuous-tests`, which does not exist,
+so three reports were written where four were asked for and nothing said so. The accepted set is
+now derived from the one definition of each vocabulary and is named in the refusal message, and
+`--help` states it too. **If a pipeline of yours passes a token that was silently ignored, it will
+now fail** — which is the point: it was not doing what it said. This follows the precedent Story
+10.3 set when it made the `--ignore-pattern` layering fix the condition of that flag's bless and
+announced it here in the same way.
+
+**2. A command line the parser rejects now exits `1`, not `2`.** Every argparse usage error —
+`--budget 1.5`, an unknown sub-command, a bare `argus` — used to exit `2`, and `action.yml` maps
+exit `2` to `verdict=NOT_READY_FOR_RELEASE` with `assessed=true`. A typo therefore published a
+**fabricated assessment of a repository for a run that never happened**. It now returns `1`, the
+reserved *the audit did not complete and NO verdict was produced* code the wire contract already
+publishes and which `action.yml` already renders as `AUDIT_FAILED` / `assessed=false`. **No new
+exit code was added** (AR3 stays `0`/`2`/`3`/`1`), `--help` and `-h` still exit `0` unchanged, and
+`2` now means — and can only mean — *the audit ran and found at least one verdict-blocking
+finding*. A CI step that branched on `2` to mean "blocked" is unaffected; one that treated a
+non-zero exit as a verdict without reading `assessed` was already wrong and is now told so.
+
+Alongside these: every operator error names a **fix** as well as a cause, a missing or unusable
+language grammar is reported on the **default** run rather than only inside a generated report, an
+internal defect in Argus is now distinguishable on stderr from an expected degradation of your
+repository (it says which it is, and where to report the former), and the stderr diagnosis no
+longer carries an absolute path from the host filesystem.
+
 ### Fixed — the default install now grounds every language the tool claims to support
 
 If your project was not Python, the tool you installed was quietly worse than the tool this project

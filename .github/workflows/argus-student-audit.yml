@@ -45,7 +45,7 @@ jobs:
           argus audit . \
             --commit "${{ github.sha }}" \
             --report-dir "./argus-reports" \
-            --reports "final-verdict,coverage-ledger,security-review,vacuous-tests" \
+            --reports "final-verdict,coverage-ledger,security-review,architecture-review" \
             --coverage-scope application
 
       - name: 📄 Render Student-Friendly Summary Report

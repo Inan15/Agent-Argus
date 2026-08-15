@@ -48,7 +48,14 @@ from dataclasses import dataclass, field
 from pathlib import Path
 
 from argus.shared.source_languages import AUDITABLE_SUFFIXES
-from argus.intake.repo_loader import RepoIntakeError
+# The three operator FIX clauses are defined ONCE, beside `RepoIntakeError` (Story 12.8 /
+# AC3). Both intake producers raise the same three conditions, and a second wording for one
+# mistake is a fork (AR7 / architecture §3.3).
+from argus.intake.repo_loader import (
+    PIN_DRIFT_FIX,
+    UNRESOLVED_COMMIT_FIX,
+    RepoIntakeError,
+)
 from argus.intake.ignore_rules import (
     IgnoreReason,
     classify_path,
@@ -119,7 +126,17 @@ def _digest_of(root: Path, rel_paths: tuple[str, ...]) -> str:
         try:
             inner.update((root / rel).read_bytes())
         except OSError as exc:
-            raise SourceStateError(f"could not read {rel!r} while pinning source state: {exc}") from exc
+            # NFR-S1 (Story 12.8 / AC6): the TYPE only, never ``str(exc)``. Measured on
+            # ``2f84a0b``, this line interpolated the raw exception and
+            # ``str(OSError)`` is ``[Errno 13] Permission denied: '<absolute host path>'`` —
+            # so the CLI's *"names the typed reason only, never an absolute path"* claim
+            # was false at precisely the epic's own "unreadable repo" case. ``rel`` is
+            # already repository-relative, which is the locator NFR-S1 permits.
+            raise SourceStateError(
+                f"could not read {rel!r} while pinning source state "
+                f"({type(exc).__name__}). Make the file readable, or exclude it from the "
+                f"audited tree, and re-run."
+            ) from exc
         # See canonical.safe_utf8_bytes — a bare .encode crashes on the surrogates a
         # C-locale POSIX host produces for a non-ASCII path, and would make this
         # digest host-dependent (NFR-P1).
@@ -224,8 +241,23 @@ def resolve_source_state(
     than in the path of every first run.
     """
     root = Path(repo_path).resolve()
+    # TWO CAUSES, TWO MESSAGES, TWO FIXES (Story 12.8 / AC3). Measured on ``2f84a0b``,
+    # `argus audit /no/such/path` and `argus audit README.md` printed the IDENTICAL line —
+    # "repo path is not a directory" — although one path does not exist and the other is a
+    # file, which are different mistakes with different corrections. `repo_loader.py:181-183`
+    # has always distinguished them; this producer never did, and it is the one every CLI
+    # audit reaches. The BASENAME is echoed, never the resolved absolute path (NFR-S1 /
+    # AC6): `Path.resolve()` turns even a relative argv value into a host path.
+    if not root.exists():
+        raise SourceStateError(
+            f"repo path does not exist: {root.name!r}. Check the path you passed to "
+            f"`argus audit` and re-run."
+        )
     if not root.is_dir():
-        raise SourceStateError(f"repo path is not a directory: {repo_path!r}")
+        raise SourceStateError(
+            f"repo path is not a directory: {root.name!r}. Pass the repository's root "
+            f"directory rather than a file inside it, and re-run."
+        )
 
     # Repo presence and commit presence are DISTINCT. A freshly `git init`-ed project
     # is a git repository with no HEAD — exactly the "new repo under development" case
@@ -245,10 +277,13 @@ def resolve_source_state(
             )
         resolved = _git(root, "rev-parse", "--verify", f"{commit}^{{commit}}")
         if not resolved:
-            raise SourceStateError(f"commit {commit!r} did not resolve to a SHA")
+            raise SourceStateError(
+                f"commit {commit!r} did not resolve to a SHA. {UNRESOLVED_COMMIT_FIX}"
+            )
         if head != resolved:
             raise SourceStateError(
-                f"working tree drift: HEAD ({head[:12]}) != pinned commit ({resolved[:12]})"
+                f"working tree drift: HEAD ({head[:12]}) != pinned commit "
+                f"({resolved[:12]}). {PIN_DRIFT_FIX}"
             )
         if is_dirty:
             raise SourceStateError(
@@ -265,7 +300,9 @@ def resolve_source_state(
     # freshly-`git init`-ed project), which is a NORMAL state to audit as a directory.
     if is_git and commit != "HEAD":
         if not _git(root, "rev-parse", "--verify", f"{commit}^{{commit}}"):
-            raise SourceStateError(f"commit {commit!r} did not resolve to a SHA")
+            raise SourceStateError(
+                f"commit {commit!r} did not resolve to a SHA. {UNRESOLVED_COMMIT_FIX}"
+            )
 
     files, excluded = _walk_sources(root)
 

@@ -67,7 +67,7 @@ What this module deliberately does NOT do
 from __future__ import annotations
 
 from enum import Enum
-from typing import Final, NamedTuple
+from typing import Final, Iterable, NamedTuple
 
 __all__ = [
     "GrammarFailure",
@@ -93,6 +93,7 @@ __all__ = [
     "core_version_is_supported",
     "canary_for",
     "canary_matches",
+    "downgrade_reasons",
 ]
 
 
@@ -560,4 +561,31 @@ def canary_matches(canary: GrammarCanary, observation: CanaryObservation) -> boo
         and observation.vocabulary == canary.vocabulary
         and observation.definitions == canary.definitions
         and observation.edges == canary.edges
+    )
+
+
+def downgrade_reasons(entries: Iterable[object]) -> tuple[str, ...]:
+    """The recorded tokens of the entries a GRAMMAR-LOAD failure downgraded (PURE).
+
+    Story 12.8 / AC7. *entries* is any iterable of objects carrying a
+    ``parse_failure_reason`` attribute (the 1.4 ``AstIndexEntry`` shape, duck-typed so this
+    pure module keeps no dependency on the impure index layer). Membership is decided by
+    :func:`classify_reason` and by nothing else: ``syntax_error``, ``read_error``,
+    ``non_python`` and ``None`` are NOT grammar-load failures and are excluded, because
+    handing them a grammar remedy would be the same class of wrong answer a prefix guess
+    gives (see this module's docstring).
+
+    Order is preserved from *entries*, which the AST index already sorts (AR11), so the
+    result is deterministic without a second sort.
+
+    It exists so the population *"which files did a grammar failure downgrade?"* has ONE
+    definition that the pipeline can hand to the CLI. ``reports/generator.py``'s two folds
+    walk the entries themselves rather than calling this, because they need each entry's
+    LANGUAGE and PACKAGE as well as its token — but they classify through the same
+    :func:`classify_reason`, which is the part that must never be forked.
+    """
+    return tuple(
+        reason
+        for reason in (getattr(entry, "parse_failure_reason", None) for entry in entries)
+        if reason is not None and classify_reason(reason) is not None
     )

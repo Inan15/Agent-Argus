@@ -98,7 +98,25 @@ _DISCLOSURE_HELPER = "_with_instrument_disclosure"
 # Non-vacuity floors (E.3 — 10.3's `-39`, 10.4's `-118`, 10.5's `-39` were all guards that
 # could pass by finding nothing). Measured 2026-08-11: four `write_text` calls, four report
 # artifacts, 72 `argus/**` modules.
-_MIN_WRITE_TEXT_CALLS = 4
+#
+# ⚠️ `_MIN_WRITE_TEXT_CALLS` CORRECTED 2026-08-15 by Story 12.8 / AC3+AC9, and RE-DERIVED
+# rather than lowered. `generate_reports` used to hold four copy-pasted `if`-blocks, one
+# `write_text` each, so "at least 4 write_text calls" was a legitimate proxy for "the four
+# reports are still written here". Story 12.8 had to introduce ONE constant naming the
+# report types — there was none, which is exactly why nothing in the tool could validate a
+# `--reports` token, and why this repository's own workflow shipped `vacuous-tests` — and a
+# constant BESIDE four hand-written branches is a parallel list that drifts (a fifth token
+# in the constant with no branch renders nothing and says nothing). So the branches became
+# one loop over `RENDERED_REPORT_TYPES` and the literal count is now 1.
+#
+# The proxy is therefore replaced by the thing it was a proxy FOR: the population is
+# `RENDERED_REPORT_TYPES` and the floor is asserted against ITS length, which cannot be
+# satisfied by deleting reports. The guard is STRONGER after the change, not weaker — a
+# fifth report type is now routed through `_with_instrument_disclosure` BY CONSTRUCTION
+# rather than by a fifth author remembering to — and `-32`'s positive control below still
+# proves `unrouted_write_text_calls` bites on an unrouted write. The write-point floor
+# stays >= 1 so a write point that stops writing at all is still RED.
+_MIN_WRITE_TEXT_CALLS = 1
 _MIN_REPORT_ARTIFACTS = 4
 _MIN_PACKAGE_MODULES = 55
 _MIN_REACHABLE_MODULES = 35
@@ -935,7 +953,12 @@ def test_TC_ArgusAgent_CLI_001_51_a_verdict_line_and_the_disclosure_appear_toget
     def _typed_failure(_request):
         raise ValueError("synthetic intake failure")
 
-    monkeypatch.setattr(cli, "run_audit", _typed_failure)
+    # Patched at `run_audit_detailed` since 2026-08-15 (Story 12.8 / AC7 / DN-4): `cli.main`
+    # calls that entry now, because the grammar-downgrade diagnosis rides on `AuditResult`.
+    # `run_audit` is a thin wrapper returning `run_audit_detailed(...).verdict`, so the seam
+    # and this guard's observable — no instrument line beside a run with no verdict — are
+    # unchanged. Updated deliberately; the alternative was to leave a stand-in nothing calls.
+    monkeypatch.setattr(cli, "run_audit_detailed", _typed_failure)
     code = cli.main(["audit", str(tmp_path), "--commit", "HEAD"])
     captured = capsys.readouterr()
 
@@ -951,7 +974,13 @@ def test_TC_ArgusAgent_CLI_001_51_a_verdict_line_and_the_disclosure_appear_toget
     def _unrenderable(_verdict, **_kwargs):
         raise ShipReadinessError("synthetic contract violation")
 
-    monkeypatch.setattr(cli, "run_audit", lambda _request: synthetic_verdict)
+    from argus.pipeline import AuditResult
+
+    monkeypatch.setattr(  # Story 12.8 / DN-4 — see the note above
+        cli,
+        "run_audit_detailed",
+        lambda _request: AuditResult(verdict=synthetic_verdict, locators=()),
+    )
     monkeypatch.setattr(cli, "render_ship_readiness", _unrenderable)
     code = cli.main(["audit", str(tmp_path), "--commit", "HEAD"])
     captured = capsys.readouterr()
@@ -1025,7 +1054,16 @@ def test_TC_ArgusAgent_REPORT_002_31_every_write_in_the_write_point_is_routed(
 
     Non-vacuity is mandatory (E.3): a rename of ``generate_reports``, a move of the module,
     or an ``ast.parse`` failure must turn this RED, not silently green.
+
+    ⚠️ **The floor was RE-DERIVED 2026-08-15 by Story 12.8** — see ``_MIN_WRITE_TEXT_CALLS``
+    for the full reason. Counting ``write_text`` calls was a proxy for *"the four reports are
+    still written here"* and held only while the four were four copy-pasted branches. They
+    are now ONE loop over ``RENDERED_REPORT_TYPES``, so the population is asserted directly,
+    against the constant. That is a correction, not a loosening: this guard's own remedy
+    sentence — *"route it, do not enumerate it"* — is what the loop implements.
     """
+    from argus.reports.generator import RENDERED_REPORT_TYPES
+
     source = _GENERATOR.read_text(encoding="utf-8")
 
     found = write_text_call_count(source, _WRITE_POINT)
@@ -1034,6 +1072,16 @@ def test_TC_ArgusAgent_REPORT_002_31_every_write_in_the_write_point_is_routed(
         f"{_MIN_WRITE_TEXT_CALLS}. Either the write point was renamed/moved (fix this "
         "guard's _WRITE_POINT) or the reports are no longer written there. A source-walking "
         "guard that finds nothing passes vacuously."
+    )
+    assert len(RENDERED_REPORT_TYPES) >= _MIN_REPORT_ARTIFACTS, (
+        f"the report-type population shrank to {list(RENDERED_REPORT_TYPES)}. The write "
+        "point is a loop over that constant now, so the count of write_text CALLS can no "
+        "longer notice a report disappearing — this assertion is what does. Removing a "
+        "consumer-facing report type is a published-surface change; take it deliberately."
+    )
+    assert f"in {'RENDERED_REPORT_TYPES'}:" in source, (
+        "the write point no longer iterates RENDERED_REPORT_TYPES, so a report type could "
+        "again be written by a hand-authored branch that bypasses the disclosure helper."
     )
     assert f"def {_DISCLOSURE_HELPER}(" in source, (
         f"the disclosure helper {_DISCLOSURE_HELPER}() is gone from the write point's module"

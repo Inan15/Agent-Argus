@@ -4,6 +4,8 @@
 
 `ArgusAgent` combines the high-precision **APAA (AI Project Assurance Audit)** Python verification engine with the vendor-portable **RAM (Repository Audit Method)** framework. Named after *Argus Panoptes* — the mythological 100-eyed all-seeing guardian — `ArgusAgent` provides multi-agent, cross-subsystem vigilance over codebases with zero blind spots.
 
+> **Never run `argus` before?** Start at **[docs/first-run.md](docs/first-run.md)** — install, your first audit, how to read the ledger, and what each verdict and exit code means. Four sections, nothing else. *(Added 2026-08-15, Story 12.8: until then this README was the only integrator-shaped document in the repository and it linked to `docs/` nowhere at all — measured, zero occurrences — so a first-time reader met the full integration surface or nothing. The page is repository documentation and is **not** packaged in the wheel, which is why this link is its whole delivery mechanism.)*
+
 > **Integrating `argus audit` into a pipeline?** Every consumer-visible change to the exit codes, artifact schemas, defaults, rendered strings and public API — and what deliberately did *not* change — is recorded in **[CHANGELOG.md](CHANGELOG.md)**.
 
 > ⚠️ **Instrument status — read this before you weigh any verdict this tool gives you.**

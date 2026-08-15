@@ -116,18 +116,30 @@ def test_TC_ArgusAgent_CLI_001_44_reports_selects_report_types_and_defaults_to_t
     Story 10.3 / AC2.1, DN-4. `--reports` was missed by the 2026-08-09 audit even though a
     committed workflow depends on it (`.github/workflows/argus-student-audit.yml:48`), which is why
     removal was never free for this one the way it was for the other five.
+
+    ⚠️ **CORRECTED 2026-08-15 by Story 12.8 / AC3, and the correction is evidence rather than
+    maintenance.** The multi-token case below used to end in `vacuous-tests` — a token
+    `generate_reports` has never rendered — and this guard asserted that the CLI faithfully
+    carried it onto the request. It did, and that was the defect: nothing anywhere validated a
+    report token, so `--reports vacuous-tests` selected a report that does not exist, rendered
+    nothing, and said nothing. The committed workflow at `argus-student-audit.yml:48` shipped
+    exactly that string. The token is replaced with `architecture-review`, which is REAL, so this
+    guard still pins what it was written to pin — the CSV selection is honoured verbatim on the
+    request — over a value the tool can actually deliver. The refusal itself is pinned in
+    `tests/test_cli.py` (this file's `:22` fences it to behaviour of the blessed flags, and the
+    accepted set is derived rather than transcribed there).
     """
     assert _request().enabled_reports == cli._DEFAULT_REPORTS == (
         "final-verdict",
         "coverage-ledger",
     )
     assert _request(
-        "--reports", "final-verdict,coverage-ledger,security-review,vacuous-tests"
+        "--reports", "final-verdict,coverage-ledger,security-review,architecture-review"
     ).enabled_reports == (
         "final-verdict",
         "coverage-ledger",
         "security-review",
-        "vacuous-tests",
+        "architecture-review",
     )
     # Same CSV discipline as --passes: it is the one shared parser, not two.
     assert _request("--reports", "final-verdict,").enabled_reports == ("final-verdict",)

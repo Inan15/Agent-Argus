@@ -318,12 +318,28 @@ remains deferred. Delivered by `sprint-change-proposal-2026-07-28.md`.)*
   the parser is enforced by `tests/test_invocation_contract.py`; see §Enforcement.)*
 - **Exit-code wire contract:** `0`=RELEASE_READY · `2`=BLOCKED · `3`=INSUFFICIENT_COVERAGE · `1`=crash
   (mirrors Minions house style `0/1/2`, `3`=not-assessed). Machine-consumable CI gate (FR18).
+  *(Amended 2026-08-15 by Story 12.8 / AC8 — no code added, one meaning made explicit. `2` means, and
+  can only mean, THE AUDIT RAN AND FOUND AT LEAST ONE VERDICT-BLOCKING FINDING. Until this story every
+  argparse USAGE error also exited `2`, and `action.yml:129` publishes `2` as
+  `verdict=NOT_READY_FOR_RELEASE assessed=true` — so a mistyped flag published a fabricated assessment
+  of a repository for a run that never happened. A parser rejection now returns the reserved `1`, which
+  the map already renders `AUDIT_FAILED` / `assessed=false`; `--help` still exits `0`. The mapping lives
+  in `cli.main`, never in `build_parser`, so `build_parser().parse_args` stays byte-identical for every
+  guard that drives it and for the second invocation surface, which already ruled a parse rejection is
+  not a verdict.)*
 - **Execution model:** sequential-canonical; parallel = pure byte-identical speedup (NFR-P1).
 - **Entry points — two, converging on one core.** *(Added 2026-08-10b, FR35.)*
 
   | Surface | Transport | Ships as |
   |---|---|---|
   | **CLI** (canonical) | process argv + exit code | console scripts `argus` / `argus-agent` / `repo-audit` |
+  <!-- Story 12.8 / FR37, 2026-08-15: the CLI row is now COMPLETE as an operator surface, which is the
+       half that was outstanding rather than the transport. It explains its own failures — every typed
+       error names a cause AND an act that changes it, an internal Argus defect is distinguishable on
+       stderr from a degradation of the caller's repository, an unknown token on a closed vocabulary is
+       refused instead of silently disabling the passes it names, `--help` states every argument's live
+       default, and a parser rejection returns the reserved no-verdict code instead of publishing one.
+       `docs/first-run.md` orients a first run and is deliberately NOT where any answer lives (FR37). -->
   | **MCP server** | **stdio only** | an entry point in the same distribution |
   | *Assistant command assets* | *(not an entry point — configuration data)* | packaged files placed in the host's config |
 
@@ -890,6 +906,46 @@ literal `"audit"` — so a SECOND sub-command's flags were invisible to `-35`/`-
 `DF-AUD-APAA-E` reconstructed by the guard written to close it. The parsed corpus also gains the shipped
 command-asset tree `argus/assets/commands/*.md` **by glob**, with a `> 0` floor in `-39`, so a rename or a
 move turns it red rather than silently shrinking the corpus.)*
+*(Amended 2026-08-15 by Story 12.8 / FR37: the parsed corpus gains `docs/*.md` **by glob**, with its own
+`> 0` floor in `-39` — `docs/first-run.md` is where a reader with no prior exposure copies their FIRST
+command line from. `parse_failure` was CORRECTED at the same time: it read `SystemExit(0)` — argparse
+ACCEPTING a line and printing help — as *"argparse rejected the documented command line"*, which made it
+structurally unable to admit a documented `--help` invocation. A usage error still exits `2` and `2` is
+still a failure there; the check is corrected, not loosened.
+**`--help` PROSE is now under contract too, in the sibling module `tests/test_help_contract.py`**
+(`TC-ArgusAgent-CLI-001-52`..`-54`) — split out along a cohesion boundary when this file crossed the
+NFR-M1 ceiling, on the `tests/invocation_sources.py` precedent, with `live_actions` imported rather than
+re-implemented. It holds every argument's RENDERED help against the LIVE `action.default`, so a default
+stated in prose cannot drift from the one the parser holds; the mechanism is
+`argparse.ArgumentDefaultsHelpFormatter` rather than a per-flag sentence, because a hand-typed default is
+the AI-E9-7 transcription class one layer out from what `-35`/`-37` already close. Three help strings
+additionally carry the operator-consequence fact their contract paragraph records (`--reports` is inert
+without `--report-dir`; `--ignore-pattern` matches by bare substring; neither `--ignore-*` can suppress a
+live production key), pinned by exact substring with the reason in the test.)*
+
+**Operator-diagnosis enforcement** *(added 2026-08-15 by Story 12.8 / FR37, NFR-R1, AR10, NFR-S1)*: the
+§A **error/degradation** rules above are enforced at the USER SURFACE, not only at the raise site.
+`argus/reports/plain_english.py` holds the ONE diagnosis vocabulary — `TYPED_FAILURE_CLASSES` plus
+`render_audit_failed_next_action`, the FR37 renderer Story 12.4 shipped and which had **zero production
+callers** until this story wired it — and all three arms that print an audit failure (the CLI's audit
+arm, the CLI's ship-readiness arm and the second invocation surface's) render from it, so one failure
+cannot be described two ways. Three properties are enforced:
+- **Every typed failure names a CAUSE and an ACT that changes it.** A cause-only message is a red light
+  with no next action, which is what trains an operator to ignore it (FR37).
+- **An INTERNAL DEFECT is distinguishable from an expected degradation** (`DF-8-4-D`, closed). The
+  distinction is carried **from the wrap site** by `pipeline.UnexpectedStageError`, because
+  `pipeline.py`'s stage wraps already converted any unexpected exception into a `PipelineError` — one of
+  the classes the CLI enumerates as expected — so a CLI-only `except` split could not have told them
+  apart. Exit stays `1` for both; the distinction lives in the message (AR3 frozen, AR7 reuse-never-fork).
+- **No diagnosis carries an absolute host path** (NFR-S1). Enforced as a PROPERTY over the surface —
+  `TC-ArgusAgent-CLI-001-61` drives the real failure paths with a `tmp_path` whose absolute string, in
+  every spelling including the `repr`-escaped one, must be absent from stdout AND stderr.
+Closed vocabularies (`--passes`/`--skip-pass`/`--reports`) are REFUSED inside `parse_args` against the
+one definition of each; open ones (`--critical-subsystem`/`--exclude-critical`, `--reports` without
+`--report-dir`) are DISCLOSED on stderr. And **a usage error is not a verdict**: a parser rejection maps
+in `main()` — never in `build_parser` — to the reserved AR3 code `1`, because `action.yml` publishes exit
+`2` as `NOT_READY_FOR_RELEASE assessed=true` and a typo was therefore fabricating an assessment for a run
+that never happened. `--help` still exits `0`.
 
 **Command-asset enforcement** *(added 2026-08-15 by Story 12.7 / FR35, second half)*: the §A rule
 *"Command assets are data, not code — they instruct a host to invoke the CLI and introduce no execution
