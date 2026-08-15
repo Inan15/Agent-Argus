@@ -146,21 +146,20 @@ _DELIVERY_MARKERS: tuple[str, ...] = (
 # `_PRESERVED_RECORD` anti-pattern 10.1's DN-5 already ruled on. Each key is an anchor substring of
 # the offending unit, lower-cased; `-26` asserts each one is both REASONED and EXERCISED, so a
 # stale exemption for a sentence that no longer exists cannot sit here quietly widening the guard.
-_EXEMPT_BY_DESIGN: dict[str, str] = {
-    "the default public install grounds **python only**": (
-        "TRUE statement about the DEFAULT INSTALL, not a V1/V2 scope claim: the nine non-Python "
-        "grammars sit in the optional `[languages]` extra, so `pip install argus-agent` really "
-        "does ground Python only. Amending it would replace a true sentence with a false one. "
-        "Owned by Story 12.5 (NFR-P3: promote-to-base-deps vs. document-the-extra), and fenced "
-        "out of Story 10.2. Exempt BY NAME WITH THE REASON, never silently."
-    ),
-    "an optional extra, so the default install grounds **python only**": (
-        "The same TRUE default-install statement restated in the requirements-mapping section. "
-        "Same owner (Story 12.5, NFR-P3), same reason: the grammars are an optional extra, so the "
-        "default install grounds Python only, and that is a packaging fact rather than a V1 scope "
-        "boundary. Amending it here would write a falsehood into the architecture."
-    ),
-}
+#
+# ⚠️ EMPTY SINCE 2026-08-15 (Story 12.5 / NFR-P3), and the emptiness is a RESULT, not an omission.
+# Story 10.2 opened this table with exactly two entries, both quoting architecture.md's *"the
+# default public install grounds **Python only**"* — TRUE statements about the default install
+# rather than V1/V2 scope claims, exempted BY NAME and fenced to Story 12.5, which owned the
+# packaging decision. 12.5 took that decision: the nine grammars are promoted to
+# `[project.dependencies]`, both sentences are STRUCK in architecture.md (§3.4 — struck, never
+# deleted), and `_strip_struck` therefore no longer presents them to the scanner. Keeping the
+# exemptions would have failed `-26`'s own EXERCISED half, which is the guard working as designed:
+# an exemption that matches nothing is a silent licence that grows. `-26` asserts the shape of
+# every entry that IS here; it deliberately does NOT require the table to be non-empty, because
+# "no document currently needs an exemption" is the healthiest state this table can be in and a
+# non-emptiness assertion would pressure a future story to invent one.
+_EXEMPT_BY_DESIGN: dict[str, str] = {}
 
 
 class _Unit:
@@ -495,8 +494,11 @@ def test_TC_ArgusAgent_DOCS_001_26_the_specification_set_is_closed_and_exemption
         "moved/deleted (§3.4: records are superseded, never erased) or the patterns drifted."
     )
 
-    # Exemptions carry reasons.
-    assert _EXEMPT_BY_DESIGN, "the exemption table is empty — record exemptions, do not omit them"
+    # Exemptions carry reasons. An EMPTY table is legitimate and is not asserted against
+    # (Story 12.5 emptied it by striking the two sentences it excused — see the table's own
+    # comment): requiring non-emptiness would make "nothing needs an exemption" a failure, and
+    # would pressure a future story to invent an entry to satisfy the guard. What is asserted is
+    # the shape of every entry that IS present, in both directions, which is where the risk is.
     for anchor, reason in _EXEMPT_BY_DESIGN.items():
         assert len(reason.split()) >= 20, (
             f"exemption {anchor!r} has no substantive reason recorded. An exemption without a "
@@ -577,14 +579,29 @@ def test_TC_ArgusAgent_DOCS_001_27_the_amendment_is_written_attributed_and_sourc
         "architecture.md amendments must carry the same attribution (AC1.1)"
     )
 
-    # The two exempt sentences are still exactly what the exemption says they are. If somebody
-    # amends them under this story's banner, the exemption's stated reason has become false and
-    # Story 12.5's decision has been pre-empted.
-    for anchor in ("the default public install grounds **Python only**",
-                   "an optional extra, so the default install grounds **Python only**"):
-        assert anchor in arch, (
-            f"architecture.md no longer contains the EXEMPT sentence {anchor!r}. These two are "
-            "true statements about the default install and belong to Story 12.5 (NFR-P3); Story "
-            "10.2 is fenced out of them. If packaging genuinely changed, that is 12.5's amendment "
-            f"and this guard's exemption reason must be rewritten with it ({_GUARD_FILE})."
+    # ── Story 12.5 / NFR-P3, 2026-08-15 ────────────────────────────────────────────────────
+    # Until this date the two sentences below were EXEMPT here by name (see `_EXEMPT_BY_DESIGN`):
+    # they were TRUE statements about the default install, not V1/V2 scope claims, and the
+    # packaging decision that would make them false belonged to Story 12.5. That decision has now
+    # been taken, so the same two sentences are asserted in their AMENDED form — present but
+    # STRUCK, with the resolution recorded beside them. This is the amendment protocol the whole
+    # file enforces, applied to the one pair of sentences it previously had to exempt from it.
+    assert "packaging decision resolved by story 12.5 (nfr-p3)" in arch.lower(), (
+        "architecture.md no longer records that the NFR-P3 packaging decision was RESOLVED by "
+        "Story 12.5. The decision is the load-bearing fact — `pyproject.toml` alone cannot say "
+        "WHY the nine grammars are core dependencies, or that the alternative was rejected."
+    )
+    for struck in (
+        "~~⚠️ **Open packaging decision, owned by Story 12.5 (NFR-P3).**",
+        "~~⚠️ **open packaging decision owned by Story 12.5** (§L446-447):",
+    ):
+        assert struck in arch, (
+            f"architecture.md does not carry {struck!r} in STRUCK form. Both sentences were true "
+            "of every release before 12.5, and §3.4 says a superseded record is struck and never "
+            "deleted — deleting them erases the evidence that the default install ever grounded "
+            "Python only, which is the fact that makes this change auditable."
         )
+    assert "Python only" in arch, (
+        "the superseded default-install wording has vanished from architecture.md entirely. "
+        "Non-vacuity for the two assertions above: they must be checking live text."
+    )

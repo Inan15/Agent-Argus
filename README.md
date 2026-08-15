@@ -89,31 +89,51 @@ Publishing to PyPI is deliberately **not** attempted by the current workflow: a 
 name+version on an index can never be replaced, which makes it an operator decision taken
 with credentials in hand.
 
-### Auditing a non-Python repository: the `[languages]` extra
+### Auditing a non-Python repository: nothing extra to install
 
-The default install grounds **Python only**. Nine further tree-sitter grammars ship in an **optional
-extra**, and installing it is what lets Argus check claims against the real AST of a JavaScript,
-TypeScript, Go, Rust, Java, C, C++, Ruby or PHP file:
+**The default install grounds every language Argus claims to support** — Python, JavaScript,
+TypeScript, Go, Rust, Java, C, C++, Ruby and PHP. All ten tree-sitter grammars are ordinary
+dependencies of the distribution, so the plain install command is the whole story:
 
 ```bash
-pip install "argus-agent[languages] @ git+https://github.com/Inan15/Agent-Argus.git@v0.1.0"
+pip install "argus-agent @ git+https://github.com/Inan15/Agent-Argus.git@v0.1.0"
 # or, from a clone:
-pip install -e ".[languages]"
+pip install -e .
 ```
 
 > ⚠️ Same interim caveat as above — the tag does not exist yet, so the first command does not resolve
 > today. The clone form works now.
 
-**What it changes, and what it does not.** The languages Argus reads are the suffixes in
+~~The default install grounds **Python only**. Nine further tree-sitter grammars ship in an **optional
+extra**, and installing it is what lets Argus check claims against the real AST of a JavaScript,
+TypeScript, Go, Rust, Java, C, C++, Ruby or PHP file.~~ *(Struck 2026-08-15 — the nine grammars moved
+into the base dependencies. NFR-P3 classifies coverage lost to a grammar missing from the default
+install as a **packaging defect, not a user error**: a developer whose project is not Python was being
+given a quietly worse result for a decision they never saw. The `[languages]` extra is **retained** so
+`pip install "argus-agent[languages]"` keeps working — it now resolves to requirements the default
+install already carries, and a test pins the two lists equal so the alias cannot promise something
+different.)*
+
+**Which languages, and where that list actually lives.** The languages Argus reads are the suffixes in
 [`argus/shared/source_languages.py`](argus/shared/source_languages.py) — that module is the single
 source of truth, not this paragraph, and `tests/test_multilanguage_audit.py` fails if a language in it
-has no grounding fixture. The extra changes what happens *after* a file is read:
+has no grounding fixture. `TC-ArgusAgent-DOCS-001-61` asserts the default dependency list grounds
+exactly that set, so a language added to the tool but not to the install turns red at edit time.
 
-| | Grammar installed | Grammar absent |
+**A grammar can still be missing at run time, and Argus tells you so where it costs you.** An
+uninstalled, vendored, or broken grammar — or a `tree-sitter` core that fails Argus's own self-check —
+still degrades a file, so the run states the reason at the point the file is downgraded rather than
+leaving a coverage number to be misread as a judgement about the code:
+
+| | Grammar usable | Grammar unusable |
 |---|---|---|
 | The file is enumerated and graded | ✅ | ✅ |
-| It can reach `audited_deep` | ✅ | ❌ — capped at shallow |
-| What the report says | the deep grade it earned | `ast_eligible=False` with a named reason token, e.g. `grammar_missing_go` |
+| It can reach `audited_deep` | ✅ | ❌ — capped at `audited_shallow` |
+| What the report says | the deep grade it earned | the file, the depth it reached, **the exact package** (e.g. `tree-sitter-go`) and the `pip install` command that restores deep grounding |
+
+The remedy is per failure class, never blended: a package that is *absent* is a `pip install`, a package
+that is *present but unrecognised* is an Argus defect you should report rather than reinstall, and a
+`tree-sitter` core that is missing or unvalidated affects every language at once and says so.
 
 **Enumerable is not the same as deeply auditable, and a missing grammar is never a silent drop.** A file
 whose grammar is absent is still counted, still graded, and still reported — it simply cannot reach

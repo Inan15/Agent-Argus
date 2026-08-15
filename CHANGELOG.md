@@ -40,6 +40,38 @@ versioning intent is [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
 ## Unreleased
 
+### Fixed — the default install now grounds every language the tool claims to support
+
+If your project was not Python, the tool you installed was quietly worse than the tool this project
+described. The nine non-Python tree-sitter grammars shipped in an **optional extra**, so the documented
+install command grounded Python only: a Go or TypeScript repository enumerated and graded normally, no
+file in it could reach `audited_deep`, and the result was a lower coverage ratio that reads as a
+judgement about the code. NFR-P3 classifies that as a **packaging defect, not a user error** — a
+developer should not have to discover an extra to be given a correct answer.
+
+The nine grammars (`tree-sitter-javascript`, `tree-sitter-typescript`, `tree-sitter-go`,
+`tree-sitter-rust`, `tree-sitter-java`, `tree-sitter-c`, `tree-sitter-cpp`, `tree-sitter-ruby`,
+`tree-sitter-php`) are now ordinary dependencies of the distribution, alongside `tree-sitter-python`.
+There is nothing to add to the install command, and no flag to find.
+
+**`pip install "argus-agent[languages]"` still works.** Story 10.2 documented that extra publicly, so
+it exists in somebody's script; it is retained as an alias whose requirements are pinned equal to the
+default ones, so it can never resolve to a different set. The cost of the change, stated rather than
+buried: every install now downloads nine grammar wheels, including a Python-only one.
+
+**A grammar that is missing anyway now says so where it costs you.** An uninstalled, vendored or broken
+grammar — or a `tree-sitter` core that does not pass Argus's own self-check — still degrades a file, and
+until now a repository where *some* files parsed was told nothing at all about the ones that did not. The
+final-verdict report now names each downgraded file, the depth it actually reached and the exact package
+that would have grounded it, and the human-register summary states the same facts once per failure class.
+The remedy is per class and never blended: an absent package is a `pip install`, a present-but-unrecognised
+one is an Argus defect to report rather than reinstall, and a missing or unvalidated `tree-sitter` core
+affects every language at once and says so instead of naming one grammar.
+
+No verdict, exit code, threshold or decision-table row changes. On a machine where every grammar was
+already installed — including CI, which sets `ARGUS_REQUIRE_LANGUAGE_GRAMMARS=1` — the output is
+unchanged.
+
 ### Specified — every terminal outcome names its next action and the ingestion boundary
 
 Argus now states, on every terminal outcome (`RELEASE_READY`, `NOT_READY_FOR_RELEASE`, `INSUFFICIENT_COVERAGE`, and the `AUDIT_FAILED` non-verdict), why that outcome was reached and the next action that changes it (FR37).

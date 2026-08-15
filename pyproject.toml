@@ -31,6 +31,12 @@ dependencies = [
     # of the stated flip.
     # The bound is RETAINED as conservative-by-default: 0.26 is unproven here, not proven
     # safe, and widening it is a packaging decision owned by 12.5 / the operator (NFR-P3).
+    # STORY 12.5 DECIDED (2026-08-15): the bound STAYS. NFR-P3 is about which grammars the
+    # default install carries, not about how wide the core's supported range is, and 11.4's
+    # evidence for the bound is unchanged — widening it would ship an untested toolchain
+    # range under cover of a packaging story. The `<0.26` ceiling is one fact with one
+    # source (`grammar_status.SUPPORTED_CORE_RANGE`, pinned both ways by
+    # `TC-ArgusAgent-DOCS-001-54`); the operator half of this decision is unaffected.
     # What now carries the guarantee is a RUNTIME defence, because a metadata bound
     # constrains a resolver and constrains nothing on a machine where the package is
     # already installed, pinned, vendored or patched: argus/index/ast_index.py's ARM 5
@@ -38,7 +44,29 @@ dependencies = [
     # the parser when the toolchain does not extract what Argus was validated against
     # (argus/shared/grammar_status.py, tests/test_grammar_runtime_validation.py).
     "tree-sitter>=0.25.0,<0.26",
+    # ── The ten grammars, in the DEFAULT install (Story 12.5, 2026-08-15 / NFR-P3) ──
+    # The nine non-Python grammars were an optional `[languages]` extra until this change, so
+    # `pip install argus-agent` grounded Python only: a Go or TypeScript repository enumerated
+    # and graded, no file in it could reach `audited_deep`, and the operator was handed a lower
+    # coverage ratio that reads as a judgement about their code. NFR-P3 classifies that as a
+    # PACKAGING DEFECT, not a user error, so the fix is here rather than in an install
+    # instruction the user has to find. `[project.optional-dependencies] languages` below is
+    # RETAINED as a backward-compatibility alias and is pinned equal to these lines by
+    # `TC-ArgusAgent-DOCS-001-61`, which also derives the expected set from
+    # `argus/shared/grammar_status.py::GRAMMAR_PACKAGE_BY_LANGUAGE` — so an eleventh language
+    # added to the tool and not to this list fails at edit time rather than in someone's audit.
+    # The specifiers are UNCHANGED by the promotion: each is exactly what the extra already
+    # declared, because a promotion that also moves a bound is two changes wearing one review.
     "tree-sitter-python>=0.25.0,<0.26",
+    "tree-sitter-javascript>=0.25.0,<0.26",
+    "tree-sitter-typescript>=0.23.0,<0.26",
+    "tree-sitter-go>=0.23.0,<0.26",
+    "tree-sitter-rust>=0.23.0,<0.26",
+    "tree-sitter-java>=0.23.0,<0.26",
+    "tree-sitter-c>=0.23.0,<0.26",
+    "tree-sitter-cpp>=0.23.0,<0.26",
+    "tree-sitter-ruby>=0.23.0,<0.26",
+    "tree-sitter-php>=0.23.0,<0.26",
 ]
 
 [tool.flit.module]
@@ -54,10 +82,21 @@ dev = [
 llm = [
     "litellm>=1.0.0",
 ]
-# Deep auditing beyond Python needs the matching tree-sitter grammar installed.
-# Without one, a repository in that language still enumerates and grades, but no file
-# can reach `audited_deep` — the report says so explicitly and names the package.
-# Pinned to the same 0.25.x line as the core grammar for the AR1 reason documented above.
+# RETAINED BACKWARD-COMPATIBILITY ALIAS (Story 12.5, 2026-08-15 / NFR-P3). These nine are now
+# ordinary `[project.dependencies]` above, so this extra adds NOTHING to a default install. It
+# is kept — not deleted — because Story 10.2 documented it publicly and
+# `pip install "argus-agent[languages]"` therefore exists in somebody's script; removing the
+# extra would turn that into a resolver error for no benefit. Every line here must appear
+# verbatim in `dependencies` above (asserted by `TC-ArgusAgent-DOCS-001-61`): if the two lists
+# could differ, this one would be a second source of truth about what a user gets.
+#
+# ~~Deep auditing beyond Python needs the matching tree-sitter grammar installed. Without one,
+# a repository in that language still enumerates and grades, but no file can reach
+# `audited_deep` — the report says so explicitly and names the package.~~ (Struck 2026-08-15:
+# the first sentence described the extra as load-bearing, which it no longer is. The second
+# remains TRUE of a grammar that is missing at run time anyway, and is now stated where it
+# matters — the report names the file, the depth it reached, the package and the `pip install`
+# command at the point of downgrade.)
 languages = [
     "tree-sitter-javascript>=0.25.0,<0.26",
     "tree-sitter-typescript>=0.23.0,<0.26",

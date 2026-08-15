@@ -77,6 +77,7 @@ from argus.shared.grammar_status import (  # noqa: E402
     CANARY_BY_ENTRY_POINT,
     CORE_VERSION_CEILING_EXCLUSIVE,
     CORE_VERSION_FLOOR,
+    GRAMMAR_PACKAGE_BY_LANGUAGE,
     INSPECT_CORE_VERSION_COMMAND,
     RUNTIME_UNVALIDATED_TOKEN,
     SUPPORTED_CORE_RANGE,
@@ -809,3 +810,339 @@ def test_the_disproved_flip_claim_survives_nowhere_uncorrected() -> None:
         "the pattern matches an unrelated sentence — it would fire on correct prose and get "
         "weakened away."
     )
+
+
+# ─────────────────────────────────────────────────────────────────────────────
+# Story 12.5 / NFR-P3 — the default install grounds the languages it claims,
+# and a grammar that is nonetheless missing states its reason WHERE IT BITES
+# ─────────────────────────────────────────────────────────────────────────────
+#
+# This file is NFR-P3's home for the same reason it is `-54`'s: the packaging metadata and
+# the runtime behaviour it promises are one fact, and splitting them into two files is how a
+# `pyproject.toml` that no longer matches the toolchain contract goes unnoticed. The
+# `dependencies`/`languages` blocks are parsed with `re` for `-54`'s stated reason —
+# `requires-python` is `>=3.10` and `tomllib` is 3.11+, so a `tomllib` import would be a
+# guard that cannot run on the declared floor.
+
+#: The `[project] dependencies` array. Anchored at column 0 so the `[project.
+#: optional-dependencies]` arrays (`dev`/`llm`/`languages`, all indented-name keys of their
+#: own) can never be mistaken for it.
+_CORE_DEPS_RE = re.compile(r"^dependencies\s*=\s*\[(.*?)^\]", re.DOTALL | re.MULTILINE)
+
+#: The backward-compatibility alias `pip install "argus-agent[languages]"` resolves through.
+_LANGUAGES_EXTRA_RE = re.compile(r"^languages\s*=\s*\[(.*?)^\]", re.DOTALL | re.MULTILINE)
+
+
+def _requirements(block: str) -> set[str]:
+    """Every quoted requirement string in a pyproject dependency array (comments excluded)."""
+    return {
+        match.strip()
+        for match in re.findall(r'"([^"]+)"', block)
+    }
+
+
+def _distribution(requirement: str) -> str:
+    """The distribution name of a PEP 508 requirement — everything before its specifier."""
+    return re.split(r"[<>=!~;\[\s]", requirement, maxsplit=1)[0].strip()
+
+
+def test_the_default_install_grounds_every_language_it_claims() -> None:
+    """TC-ArgusAgent-DOCS-001-61 — Story 12.5 / NFR-P3 (AC1 + AC3): packaging matches the claim.
+
+    NFR-P3 classifies coverage degraded by a grammar absent from the DEFAULT install as a
+    **packaging defect**, so the assertion is over `[project] dependencies` — the array a bare
+    ``pip install argus-agent`` resolves — and never over the ``[languages]`` extra, which by
+    definition requires a user to discover it.
+
+    The expected set is DERIVED from ``GRAMMAR_PACKAGE_BY_LANGUAGE``, never hand-typed: that
+    table is already pinned equal to the enumerable language set by
+    ``TC-ArgusAgent-REPORT-002-25``, so an eleventh language added to the tool but not to the
+    default install turns this red at edit time. A hand-typed list of ten is trap E.5 — the
+    prose copy of a pinned figure that drifts (``AI-E9-7/R1``).
+    """
+    assert _PYPROJECT.is_file(), f"pyproject.toml not found at {_PYPROJECT}"
+    text = _PYPROJECT.read_text(encoding="utf-8")
+
+    core = _CORE_DEPS_RE.search(text)
+    assert core, (
+        "no `dependencies = [...]` array could be parsed out of pyproject.toml. This guard "
+        "must not pass by finding nothing — fix the pattern, do not delete it."
+    )
+    core_requirements = _requirements(core.group(1))
+    core_distributions = {_distribution(req) for req in core_requirements}
+    assert core_distributions, "the core dependency array parsed to nothing — the pattern rotted"
+
+    # Non-vacuity: the expectation is the shared table, and the shared table is the language set.
+    assert set(GRAMMAR_PACKAGE_BY_LANGUAGE) == set(LANGUAGE_BY_SUFFIX.values()), (
+        "the grammar-package table and the enumerable language set have diverged; this guard "
+        "would then assert the default install grounds a set Argus does not claim to support"
+    )
+    missing = sorted(set(GRAMMAR_PACKAGE_BY_LANGUAGE.values()) - core_distributions)
+    assert not missing, (
+        f"the DEFAULT install does not ground every language Argus claims: {missing} are not in "
+        "`[project] dependencies`. NFR-P3 classifies exactly this as a packaging defect — a user "
+        "on that stack is silently given a worse result and would have to discover an optional "
+        "extra to fix it. Promote them into `dependencies`, do not document a workaround."
+    )
+
+    # AC3 — `pip install "argus-agent[languages]"` must keep working, and the alias may not
+    # become a SECOND source of truth: every requirement it names is one the default already
+    # carries, specifier included. An alias with its own bound is a divergence waiting to be
+    # measured (`argus/shared/source_languages.py`'s docstring lists what that has cost here).
+    extra = _LANGUAGES_EXTRA_RE.search(text)
+    assert extra, (
+        "the `[project.optional-dependencies] languages` extra was REMOVED. Story 10.2 "
+        "documented it publicly, so `pip install \"argus-agent[languages]\"` is a command "
+        "someone has in a script; removing it breaks that install with a resolver error."
+    )
+    extra_requirements = _requirements(extra.group(1))
+    assert extra_requirements, "the `languages` extra parsed to nothing — the pattern rotted"
+    drifted = sorted(extra_requirements - core_requirements)
+    assert not drifted, (
+        f"the `[languages]` extra names requirement(s) the default install does not: {drifted}. "
+        "The extra is a backward-compatibility ALIAS as of Story 12.5; if the two lists can "
+        "differ, one of them is a lie about what a user gets."
+    )
+
+    # AC3 — the documentation and the metadata describe the SAME product. Struck spans are
+    # RETRACTED text (§3.4: superseded, never deleted), so they are removed before the live
+    # README is read — otherwise the mandated amendment form would look identical to the defect.
+    readme = (_REPO_ROOT / "README.md").read_text(encoding="utf-8")
+    live_readme = re.sub(r"~~(?:[^\n]|\n(?!\s*\n))+?~~", " ", readme)
+    assert "default install grounds **Python only**" not in live_readme, (
+        "README.md still tells the reader, in live text, that the default install grounds "
+        "Python only. That was true until Story 12.5 promoted the nine grammars; it is now a "
+        "false statement about the package this repository builds."
+    )
+    assert "default install grounds **Python only**" in readme, (
+        "the superseded sentence was DELETED from README.md rather than struck. §3.4: the "
+        "record of what the product used to promise is what makes the change auditable, and "
+        "this project keeps it (README.md already strikes a superseded CLI invocation)."
+    )
+    assert "The default install grounds every language Argus claims to support" in live_readme, (
+        "README.md does not state the new behaviour positively. `-17`'s lesson applies here: a "
+        "surface can satisfy 'says nothing false' by saying nothing at all, and silence leaves "
+        "the reader with the optional-extra instructions they already have in their notes."
+    )
+    assert "[languages]" in readme, (
+        "README.md no longer mentions the `[languages]` extra at all. It is RETAINED for "
+        "backward compatibility (AC3), and a retained public command that no document "
+        "mentions is one nobody can tell is still supported."
+    )
+
+
+# ─────────────────────────────────────────────────────────────────────────────
+# Story 12.5 / AC2 — the reason is stated AT THE POINT OF DOWNGRADE (DF-10-4-A)
+# ─────────────────────────────────────────────────────────────────────────────
+#
+# `_render_readability_warning` fires only when NOTHING parsed (`if eligible: return []`), so a
+# polyglot repository whose Python parses learned nothing about its failed Go grammar. That
+# blind spot was measured and filed as `DF-10-4-A`, fenced by
+# `test_grammar_diagnosis.py::TC-ArgusAgent-REPORT-002-29`, and handed to THIS story by name.
+# It is closed by a SEPARATE surface rather than by widening 10.4's trigger — the two answer
+# different questions ("this verdict reflects tooling, not code quality" vs. "these specific
+# files were downgraded, and here is what to install"), and 10.4's fence stays green.
+
+
+def _partial_index(reasons: dict[str, int]) -> object:
+    """A duck-typed index where SOME file parsed — the DF-10-4-A shape, per the 10.4 stub."""
+    from tests.test_grammar_diagnosis import _index_stub
+
+    index = _index_stub(reasons)
+    eligible = types.SimpleNamespace(
+        file_path="src/app.py",
+        ast_eligible=True,
+        parse_failed=False,
+        parse_failure_reason=None,
+        definitions=(),
+        edges=(),
+    )
+    index.entries = tuple(index.entries) + (eligible,)  # type: ignore[attr-defined]
+    return index
+
+
+def _ledger_for(index: object) -> object:
+    """A real ledger grading every parse-failed entry `audited_shallow` — the downgrade point."""
+    from argus.ledger.coverage_ledger import (
+        CoverageDepth,
+        CoverageLedger,
+        CoverageLedgerEntry,
+    )
+
+    return CoverageLedger.build(
+        tuple(
+            CoverageLedgerEntry(
+                file_path=entry.file_path,
+                depth=(
+                    CoverageDepth.AUDITED_DEEP
+                    if entry.ast_eligible
+                    else CoverageDepth.AUDITED_SHALLOW
+                ),
+                claim_present=entry.ast_eligible,
+            )
+            for entry in getattr(index, "entries", ())
+        )
+    )
+
+
+def _downgrade_section(reasons: dict[str, int]) -> str:
+    index = _partial_index(reasons)
+    return "\n".join(
+        report_generator._render_grammar_downgrade_section(_ledger_for(index), index)
+    )
+
+
+def test_a_missing_grammar_names_itself_at_the_point_of_downgrade() -> None:
+    """TC-ArgusAgent-REPORT-002-35 — Story 12.5 / AC2 (closes DF-10-4-A).
+
+    RED-first against the shipped tree: before this story the whole surface returned nothing
+    for a partially-parsed repository, so every assertion below failed on the "no callout at
+    all" clause.
+
+    The load-bearing half is the LAST assertion: 10.4's all-or-nothing callout must STILL be
+    silent for this input. If closing DF-10-4-A had been done by widening
+    ``_render_readability_warning``, a partially-parsed repository would be told *"No file
+    could be parsed"* — a false statement about the run, and the sentence 10.4's own guard
+    exists to keep truthful.
+    """
+    from argus.ledger.coverage_ledger import CoverageLedger
+
+    text = _downgrade_section({"grammar_missing_go": 2})
+    assert text, (
+        "a repository whose Python parsed and whose Go did NOT was told nothing at all about "
+        "its missing Go grammar — DF-10-4-A, the blind spot this story owns by name"
+    )
+    assert "tree-sitter-go" in text, "the missing grammar PACKAGE is not named"
+    assert "pip install tree-sitter-go" in text, (
+        "no runnable remedy at the point of downgrade — NFR-P3 requires the reason AND the fix"
+    )
+    assert "audited_shallow" in text, (
+        "the section does not state the depth the affected files actually reached, so a reader "
+        "cannot connect it to the coverage number that withheld their verdict"
+    )
+    assert "grammar_missing_go_0.src" in text, (
+        "no file is NAMED. 'some Go files were downgraded' is not a point-of-downgrade "
+        "disclosure — it is the same aggregate the coverage ratio already gave them."
+    )
+    # Scoped to the PROSE half: the stub's synthetic paths are named after their reason
+    # token, so a whole-document scan would flag the file-listing column it exists to require.
+    prose = text.split("### Files downgraded")[0]
+    assert "grammar_missing_" not in prose, (
+        "the raw reason token leaked into operator prose — classify through the shared "
+        "contract, never by slicing the token at a call site"
+    )
+    assert "src/app.py" not in text, (
+        "a file that parsed FINE is listed as downgraded by a grammar failure — the section "
+        "must name only what the failure actually cost"
+    )
+
+    # 10.4's fence, from the other side: the all-or-nothing callout stays silent here.
+    index = _partial_index({"grammar_missing_go": 2})
+    assert report_generator._render_readability_warning(_ledger_for(index), index) == [], (  # type: ignore[arg-type]
+        "the 'No file could be parsed' callout now fires on a repository where a file DID "
+        "parse. That sentence would be false, and TC-ArgusAgent-REPORT-002-29 fences it."
+    )
+    assert report_generator._render_grammar_downgrade_section(CoverageLedger(entries=()), None) == []
+
+
+def test_the_downgrade_section_does_not_double_report_or_misfire() -> None:
+    """TC-ArgusAgent-REPORT-002-36 — Story 12.5 / AC2: one surface per run, each with its own remedy.
+
+    Three negative controls and one mixed-class control. The double-report control is the one
+    that matters: when NOTHING parsed, 10.4's callout already says it in the loudest register
+    the report has, and a second block repeating the same remedies would train a reader to
+    skim both.
+    """
+    from tests.test_grammar_diagnosis import _index_stub
+
+    total_failure = _index_stub({"grammar_missing_go": 2})
+    ledger = _ledger_for(total_failure)
+    assert report_generator._render_grammar_downgrade_section(ledger, total_failure) == [], (
+        "the point-of-downgrade section fired on a run where NOTHING parsed. That run is "
+        "already covered by `_render_readability_warning`, in a louder register, with the same "
+        "remedies — two blocks saying one thing is how a reader learns to skip both."
+    )
+    assert report_generator._render_readability_warning(ledger, total_failure), (
+        "…and the control is not vacuous: 10.4's callout DOES fire for that same input"
+    )
+
+    assert _downgrade_section({"syntax_error": 3}) == "", (
+        "a syntax error was given a grammar remedy. Only grammar-LOAD failures may claim one — "
+        "telling someone to `pip install` a grammar they already have, over a typo in their "
+        "own file, is the DF-AUD-APAA-F harm in a new place."
+    )
+    assert _downgrade_section({}) == ""
+
+    # Mixed classes: each keeps ITS OWN remedy, never a blended `pip install` line.
+    mixed = _downgrade_section(
+        {
+            "grammar_missing_go": 2,
+            "grammar_entrypoint_missing_php": 1,
+            "grammar_load_failed_rust": 1,
+        }
+    )
+    assert "pip install tree-sitter-go" in mixed, "the installable cause lost its remedy in the mix"
+    assert "pip install tree-sitter-php" not in mixed, (
+        "cause 2's grammar IS installed — this line tells the operator to install what they "
+        "already have, which is exactly the defect the shared contract exists to prevent"
+    )
+    assert "pip install tree-sitter-rust" not in mixed, (
+        "cause 3's grammar is installed and broken; `pip install` re-fetches the same wheel"
+    )
+    assert "tree-sitter-php" in mixed and "tree-sitter-rust" in mixed, (
+        "a language present in the index went unmentioned entirely"
+    )
+
+
+def test_the_plain_english_summary_names_the_package_per_language_class() -> None:
+    """TC-ArgusAgent-REPORT-002-37 — Story 12.5 / AC2, second clause: the human register too.
+
+    The report renders a table; the human register renders sentences. Both must name the
+    SPECIFIC package per missing language class, and both must read off the shared
+    classification rather than each parsing the token their own way.
+
+    The exhaustiveness control is 11.4's ``DF-10-4-E`` lesson applied to the new surface: a
+    sixth cause added without a sentence here must RAISE, never fall through to another
+    cause's remedy — which is how an operator is handed a command that cannot help them.
+    """
+    from argus.reports import plain_english
+
+    lines = plain_english.render_grammar_downgrade_summary(
+        ("grammar_missing_go", "grammar_missing_go", "syntax_error", None)
+    )
+    assert len(lines) == 1, f"expected exactly one class line, got {lines}"
+    line = lines[0]
+    assert "tree-sitter-go" in line and "pip install tree-sitter-go" in line
+    assert "2 go" in line, "the affected file count per language is not stated"
+    assert "audited_shallow" in line, "the human register does not say what the files became"
+    assert "grammar_missing_" not in line, "the raw token leaked into human prose"
+    # The module's own contract: MARKUP-FREE, so the same string is correct on a terminal
+    # and inside a Markdown callout (see `render_depth_meaning`'s docstring).
+    assert "*" not in line and "#" not in line and "|" not in line
+
+    assert plain_english.render_grammar_downgrade_summary(()) == ()
+    assert plain_english.render_grammar_downgrade_summary(("syntax_error",)) == ()
+
+    # Every registered cause renders its OWN sentence; a sixth is LOUD.
+    from collections import Counter
+
+    rendered = {
+        failure: plain_english._downgrade_sentence(failure, Counter({"go": 1}))
+        for failure in registered_failures()
+    }
+    assert len(set(rendered.values())) == len(registered_failures()) == 5, (
+        "two causes rendered the identical sentence — one operator is being told to run a "
+        f"command that cannot help them:\n{rendered}"
+    )
+    core_only = rendered[GrammarFailure.CORE_RUNTIME_MISSING]
+    assert "tree-sitter-go" not in core_only, (
+        "the core-runtime cause named a per-language package. Every language is down; naming "
+        "one grammar is the maximally wrong remedy."
+    )
+    unvalidated = rendered[GrammarFailure.RUNTIME_UNVALIDATED]
+    assert SUPPORTED_CORE_RANGE in unvalidated and INSPECT_CORE_VERSION_COMMAND in unvalidated
+    assert "tree-sitter-go" not in unvalidated
+
+    fake = types.SimpleNamespace(name="INVENTED_CAUSE", value="invented_cause")
+    with pytest.raises(ValueError, match="no operator remedy is registered"):
+        plain_english._downgrade_sentence(fake, Counter({"go": 1}))  # type: ignore[arg-type]

@@ -50,6 +50,20 @@ _ARTIFACT_DIR = _REPO_ROOT / "_bmad-output" / "design-artifacts" / "ArgusAgent"
 # too — so a future edit can neither quietly drop the exit-code contract nor bolt on an
 # unreviewed claim section.
 _NOTE_SECTIONS: tuple[str, ...] = (
+    # `## Unreleased` — added 2026-08-15 by Story 12.5 (NFR-P3). A PURE INSERTION: no existing
+    # section moved relative to any other, and nothing was demoted.
+    # Placed FIRST, and the placement is the DECISION this registry's comment above demands
+    # rather than a default. Promotion above 11.1's instrument disclosure — which has held first
+    # place since it was registered, on the ground that it bounds how a consumer should weigh
+    # every other claim in this note — was NOT taken lightly, and it survives the registry's own
+    # stated principle, *what a consumer of THIS release hits first*, applied literally: this is
+    # the only entry in the note that changes what `pip install` puts on their disk, and it is
+    # therefore the only one they encounter before Argus has run at all. It is also the only
+    # entry that silently changed the ANSWER for a whole class of user — a non-Python repository
+    # was graded by a tool that could not read it — and 11.1's disclosure is what tells them how
+    # much to trust the answer, which is a question that arises after there is one. Everything
+    # below it can move a verdict, an exit code or a claim; this one moves what the product IS.
+    "### Fixed — the default install now grounds every language the tool claims to support",
     # `## Unreleased` — added 2026-08-13 by Story 12.4 (FR37 / DF-11-4-D / AI-E11-6).
     "### Specified — every terminal outcome names its next action and the ingestion boundary",
     # `## Unreleased` — added 2026-08-11 by Story 11.1 (FR34). Registered FIRST because it is

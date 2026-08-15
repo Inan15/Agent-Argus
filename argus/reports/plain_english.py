@@ -84,6 +84,9 @@ disclosed.
 
 from __future__ import annotations
 
+from collections import Counter
+from typing import Iterable
+
 from argus.verdict.verdict_gate import (
     RELEASE_READY_DEEP_THRESHOLD,
     AuditVerdict,
@@ -93,6 +96,21 @@ from argus.verdict.verdict_gate import (
 
 from argus.shared.source_languages import format_ingestion_boundary, AUDITABLE_SUFFIXES
 
+# The reason-token vocabulary is the PURE contract shared with the PRODUCER
+# (``argus/index/ast_index.py``) and with the report register
+# (``argus/reports/generator.py``). This module owns the HUMAN wording and nothing else:
+# which class, which language and which package are read off that one table, so the two
+# registers of a single run cannot disagree about the facts while each keeps its own voice
+# (Story 10.4 / DN-3 — the arrow stays pure-module → pure-module, AR8).
+from argus.shared.grammar_status import (
+    CORE_PACKAGE,
+    INSPECT_CORE_VERSION_COMMAND,
+    SUPPORTED_CORE_RANGE,
+    GrammarFailure,
+    classify_reason,
+    grammar_package_for,
+)
+
 __all__ = [
     "TERMINAL_OUTCOMES",
     "LLM_DEEP_PASSES",
@@ -100,6 +118,7 @@ __all__ = [
     "with_deep_pass",
     "ShipReadinessError",
     "render_depth_meaning",
+    "render_grammar_downgrade_summary",
     "render_ship_readiness",
     "render_audit_failed_next_action",
 ]
@@ -237,6 +256,111 @@ def render_depth_meaning(
         "over it. No language model read any source — no LLM-backed deep pass was "
         "enabled. This is a structural and deterministic assurance grade, not a "
         "comprehension grade."
+    )
+
+
+def _downgrade_sentence(failure: GrammarFailure, counts: Counter[str]) -> str:
+    """One human-register sentence for ONE failure class (PURE, markup-free).
+
+    Never a blended sentence, for :func:`~argus.reports.generator._render_grammar_remedy`'s
+    reason: a polyglot repository can hit several of these at once and a merged
+    ``pip install`` line is wrong for at least one of them by construction — cause 1's
+    package is absent, cause 3's is present and broken, cause 2's is present and fine.
+
+    This is the HUMAN register of facts the report register also states. The wording is this
+    module's (markup-free, so the same string is correct on a terminal and inside a Markdown
+    callout); the FACTS — which class, which language, which package — come from
+    ``argus.shared.grammar_status`` in both places, which is what stops the two surfaces of
+    one run from naming different packages.
+
+    Raises:
+        ValueError: *failure* has no registered sentence. An unregistered cause is LOUD here
+            rather than falling through to another cause's remedy — ``DF-10-4-E``'s lesson,
+            applied to this surface the day it was written rather than after it bites.
+    """
+    languages = sorted(counts)
+    files = sum(counts.values())
+    where = ", ".join(f"{counts[lang]} {lang}" for lang in languages)
+    packages = " ".join(grammar_package_for(lang) for lang in languages)
+
+    if failure is GrammarFailure.PACKAGE_MISSING:
+        return (
+            f"Downgraded to `audited_shallow` — grammar package not installed ({where}): run "
+            f"`pip install {packages}` and re-run to restore deep grounding. All supported "
+            f"languages ship in the default install, so a grammar missing here is a packaging "
+            f"or environment defect rather than a limit of this code (NFR-P3)."
+        )
+    if failure is GrammarFailure.ENTRY_POINT_MISSING:
+        return (
+            f"Downgraded to `audited_shallow` — Argus does not recognise this grammar "
+            f"package's entry point ({where}): `{packages}` IS installed, so there is nothing "
+            f"for you to install. This is an Argus defect; please report it with the "
+            f"installed version of `{packages}`."
+        )
+    if failure is GrammarFailure.LOAD_FAILED:
+        return (
+            f"Downgraded to `audited_shallow` — the installed grammar could not be loaded on "
+            f"this runtime ({where}): reinstall or rebuild `{packages}` and check that its "
+            f"version pairs with the installed `{CORE_PACKAGE}` (an ABI mismatch or a corrupt "
+            f"build looks like this)."
+        )
+    if failure is GrammarFailure.CORE_RUNTIME_MISSING:
+        return (
+            f"Downgraded to `audited_shallow` — the `{CORE_PACKAGE}` core runtime is not "
+            f"importable ({files} file(s)): run `pip install {CORE_PACKAGE}` and re-run. "
+            f"Every language is affected, so installing individual grammar packages will not "
+            f"help."
+        )
+    if failure is GrammarFailure.RUNTIME_UNVALIDATED:
+        # Deliberately names no observed version, exception message or host path
+        # (NFR-S1 / 10.4 DN-5): the operator is given the supported range and the command to
+        # read their own environment. A richer diagnostic is Story 12.8's.
+        return (
+            f"Downgraded to `audited_shallow` — the installed parsing toolchain did not pass "
+            f"Argus's self-check ({files} file(s)): install a supported `{CORE_PACKAGE}` "
+            f"(`{SUPPORTED_CORE_RANGE}`) and re-run; check what you have with "
+            f"`{INSPECT_CORE_VERSION_COMMAND}`. Every language is affected, so installing "
+            f"individual grammar packages will not help."
+        )
+    raise ValueError(
+        f"no operator remedy is registered for GrammarFailure.{failure.name}. Every registered "
+        "cause must render ITS OWN sentence: falling through to another cause's would tell the "
+        "operator to run a command that cannot help them (argus/shared/grammar_status.py)."
+    )
+
+
+def render_grammar_downgrade_summary(
+    reasons: Iterable[str | None],
+) -> tuple[str, ...]:
+    """State, per failure class, WHICH grammar package is missing (PURE, secret-safe).
+
+    Story 12.5 / NFR-P3, second clause: *where a language grammar is uninstalled or
+    downgraded, its absence and the reason are stated in the tool's own output at the point
+    the file is downgraded* — not only in the README, and not only as a coverage number that
+    reads as a judgement about the code.
+
+    *reasons* is the recorded ``parse_failure_reason`` of each affected file, in any order.
+    Classification goes through ``classify_reason``, never through prefix arithmetic at this
+    call site: ``grammar_entrypoint_missing_go`` does not start with ``grammar_missing_`` (a
+    prefix reader goes SILENT) and a naive widening to ``grammar_`` would slice it into the
+    "language" ``entrypoint_missing_go`` and name the package
+    ``tree-sitter-entrypoint_missing_go`` (a prefix reader MISDIRECTS). Anything that is not
+    a grammar-LOAD failure — ``syntax_error``, ``read_error``, ``None`` — yields nothing:
+    a grammar remedy for a typo would be the same class of wrong answer.
+
+    Ordering is deterministic (AR4): classes in ``GrammarFailure`` declaration order,
+    languages sorted inside each class.
+    """
+    by_class: dict[GrammarFailure, Counter[str]] = {}
+    for reason in reasons:
+        diagnosis = classify_reason(reason)
+        if diagnosis is None:
+            continue
+        by_class.setdefault(diagnosis.failure, Counter())[diagnosis.language or ""] += 1
+    return tuple(
+        _downgrade_sentence(failure, by_class[failure])
+        for failure in GrammarFailure
+        if failure in by_class
     )
 
 

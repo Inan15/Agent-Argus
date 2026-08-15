@@ -19,7 +19,11 @@ from argus.reports.formatter import (
     render_callout,
     render_markdown_table,
 )
-from argus.reports.plain_english import render_depth_meaning, render_ship_readiness
+from argus.reports.plain_english import (
+    render_depth_meaning,
+    render_grammar_downgrade_summary,
+    render_ship_readiness,
+)
 from argus.detectors.vacuous_test import partition_application_files
 
 # The reason-token vocabulary is a PURE contract shared with the PRODUCER
@@ -440,6 +444,96 @@ def _render_readability_warning(
     ]
 
 
+#: How many downgraded files the point-of-downgrade table names before it summarises the
+#: rest. Same shape and reason as ``_MAX_LISTED_CRITICAL_BLOCKERS``: a work list nobody can
+#: read is not a work list, and the remaining count is stated rather than dropped.
+_MAX_LISTED_GRAMMAR_DOWNGRADES = 20
+
+
+def _render_grammar_downgrade_section(
+    ledger: CoverageLedger, ast_index: object | None
+) -> list[str]:
+    """Name the files a grammar failure downgraded, AT THE POINT OF DOWNGRADE (Story 12.5).
+
+    NFR-P3's second clause: *where a language grammar is uninstalled or downgraded, its
+    absence and the reason are stated in the tool's own output at the point the file is
+    downgraded*. Closes ``DF-10-4-A``, measured and filed by Story 10.4 and handed here by
+    name: ``_render_readability_warning`` returns early on ``if eligible: return []``, so a
+    polyglot repository whose Python parses was told NOTHING about its failed Go grammar —
+    it saw only a coverage ratio, which reads as a judgement about the code.
+
+    ⛔ A SEPARATE surface, not a widening of 10.4's trigger, and the distinction is the whole
+    design. The two answer different questions: 10.4's says *"no file could be parsed, so
+    this verdict reflects tooling and not code quality"* — a sentence that is FALSE for a
+    partially-parsed repository — while this one says *"these specific files were downgraded,
+    this is the package that would have grounded them, and this is the command"*. Rendering
+    both for a total failure would state one set of remedies twice in two registers, so this
+    one stands down when nothing parsed (``TC-ArgusAgent-REPORT-002-36`` pins both halves).
+
+    The per-class prose is ``plain_english.render_grammar_downgrade_summary`` — REUSED, not
+    re-authored. The two human surfaces of one run naming different packages for the same
+    failure is precisely the drift ``argus/shared/grammar_status.py`` exists to prevent, and
+    a second copy of the wording is how that starts. What this function adds is the half a
+    sentence cannot carry: WHICH files, and what depth they actually reached.
+    """
+    if ast_index is None:
+        return []
+    entries = getattr(ast_index, "entries", ()) or ()
+    if not entries:
+        return []
+    if not any(getattr(entry, "ast_eligible", False) for entry in entries):
+        return []  # nothing parsed — 10.4's callout owns this run, in a louder register
+
+    downgraded: list[tuple[str, str]] = []  # (file_path, missing package)
+    reasons: list[str | None] = []
+    for entry in entries:
+        reason = getattr(entry, "parse_failure_reason", None)
+        diagnosis = classify_reason(reason)
+        if diagnosis is None:
+            continue  # syntax_error / read_error / non_python — not a grammar-LOAD failure
+        reasons.append(reason)
+        package = (
+            grammar_package_for(diagnosis.language)
+            if diagnosis.language
+            else CORE_PACKAGE  # the runtime-scoped causes are not about one language
+        )
+        downgraded.append((str(getattr(entry, "file_path", "")), package))
+    if not downgraded:
+        return []
+
+    depth_by_path = {entry.file_path: entry.depth.value for entry in ledger.entries}
+    downgraded.sort()  # deterministic (AR4), and stable against index iteration order
+
+    lines: list[str] = [
+        render_callout(
+            "WARNING",
+            f"**{len(downgraded)} file(s) were downgraded because a language grammar was not "
+            f"usable — not because of anything in the code.** The rest of this report's "
+            f"coverage numbers count them at the depth below, so this is a floor imposed by "
+            f"grammar loading. What failed, and what fixes each one:\n\n"
+            + "\n".join(
+                f"- {sentence}"
+                for sentence in render_grammar_downgrade_summary(reasons)
+            )
+        ),
+        "",
+        "### Files downgraded by a grammar failure",
+        "",
+        "| File | Depth reached | Grammar package |",
+        "|---|---|---|",
+    ]
+    for path, package in downgraded[:_MAX_LISTED_GRAMMAR_DOWNGRADES]:
+        # A file the index examined but the ledger never graded is stated as such rather
+        # than given a plausible default — the `_render_critical_blockers` precedent.
+        depth = depth_by_path.get(path, "not in ledger (never graded)")
+        lines.append(f"| `{path}` | `{depth}` | `{package}` |")
+    remaining = len(downgraded) - _MAX_LISTED_GRAMMAR_DOWNGRADES
+    if remaining > 0:
+        lines.append(f"| … and {remaining} more | | |")
+    lines.append("")
+    return lines
+
+
 def _render_source_state(request: AuditRequest, source_state: object | None) -> list[str]:
     """Render WHAT was audited and whether anyone else can reconstruct it.
 
@@ -500,6 +594,10 @@ def render_final_verdict_report(
     lines.append("")
     readability = _render_readability_warning(ledger, ast_index)
     lines.extend(readability)
+    # NFR-P3 / Story 12.5 — the point-of-downgrade disclosure, above the coverage numbers it
+    # explains. Mutually exclusive with the callout above by construction (see the function),
+    # so at most one of the two ever renders for a given run.
+    lines.extend(_render_grammar_downgrade_section(ledger, ast_index))
     # The human register FIRST (the brief's dual-register output). A reader who opens
     # this report should learn whether they can ship, and why not, before meeting a
     # single enum token or fraction. The machine-grade fields follow immediately below

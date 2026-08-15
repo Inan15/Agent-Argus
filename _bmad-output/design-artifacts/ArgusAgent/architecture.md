@@ -660,11 +660,36 @@ range, checked as a second and independent signal — withholds the parser and r
 `INSUFFICIENT_COVERAGE` with no change to `verdict_gate.py`, `pipeline.py`, the FR16 decision table or
 any threshold. Guard: `tests/test_grammar_runtime_validation.py`.
 
-⚠️ **Open packaging decision, owned by Story 12.5 (NFR-P3).** The 9 grammars are an **optional extra**,
+~~⚠️ **Open packaging decision, owned by Story 12.5 (NFR-P3).** The 9 grammars are an **optional extra**,
 so the default public install grounds **Python only** — which NFR-P3 classifies as a packaging defect for
 the V1.5 audience. Resolving it means either promoting the grammars to base dependencies (larger install,
 no discovery burden) or making the documented public install command carry the extra (smaller default, a
-step the user must not miss). **Recorded as a decision, not decided here.**
+step the user must not miss). **Recorded as a decision, not decided here.**~~
+
+✅ **Packaging decision RESOLVED by Story 12.5 (NFR-P3)** *(decided 2026-08-15; the paragraph above is
+STRUCK, not deleted — §3.4 evidence immutability. It was true of every release up to this change, and the
+record of what the default install used to be is what makes the change auditable).* **Promoting to base
+dependencies is the option taken**, and the other one is rejected on the NFR's own words: an install
+command carrying an extra is still a step the user must not miss, and NFR-P3 classifies degraded coverage
+from a missing grammar as a *packaging defect, not a user error*. The 9 non-Python grammars now sit in
+`pyproject.toml` `[project.dependencies]`, so `pip install argus-agent` grounds all 10 supported source
+languages with nothing to discover. `[project.optional-dependencies] languages` is RETAINED as a
+backward-compatibility alias — Story 10.2 documented it publicly, so `pip install "argus-agent[languages]"`
+exists in somebody's script and must not start failing — and is pinned equal to the default requirements so
+the alias can never become a second source of truth. The cost accepted with eyes open: a larger default
+install (nine wheels) for every user, including a Python-only one. Guards:
+`tests/test_grammar_runtime_validation.py` (`TC-ArgusAgent-DOCS-001-61`, over the real `pyproject.toml`).
+
+✅ **The residual case is now DISCLOSED rather than assumed away (NFR-P3, second clause).** A grammar can
+still be absent at run time — uninstalled, vendored, broken for the host runtime, or a core that does not
+pass the Story 11.4 canary — and a default install no longer makes that a user's own doing. So the reason
+is stated **at the point the file is downgraded**: `argus/reports/generator.py::_render_grammar_downgrade_section`
+names each downgraded file, the depth it reached and the grammar package that would have grounded it, and
+`argus/reports/plain_english.py::render_grammar_downgrade_summary` states the same facts once per failure
+class in the human register. This closes `DF-10-4-A` — Story 10.4's callout fires only when *nothing*
+parsed, so a polyglot repository whose Python parsed learned nothing about its failed Go grammar. It is a
+SEPARATE surface, not a widening of that trigger: 10.4's sentence ("no file could be parsed") is false for
+a partially-parsed repository, and `TC-ArgusAgent-REPORT-002-35`/`-36` pin both halves of the fence.
 
 **V1.5 distribution channels** *(added 2026-08-10b; mirrors PRD §Developer Tool)*: public index (primary)
 · marketplace action (**gated on Story 11.3**) · **MCP server as an entry point in this same distribution
@@ -1043,9 +1068,12 @@ tests/security/
   (`argus/audit/deep_audit.py`), off by default, spend through the existing ceiling (§L381-388) ·
   **FR37** → `argus/reports/plain_english.py` + `argus/reports/generator.py`, the two verdict-rendering
   surfaces · **NFR-S6** → the no-egress-without-opt-in committed gate (§L385-388, L460) ·
-  **NFR-P3** → ⚠️ **open packaging decision owned by Story 12.5** (§L446-447): the 9 non-Python grammars are
+  **NFR-P3** → ~~⚠️ **open packaging decision owned by Story 12.5** (§L446-447): the 9 non-Python grammars are
   an optional extra, so the default install grounds **Python only** — the exact state NFR-P3 classifies as a
-  packaging defect.
+  packaging defect.~~ ✅ **RESOLVED by Story 12.5, 2026-08-15** (struck above, not deleted — §3.4): the 9
+  non-Python tree-sitter grammars are promoted to `[project.dependencies]`, so the default install grounds
+  all 10 supported source languages out of the box, and a grammar nonetheless missing at run time states
+  its package and its `pip install` remedy at the point the file is downgraded (§L669-693).
 
 ### Implementation Readiness Validation ✅
 - Decisions complete with verified versions; patterns enforceable (committed gates: import-isolation,
