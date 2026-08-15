@@ -34,8 +34,10 @@ asset is detectable, because a written asset is byte-identical for identical inp
 Containment (NFR-S4/NFR-S5), split across the two halves for the reason above
 -----------------------------------------------------------------------------
 This is the only place Argus writes outside the audited repository at all, so the write set
-is closed twice. The PURE half refuses an asset name that is absolute, carries a path
-separator or a ``..`` segment — a name is a NAME, never a path. The IMPURE half re-checks
+is closed twice. The PURE half refuses an asset name that is absolute, carries a drive, a
+path separator or a ``..`` segment — a name is a NAME, never a path — and it decides that
+under BOTH path flavours on every host (:data:`PATH_FLAVOURS`), because a rule that consults
+the running machine's separators answers one question two ways. The IMPURE half re-checks
 the real filesystem: every write's parent directory must resolve INSIDE the resolved
 destination root, so a symlinked ``commands/`` directory pointing somewhere else is refused
 rather than followed. Both raise :class:`CommandInstallError`, which is a ``ValueError``
@@ -54,7 +56,7 @@ from __future__ import annotations
 import os
 from dataclasses import dataclass
 from importlib import resources
-from pathlib import Path
+from pathlib import Path, PurePath, PurePosixPath, PureWindowsPath
 
 from argus.assets.commands import ASSET_MARKER, ASSET_SUFFIX, DISCLOSURE_PLACEHOLDER
 from argus.commands.hosts import AssistantHost, resolve_hosts
@@ -65,11 +67,13 @@ from argus.verdict.negative_assurance import (
 
 __all__ = [
     "ASSET_PACKAGE",
+    "PATH_FLAVOURS",
     "CommandAsset",
     "CommandInstallError",
     "ContainmentError",
     "InstallOutcome",
     "PlannedWrite",
+    "asset_name_escape_reason",
     "default_destination_root",
     "detect_hosts",
     "install_commands",
@@ -81,6 +85,22 @@ __all__ = [
 
 #: The importable package the assets live in. Named once; every read resolves through it.
 ASSET_PACKAGE = "argus.assets.commands"
+
+#: Every path flavour an asset name is judged against — BOTH, always, on every host.
+#:
+#: The host's own flavour is not enough, and the CI failure of 2026-08-16 is the proof: the
+#: previous predicate asked ``os.sep``/``os.altsep``, which are properties of the machine
+#: running the step rather than of the name being checked. Two failure modes fall straight
+#: out of that, and this repository has now met both: a name is REFUSED on one platform and
+#: ACCEPTED on another (``a\b.md`` is one segment to POSIX and two to Windows), and a guard
+#: written on one platform proves nothing about the other. ``store/paths.py`` and
+#: ``index/partitioner.py`` already decide containment under both flavours for the same
+#: stated reason — *containment has to be decided identically everywhere or it is not
+#: containment* — and this is that rule, applied to the one name a write is joined from.
+PATH_FLAVOURS: tuple[tuple[str, type[PurePath]], ...] = (
+    ("POSIX", PurePosixPath),
+    ("Windows", PureWindowsPath),
+)
 
 
 class CommandInstallError(ValueError):
@@ -156,6 +176,42 @@ class InstallOutcome:
 # ─────────────────────────────────────────────────────────────────────────────
 
 
+def asset_name_escape_reason(name: str, flavour: type[PurePath]) -> str:
+    """Why *name* is a PATH rather than a bare file name under *flavour* — or ``""`` (PURE).
+
+    THE containment predicate, half one, and public so it can be exercised under BOTH
+    flavours from any host (12.6 / DN-7: need a helper, promote it — never reach through a
+    ``_``-prefixed API). Nothing here consults ``os.sep``, ``os.altsep``, ``os.name`` or
+    ``pathlib.Path``: whether a name escapes is a property of the NAME, and a predicate that
+    asks the running machine gives two different answers to one question.
+
+    A bare name is one relative path segment, so that is exactly what is required — and the
+    four ways a string can fail to be one are each named rather than collapsed, because the
+    refusal a reader gets should say which rule it broke:
+
+    * a NUL byte, which truncates the name at the C boundary underneath every filesystem
+      call, so the path checked and the path opened are not the same string;
+    * a drive (``C:x.md``) — drive-RELATIVE and therefore not absolute by ``is_absolute()``,
+      yet it resolves against a per-drive working directory that is not the destination root;
+    * a root (``/x.md``, ``\\x.md``, a UNC share), which discards the join entirely;
+    * more or fewer than one segment, which is every separator (``a/b.md``, ``a\\b.md``),
+      every traversal (``../x.md``) and the degenerate ``.``/``..`` in one rule.
+    """
+    if "\x00" in name:
+        return "carries a NUL byte"
+    pure = flavour(name)
+    if pure.drive:
+        return f"carries the drive {pure.drive!r}"
+    if pure.root or pure.is_absolute():
+        return "is rooted, so joining it to the destination root would discard the root"
+    if pure.parts != (name,):
+        return (
+            f"is not one path segment: it parses as {list(pure.parts)}, so it carries a "
+            "separator or a traversal"
+        )
+    return ""
+
+
 def _validate_asset_name(name: str) -> None:
     """Refuse an asset name that is a PATH rather than a name (PURE, containment half one).
 
@@ -163,21 +219,24 @@ def _validate_asset_name(name: str) -> None:
     separator, a ``..`` segment, a drive letter or a leading root is not that, and it is the
     cheapest way to make a write land outside the destination root. Refused before anything
     is joined, because a check performed after the join is a check performed on the escape.
+
+    The judgement is taken under EVERY flavour in :data:`PATH_FLAVOURS` and the union
+    refuses, so ``argus install-commands`` accepts and refuses precisely the same set of
+    names on Linux, macOS and Windows.
     """
     if not name.endswith(ASSET_SUFFIX) or len(name) <= len(ASSET_SUFFIX):
         raise ContainmentError(
             f"command asset {name!r} is not a `<stem>{ASSET_SUFFIX}` file name"
         )
-    if "/" in name or "\\" in name or os.sep in name or (os.altsep or "") in name:
-        raise ContainmentError(
-            f"command asset {name!r} carries a path separator; an asset name is a NAME, "
-            "never a path, and a path here is how a write escapes the destination root"
-        )
-    if name in (".", "..") or ".." in Path(name).parts or Path(name).is_absolute():
-        raise ContainmentError(
-            f"command asset {name!r} is absolute or carries a `..` segment; refused before "
-            "it is joined to any destination"
-        )
+    for flavour_name, flavour in PATH_FLAVOURS:
+        reason = asset_name_escape_reason(name, flavour)
+        if reason:
+            raise ContainmentError(
+                f"command asset {name!r} {reason} under {flavour_name} path rules; an asset "
+                "name is a NAME, never a path, and a path here is how a write escapes the "
+                "destination root. Refused before it is joined to any destination, and "
+                "refused identically on every host"
+            )
 
 
 def render_asset(asset: CommandAsset, disclosure: str) -> str:

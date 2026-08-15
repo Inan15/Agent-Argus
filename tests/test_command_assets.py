@@ -36,6 +36,7 @@ is the defect class that turned a whole CI leg red once already.
 
 from __future__ import annotations
 
+import ast
 import os
 import re
 import subprocess
@@ -46,11 +47,14 @@ import pytest
 from argus import cli
 from argus.assets.commands import ASSET_MARKER, ASSET_SUFFIX, DISCLOSURE_PLACEHOLDER
 from argus.commands import hosts as host_registry
+from argus.commands import installer as installer_module
 from argus.commands.installer import (
     ASSET_PACKAGE,
+    PATH_FLAVOURS,
     CommandAsset,
     CommandInstallError,
     ContainmentError,
+    asset_name_escape_reason,
     install_commands,
     load_command_assets,
     plan_writes,
@@ -85,16 +89,26 @@ _STRUCK_RE = re.compile(r"~~.*?~~", re.S)
 # Directories whose markdown is NOT a consumer-facing publication of the command set, each with the
 # reason it is excluded. The corpus is EXCLUSION-based on purpose: a new document anywhere else is
 # INCLUDED by default, which is the only arrangement under which "a fourth list added later is RED,
-# not invisible" is true. Every prefix must exist (asserted by `-11`), so a stale exclusion — the
-# quietest way to widen a hole — turns red instead of silently admitting a whole tree.
+# not invisible" is true. Every prefix must still name TRACKED content (asserted by `-11`), so a
+# stale exclusion — the quietest way to widen a hole — turns red instead of silently admitting a
+# whole tree.
 _NON_PUBLISHING_PREFIXES: dict[str, str] = {
     "_bmad-output/": "planning artifacts and story files — the project's META-DISCUSSION of the "
     "command set, never a command a consumer is told to run. This is `-28`'s own corpus rule: a "
     "guard that fires on the story that specifies the change cries wolf and gets deleted.",
     "_bmad/": "the installed BMAD method module — third-party workflow content, not this "
     "project's publication.",
-    ".claude/": "this repository's OWN assistant configuration. It is a consumer of the "
-    "convention, not a publisher of Argus's command set.",
+    # REMOVED 2026-08-16 (CI run 31895158449, ubuntu/3.11). §3.4 — the entry is kept legible
+    # rather than deleted silently:
+    #   ~~".claude/": "this repository's OWN assistant configuration. It is a consumer of the
+    #     convention, not a publisher of Argus's command set."~~
+    # `.claude/` is in `.gitignore`, so no path under it can EVER appear in `git ls-files` and
+    # this prefix excluded nothing from a corpus drawn from exactly that command. It survived
+    # because `-11` asked the DEVELOPER'S FILESYSTEM whether the prefix existed — true on the
+    # machine that wrote it, false in every fresh clone — so the guard was green here and red on
+    # CI. Removing it changes the corpus by zero documents (asserted below: the corpus is drawn
+    # from tracked files only), and `-06` still turns red in both directions if a `.claude/`
+    # document is ever force-added and publishes a command list.
     ".github/": "issue/PR templates and workflow documentation — CI plumbing, not a command list.",
     "tests/": "test fixtures and cartridges. A fixture that names a command is an input to a "
     "guard, not a claim to a reader.",
@@ -107,22 +121,28 @@ def _read(path: Path) -> str:
     return path.read_text(encoding="utf-8")
 
 
-def tracked_markdown() -> tuple[str, ...]:
-    """Every tracked ``*.md`` path, POSIX-style (IMPURE read over ``git ls-files``).
+def tracked_paths(pathspec: str = "") -> tuple[str, ...]:
+    """Every tracked path (optionally matching *pathspec*), POSIX-style (IMPURE ``git ls-files``).
 
     ``git ls-files`` rather than ``rglob`` deliberately: the question is what this repository
     PUBLISHES, and an untracked scratch file is not published. It also means a new document is in
     the corpus the moment it is staged, which is the property AC4's *"resolved by scan, not
     declared"* asks for.
+
+    One function for both callers, because the corpus and the exclusions that carve it up have to
+    be drawn from the SAME population. `-11` asked the developer's filesystem instead until
+    2026-08-16, and a guard that answers a question about the repository by looking at one
+    machine's working tree is green on that machine and red everywhere else.
     """
-    done = subprocess.run(
-        ["git", "ls-files", "--", "*.md"],
-        cwd=str(_REPO_ROOT),
-        capture_output=True,
-        text=True,
-    )
-    assert done.returncode == 0, f"`git ls-files -- '*.md'` failed: {done.stderr}"
+    command = ["git", "ls-files"] + (["--", pathspec] if pathspec else [])
+    done = subprocess.run(command, cwd=str(_REPO_ROOT), capture_output=True, text=True)
+    assert done.returncode == 0, f"`{' '.join(command)}` failed: {done.stderr}"
     return tuple(sorted(line for line in done.stdout.splitlines() if line.strip()))
+
+
+def tracked_markdown() -> tuple[str, ...]:
+    """Every tracked ``*.md`` path, POSIX-style (IMPURE read over ``git ls-files``)."""
+    return tracked_paths("*.md")
 
 
 def publishing_corpus() -> tuple[str, ...]:
@@ -383,32 +403,110 @@ def test_TC_ArgusAgent_ASSETS_001_04_the_installer_writes_the_disclosure_into_ev
         render_asset(CommandAsset(name="x.md", text=f"{ASSET_MARKER}\nno placeholder"), expected)
 
 
+#: Names that must NEVER be joined to a destination root, each paired with what it models.
+#: Generated from the SHAPE of the join rather than imagined, and deliberately spanning both path
+#: flavours: five of the fixed entries are ONE inert segment under POSIX rules and an escape under
+#: Windows rules (every ``\`` spelling, and the drive-relative ``C:escape.md``) — and the last
+#: entry is whichever of the two the RUNNING host means. That asymmetry is exactly why the
+#: judgement is taken under both. A packaged asset name travels — it is authored on one host,
+#: shipped in a distribution, and joined to a destination on whichever host installs it.
+_ESCAPING_NAMES: tuple[tuple[str, str], ...] = (
+    ("../escape.md", "parent traversal, POSIX spelling"),
+    ("..\\escape.md", "parent traversal, Windows spelling — ONE inert segment to POSIX"),
+    ("sub/escape.md", "a separator, POSIX spelling"),
+    ("sub\\escape.md", "a separator, Windows spelling — ONE inert segment to POSIX"),
+    ("/escape.md", "rooted, POSIX spelling"),
+    ("\\escape.md", "rooted, Windows spelling (root-relative: `is_absolute()` is FALSE)"),
+    ("C:/escape.md", "drive + root"),
+    ("C:escape.md", "DRIVE-RELATIVE: no separator at all, and no `..`, yet it resolves "
+                    "against that drive's own working directory rather than the destination"),
+    ("\\\\server\\share\\escape.md", "a UNC share — another machine entirely"),
+    ("esc\x00ape.md", "a NUL byte, which truncates the name below every filesystem call"),
+    (os.path.abspath("/escape.md"), "whatever `absolute` means on THIS host"),
+)
+
+
 def test_TC_ArgusAgent_ASSETS_001_05_a_write_can_never_escape_the_destination_root(
     tmp_path: Path,
 ) -> None:
     """TC-ArgusAgent-ASSETS-001-05 — AC8: containment, in both halves, each shown red.
 
     OBSERVABLE: whether a planned write whose name or whose directory escapes the destination root
-    is REFUSED with a typed error.
+    is REFUSED with a typed error — and, for the pure half, whether the refusal is the SAME on
+    every host.
 
     This is the only place Argus writes outside the audited repository at all, so NFR-S4/NFR-S5
     containment discipline applies to it directly. Two halves, because one cannot cover the other:
-    a pure check catches ``..`` and an absolute name; only a real-path check catches a symlink.
+    a pure check catches ``..``, a drive and an absolute name; only a real-path check catches a
+    symlink.
 
-    ADVERSARIAL VARIANTS, generated from the shape of the join rather than imagined: an asset named
-    ``../escape.md``, one named with an absolute path, and a ``commands/`` directory that is a
-    symlink pointing outside the root.
+    ADVERSARIAL VARIANTS, generated from the shape of the join rather than imagined:
+    :data:`_ESCAPING_NAMES` (traversal, separator, root, drive-relative, UNC and NUL, in BOTH
+    spellings), and a ``commands/`` directory that is a symlink pointing outside the root.
+
+    **PLATFORM PARITY, and why it is asserted rather than assumed.** Until 2026-08-16 the pure
+    half asked ``os.sep``/``os.altsep`` — properties of the machine running the step, not of the
+    name being judged. ``os.altsep`` is ``None`` on POSIX, so ``(os.altsep or "") in name``
+    reduced to ``"" in name``, which is TRUE of every string: `argus install-commands` refused
+    its own shipped assets and could not run at all on Linux or macOS, while every guard in this
+    file — written and run on Windows — stayed green. So the predicate is now exercised under BOTH
+    flavours explicitly, from whichever host happens to run this: these assertions produce
+    identical results on every platform, and would fail on every platform if either flavour's
+    judgement regressed.
     """
     host = host_registry.HOST_REGISTRY[0]
     disclosure = render_instrument_disclosure(INSTRUMENT_STATUS, short=True)
     body = f"{ASSET_MARKER}\n{DISCLOSURE_PLACEHOLDER}\n"
 
-    for evil in ("../escape.md", "sub/escape.md", os.path.abspath("/escape.md")):
+    for evil, models in _ESCAPING_NAMES:
         with pytest.raises(ContainmentError):
             plan_writes((CommandAsset(name=evil, text=body),), (host,), disclosure)
+        reasons = {
+            label: asset_name_escape_reason(evil, flavour) for label, flavour in PATH_FLAVOURS
+        }
+        assert any(reasons.values()), (
+            f"{evil!r} ({models}) is not named as an escape under ANY path flavour: {reasons}. "
+            "The refusal above would then be coming from somewhere else, and this name would be "
+            "accepted the moment the suffix rule changed."
+        )
 
-    # The honest name is accepted by the same call, so the refusal is not a blanket one.
+    # The honest names are ACCEPTED by the same predicate under BOTH flavours, so the refusal is
+    # not a blanket one — and the shipped set is included by derivation, because it is exactly
+    # what the POSIX defect refused in CI (`argus-audit-report.md`).
+    honest = ("ok.md", *(path.name for path in shipped_asset_paths()))
+    assert len(honest) > 1, "no asset shipped — the acceptance half of this guard is vacuous"
+    for name in honest:
+        clean = {
+            label: asset_name_escape_reason(name, flavour) for label, flavour in PATH_FLAVOURS
+        }
+        assert not any(clean.values()), (
+            f"the honest asset name {name!r} is refused as an escape: {clean}. A containment "
+            "rule that refuses the distribution's own assets does not protect anyone; it just "
+            "breaks the step on that platform."
+        )
     assert plan_writes((CommandAsset(name="ok.md", text=body),), (host,), disclosure)
+
+    # STRUCTURAL PIN on the defect class, not on its one instance: the pure half may not consult
+    # the host's separators again. `os.path.realpath` (the IMPURE half) is a filesystem question
+    # and is legitimately host-bound; `os.sep`/`os.altsep`/`os.name` are not questions about the
+    # name at all. Asserted over the source because the accepting/refusing behaviour of the
+    # reintroduced bug is INVISIBLE on Windows — which is precisely how it shipped.
+    source = Path(installer_module.__file__ or "").read_text(encoding="utf-8")
+    host_bound = sorted(
+        {
+            f"os.{node.attr}"
+            for node in ast.walk(ast.parse(source))
+            if isinstance(node, ast.Attribute)
+            and isinstance(node.value, ast.Name)
+            and node.value.id == "os"
+            and node.attr in {"sep", "altsep", "pathsep", "name", "curdir", "pardir"}
+        }
+    )
+    assert not host_bound, (
+        f"argus/commands/installer.py consults {host_bound} again. Containment is a property of "
+        "the NAME: judge it under argus.commands.installer.PATH_FLAVOURS, which is both flavours "
+        "on every host, so Linux, macOS and Windows accept and refuse the same set."
+    )
 
     # Half two — a symlinked configuration directory. Skipped, with a NAMED reason, where the host
     # forbids symlink creation (unprivileged Windows), never passed silently.
@@ -717,16 +815,28 @@ def test_TC_ArgusAgent_ASSETS_001_11_the_scan_population_is_honest_and_non_vacuo
     suppresses nothing visible, but it makes the exclusion registry read as reviewed when it is not.
     Both are asserted here, and the README/CHANGELOG membership is asserted by name because those
     are the two surfaces the whole story is about.
+
+    STALENESS IS ASKED OF THE REPOSITORY, NOT OF THIS MACHINE (2026-08-16, CI run 31895158449).
+    The check was ``(_REPO_ROOT / prefix).exists()``, which is a question about the working tree
+    the test happens to run in: ``.claude/`` is gitignored, so it existed on the author's machine
+    and in no clone, and this guard was permanently green here and permanently red on Linux CI.
+    The corpus is drawn from ``git ls-files``; the exclusions that carve it up are now judged
+    against that same population, which is both host-independent and STRICTER — a directory that
+    exists but is untracked no longer satisfies the check, because it could never have been in
+    the corpus for the exclusion to remove.
     """
     corpus = publishing_corpus()
     assert len(corpus) >= 5, f"the markdown scan reached only {list(corpus)}"
     assert "README.md" in corpus and "CHANGELOG.md" in corpus, (
         f"the consumer-facing surfaces fell out of the scanned corpus: {list(corpus)}"
     )
+    tracked = tracked_paths()
+    assert tracked, "`git ls-files` returned nothing — this half of the guard would be vacuous"
     for prefix, reason in _NON_PUBLISHING_PREFIXES.items():
         assert reason, f"exclusion {prefix!r} carries no reason"
-        assert (_REPO_ROOT / prefix.rstrip("/")).exists(), (
-            f"the exclusion {prefix!r} names a path that no longer exists. Remove it deliberately: "
+        assert any(rel.startswith(prefix) for rel in tracked), (
+            f"the exclusion {prefix!r} excludes nothing: no TRACKED path starts with it, so it "
+            "removes no document from a corpus drawn from `git ls-files`. Remove it deliberately: "
             "a stale exclusion makes this registry look reviewed when it is not."
         )
     assert any(rel.startswith("audit/") for rel in corpus), (

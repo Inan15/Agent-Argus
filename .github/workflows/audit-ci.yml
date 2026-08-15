@@ -17,6 +17,25 @@ jobs:
     steps:
       - name: Checkout Repository
         uses: actions/checkout@v4
+        with:
+          # FULL history, not the default depth-1 shallow clone (added 2026-08-16 after CI
+          # run 31895158449). Four guards in this suite ask questions of the REPOSITORY'S
+          # HISTORY and cannot answer them from a single commit — they were red on every CI
+          # run and green on every developer machine, which is the worst possible split:
+          #
+          #   * tests/test_dogfood_artifact_currency.py -49 resolves the provenance sha each
+          #     committed dogfood artifact cites (`git cat-file -e <sha>`), and -50 diffs
+          #     `argus/` between that sha and HEAD. In a shallow clone the sha is not a commit
+          #     in the repository at all, so both report a fabricated staleness;
+          #   * -52 generates its adversarial set from `git rev-list HEAD` and refuses to run
+          #     on fewer than ten commits — correctly, since one commit proves nothing;
+          #   * tests/test_pipeline_split_surface.py -15 asserts the pinned pre-split blob's
+          #     commit is an ancestor of HEAD.
+          #
+          # `.github/workflows/argus-student-audit.yml` and `release.yml` already take full
+          # history for the same class of reason. Do NOT answer a red from these guards by
+          # loosening them: a history question needs the history.
+          fetch-depth: 0
 
       - name: Set up Python ${{ matrix.python-version }}
         uses: actions/setup-python@v5
@@ -32,6 +51,12 @@ jobs:
           # which is unreachable without the matching tree-sitter grammar. A bare `.[dev]`
           # install turns the multi-language claim into two red tests for an environment
           # reason rather than a defect.
+          #
+          # `[dev]` also carries `build` + `flit_core` as of 2026-08-16 (CI run 31895158449).
+          # Without them `tests/test_built_distribution.py` could not build the artifact it
+          # measures, so it SKIPPED every guard on every CI run — and `-24`, which refuses to
+          # let that skip become the normal path, was red. Nothing to add here: the extra
+          # declares the tooling, so this line acquires it.
           pip install .[dev,languages]
           # radon is already a RUNTIME dependency (the breadth detector calls its API),
           # so it arrives with the package — installing it again here only obscured

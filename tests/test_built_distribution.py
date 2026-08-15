@@ -479,6 +479,23 @@ def test_TC_ArgusAgent_RELEASE_001_24_missing_build_tooling_is_named_never_silen
         "skipped guard is a guard nobody runs"
     )
 
+    # WHY it was skipping, closed at the source (2026-08-16, CI run 31895158449): CI installs
+    # `.[dev]`, which declared neither tool, so this whole file skipped on every run and the
+    # assertion above was red for an ENVIRONMENT reason. The extra that says what it takes to
+    # run this suite must name what these guards need — `flit_core` at the FULL `[build-system]`
+    # specifier, so the copy in `[dev]` cannot become a second bound on the backend.
+    pyproject = (_REPO_ROOT / "pyproject.toml").read_text(encoding="utf-8")
+    dev = re.search(r"^dev\s*=\s*\[(.*?)^\]", pyproject, re.DOTALL | re.MULTILINE)
+    system = re.search(r"^requires\s*=\s*\[(.*?)\]", pyproject, re.DOTALL | re.MULTILINE)
+    assert dev and system, "`[dev]` / `[build-system] requires` no longer parse out of pyproject"
+    declared = re.findall(r'"([^"]+)"', dev.group(1))
+    needed = [n for n, _ in _REQUIRED_BUILD_TOOLS] + re.findall(r'"(flit_core[^"]*)"', system.group(1))
+    absent = [need for need in needed if not any(req.startswith(need) for req in declared)]
+    assert not absent, (
+        f"the `[dev]` extra does not declare {absent}, so an environment built from it SKIPS "
+        "every guard in this file. Declare the tooling; do not relax the assertion above."
+    )
+
 
 # ─────────────────────────────────────────────────────────────────────────────
 # AC3 — the published figures are ASSERTED against the live measurement

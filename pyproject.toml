@@ -78,6 +78,22 @@ dev = [
     "pytest-asyncio",
     "pytest-cov",
     "mypy>=1.0",
+    # ── The BUILT-ARTIFACT tooling (added 2026-08-16, CI run 31895158449) ──
+    # `tests/test_built_distribution.py` builds a real wheel + sdist and measures them; where
+    # the tooling is absent it reports `Unevaluable(E6)` and SKIPS rather than passing on a
+    # question it could not put. On CI neither package was installed, so the whole file skipped
+    # on every run and `-24` — "a permanently skipped guard is a guard nobody runs" — went red.
+    # It is red about the ENVIRONMENT, not about the code, so the fix belongs here: the extra
+    # that declares what it takes to run this suite now declares this too.
+    #
+    # `flit_core` is needed as well as `build`, and its absence is the less obvious half: pip
+    # resolves `[build-system] requires` into an ISOLATED build environment, so it never lands
+    # in the environment the tests run in — and the build here is deliberately `--no-isolation`
+    # (a test suite in this project may not reach the network). The specifier is held equal to
+    # `[build-system] requires` by `TC-ArgusAgent-RELEASE-001-24`, so this cannot become a
+    # second source of truth about which backend version this project builds with.
+    "build>=1.0",
+    "flit_core >=3.2,<4",
 ]
 llm = [
     "litellm>=1.0.0",
