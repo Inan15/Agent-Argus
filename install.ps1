@@ -1,4 +1,15 @@
 # ArgusAgent Installer Script for Windows PowerShell
+#
+# Story 12.7 / FR35 — THIS SCRIPT NO LONGER PLACES ANY FILE ITSELF. It installs the
+# distribution and then delegates to `argus install-commands`, which is the ONE placement
+# mechanism (AR7 / architecture §3.3).
+#
+# What was here until 2026-08-15, and why it went: this script created a `commands`
+# directory under the Claude Code configuration root and then copied `adapters\claude-code\*`
+# into the root itself — BESIDE the directory a command is actually read from — so the
+# commands it reported installing never appeared. `install.sh` was broken in the identical
+# way. A second copy of a placement rule drifts in one of the two; there is now only one, it
+# ships in the wheel, and it is covered by the verification area `TC-ArgusAgent-ASSETS-001`.
 
 $ErrorActionPreference = "Stop"
 
@@ -20,37 +31,18 @@ try {
 Write-Host "[2/4] Installing ArgusAgent package locally..." -ForegroundColor Yellow
 pip install -e .
 
-# 3. Detect & Install Adapters
-Write-Host "[3/4] Detecting AI Coding Assistants..." -ForegroundColor Yellow
-$userHome = [System.Environment]::GetFolderPath('UserProfile')
-$adaptersCount = 0
-
-# Claude Code
-$claudeDir = Join-Path $userHome ".claude"
-if (Test-Path $claudeDir) {
-    Write-Host "  -> Detected Claude Code. Installing skills..." -ForegroundColor Green
-    $cmdDir = Join-Path $claudeDir "commands"
-    New-Item -ItemType Directory -Force -Path $cmdDir | Out-Null
-    Copy-Item -Path "adapters\claude-code\*" -Destination $claudeDir -Recurse -Force
-    $adaptersCount++
-}
-
-# Cursor
-$cursorDir = Join-Path $userHome ".cursor"
-if (Test-Path $cursorDir) {
-    Write-Host "  -> Detected Cursor. Installing rules..." -ForegroundColor Green
-    $rulesDir = Join-Path $cursorDir "rules"
-    New-Item -ItemType Directory -Force -Path $rulesDir | Out-Null
-    Copy-Item -Path "adapters\cursor\*" -Destination $rulesDir -Recurse -Force
-    $adaptersCount++
-}
-
-# 4. Verify CLI
-Write-Host "[4/4] Verifying CLI installation..." -ForegroundColor Yellow
+# 3. Verify CLI
+Write-Host "[3/4] Verifying CLI installation..." -ForegroundColor Yellow
 argus --help | Out-Null
+
+# 4. Place the packaged assistant commands — every supported host whose configuration
+# directory is detected. `--dest` is not passed, so the destination is your home directory.
+# Add `--dry-run` to see the plan first, and `--remove` to take exactly these files away.
+Write-Host "[4/4] Placing the packaged assistant commands..." -ForegroundColor Yellow
+argus install-commands
 
 Write-Host ""
 Write-Host "====================================================" -ForegroundColor Green
-Write-Host " ArgusAgent installation complete! ($adaptersCount adapters installed)" -ForegroundColor Green
-Write-Host " Run 'argus --help' or use '/audit' in your AI assistant." -ForegroundColor Green
+Write-Host " ArgusAgent installation complete!" -ForegroundColor Green
+Write-Host " Run 'argus audit .' or use the /argus-audit commands in a supported AI assistant." -ForegroundColor Green
 Write-Host "====================================================" -ForegroundColor Green

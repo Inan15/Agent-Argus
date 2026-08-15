@@ -1,3 +1,0 @@
-# ArgusAgent Cursor Rules
-
-Rule: Always run ArgusAgent `/audit` before completing code reviews.

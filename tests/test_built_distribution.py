@@ -647,6 +647,31 @@ def test_TC_ArgusAgent_DOCS_001_56_documented_commands_are_marked_until_they_shi
     Both directions, and the second one is the point: when Story 12.7 / FR35 actually ships
     a mechanism, this test goes RED until the marker is REMOVED. The marker cannot outlive
     the gap it describes.
+
+    ⚠️ **CORRECTED 2026-08-15 by Story 12.7, and recorded here rather than fixed quietly.**
+    The ``mechanism_ships`` branch below had **NEVER EXECUTED** — it carried
+    ``# pragma: no cover - true only once 12.7 delivers`` — and as written it asserted one
+    thing (*"the marker is gone"*) and then ``return``ed, **skipping every remaining
+    assertion in the test**. So the moment this story shipped its first asset, the guard
+    that exists to hold the documented set to the shipped set would have stopped holding
+    anything at all: a reader could have satisfied it by DELETING the ``/audit`` lines from
+    the README, which is the opposite of a delivery. That is precisely the never-executed
+    branch class Epic 12 has now recorded three times — ``-49``'s registered-surface loop,
+    ``_ENTRY_POINT``'s prose, and this. It was written in good faith for a delivery nobody
+    could see yet, and it was wrong about the one thing that mattered.
+
+    The corrected delivered branch is a REPLACEMENT, never a relaxation. It asserts:
+
+    1. the FORTHCOMING marker is gone (the original assertion, kept);
+    2. **set equality (AC4)** between the shipped asset tree and what README publishes,
+       in BOTH directions — derived, in ONE place, by importing
+       ``tests/test_command_assets.py``'s helpers rather than re-implementing the
+       derivation here, because a rule implemented twice drifts in one of the two (AR7);
+    3. a **non-vacuity floor**: the shipped set and the published set must each be
+       non-empty, so this can never pass over nothing;
+
+    and it does **not** return early — the alias closure above it and the assertions below
+    run in both states.
     """
     dist = _distribution()
     readme = _README.read_text(encoding="utf-8")
@@ -669,16 +694,43 @@ def test_TC_ArgusAgent_DOCS_001_56_documented_commands_are_marked_until_they_shi
         assert f"`{alias}`" in readme, f"console alias {alias!r} is undocumented in README"
         assert target in readme, f"README does not state that {alias!r} runs {target!r}"
 
-    commands = _SLASH_COMMAND.findall(readme)
-    assert commands, "README documents no /audit command; the guard has nothing to hold"
-
     mechanism_ships = bool(dist.data_assets)
-    if mechanism_ships:  # pragma: no cover - true only once 12.7 delivers
+    if mechanism_ships:
+        # DELIVERED (Story 12.7 / FR35). The marker is gone AND the sets are equal.
+        from tests.test_command_assets import published_commands, shipped_command_spellings
+
         assert _FORTHCOMING_MARKER not in readme, (
             f"the distribution now ships command assets {sorted(dist.data_assets)}, so the "
             "FORTHCOMING marker is stale — remove it (Story 12.7 / FR35 delivered)."
         )
+        shipped = shipped_command_spellings()
+        published = published_commands(readme)
+        # NON-VACUITY FLOOR (E.3). Without these two lines the equality below is satisfied by
+        # a README that documents nothing and a distribution that ships nothing — which is
+        # exactly how the uncorrected branch could have been "passed".
+        assert shipped, (
+            "the distribution ships data assets but NO command spelling could be derived from "
+            "the asset tree and the host registry. The equality below would be vacuous."
+        )
+        assert published, (
+            "README publishes no command at all while the wheel ships command assets. Deleting "
+            "the documented commands is NOT how this guard is satisfied — that would ship a "
+            "capability no reader can find."
+        )
+        assert published == shipped, (
+            "README and the shipped command-asset tree disagree.\n"
+            f"  published but NOT shipped: {sorted(published - shipped)}\n"
+            f"  shipped but NOT published: {sorted(shipped - published)}\n"
+            "A documented command that is not delivered is removed in the same change (AC4); "
+            "a shipped command nobody documents is one a reader can never find. "
+            "tests/test_command_assets.py::TC-ArgusAgent-ASSETS-001-06 holds the same equality "
+            "over EVERY publishing surface — this is the README half, kept here because this "
+            "is the guard that was measuring the gap."
+        )
         return
+
+    commands = _SLASH_COMMAND.findall(readme)  # pragma: no cover - the pre-12.7 state
+    assert commands, "README documents no /audit command; the guard has nothing to hold"
 
     # Every documented command must sit under the marker, in its own section.
     lines = readme.splitlines()

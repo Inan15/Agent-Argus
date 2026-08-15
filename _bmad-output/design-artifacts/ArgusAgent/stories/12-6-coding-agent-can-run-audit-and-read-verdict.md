@@ -4,7 +4,7 @@ baseline_commit: 54b96d79787d58f5176367bc348cc89eeedf08fa
 
 # Story 12.6: A coding agent can run the audit and read the verdict
 
-Status: review
+Status: done
 
 <!-- Note: Validation is optional. Run validate-create-story for quality check before dev-story. -->
 
@@ -753,6 +753,98 @@ stays, because removing it would claim 12.7's delivery.
 - `_bmad-output/design-artifacts/ArgusAgent/sprint-status.yaml` — `12-6 → review`
 
 ### Review Findings
+
+**code-review 12-6 iteration 1 (Sonnet 5): review → done. VERDICT: PASS.**
+
+Scope reviewed: `git diff 54b96d7..HEAD` across both commits — `87cdea4` (the implementation:
+new `argus/mcp/__init__.py` / `protocol.py` / `server.py`, new `tests/test_mcp_server.py`,
+modified `argus/cli.py`, `argus/__init__.py`, `pyproject.toml`, `README.md`, `CHANGELOG.md`,
+`architecture.md`, and nine existing test files) and `ddeb30d` (the DF-10-4-D dogfood
+artifact-regeneration commit).
+
+Independently re-derived on disk, not transcribed:
+- `python -m pytest -q` → **1492 passed, 0 failed, 0 error, 0 skipped** (confirmed via a
+  junit-xml run: `tests="1492" errors="0" failures="0" skipped="0"`), exit 0.
+- `python -m mypy argus` → `Success: no issues found in 78 source files`.
+- `python -m bandit -r argus -q` → **19 Low / 0 Medium / 0 High**, matching the claimed baseline
+  exactly.
+- `python -m build` on a clean checkout → wheel **83 entries**, sdist **82 files** — matches
+  README's re-derived figures exactly. `find argus -name '*.py' | wc -l` → **78**, matching the
+  "78 of the 78 shipped modules import" claim.
+- The official `mcp` PyPI wheel's `METADATA` was downloaded and inspected directly:
+  `Requires-Dist` includes `starlette`, `uvicorn` and `sse-starlette` **unconditioned on any
+  extra** — DN-1's stated reason for refusing the SDK is factually correct, not merely
+  asserted.
+- Re-ran `test_v1_commitment_closure.py`'s own `build_import_graph` / `reachable_from_any`
+  functions directly: **78 modules, 392 edges, 63 reachable from the `[project.scripts]`
+  union (60 from `argus.cli` alone)** — all comfortably above the new floors (58/290/47, up
+  from 55/150/35) and above the old floors too, so no floor was loosened. The union adds
+  **exactly** `argus.mcp`, `argus.mcp.protocol`, `argus.mcp.server` and **no** existing
+  `library-seam` module — FR23/24/26/29 confirmed still disposed `library-seam` with the live
+  graph.
+- Grepped `argus/mcp/**` for the FR34 disclosure constant's rendered text and for
+  `INSTRUMENT_STATUS` — no transcribed copy exists; every render routes through
+  `render_instrument_disclosure(INSTRUMENT_STATUS)` imported from
+  `argus/verdict/negative_assurance.py` (AI-E9-7 held).
+
+AC-by-AC, verified against the diff and the story's own decision markers rather than assumed:
+- **AC1** — exactly one new `[project.scripts]` alias (`argus-mcp = argus.mcp.server:main`),
+  no new dependency; both protocol eras served through one dispatcher; closed
+  `ProtocolVersion` enum with an exhaustive `protocol_era()` that raises on an unregistered
+  member (the `render_instrument_disclosure`/`exit_code_for_verdict` house pattern); `-32601`
+  / `-32700` / `-32602` / `-32022` all independently exercised via `test_mcp_server.py`'s
+  driven-loop tests and read as correct.
+- **AC2** — `-04`/`-05` cover the symbol table and the real process (a `socket.bind`/`listen`
+  sentinel proven capable of firing); `argus.mcp.*` appended to
+  `test_no_web_imports.py::_MODULES_UNDER_GUARD` (pure extension, not a fork); the dependency
+  arrow points inward only (`-13` scans 75+ core modules for a reach into `argus.mcp`, finds
+  none); no credential-shaped property in the derived `inputSchema` (`-09`, with a generated
+  adversarial variant per credential stem).
+- **AC3** — parity is structural: `build_tool_argv` projects validated arguments back onto a
+  real argv and hands it to `cli.build_parser().parse_args`, then `cli.resolve_passes` /
+  `cli.build_request` — the CLI's own functions — do the rest, so the DN-8 `coverage_scope`
+  divergence (CLI `application` vs `AuditRequest` `repository`) governs correctly. `-07`
+  drives **both real entry points** over one fixture repo and additionally demonstrates the
+  defect directly: a hand-built `AuditRequest(...)` yields `coverage_scope is None` where the
+  real MCP path narrows to `scope=application, held_out=1`. `-06` derives the schema from the
+  parser and shows a flag added to a live parser instance is picked up automatically.
+- **AC4** — `_tool_call_payload` wraps the entire `run_audit` call (and its own
+  `build_parser().parse_args` failure path) in
+  `contextlib.redirect_stdout(stderr), contextlib.redirect_stderr(stderr)`. `-08`'s
+  non-vacuity half is real: a synthetic `print()` + `sys.stdout.write()` is injected at the
+  adapter's own `server.run_audit` call site during a live audit, and the test shows the noise
+  lands on stderr while every stdout line stays parseable JSON-RPC.
+- **AC5** — the disclosure is in both the `tools/list` description and every verdict-bearing
+  result (`-10`); `_MCP_DISCLOSURE_SURFACES` populated; `-49`'s previously-never-executed,
+  transcription-demanding assertion corrected to a derived `ast` routing closure
+  (`functions_calling` over `_VERDICT_RENDER_CALLS` / `_DISCLOSURE_RENDERER`) with a `> 0`
+  non-vacuity floor and both-direction positive controls (an honest renderer that routes, and
+  a smuggled second renderer that does not) — read and re-derived independently above.
+- **AC6** — every gate this story falsifies is corrected, not loosened, confirmed file by
+  file: `test_v1_commitment_closure.py` (entry points derived from `[project.scripts]`, FR35
+  flipped `not-built → wired` naming the 12.7 residual, floors raised), `test_no_web_imports.py`
+  (pure append), `test_invocation_contract.py` (derived `_CONSOLE_SCRIPTS`, target-aware
+  `parse_failure`), `test_instrument_disclosure.py` (see AC5), README/CHANGELOG/`__init__.py`
+  (all measured figures re-derived and independently confirmed above; the pre-existing
+  80-vs-77 self-contradiction fixed by removing the second remembered number rather than
+  patching it), `architecture.md` (both FR35 sites struck-not-deleted per §3.4),
+  `CHANGELOG.md` (`_NOTE_SECTIONS` extended with a reasoned placement, order matches the live
+  document).
+- **AC7** — `deep_ratio`/`assessed_deep_ratio` travel as `"num/den"` strings via
+  `argus.store.canonical.dumps`, which **refuses `float` at the serializer** (demonstrated in
+  `-15` by asserting `CanonicalSerializationError` on an injected float) — AR4 is structural on
+  this transport, not merely tested, and the CLI's own stdout output is unchanged (only
+  `_PROG` → `PROG` and `_build_request`/`_resolve_passes`/etc. → public names, confirmed
+  byte-identical behaviour by diff). NFR-M1: every new/touched file re-measured under the 1200
+  cap; `test_v1_commitment_closure.py`'s `DF-12-1-B` exemption entry updated in place to 1685
+  (confirmed via `wc -l`). NFR-R1: a typed pipeline failure becomes `isError: true` with the
+  CLI's own secret-safe wording (`-12`), never a traceback, and the server keeps serving the
+  next request on the same connection (also `-12`).
+
+No unresolved `decision-needed` or `patch` item. No unresolved High or Medium issue. All seven
+ACs independently verified met against the real diff and the real tree. Nothing loosened: every
+re-measured floor was checked against a live re-computation and found to sit strictly above both
+the old and the new floor. Nothing dismissed as noise — no noise was found.
 
 ## Change Log
 

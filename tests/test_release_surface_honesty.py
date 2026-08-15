@@ -86,6 +86,31 @@ _NOTE_SECTIONS: tuple[str, ...] = (
     # before they need to know how far the instrument has been validated. Everything below
     # can move a verdict, an exit code or a claim; these first two move what the product IS.
     "### Added — `argus-mcp`, so a coding agent can run the audit and read the verdict itself",
+    # `## Unreleased` — added 2026-08-15 by Story 12.7 (FR35, second half). A PURE INSERTION: no
+    # existing section moved relative to any other, and nothing was demoted.
+    # Placed THIRD, and the placement is the DECISION this registry's comment above demands rather
+    # than a default. Applying the registry's stated principle literally, *what a consumer of THIS
+    # release hits first*: this is the THIRD and last entry in the note that changes the answer to
+    # "what did I just install" — 12.5's changed what the install GROUNDS, 12.6's added a fourth
+    # console alias, and this one adds DATA FILES to the wheel plus a second sub-command. It sits
+    # directly beneath 12.6's for a second, stronger reason: it delivers the half of FR35 that
+    # 12.6's own section explicitly names as NOT delivered, so a reader meets the two halves in
+    # delivery order rather than having to reconcile them.
+    # PROMOTION ABOVE 12.5's AND 12.6's WAS CONSIDERED AND DECLINED, on the honest reading rather
+    # than the flattering one. The argument for promotion is real: this is the only entry in the
+    # whole note that writes a file into the consumer's OWN configuration directory, outside any
+    # repository, which is the most invasive thing anything in this release does. It is declined
+    # because that write happens only on an EXPLICIT OPERATOR ACT — running `argus
+    # install-commands` — whereas 12.5's grammar promotion and 12.6's fourth alias both land
+    # unconditionally at `pip install` time and change what a consumer has before they have typed
+    # anything. That is the same test the registry applied to 12.2's egress entry, which was
+    # declined promotion for being unreachable without an explicit new flag; applying it one way to
+    # a transmit path and another way to a write path would make the principle decorative.
+    # It stays ABOVE 11.1's instrument disclosure for the reason 12.5's and 12.6's do, and without
+    # competing with it: the assets this step places CARRY that disclosure, rendered at write time,
+    # so a reader who reaches this section has already been handed the caveat rather than had it
+    # deferred.
+    "### Added — `argus install-commands`, so the commands this README documents are the commands you get",
     # `## Unreleased` — added 2026-08-13 by Story 12.4 (FR37 / DF-11-4-D / AI-E11-6).
     "### Specified — every terminal outcome names its next action and the ingestion boundary",
     # `## Unreleased` — added 2026-08-11 by Story 11.1 (FR34). Registered FIRST because it is
@@ -218,6 +243,20 @@ _RELEASE_SURFACES: tuple[str, ...] = (
     "_bmad-output/design-artifacts/ArgusAgent/minions-dogfood-proof.md",
     "_bmad-output/design-artifacts/ArgusAgent/minions-dogfood-partition-plan.md",
     "_bmad-output/design-artifacts/ArgusAgent/minions-dogfood-budget-plan.md",
+    # Registered 2026-08-15 by Story 12.7 (FR35, second half). These are the packaged command
+    # assets: they SHIP IN THE WHEEL and are then written into a consumer's own assistant
+    # configuration directory, which makes them the most directly consumer-facing text this
+    # project publishes — an agent reads them before it decides to run anything. A surface this
+    # release publishes on and `-17` does not scan is a surface where an over-claim can land
+    # unseen, and this is the one class of surface where an over-claim would be read by a
+    # machine that then acts on it.
+    # Registered INDIVIDUALLY and matched by a pattern below, which is `-18`'s design and not a
+    # redundancy: the pattern is what makes a FOURTH asset red rather than invisible, and the
+    # named entry is what makes adding one a deliberate, reviewed act. A registry entry no
+    # pattern resolves proves nothing, and a pattern with no registry lets anything through.
+    "argus/assets/commands/argus-audit.md",
+    "argus/assets/commands/argus-audit-report.md",
+    "argus/assets/commands/argus-audit-security.md",
 )
 
 # Globs that resolve to every file that COULD be such a surface. Anything they find which
@@ -229,6 +268,11 @@ _RELEASE_SURFACE_PATTERNS: tuple[str, ...] = (
     "pyproject.toml",
     ".github/workflows/release.yml",
     "_bmad-output/design-artifacts/ArgusAgent/minions-dogfood-*.md",
+    # Added 2026-08-15 by Story 12.7, WITH the registry entries above. Without this pattern
+    # `-18`'s closure never resolves the asset tree at all and would pass vacuously about the one
+    # surface class this story adds — which is exactly the shape of the `_CONSOLE_SCRIPTS` and
+    # `_ENTRY_POINT` defects Story 12.6 found twice: a recognizer that quietly stops recognizing.
+    "argus/assets/commands/*.md",
 )
 
 # The preserved, frozen Story-7.2 independent run matches the dogfood glob but is NOT a

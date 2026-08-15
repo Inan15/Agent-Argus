@@ -124,15 +124,56 @@ class DerivedArgument:
     default: object
     shape: str
     choices: tuple[str, ...] = ()
+    #: Which sub-command(s) accept it. Recorded from 2026-08-15 (Story 12.7) so the walk can be a
+    #: closure over EVERY sub-command without losing which one an argument came from — `-39` uses
+    #: it to prove the closure really reached more than one, and `conflicting_arguments` uses the
+    #: same information to refuse a spelling that would mean two different things.
+    subcommands: tuple[str, ...] = ()
 
 
-def derive_arguments(parser: argparse.ArgumentParser, subcommand: str) -> dict[str, DerivedArgument]:
-    """Walk *parser*'s *subcommand* and return every accepted argument, keyed by spelling (PURE).
+def subcommands(parser: argparse.ArgumentParser) -> tuple[str, ...]:
+    """Every sub-command *parser* declares, read off ``_SubParsersAction.choices`` (PURE).
+
+    CORRECTED 2026-08-15 by Story 12.7, and the correction is the point rather than a tidy-up.
+    ``derive_arguments`` used to take a hand-named ``subcommand`` and **every one of its five call
+    sites passed the literal ``"audit"``**. A second sub-command's flags were therefore invisible to
+    ``-35`` (parser↔contract equality), ``-37`` (defaults and shapes) and ``-38`` (every flag names
+    a findable contract site) — so the day ``install-commands`` landed, four accepted flags would
+    have been specified nowhere and *nothing in this file would have gone red*. That is
+    ``DF-AUD-APAA-E`` itself, reconstructed by the guard written to close it, and it is verbatim the
+    ``_CONSOLE_SCRIPTS`` / ``_ENTRY_POINT`` defect class Story 12.6 found twice: a derivation narrow
+    enough to miss the next surface. The population is now a CLOSURE over the parser.
+    """
+    found: list[str] = []
+    for action in parser._actions:  # noqa: SLF001 - argparse exposes no public walk
+        if isinstance(action, argparse._SubParsersAction):  # noqa: SLF001 - same
+            found.extend(
+                name
+                for name, sub in action.choices.items()
+                if isinstance(sub, argparse.ArgumentParser)
+            )
+    return tuple(sorted(set(found)))
+
+
+def derive_arguments(
+    parser: argparse.ArgumentParser, subcommand: str | None = None
+) -> dict[str, DerivedArgument]:
+    """Every accepted argument, keyed by spelling (PURE). ``None`` = EVERY sub-command.
 
     Uses argparse private API (``_subparsers`` / ``_group_actions`` / ``_actions``) — see the module
     docstring's failure mode 4 and ``-39``, which is the countermeasure. ``-h/--help`` is excluded:
     it is argparse's own, is not part of the product's invocation contract, and its prose is Story
     12.8's. A positional is keyed by its ``dest``.
+
+    The default is the CLOSURE (see :func:`subcommands`): a sub-command added to ``build_parser``
+    brings its flags into ``-35``/``-37``/``-38`` with no edit here, which is the only arrangement
+    under which "an unregistered flag is red" stays true of the whole tool rather than of one
+    sub-command. An explicit *subcommand* is still accepted, because ``-40``'s positive controls
+    exercise these helpers over SYNTHETIC parsers and want to name the one they built.
+
+    Each entry records which sub-command(s) accept it. A spelling defined DIFFERENTLY by two
+    sub-commands cannot be represented by one registry entry, so it is not silently merged —
+    :func:`conflicting_arguments` finds it and ``-39`` fails on it.
     """
     subparsers_actions = [
         action
@@ -141,21 +182,56 @@ def derive_arguments(parser: argparse.ArgumentParser, subcommand: str) -> dict[s
     ]
     derived: dict[str, DerivedArgument] = {}
     for subparsers_action in subparsers_actions:
-        sub = subparsers_action.choices.get(subcommand)
-        if sub is None:
-            continue
-        for action in sub._actions:  # noqa: SLF001 - same
-            if isinstance(action, argparse._HelpAction):  # noqa: SLF001 - same
+        for name, sub in subparsers_action.choices.items():
+            if subcommand is not None and name != subcommand:
                 continue
-            spelling = action.option_strings[0] if action.option_strings else action.dest
-            derived[spelling] = DerivedArgument(
-                spelling=spelling,
-                dest=action.dest,
-                default=action.default,
-                shape=describe_shape(action),
-                choices=tuple(str(c) for c in (action.choices or ())),
-            )
+            if not isinstance(sub, argparse.ArgumentParser):
+                continue
+            for action in sub._actions:  # noqa: SLF001 - same
+                if isinstance(action, argparse._HelpAction):  # noqa: SLF001 - same
+                    continue
+                spelling = action.option_strings[0] if action.option_strings else action.dest
+                seen = derived.get(spelling)
+                derived[spelling] = DerivedArgument(
+                    spelling=spelling,
+                    dest=action.dest,
+                    default=action.default,
+                    shape=describe_shape(action),
+                    choices=tuple(str(c) for c in (action.choices or ())),
+                    subcommands=(*(seen.subcommands if seen else ()), name),
+                )
     return derived
+
+
+def conflicting_arguments(parser: argparse.ArgumentParser) -> tuple[str, ...]:
+    """Spellings two sub-commands accept with DIFFERENT defaults/shapes/choices (PURE).
+
+    The closure in :func:`derive_arguments` keys by spelling, because the contract registry — and
+    ``cli.py``'s own contract block — talk about spellings. That is honest only while a spelling
+    means one thing across the whole tool. If it ever does not, one of the two definitions would be
+    silently dropped from the comparison and the registry would describe a flag some invocation does
+    not have. So the collision is DETECTED rather than assumed away, before it can happen.
+    """
+    problems: list[str] = []
+    for name in subcommands(parser):
+        for spelling, argument in derive_arguments(parser, name).items():
+            for other in subcommands(parser):
+                if other <= name:
+                    continue
+                rival = derive_arguments(parser, other).get(spelling)
+                if rival is None:
+                    continue
+                if (argument.default, argument.shape, argument.choices) != (
+                    rival.default,
+                    rival.shape,
+                    rival.choices,
+                ):
+                    problems.append(
+                        f"{spelling}: {name} accepts it as "
+                        f"({argument.default!r}, {argument.shape}, {argument.choices}) while "
+                        f"{other} accepts it as ({rival.default!r}, {rival.shape}, {rival.choices})"
+                    )
+    return tuple(sorted(problems))
 
 
 # ─────────────────────────────────────────────────────────────────────────────
@@ -194,6 +270,11 @@ _CLI_BLOCK = "argus/cli.py::LOCKED-CLI-CONTRACT-BLOCK"
 # FR30 — the binding capability contract. Its ORIGINAL four-parameter wording is struck rather than
 # deleted (PRD §3.4 evidence immutability), so this anchor survives the amendment by design.
 _FR30 = "artifact:E-PRD/prd.md::repo + commit + budget + materiality_bar"
+
+# The release-note section that SPECIFIES the `install-commands` sub-command and its four
+# arguments (Story 12.7 / FR35). Registered in `_NOTE_SECTIONS` where `-16` pins ORDER, not just
+# membership, so this anchor cannot be satisfied by an unreviewed heading.
+_INSTALL_SECTION = "CHANGELOG.md::### Added — `argus install-commands`"
 
 CONTRACT_REGISTRY: tuple[ContractEntry, ...] = (
     ContractEntry(
@@ -351,6 +432,58 @@ CONTRACT_REGISTRY: tuple[ContractEntry, ...] = (
         ),
         notes="A library consumer and a CLI consumer get different assessed populations by default.",
     ),
+    # ── The `install-commands` sub-command (Story 12.7 / FR35, 2026-08-15) ──────────────────
+    # These four entered with the SECOND sub-command, and they are the reason `derive_arguments`
+    # had to stop being scoped to one hand-named sub-command: under the old walk all four would
+    # have been accepted by the shipped parser and specified in no document, with this file green
+    # — `DF-AUD-APAA-E` reconstructed by the guard that closes it. Each names the CHANGELOG
+    # section that specifies it PLUS `cli.py`'s own contract block, the same two-site shape every
+    # Story-10.3 entry uses.
+    ContractEntry(
+        spelling="--host",
+        dest="host",
+        default=None,
+        shape=SHAPE_APPEND,
+        sites=(_INSTALL_SECTION, _CLI_BLOCK),
+        notes="Restricts the step to named hosts from the CLOSED registry in "
+        "argus/commands/hosts.py. Omitted means every registered host that is DETECTED; naming "
+        "one skips detection, because an operator naming a host has already made the statement "
+        "detection would infer. An unregistered name is a typed refusal, never a silent skip — "
+        "silently ignoring a misspelling would report success for a step that placed nothing, "
+        "which is exactly the shape install.sh's Cline branch had.",
+    ),
+    ContractEntry(
+        spelling="--dest",
+        dest="dest",
+        default="",
+        shape=SHAPE_VALUE,
+        sites=(_INSTALL_SECTION, _CLI_BLOCK),
+        notes="Overrides the host-configuration ROOT the registry's paths are relative to; "
+        "defaults to the user's home directory. THE TESTABILITY SEAM: every guard drives the real "
+        "step against a tmp_path through this flag, so no test in this suite touches a real $HOME. "
+        "Writes never leave the resolved root (`..`, an absolute asset name and a symlinked "
+        "configuration directory are each a typed refusal).",
+    ),
+    ContractEntry(
+        spelling="--dry-run",
+        dest="dry_run",
+        default=False,
+        shape=SHAPE_STORE_TRUE,
+        sites=(_INSTALL_SECTION, _CLI_BLOCK),
+        notes="Resolves and containment-checks the whole plan, prints exactly what would be "
+        "written, and writes nothing. It runs the SAME checks a real run runs — a dry run that "
+        "skipped them would report a plan the real run refuses.",
+    ),
+    ContractEntry(
+        spelling="--remove",
+        dest="remove",
+        default=False,
+        shape=SHAPE_STORE_TRUE,
+        sites=(_INSTALL_SECTION, _CLI_BLOCK),
+        notes="Deletes exactly the files this step wrote — recognised by the marker each asset "
+        "carries — and nothing else. It closes the asymmetry uninstall.sh had: it ran `pip "
+        "uninstall` only, leaving every copied file in the user's home directory forever.",
+    ),
 )
 
 
@@ -457,266 +590,36 @@ def locked_contract_block() -> str:
     return source[start:end]
 
 
+
 # ─────────────────────────────────────────────────────────────────────────────
 # AC6.4 — the documented invocations must actually run
 # ─────────────────────────────────────────────────────────────────────────────
 #
-# Scoped to README.md, action.yml and .github/workflows/*.yml, and MEASURED against the corpus
-# before the pattern was written (10.2's D2 lesson). `epics.md` and this repository's story files
-# also contain `argus audit ...` strings, but they are the project's meta-discussion of the command
-# rather than a command a CONSUMER is told to run; a guard that fires on those cries wolf and gets
-# deleted by the third person to hit it.
-#
-# A command line counts when it is inside an executable block — a fenced ```bash/```sh block in
-# README, or a YAML `run:` script — AND its first token is a console script this distribution ships.
-# Measured consequences of that rule on the real corpus: `pip install "argus-agent @ ..."`,
-# `mypy argus`, `bandit -r argus`, `--title "argus-agent $TAG"` and the `/audit ...` slash-command
-# block (README:178-190, Story 12.7's, DN-9) are all correctly OUT; README's terminal invocation,
-# action.yml's and argus-student-audit.yml's are all correctly IN.
-
-# DERIVED from `[project.scripts]`, never hand-listed — corrected 2026-08-15 by Story 12.6.
-# It was the three-tuple `("argus", "argus-agent", "repo-audit")` until this story added a
-# FOURTH alias, and nothing here would have noticed: `_CONSOLE_SCRIPTS` is the recognizer
-# for "is this line a documented invocation of something we ship", so a shipped script
-# missing from it makes every command line a consumer copies for that script INVISIBLE to
-# `-28`. That is a guard narrowing itself silently, which is the class AI-E11-1 clause (iii)
-# names — the population is closed over the distribution metadata, so the next alias is
-# covered the day it is declared and not the day somebody remembers this file.
-#
-# The TARGET matters as well as the name: the three CLI aliases all resolve to
-# `argus.cli:main` and their command lines are parsed by `build_parser`, while `argus-mcp`
-# resolves to `argus.mcp.server:main`, whose entire input is a JSON-RPC stream on stdin and
-# which accepts NO arguments. Handing an `argus-mcp` line to the CLI parser would report a
-# usage error for a command that is correct, so `parse_failure` dispatches on the target
-# (below) rather than assuming one parser for every script this distribution ships.
-_CLI_ENTRY_TARGET = "argus.cli:main"
-_MCP_ENTRY_TARGET = "argus.mcp.server:main"
-
-
-def console_script_targets() -> dict[str, str]:
-    """``{alias: target}`` read off ``pyproject.toml [project.scripts]`` (PURE).
-
-    Raises rather than returning an empty mapping if the table cannot be located: an empty
-    recognizer makes every documented invocation invisible and `-28` would pass over
-    nothing at all.
-    """
-    text = _read("pyproject.toml")
-    match = re.search(r"^\[project\.scripts\]\n(.*?)(?=\n\[|\Z)", text, re.S | re.M)
-    assert match, "pyproject.toml declares no [project.scripts] table"
-    found = dict(re.findall(r'^([\w.-]+)\s*=\s*"([^"]+)"', match.group(1), re.M))
-    assert found, "no console alias parsed out of [project.scripts]"
-    return found
-
-
-_CONSOLE_SCRIPT_TARGETS = console_script_targets()
-_CONSOLE_SCRIPTS = tuple(sorted(_CONSOLE_SCRIPT_TARGETS))
-
-_INVOCATION_SOURCES = ("README.md", "action.yml")
-_WORKFLOW_GLOB = ".github/workflows/*.yml"
-
-# `${{ github.sha }}`, `$TAG`, `<repo>` — a documented placeholder is a value, not a parse error.
-_PLACEHOLDER_RE = re.compile(r"\$\{\{[^}]*\}\}|\$\{[^}]*\}|\$[A-Za-z_][A-Za-z0-9_]*|<[^>\s]+>")
-_PLACEHOLDER = "PLACEHOLDER"
-
-
-@dataclass(frozen=True)
-class DocumentedInvocation:
-    """A console-script command line committed in a consumer-facing file."""
-
-    source: str
-    line_number: int
-    command: str
-
-
-# The YAML `run:` header, in BOTH shapes GitHub accepts, and in EVERY spelling YAML gives each
-# shape. Group `block` is the block-scalar header if one is present, group `rest` is whatever
-# else follows the key on the same line.
-#
-# `block` deliberately matches the whole YAML block header — the style indicator `|` or `>`
-# followed by its OPTIONAL indentation indicator (a digit) and chomping indicator (`-`/`+`), in
-# EITHER order, which is what the YAML spec allows (`c-b-block-header`). So `|`, `>`, `|-`, `|+`,
-# `>-`, `>+`, `|2`, `|2-`, `|-2`, `>-2` are all recognised as block headers. The previous rule
-# `(?:[|>][-+]?\s*)?(.*)` did not, and the miss was not academic: a digit is not `[-+]`, so
-# `run: |2` fell into group 1 non-empty and was classified as the SINGLE-LINE form.
-#
-# 🚩 THE CLASSIFICATION KEYS ON THE PRESENCE OF `block`, NOT ON WHETHER SOMETHING FOLLOWS IT.
-# That is the whole correction (Story 11.3 review iteration 1). YAML permits exactly one thing
-# after a block header on the same line — a comment — so `run: | # scrub inputs first` IS a block
-# scalar, and the old "is the remainder non-empty?" test read the comment text as the command and
-# never scanned the indented body where the real script lives. Nine header spellings were
-# measured VACUOUS on 2026-08-12 before this fix (`| #`, `> #`, `|- #`, `|+ #`, `|2`, `|2- #`,
-# `>-2`, `run: # …`, and a single-line scalar continued onto the next line); each is ordinary,
-# non-adversarial CI YAML. Keying on the indicator makes the set of recognised block spellings
-# the YAML grammar itself rather than a list of the ones somebody thought of (§C.6).
-_RUN_HEADER_RE = re.compile(r"^-?\s*run:\s*(?P<block>[|>][0-9+\-]*)?\s*(?P<rest>.*)$")
-
-
-def _expression_is_open(text: str) -> bool:
-    """Does *text* carry a `${{` that has not been closed by a `}}` yet? (PURE)"""
-    return text.count("${{") > text.count("}}")
-
-
-def executable_line_numbers(text: str, suffix: str) -> set[int]:
-    """1-based line numbers that sit inside an executable block (PURE).
-
-    PUBLIC on purpose (Story 11.3 / DN-2): this is the SINGLE definition of "which lines are
-    shell source?" in this repository, and `tests/test_workflow_input_containment.py` imports
-    it rather than carrying a second copy (AR7 / architecture §3.3 — extend, never duplicate).
-    A private spelling would have forced the injection guard to reach through `_`-prefixed
-    API or to re-implement the rule, and a rule implemented twice drifts in one of the two.
-
-    **Both YAML `run:` shapes are recognised, and that generalisation is load-bearing.** The
-    original rule keyed on ``^-?\\s*run:\\s*[|>]?[-+]?\\s*$`` — the ``\\s*$`` requires
-    end-of-line after the key, so it saw block scalars ONLY. Measured on 2026-08-12 against a
-    synthetic ``- run: echo "${{ inputs.evil }}"`` it returned an **empty** set, and against
-    `.github/workflows/release.yml` it missed four real single-line `run:` steps. A guard
-    inheriting that blindness would have been vacuous against the cheapest way to reintroduce
-    `DF-9-2-D`: writing the interpolation on one line. Re-measured after the generalisation,
-    `extract_documented_invocations()` returns the same five invocations element-by-element —
-    every single-line `run:` in the corpus starts with `python`, which is not a console script
-    this distribution ships.
-
-    **Story 11.3, review iteration 1 — the same lesson, one shape further out.** The first
-    generalisation asked *"is anything left on the line after the key?"* and called a non-empty
-    remainder the command. That re-created the identical blindness for a header carrying a
-    trailing YAML comment (``run: | # scrub inputs before use``) and for a header carrying an
-    indentation indicator (``run: |2``): the remainder is non-empty in both, so the line was
-    classified single-line, ``run_indent`` was never set, and **the indented body — where the
-    script and any interpolation live — was never scanned at all**. Measured before the fix,
-    nine such headers each yielded an EMPTY hit set from the containment guard. The rule now
-    keys on the PRESENCE of the block indicator (YAML allows only a comment after it), which
-    makes the recognised set the YAML grammar rather than an enumeration. ``-32`` in
-    ``tests/test_workflow_input_containment.py`` drives the whole generated cross product of
-    style x indentation x chomping x comment through this function and fails on any spelling
-    that collapses back to the single-line branch.
-
-    **A single-line ``run:`` whose value carries an unclosed ``${{`` absorbs its continuation
-    lines**, because a YAML plain or quoted scalar may span lines and ``run: echo "${{`` /
-    ``  inputs.evil }}"`` is legal YAML that the runner folds into one command. The continuation
-    is bounded by the closing ``}}`` and by the indentation returning, deliberately narrowly: a
-    single-line ``run:`` is normally followed by a SIBLING key (``env:``, ``with:``) whose body is
-    more indented, and absorbing that would report `env:`-bound values — the very shape this
-    project asks authors to write — as shell source.
-    """
-    inside: set[int] = set()
-    if suffix == ".md":
-        fenced = False
-        for number, line in enumerate(text.splitlines(), start=1):
-            stripped = line.strip()
-            if stripped.startswith("```"):
-                fenced = not fenced and stripped[3:].strip().lower() in ("bash", "sh", "shell", "console")
-                continue
-            if fenced:
-                inside.add(number)
-        return inside
-    # YAML: everything under a `run:` block scalar, until the indentation returns — PLUS the
-    # single-line `run: cmd …` form, which is shell source on the key's own line.
-    run_indent: int | None = None
-    open_indent: int | None = None  # single-line `run:` whose value has an unclosed `${{`
-    open_text = ""
-    for number, line in enumerate(text.splitlines(), start=1):
-        stripped = line.strip()
-        if not stripped:
-            continue
-        indent = len(line) - len(line.lstrip())
-        if run_indent is not None and indent > run_indent:
-            inside.add(number)
-            continue
-        if open_indent is not None and indent > open_indent:
-            inside.add(number)  # continuation of a multi-line single-line-form scalar
-            open_text += "\n" + stripped
-            if not _expression_is_open(open_text):
-                open_indent = None
-            continue
-        run_indent = None
-        open_indent = None
-        header = _RUN_HEADER_RE.match(stripped)
-        if header is not None:
-            rest = header.group("rest").strip()
-            if header.group("block") is not None or not rest or rest.startswith("#"):
-                # Block scalar (`run: |`, `run: >-2`, `run: |+ # note`) or a bare `run:` key:
-                # the script is what follows, indented. Only a COMMENT may legally follow a
-                # block header, so its remainder is never the command.
-                run_indent = indent
-            else:
-                inside.add(number)  # single-line `run: cmd …` — the line itself is the script
-                if _expression_is_open(rest):
-                    open_indent, open_text = indent, rest
-    return inside
-
-
-def extract_documented_invocations() -> tuple[DocumentedInvocation, ...]:
-    """Extract every console-script command line committed in the consumer-facing corpus (PURE)."""
-    files = [_REPO_ROOT / name for name in _INVOCATION_SOURCES]
-    files.extend(sorted(_REPO_ROOT.glob(_WORKFLOW_GLOB)))
-    found: list[DocumentedInvocation] = []
-    for path in files:
-        if not path.exists():
-            continue
-        text = path.read_text(encoding="utf-8")
-        executable = executable_line_numbers(text, path.suffix)
-        lines = text.splitlines()
-        number = 0
-        while number < len(lines):
-            number += 1
-            if number not in executable:
-                continue
-            stripped = lines[number - 1].strip()
-            first = stripped.split(" ", 1)[0]
-            if first not in _CONSOLE_SCRIPTS:
-                continue
-            start = number
-            parts = [stripped]
-            while parts[-1].endswith("\\") and number < len(lines):
-                parts[-1] = parts[-1][:-1]
-                number += 1
-                parts.append(lines[number - 1].strip())
-            found.append(
-                DocumentedInvocation(
-                    source=str(path.relative_to(_REPO_ROOT)).replace("\\", "/"),
-                    line_number=start,
-                    command=" ".join(part.strip() for part in parts).strip(),
-                )
-            )
-    return tuple(found)
-
-
-def parse_failure(command: str) -> str | None:
-    """Return the parse failure for *command*, or ``None`` when it parses (PURE).
-
-    ``build_parser().parse_args`` is called directly rather than through a subprocess: the failure
-    mode under test is the ARGUMENT CONTRACT, not process spawning, and a subprocess would make this
-    guard host-dependent on all three CI legs.
-    """
-    substituted = _PLACEHOLDER_RE.sub(_PLACEHOLDER, command)
-    try:
-        argv = shlex.split(substituted, posix=True)
-    except ValueError as exc:  # unbalanced quotes in the documented line
-        return f"could not tokenise: {exc}"
-
-    # Which parser judges the line is decided by the alias's TARGET, not assumed (Story
-    # 12.6). `argus-mcp` takes no arguments at all — its input is the message stream — so
-    # for it the contract is "the documented line is the bare command", and a documented
-    # `argus-mcp --something` is a failure here rather than a false green.
-    target = _CONSOLE_SCRIPT_TARGETS.get(argv[0] if argv else "", _CLI_ENTRY_TARGET)
-    if target == _MCP_ENTRY_TARGET:
-        if len(argv) > 1:
-            return (
-                f"`{argv[0]}` accepts no arguments (its input is a JSON-RPC stream on "
-                f"stdin) and this line passes {argv[1:]}"
-            )
-        return None
-
-    parser = cli.build_parser()
-    parser.exit_on_error = False
-    try:
-        parser.parse_args(argv[1:])
-    except SystemExit as exc:
-        return f"SystemExit {exc.code} — argparse rejected the documented command line"
-    except argparse.ArgumentError as exc:
-        return f"ArgumentError: {exc}"
-    return None
-
+# MOVED 2026-08-15 by Story 12.7 to `tests/invocation_sources.py`, along the cohesion boundary this
+# file already had, because adding the shipped command-asset tree to the corpus pushed this module
+# past the NFR-M1 1200-line ceiling. The remedy the ceiling guard itself prescribes is a split into
+# a sibling module with a re-export and EVERY IMPORT PATH UNCHANGED — not shaved lines and not a
+# narrowed population — so every name below is re-exported here and
+# `from tests.test_invocation_contract import executable_line_numbers` resolves exactly as before.
+# The tests that USE them stay in this file: `-28` is a Story-10.3 assertion and belongs beside the
+# rest of the contract, and `-39`'s non-vacuity floor spans both halves by design.
+from tests.invocation_sources import (  # noqa: E402,F401 - re-export, import path preserved
+    _ASSET_GLOB,
+    _CLI_ENTRY_TARGET,
+    _CONSOLE_SCRIPT_TARGETS,
+    _CONSOLE_SCRIPTS,
+    _INVOCATION_SOURCES,
+    _MCP_ENTRY_TARGET,
+    _PLACEHOLDER,
+    _PLACEHOLDER_RE,
+    _RUN_HEADER_RE,
+    _WORKFLOW_GLOB,
+    DocumentedInvocation,
+    console_script_targets,
+    executable_line_numbers,
+    extract_documented_invocations,
+    parse_failure,
+)
 
 # ─────────────────────────────────────────────────────────────────────────────
 # Tests
@@ -728,7 +631,7 @@ def test_TC_ArgusAgent_CLI_001_35_every_accepted_flag_is_registered_and_vice_ver
 
     Story 10.3 / AC6.1, AC6.2, AC6.3 (`DF-AUD-APAA-E`).
     """
-    derived = derive_arguments(cli.build_parser(), "audit")
+    derived = derive_arguments(cli.build_parser())
     registered = _registry_by_spelling()
     unregistered, unaccepted = unregistered_and_unaccepted(derived, registered)
 
@@ -760,6 +663,20 @@ def test_TC_ArgusAgent_CLI_001_36_every_registered_spelling_actually_parses() ->
         SHAPE_CHOICE: None,  # filled from the registry's own choices
         SHAPE_STORE_TRUE: [],
     }
+    # The sub-command a flag belongs to, and that sub-command's required positionals, are DERIVED
+    # from the live parser rather than hand-typed (Story 12.7). The prefix used to be the literal
+    # `"argus audit . "`, which was correct only while there was exactly one sub-command — the
+    # same single-surface assumption `derive_arguments` carried, in a second place.
+    parser = cli.build_parser()
+    derived = derive_arguments(parser)
+    positionals_by_subcommand = {
+        name: [
+            argument.dest
+            for argument in derive_arguments(parser, name).values()
+            if argument.shape == SHAPE_POSITIONAL
+        ]
+        for name in subcommands(parser)
+    }
     failures: list[str] = []
     for entry in CONTRACT_REGISTRY:
         if entry.shape == SHAPE_POSITIONAL:
@@ -768,9 +685,12 @@ def test_TC_ArgusAgent_CLI_001_36_every_registered_spelling_actually_parses() ->
             value = [entry.choices[0]] if entry.choices else ["x"]
         else:
             value = list(sample_for_shape[entry.shape] or [])
-        failure = parse_failure("argus audit . " + shlex.join([entry.spelling, *value]))
-        if failure is not None:
-            failures.append(f"{entry.spelling}: {failure}")
+        accepting = derived[entry.spelling].subcommands
+        for name in accepting:
+            prefix = ["argus", name, *(["."] * len(positionals_by_subcommand[name]))]
+            failure = parse_failure(shlex.join([*prefix, entry.spelling, *value]))
+            if failure is not None:
+                failures.append(f"{name} {entry.spelling}: {failure}")
     assert not failures, (
         "A CONTRACT SITE NAMES A FLAG THE PARSER REJECTS — " + "; ".join(failures)
     )
@@ -782,7 +702,7 @@ def test_TC_ArgusAgent_CLI_001_37_defaults_and_shapes_match_the_contract() -> No
     Story 10.3 / AC6.7. A silent default change is a behavioural change to a published surface; it
     must cost a deliberate registry edit.
     """
-    derived = derive_arguments(cli.build_parser(), "audit")
+    derived = derive_arguments(cli.build_parser())
     problems = shape_divergences(derived, _registry_by_spelling())
     assert not problems, "PARSER/CONTRACT DIVERGENCE:\n  " + "\n  ".join(problems)
 
@@ -801,7 +721,7 @@ def test_TC_ArgusAgent_CLI_001_37b_the_coverage_scope_divergence_is_pinned_both_
     entry = _registry_by_spelling()["--coverage-scope"]
     assert entry.exemption, "DN-8's exemption must carry its reason, never bare silence"
 
-    cli_default = derive_arguments(cli.build_parser(), "audit")["--coverage-scope"].default
+    cli_default = derive_arguments(cli.build_parser())["--coverage-scope"].default
     library_default = AuditRequest.model_fields["coverage_scope"].default
 
     assert cli_default == "application", (
@@ -841,9 +761,10 @@ def test_TC_ArgusAgent_CLI_001_39_the_guard_is_not_vacuous() -> None:
     future argparse changes them, a naive walk returns an empty list and every set comparison above
     passes over nothing. This test must go RED in that case, not silently green.
     """
-    derived = derive_arguments(cli.build_parser(), "audit")
+    parser = cli.build_parser()
+    derived = derive_arguments(parser)
     assert derived, (
-        "THE PARSER WALK RETURNED NOTHING. Either the `audit` sub-command is gone or argparse's "
+        "THE PARSER WALK RETURNED NOTHING. Either the sub-commands are gone or argparse's "
         "private structure changed. Every equality assertion in this file is vacuous until this "
         "is repaired — do NOT delete this test to get green."
     )
@@ -853,6 +774,29 @@ def test_TC_ArgusAgent_CLI_001_39_the_guard_is_not_vacuous() -> None:
     )
     assert CONTRACT_REGISTRY, "CONTRACT_REGISTRY is empty — the comparison would be vacuous"
 
+    # Story 12.7 — the closure really is a closure. Until 2026-08-15 the walk was scoped to the
+    # hand-named `audit` sub-command at every one of its call sites, so a second sub-command's
+    # flags were invisible to `-35`/`-37`/`-38`. These three assertions are what stop that
+    # narrowing from reappearing: the parser must declare more than one sub-command, the walk must
+    # reach every one it declares, and no spelling may mean two different things.
+    names = subcommands(parser)
+    assert len(names) >= 2, (
+        f"the parser declares {list(names)} — the closure over sub-commands cannot be shown to be "
+        "wider than the single hand-named one it replaced. If a sub-command was removed, say so "
+        "deliberately; do not let this assertion decay into a tautology."
+    )
+    reached = {name for argument in derived.values() for name in argument.subcommands}
+    assert reached == set(names), (
+        f"the argument walk reached {sorted(reached)} but the parser declares {list(names)} — a "
+        "sub-command's flags are accepted and invisible to every comparison in this file, which "
+        "is `DF-AUD-APAA-E` exactly."
+    )
+    assert conflicting_arguments(parser) == (), (
+        "two sub-commands accept the SAME spelling with different defaults/shapes/choices, so one "
+        "registry entry cannot describe both and the comparison would silently drop one: "
+        f"{conflicting_arguments(parser)}"
+    )
+
     invocations = extract_documented_invocations()
     assert invocations, (
         "THE DOCUMENTED-INVOCATION EXTRACTOR FOUND NOTHING. Either the consumer-facing corpus "
@@ -861,6 +805,16 @@ def test_TC_ArgusAgent_CLI_001_39_the_guard_is_not_vacuous() -> None:
     sources = {invocation.source for invocation in invocations}
     assert "README.md" in sources and "action.yml" in sources, (
         f"the extractor no longer reaches both README.md and action.yml — found {sorted(sources)}"
+    )
+    # Story 12.7 / AC3 — the `> 0` floor on the corpus's newest member. A rename or a move of the
+    # asset tree turns this RED instead of silently shrinking `-28` back to the corpus it had
+    # before, which is the `_CONSOLE_SCRIPTS` failure mode: a recognizer that stops recognizing.
+    from_assets = [s for s in sources if s.startswith("argus/assets/commands/")]
+    assert from_assets, (
+        "NO documented invocation was extracted from the shipped command-asset tree "
+        f"({_ASSET_GLOB!r}). Either the tree moved, the assets stopped carrying a fenced `argus "
+        "…` invocation, or the glob stopped matching — in every case `-28` has quietly stopped "
+        "checking the one surface Story 12.7 added it for."
     )
 
 

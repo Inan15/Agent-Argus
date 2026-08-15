@@ -133,20 +133,25 @@ _MIN_CLAIM_ATOMS = 15
 # count itself is pinned exactly by `-32`'s both-direction closure against the registry.
 _MIN_FR_IDS = 30
 
-# RE-MEASURED 2026-08-15 by Story 12.6 against the tree it produced, because the reachability
-# population changed shape: the walk now starts from the SET of `[project.scripts]` entry modules
-# (`argus.cli` ∪ `argus.mcp.server`) rather than from `argus.cli` alone. Measured on that tree: 78
-# modules under `argus/`, 390 intra-package import edges (submodule edges plus the ancestor-package
-# edges a submodule import implies), 63 modules reachable from the union — of which 60 are reachable
-# from `argus.cli` by itself, so the second entry point adds exactly the three `argus.mcp.*` modules
-# and NO existing seam. (Previously measured 2026-08-11: 72 / 318 / 53 from `argus.cli` alone.)
+# RE-MEASURED 2026-08-15 by Story 12.7 against the tree it produced. Measured: **83** modules under
+# `argus/`, **401** intra-package import edges (submodule edges plus the ancestor-package edges a
+# submodule import implies), **68** modules reachable from the union of the `[project.scripts]`
+# entry modules. The five new modules are `argus.assets`, `argus.assets.commands`, `argus.commands`,
+# `argus.commands.hosts` and `argus.commands.installer`, and ALL FIVE are reachable — the installer
+# is reached from `argus.cli` through the `install-commands` sub-command, which is what makes FR35's
+# second half `wired` rather than a library seam. No entry point was added: `install-commands` is a
+# SUB-COMMAND (DN-1), so the entry-point set is unchanged and the reachability walk starts where it
+# started.
+# ~~Measured 2026-08-15 by Story 12.6: 78 / 390 / 63, of which 60 from `argus.cli` alone.~~
+# ~~Measured 2026-08-11: 72 / 318 / 53 from `argus.cli` alone.~~ (§3.4 — the earlier measurements
+# stay legible so the trend is readable rather than remembered.)
 # Floors still sit ~25% low, and they RISE with the measurement rather than being left where they
 # were: a floor that stops tracking the tree is a floor that stops meaning anything. A package split
-# may move modules between files, but a walk that finds 57 modules or 280 edges has stopped seeing
+# may move modules between files, but a walk that finds 61 modules or 299 edges has stopped seeing
 # the package.
-_MIN_PACKAGE_MODULES = 58
-_MIN_IMPORT_EDGES = 290
-_MIN_REACHABLE_MODULES = 47
+_MIN_PACKAGE_MODULES = 62
+_MIN_IMPORT_EDGES = 300
+_MIN_REACHABLE_MODULES = 51
 
 # ─────────────────────────────────────────────────────────────────────────────
 # The two CLOSED disposition vocabularies (Story 10.5 DN-4). A hit that fits none of these is a
@@ -534,13 +539,31 @@ _REVERSE_REGISTRY: tuple[_Delivery, ...] = (
               "projection, so the surface is reachable from a declared entry point and the verdict "
               "is the CLI's by construction (`TC-ArgusAgent-MCP-001-07`). Reachability is proven "
               "by `-34` above against the union closure, which from this date starts at the SET of "
-              "`[project.scripts]` entry modules rather than at `argus.cli` alone. WHAT IS NOT "
+              "`[project.scripts]` entry modules rather than at `argus.cli` alone. "
+              "COMPLETED 2026-08-15 by Story 12.7, which delivered the residual this entry named "
+              "one story earlier — and the residual is struck rather than deleted because it is "
+              "the record of what `wired` did and did not cover at the time: ~~WHAT IS NOT "
               "DELIVERED, named so this entry does not over-claim the FR: the PACKAGED ASSISTANT "
               "COMMAND ASSETS — the `/audit …` command files and any registration mechanism — are "
               "**Story 12.7's**, the wheel still ships ZERO data assets, and installing this "
               "distribution registers no slash command in any assistant "
               "(`TC-ArgusAgent-DOCS-001-56` holds that gap open with its FORTHCOMING marker, which "
-              "this story deliberately did NOT remove). Publishing anything at all is Story "
+              "this story deliberately did NOT remove).~~ All three of those clauses are now FALSE. "
+              "The command assets ship as DATA under `argus/assets/commands/**` (proven on a "
+              "freshly built wheel AND sdist by `TC-ArgusAgent-ASSETS-001-12`, so "
+              "`BuiltDistribution.data_assets` is non-empty), and the documented step that places "
+              "them is a SECOND SUB-COMMAND on this same entry point — `argus install-commands`, "
+              "whose logic is `argus/commands/installer.py::install_commands` and whose closed "
+              "host registry is `argus/commands/hosts.py::HOST_REGISTRY`. The disposition stays "
+              "`wired` and the module/anchor above are UNCHANGED deliberately: `wired` is proven by "
+              "`-34` against the import closure from the `[project.scripts]` entry modules, the new "
+              "surface adds NO entry point (that is DN-1's whole point), and it is reached from "
+              "`argus.cli` — the module this registry already names — so re-pointing the anchor at "
+              "the installer would trade a proven coordinate for an equivalent one and lose the "
+              "12.6 half. The set that ships now equals the set every surface publishes, in both "
+              "directions (`TC-ArgusAgent-ASSETS-001-06`), and `-56`'s delivered branch — which had "
+              "never executed and returned after ONE assertion — was corrected to assert that "
+              "equality rather than merely the marker's absence. Publishing anything at all is Story "
               "12.9's. ~~Specified for V1.5 and owned by Stories 12.6/12.7 (the local "
               "agent-integration surface; `argus/mcp/**` does not exist on this tree). ⛔ Not "
               "amended by Story 10.5.~~ (§3.4 struck, not deleted — superseded by the delivery "
@@ -1553,16 +1576,16 @@ def test_neither_closure_can_pass_by_finding_nothing() -> None:
     reachable = reachable_from_any(graph, _ENTRY_POINTS)
     assert len(graph) >= _MIN_PACKAGE_MODULES, (
         f"Only {len(graph)} modules found under {_PACKAGE_ROOT.name}/ (floor "
-        f"{_MIN_PACKAGE_MODULES}, measured 78 on 2026-08-15). The package moved or was renamed, "
+        f"{_MIN_PACKAGE_MODULES}, measured 83 on 2026-08-15). The package moved or was renamed, "
         "and every reachability assertion in this file has quietly stopped testing anything."
     )
     assert edges >= _MIN_IMPORT_EDGES, (
-        f"Only {edges} import edges resolved (floor {_MIN_IMPORT_EDGES}, measured 390 on "
+        f"Only {edges} import edges resolved (floor {_MIN_IMPORT_EDGES}, measured 401 on "
         "2026-08-15). Either the import style changed or the resolver silently stopped resolving."
     )
     assert len(reachable) >= _MIN_REACHABLE_MODULES, (
         f"Only {len(reachable)} modules reachable from {_ENTRY_POINT_LABEL} (floor "
-        f"{_MIN_REACHABLE_MODULES}, measured 63 on 2026-08-15). If an entry point moved, every "
+        f"{_MIN_REACHABLE_MODULES}, measured 68 on 2026-08-15). If an entry point moved, every "
         "'wired' disposition here is being proven against the wrong graph."
     )
     # THE ENTRY-POINT SET IS DERIVED, and its derivation is asserted non-vacuous.

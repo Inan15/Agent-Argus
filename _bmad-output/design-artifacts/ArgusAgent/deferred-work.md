@@ -3515,3 +3515,71 @@ premise, confirmed). Closure probe re-run against the guard's own builder: **74*
     cartridge staging convention
   - category: maintainability (test-harness fragility on a security gate)
   - severity: 🟢
+
+
+## Deferred from: story 12-7-commands-the-readme-promises-actually-exist (2026-08-15)
+
+**Append-only (§3.4): nothing above this heading was edited, reordered or deleted.**
+
+### Closed by this story
+
+- **`DF-11-5-C` — CLOSED 2026-08-15.** *"`README.md`'s seven `/audit …` commands are documented but
+  undelivered"* — filed by Story 11.5 so that 12.7 would know the `FORTHCOMING` marker was its to
+  remove. It is closed in the only way that is a delivery rather than a deletion: the distribution
+  now **ships** the command assets (`argus/assets/commands/*.md`, in the built wheel **and** sdist),
+  a documented packaged step places them (`argus install-commands`), and the marker is gone because
+  the gap it described is gone. **Four of the seven commands were removed rather than built**, each
+  with its reason recorded on the consumer surfaces (struck, not deleted): `repo` and `architecture`
+  name no pass the CLI has, `subsystem <name>` needs a scoping capability that does not exist, and
+  `resume` is `DF-3-4-A` — a working engine with no CLI entrance, which stays open and is NOT
+  re-filed here. Three commands ship and resolve through the real parser.
+  ⚠️ **The guard that held this entry was CORRECTED, not merely satisfied.**
+  `TC-ArgusAgent-DOCS-001-56`'s delivered-state branch had **never executed** (it carried
+  `# pragma: no cover`) and, as written, asserted only *"the marker is gone"* and then `return`ed —
+  so from the moment an asset shipped, nothing held the documented set to the shipped set, and the
+  test could have been satisfied by DELETING the commands from the README. The branch now asserts
+  set equality in both directions with a non-vacuity floor on each side. Recorded here because a
+  guard that stops guarding at the moment of delivery is the defect class this ledger exists for,
+  and this is its third instance in Epic 12 (`-49`'s registered-surface loop, `_ENTRY_POINT`'s
+  prose, and now `-56`).
+
+### Re-stated, NOT re-filed — cited by this story and still open
+
+- **`DF-3-4-A`** (resume has no CLI entrance) and **`DF-10-5-C`** (FR29 evidence export needs a CLI
+  surface) are the reasons two published commands were removed rather than implemented. Both stay
+  open under their existing owners and target stories; neither is re-filed, because a gap filed
+  twice is a gap that gets closed once and left looking open.
+
+### Filed by this story
+
+- **`DF-12-7-A` — 🟢 the host registry ships ONE verified member (`claude-code`), while five hosts
+  named by the old README have no registered convention.** DN-2 made this a decision rather than an
+  omission: an entry exists only if its exact configuration directory and its exact resulting
+  command spelling were verified, and six two-to-three-line `adapters/**` stubs were not a delivery
+  for the other five. Each remaining host is **one reviewed registry entry, one derived README row
+  and no new code path** away — the asset tree, the placement mechanism, the containment rule and
+  the disclosure render are all host-independent by construction. Filed so the narrowing is visible
+  rather than inferred from a list that got shorter.
+  - id: DF-12-7-A
+  - origin_story: 12-7-commands-the-readme-promises-actually-exist
+  - owner: Engineering
+  - target_story: NONE — unscheduled; the next story that adds a supported assistant
+  - category: scope (deliberate narrowing, recorded)
+  - severity: 🟢
+
+- **`DF-12-7-B` — 🟢 a STALE installed command asset is detectable but not detected FOR the user.**
+  AC6 asks which of two properties Epic 13's expiry gets, and the answer is stated rather than
+  implied: **re-running `argus install-commands` produces the new text** (the render is a pure
+  function of the packaged asset and the pinned constant, so an install after Story 13.3 flips
+  `INSTRUMENT_STATUS` rewrites every file), and staleness **is** detectable — the bytes on disk stop
+  equalling the bytes the renderer now produces. What does NOT exist is anything that *tells the
+  user* their installed copy is stale; nothing warns them, and the tool never reads back what it
+  wrote. Building that would need a read-back-and-compare path this story's sentence does not cover.
+  Filed with a named owner rather than left silent, per AC6's own instruction.
+  - id: DF-12-7-B
+  - origin_story: 12-7-commands-the-readme-promises-actually-exist
+  - owner: Engineering
+  - target_story: **13.3** — the story that flips the instrument status is the one whose users will
+    hold a stale copy
+  - category: documentation-accuracy (FR34 expiry on a placed artifact)
+  - severity: 🟢

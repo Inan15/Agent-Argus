@@ -327,6 +327,19 @@ remains deferred. Delivered by `sprint-change-proposal-2026-07-28.md`.)*
   | **MCP server** | **stdio only** | an entry point in the same distribution |
   | *Assistant command assets* | *(not an entry point — configuration data)* | packaged files placed in the host's config |
 
+  ✅ **The third row became a delivery on 2026-08-15 (Story 12.7 / FR35, second half).** The assets ship in
+  the wheel and the sdist as `argus/assets/commands/*.md`, and *"placed in the host's config"* is now one
+  documented, packaged step: the **second sub-command** `argus install-commands` — not a third entry point,
+  which is why the table's row count is unchanged and why this is recorded here rather than by adding a row.
+  The reasoning is DN-1's: the step's transport is argv, identical to the CLI's, so a separate console alias
+  would be a fork of an entry point rather than an extension of one (AR7 / §3.3), whereas 12.6's second
+  alias was justified by a genuinely different transport. `argus/commands/installer.py` splits a PURE fold
+  (assets × hosts × destination → resolved `(path, bytes)` writes) from a THIN impure write, and it is the
+  only place in this product that writes outside the audited repository at all — so constraint 3 below
+  ("no new authority") is joined by a containment rule of the same kind as NFR-S4/NFR-S5: every write
+  resolves inside the destination root, and a `..` segment, an absolute asset name or a symlinked
+  configuration directory is refused with a typed error.
+
   **The invariant that makes this cheap: both entry points construct the same `AuditRequest` and consume
   the same `AuditVerdict`.** The MCP server is **impure I/O wiring** in the §Pure/Impure master-rule sense
   — a protocol adapter, exactly as `cli.py` is an argv adapter. It contains **no audit logic, no verdict
@@ -871,6 +884,33 @@ so a documented invocation that would give a consumer an argparse usage error fa
 the walk uses argparse private API, a non-vacuity assertion is mandatory (`-39`): an argparse-internals
 change must turn this red, not silently green. **A red result when a new flag lands (`--deep`/FR36, any
 MCP-era flag) is the guard working, not a defect** — registration is meant to cost a deliberate edit.
+*(Amended 2026-08-15 by Story 12.7: the derivation is now a **closure over every sub-command** in
+`_SubParsersAction.choices`. It was scoped to one hand-named sub-command — every call site passed the
+literal `"audit"` — so a SECOND sub-command's flags were invisible to `-35`/`-37`/`-38`, which is
+`DF-AUD-APAA-E` reconstructed by the guard written to close it. The parsed corpus also gains the shipped
+command-asset tree `argus/assets/commands/*.md` **by glob**, with a `> 0` floor in `-39`, so a rename or a
+move turns it red rather than silently shrinking the corpus.)*
+
+**Command-asset enforcement** *(added 2026-08-15 by Story 12.7 / FR35, second half)*: the §A rule
+*"Command assets are data, not code — they instruct a host to invoke the CLI and introduce no execution
+path of their own"* is enforced by **`tests/test_command_assets.py`** (verification area
+`TC-ArgusAgent-ASSETS-001-01`..`-12`). Four claims, each derived rather than declared. **(1) Packaged:**
+the assets are resolved through `importlib.resources` over a real package — never `__file__` arithmetic,
+which breaks in a zip-imported or relocated distribution — and are asserted present in a freshly built
+**wheel and sdist**, because those are built from different populations (the whole package directory
+versus VCS-tracked files) and the asymmetry is silent. **(2) No authority:** every executable line in every
+shipped asset is an `argus …` invocation the REAL parser accepts, no asset carries an interpolation
+construct, and none enables the egress opt-in — a file placed in a user's configuration directory can
+never constitute that operator act. **(3) Set equality:** the shipped set is DERIVED from the asset names
+× the host registry, and every surface that publishes a command list is compared against it in both
+directions, with the surface population resolved by **scanning tracked markdown** so a fourth list added
+later is red rather than invisible, and with §3.4 struck spans excluded so an honest retraction stays
+writable. **Exactly one** command-asset tree may exist in the repository — that is what forced the
+`adapters/**` stubs to be resolved rather than left as a second source of truth. **(4) Containment and
+FR34:** the one new write path refuses any target escaping the resolved destination root (`..`, an
+absolute name, a symlinked configuration directory), and the instrument-status disclosure is **rendered at
+write time** from the one constant — asserted absent from every committed asset AND present in every
+written one, which is `-49`'s corrected shape at a new seam.
 
 **Degradation-diagnosis enforcement** *(added 2026-08-10 by Story 10.4 / `DF-AUD-APAA-F`)*: the
 §Error/Degradation rule above — *a degraded outcome records the cause it actually had, and a recorded
@@ -969,7 +1009,14 @@ determinism core isolated and independently testable.)*
 ```text
 argus/mcp/              # FR35 stdio protocol adapter — impure wiring, no audit logic
 argus/assets/commands/  # packaged assistant command assets (data, not code)
+argus/commands/         # FR35 `argus install-commands` — pure host registry + pure fold + thin write
 ```
+
+✅ **Both reserved paths are now occupied** — `argus/mcp/` by Story 12.6, `argus/assets/commands/` by Story
+12.7 — and the placement recorded here in advance turned out to be the one that shipped. `argus/commands/`
+is the one addition this proposal did not anticipate, and it exists for NFR-M1's *"NO business logic in the
+entrypoint"*: the installer's logic could not live in `argus/cli.py`, and putting it beside the DATA in
+`argus/assets/` would have made an inert data package executable.
 
 *(The tree header above still reads `minions_core/apaa/` — stale since the 2026-08-03 separation, on the
 same correction path as §I Packaging. Recorded here; the tree-wide rename is not this proposal's scope.)*
@@ -1071,10 +1118,21 @@ tests/security/
   through `argus/cli.py`'s OWN request projection, so it carries no audit logic, no verdict logic and no
   second decision path, and the verdict is the CLI's BY CONSTRUCTION rather than by discipline. All five §A
   binding constraints are asserted mechanically (`tests/test_mcp_server.py`, verification area
-  `ArgusAgent-MCP-001`). ⚠️ **SCOPE, so this row does not over-claim the FR:** the packaged assistant command
+  `ArgusAgent-MCP-001`). ~~⚠️ **SCOPE, so this row does not over-claim the FR:** the packaged assistant command
   assets and any registration mechanism are **Story 12.7's** — the wheel still ships ZERO data assets and
-  installing this distribution registers no slash command in any assistant — and publishing anything at all
-  is **Story 12.9's** · **FR36** → `DeepAuditSeam`
+  installing this distribution registers no slash command in any assistant~~ ✅ **COMPLETED by Story 12.7,
+  2026-08-15** (struck above, not deleted — §3.4; the residual it named was right and has now been closed):
+  the assets ship as DATA under `argus/assets/commands/**` (asserted in the built **wheel and sdist** by
+  `TC-ArgusAgent-ASSETS-001-12`, so `BuiltDistribution.data_assets` is non-empty), and the documented step
+  that places them is a **second sub-command on the CLI entry point** — `argus install-commands`
+  (`argus/commands/installer.py`, closed host registry `argus/commands/hosts.py`), which is DN-1's ruling:
+  the transport is argv, identical to the CLI's, so a separate console alias would have been a fork of an
+  entry point rather than an extension of one (AR7 / §3.3). It therefore adds **no** `[project.scripts]`
+  entry, and the second surface's published tool schema — derived from the `audit` sub-parser alone — is
+  untouched. The set that ships equals the set every publishing surface documents, in both directions
+  (`TC-ArgusAgent-ASSETS-001-06`), and the FR34 disclosure is RENDERED into each placed file at write time
+  from the one constant rather than committed into an asset (AI-E9-7 / DN-7). Publishing anything at all
+  remains **Story 12.9's** · **FR36** → `DeepAuditSeam`
   (`argus/audit/deep_audit.py`), off by default, spend through the existing ceiling (§L381-388) ·
   **FR37** → `argus/reports/plain_english.py` + `argus/reports/generator.py`, the two verdict-rendering
   surfaces · **NFR-S6** → the no-egress-without-opt-in committed gate (§L385-388, L460) ·

@@ -284,6 +284,24 @@ _MODULES_UNDER_GUARD = (
     "argus.mcp",
     "argus.mcp.protocol",
     "argus.mcp.server",
+    # Story 12.7 / FR35 (second half) — the packaged command assets and the one step that
+    # places them. `argus.assets` / `argus.assets.commands` are DATA packages: they exist so
+    # `importlib.resources` can resolve the `.md` assets from a built distribution (never
+    # `__file__` path arithmetic, which breaks the moment the distribution is zip-imported or
+    # relocated), and their modules declare only inert format constants. They are registered
+    # here anyway rather than exempted, because the claim under test is about the whole
+    # import graph and a data package that acquired an import would be exactly the thing
+    # nobody would think to look at.
+    # `argus.commands.hosts` is the PURE closed host registry and `argus.commands.installer`
+    # is the pure fold plus its thin impure write — the only place this project writes
+    # outside the audited repository at all. Both reach `argus.verdict.negative_assurance`
+    # for the FR34 disclosure, which is already under this guard; neither reaches the web
+    # stack, and neither may acquire it. Extend the guard (do NOT fork) per AI-E3-6.
+    "argus.assets",
+    "argus.assets.commands",
+    "argus.commands",
+    "argus.commands.hosts",
+    "argus.commands.installer",
 )
 
 # Story 1.7 — the Epic-1 verdict path is ZERO-LLM-token (NFR-D2). The pipeline /

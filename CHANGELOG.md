@@ -107,9 +107,68 @@ still the only opt-in to egress, and still disclosing what will be transmitted b
 leaves. Every verdict this surface returns carries the instrument-status disclosure below, and so does
 the tool description, which an agent reads *before* it can decide to call the tool.
 
-**This is half of FR35.** The packaged assistant command assets — the `/audit …` commands README marks
-FORTHCOMING — are not in this release, and the wheel still ships zero data assets. Nothing here is
-published: no tag, no release, no index upload.
+**This was half of FR35.** ~~The packaged assistant command assets — the `/audit …` commands README marks
+FORTHCOMING — are not in this release, and the wheel still ships zero data assets.~~ *(Struck
+2026-08-15 — superseded by the section immediately below, which delivers the other half. All three
+clauses became false in one change: the assets are packaged, the FORTHCOMING marker is gone, and the
+wheel ships data assets. §3.4 — the superseded sentence stays legible with its correction.)* Nothing
+here is published: no tag, no release, no index upload.
+
+### Added — `argus install-commands`, so the commands this README documents are the commands you get
+
+The other half of FR35, and the half a `pip install` user could actually see nothing of before: the
+distribution now **ships the assistant command assets as data** and ships the step that places them.
+
+```bash
+argus install-commands --dry-run   # print exactly what would be written; write nothing
+argus install-commands             # place them for every supported host that is detected
+argus install-commands --remove    # delete exactly what the step wrote, and nothing else
+```
+
+**A second sub-command, not a fifth console alias.** `argus/cli.py` called `audit` *"the only V1
+sub-command; an additive seam for future ones"*, and this is that seam being used. The transport here
+is argv — identical to the CLI's — so a separate entry point would have been a fork of one, whereas
+12.6's `argus-mcp` alias was justified by a genuinely different transport (JSON-RPC on stdio). It
+therefore adds **no** `[project.scripts]` entry, and 12.6's MCP tool schema — derived from the `audit`
+sub-parser alone — is unchanged.
+
+It accepts `--host <name>` (repeatable; default is every registered host whose configuration directory
+is detected), `--dest <dir>` (override the configuration root), `--dry-run` and `--remove`, and nothing
+more. It obeys the existing contracts unchanged: the exit-code wire contract, a secret-safe stderr line
+and exit `1` on a typed failure rather than a traceback, no absolute host path in any message, and no
+`.argus/` write, network call or egress. It writes **only** inside the resolved destination root — a
+path escaping it via `..`, an absolute asset name or a symlinked configuration directory is refused
+with a typed error.
+
+**Three commands ship, and the published set is asserted equal to the shipped one.** `/argus-audit`,
+`/argus-audit-security` and `/argus-audit-report`, covering **Claude Code** (`~/.claude/commands/`).
+Every surface that publishes a command list is compared against the packaged asset tree in both
+directions, and the surface population is resolved by scanning the repository, so a fourth list added
+later is red rather than invisible.
+
+**The instrument-status disclosure is rendered into each placed file at install time**, from the one
+constant that declares it — never committed into an asset, because a transcribed copy of a pinned
+constant goes stale the day the status changes. Re-running the step refreshes it.
+
+**Removed, in the same change, four commands that could not run** (struck, not deleted — §3.4).
+~~`/audit repo`~~ and ~~`/audit architecture`~~ named no pass the tool has (`architecture-review` is a
+*report*, already produced by `/argus-audit-report`); ~~`/audit subsystem <name>`~~ needed a scoping
+capability that does not exist;
+and ~~`/audit resume`~~ had a working engine with no command-line entrance at all — a gap filed as
+`DF-3-4-A` and open since Story 3.4, and building one is a later story's work, not a documentation
+fix's. Three published lists disagreed with each other before this change (`README.md` seven,
+`audit/commands.md` ten, `audit/skill.md` six), and the developer-report count was published as **12**
+in three places while four are rendered. All of it is corrected here and struck rather than deleted.
+
+**Superseded: the `adapters/` stub tree.** Six two-to-three-line directories that registered nothing,
+were packaged nowhere, and named a seventh host (RooCode) that had no directory at all. One of them,
+`adapters/codex-cli/prompt_adapter.md`, published `argus --budget 500` — an invocation the real parser
+rejects, the same defect class Story 10.3 corrected in the README, surviving in a file no guard was
+looking at. `install.sh` and `install.ps1` both created a `commands/` directory and then copied those
+stubs *beside* it, so nothing they reported installing ever appeared, and `uninstall.sh` removed none
+of it. There is now exactly one command-asset tree, one placement mechanism, and a removal path.
+
+Nothing here is published: no tag, no release, no index upload, no marketplace listing.
 
 ### Specified — every terminal outcome names its next action and the ingestion boundary
 
@@ -297,9 +356,12 @@ corpus"*; the claim, the negation, the status vocabulary and the removal conditi
 adjudication, and nothing else) are unchanged. README's *"When installed, `ArgusAgent` registers slash
 commands in your AI coding assistant"* is corrected to what the wheel measurably contains — three
 console aliases (`argus`, `argus-agent`, `repo-audit`), all three entry points for `argus.cli:main`,
-and zero data assets — and the seven `/audit …` commands are **marked forthcoming** against Story 12.7
-/ FR35 rather than deleted, with a test that fails if the marker outlives the gap or is removed before
-it closes.
+and zero data assets — and the seven ~~`/audit …`~~ commands are **marked forthcoming** against Story
+12.7 / FR35 rather than deleted, with a test that fails if the marker outlives the gap or is removed
+before it closes. *(Amended 2026-08-15 — the marker's gap is CLOSED by the section*
+*"Added — `argus install-commands`" above: the wheel now ships data assets, the seven commands are*
+*superseded by three that resolve, and the same test now holds the published set equal to the shipped*
+*one. §3.4 — the sentence stays legible because it is the record of why the marker existed.)*
 
 Every figure above is LOCAL, Windows / CPython 3.11.15. **CI evidence: NOT ESTABLISHED** — no CI run
 has executed this change. Nothing here is published: no tag, no release, no index upload.
@@ -574,17 +636,24 @@ to block, and flipping the default here would pre-empt a policy decision that be
 ### Packaging: what the distribution contains
 
 `[tool.flit.module] name = "argus"` packages the `argus` Python package and nothing else. Measured on the
-built artifacts: the wheel holds 78 modules plus metadata; the sdist adds `pyproject.toml`, `README.md`,
-`LICENSE` and `PKG-INFO`. The RAM workflow directories (`audit/`, `phases/`, `adapters/`, `templates/`)
-and the installer scripts are **repository-only** — see README.md for the full capability split.
+built artifacts: the wheel holds 83 modules plus the packaged command assets and metadata; the sdist adds
+`pyproject.toml`, `README.md`, `LICENSE` and `PKG-INFO`. The RAM workflow directories (`audit/`,
+`phases/`, `templates/`) and the installer scripts are **repository-only** — see README.md for the full
+capability split. *(Amended 2026-08-15 by Story 12.7: the module figure moved with the tree, ~~`adapters/`~~
+was superseded by the packaged `argus/assets/commands/` tree, and "and nothing else" no longer implies
+zero data assets — `flit_core` ships every file under `argus/`, so the command assets reach the wheel
+with no build-backend change and reach the sdist because they are tracked.)*
 
 Measured on the built wheel with this repository removed from `sys.path`, one clean subprocess per module:
-**78 of the 78 shipped modules import.** None fail. (The figure read 73 of 73 when `0.1.0` was
+**83 of the 83 shipped modules import.** None fail. (The figure read 73 of 73 when `0.1.0` was
 written; it is DERIVED from the freshly built artifact by `TC-ArgusAgent-DOCS-001-54` — *the artifact
 is the fact* — and moved to 74 on 2026-08-13 when Story 12.2 added `argus/audit/deep_pass.py`, then
 to 75 later the same day when Story 12.3 added `argus/cache/stage_memo.py`, the production call site
 that wires the FR27/NFR-D1 memoization store, then to 78 on 2026-08-15 when Story 12.6 added the
-three-module `argus/mcp/` stdio adapter behind the `argus-mcp` entry point. The
+three-module `argus/mcp/` stdio adapter behind the `argus-mcp` entry point, then to 83 the same day
+when Story 12.7 added `argus/assets/` + `argus/assets/commands/` (the packaged command-asset tree, a
+real package so `importlib.resources` resolves it from a built distribution) and `argus/commands/`
+(the closed host registry plus the installer behind `argus install-commands`). The
 count is restated rather than frozen precisely so it cannot go stale, which is the defect this guard
 exists to catch; nothing about the `0.1.0` release itself is amended.) Five modules did fail until
 2026-08-12 —

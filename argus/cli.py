@@ -26,7 +26,21 @@ console wrapper does ``sys.exit(main())``.
 The LOCKED CLI contract (frozen + documented per the story)
 -----------------------------------------------------------
 ``argus audit <repo> --commit <sha> --budget <int> --materiality-bar <bar>``
-- sub-command ``audit`` (the only V1 sub-command; an additive seam for future ones)
+- sub-command ``audit`` — ~~the only V1 sub-command; an additive seam for future ones~~
+  (§3.4 struck, not deleted — 2026-08-15, Story 12.7 / FR35. The first clause became FALSE
+  and the second was HONOURED: ``install-commands`` is the second V1 sub-command, and it
+  entered through exactly the seam this sentence reserved. It is a sub-command rather than
+  a fifth console alias precisely because of that record: 12.6's second alias was justified
+  only by a DIFFERENT transport (a JSON-RPC message stream on stdio), while this step's
+  transport is argv — identical to this one — so a separate alias would be a fork of an
+  entry point rather than an extension of one (AR7 / architecture §3.3). Being a
+  sub-command it adds no ``[project.scripts]`` entry, so the console-alias closures, the
+  reachability floors and the second surface's published tool schema — which derives from
+  the ``audit`` sub-parser alone — are all untouched. (This paragraph names that surface's
+  TRANSPORT rather than its protocol on purpose: the protocol's token would make this
+  module an unregistered disclosure surface for ``tests/test_instrument_disclosure.py``'s
+  ``-49`` closure, and 12.6 ruled on exactly that trade — a false registry entry is worse
+  than a coy docstring.)
 - positional ``<repo>`` — the audited-repo path → ``AuditRequest.repo_path``
 - ``--commit`` — OPTIONAL, defaulting to ``HEAD``. A pinned commit is the FR1
   determinism precondition, and this contract was originally written as REQUIRED
@@ -119,6 +133,40 @@ statement closest to the code, and ``tests/test_invocation_contract.py``
   population than a CLI consumer.** Both are shipped, announced defaults; neither is
   changed here, and ``TC-ArgusAgent-CLI-001-37b`` pins the divergence in both
   directions so it cannot drift or close by accident.
+
+The SECOND sub-command: ``argus install-commands`` (added 2026-08-15 by Story 12.7 / FR35)
+-------------------------------------------------------------------------------------------
+``argus install-commands [--host <name>]… [--dest <dir>] [--dry-run] [--remove]`` places the
+packaged command assets (``argus/assets/commands/**``) into an assistant's configuration
+directory, and removes them again. It is the ONE placement mechanism: ``install.sh``,
+``install.ps1`` and ``uninstall.sh`` delegate to it rather than copying anything themselves,
+which is what closes the measured defect that both of them created ``~/.claude/commands/``
+and then copied the adapter files BESIDE it. All logic lives in ``argus/commands/**``
+(NFR-M1 — no business logic in the entry point); this module declares the arguments, prints
+the rendered outcome, and maps a typed failure to exit ``1`` exactly as ``audit`` does.
+
+- ``--host <name>`` — REPEATABLE (``action="append"``), DEFAULT ``None``. Restricts the step
+  to named hosts from the CLOSED registry in ``argus/commands/hosts.py``. Omitted means
+  *every registered host whose configuration directory is DETECTED*; naming one skips
+  detection, because an operator naming a host has already made the statement detection
+  would infer. An unregistered name is a typed refusal, never a silent skip.
+- ``--dest <dir>`` — DEFAULT ``""`` (the user's home directory). Overrides the
+  host-configuration ROOT the registry's paths are relative to. This is the TESTABILITY
+  SEAM: every guard drives the real step against a temporary directory, so no test in this
+  suite reads or writes a real ``$HOME``.
+- ``--dry-run`` — ``store_true``, DEFAULT ``False``. Resolves and containment-checks the
+  whole plan, prints exactly what would be written, and writes nothing.
+- ``--remove`` — ``store_true``, DEFAULT ``False``. Deletes exactly the files this step
+  wrote — recognised by the marker each asset carries — and nothing else. It closes the
+  asymmetry ``uninstall.sh`` had: it ran ``pip uninstall`` only, leaving every copied file
+  in the user's home directory forever.
+
+It obeys the CLI's existing contracts unchanged: the AR3 exit-code wire contract, a
+secret-safe stderr line and return ``1`` on a typed failure (never a traceback, NFR-R1), no
+absolute host path in any message (NFR-S1 — the outcome structure carries only
+destination-relative paths), and no ``.argus/`` write, network call or egress. It writes
+ONLY inside the resolved destination root; a path escaping it — via ``..``, an absolute
+asset name, or a symlinked configuration directory — is refused with a typed error.
 
 **The accepted surface is DERIVED, never transcribed.** ``build_parser`` below is the
 source of truth; this prose is checked against it by ``TC-ArgusAgent-CLI-001-35``
@@ -327,6 +375,55 @@ def build_parser() -> argparse.ArgumentParser:
             "ratios are printed, and the coverage floor is re-applied WITHIN the scope, "
             "so a narrowing can never lower the bar for a claim."
         ),
+    )
+
+    # Story 12.7 / FR35 — the SECOND V1 sub-command, entering through the additive seam the
+    # docstring above reserved. It is declared here, beside `audit`, because `build_parser`
+    # is the single source of truth for the accepted surface; the logic it reaches is in
+    # `argus/commands/**`. The `audit` sub-parser above is UNTOUCHED by this addition, which
+    # is what keeps 12.6's published tool schema and argv projection — both derived from the
+    # `audit` sub-parser alone — byte-identical. (Named by transport rather than protocol, for
+    # the reason recorded in the module docstring.)
+    install = subparsers.add_parser(
+        "install-commands",
+        help=(
+            "Place the packaged assistant command assets into a supported assistant's "
+            "configuration directory, or remove them again with --remove."
+        ),
+    )
+    install.add_argument(
+        "--host",
+        dest="host",
+        action="append",
+        default=None,
+        metavar="NAME",
+        help=(
+            "Restrict the step to a registered assistant host (repeatable). Omitted: every "
+            "registered host whose configuration directory is detected. An unregistered "
+            "name is refused rather than skipped."
+        ),
+    )
+    install.add_argument(
+        "--dest",
+        dest="dest",
+        default="",
+        metavar="DIR",
+        help=(
+            "Override the host-configuration root the registry's paths are relative to. "
+            "Defaults to your home directory. Writes never leave the resolved root."
+        ),
+    )
+    install.add_argument(
+        "--dry-run",
+        dest="dry_run",
+        action="store_true",
+        help="Resolve and check the whole plan, print what would be written, write nothing.",
+    )
+    install.add_argument(
+        "--remove",
+        dest="remove",
+        action="store_true",
+        help="Delete exactly the files this step wrote (recognised by their marker), and nothing else.",
     )
     return parser
 
@@ -584,6 +681,37 @@ def _emit_ship_readiness(
     return None
 
 
+def _run_install_commands(args: argparse.Namespace) -> int:
+    """Thin adapter for ``argus install-commands`` — resolve, print, map the exit code.
+
+    Story 12.7 / FR35. EVERY decision this step makes is made in ``argus/commands/**``: the
+    closed host registry, the pure asset x host fold, containment, the FR34 disclosure
+    render and the report text. What is left here is the entry point's own job and only
+    that — call the shell, print what it returns, and translate a typed failure into the
+    AR3 wire contract (NFR-M1 — no business logic in the entry point).
+
+    The failure arm is deliberately the SAME shape ``main`` already uses for the audit:
+    every typed failure in ``argus/commands/**`` is a ``ValueError`` subclass, so it maps to
+    one secret-safe stderr line and the reserved exit code ``1`` with no new vocabulary and
+    no traceback (AR10/NFR-R1). Authoring new diagnosis prose is Story 12.8's fence.
+    """
+    from argus.commands.installer import install_commands, render_outcome
+
+    try:
+        outcome = install_commands(
+            dest=args.dest,
+            requested_hosts=tuple(args.host or ()),
+            dry_run=args.dry_run,
+            remove=args.remove,
+        )
+    except ValueError as exc:
+        print(f"{PROG}: install-commands failed: {exc}", file=sys.stderr)
+        return _CRASH_EXIT_CODE
+    for line in render_outcome(outcome):
+        print(line)
+    return 0
+
+
 def main(argv: list[str] | None = None) -> int:
     """Parse argv → ``AuditRequest`` → pipeline → exit code (FR30/FR18/AR3).
 
@@ -591,10 +719,17 @@ def main(argv: list[str] | None = None) -> int:
     ``AuditVerdict.exit_code`` (``0``/``2``/``3``) on a completed audit, or ``1``
     on a TYPED pipeline failure (with a secret-safe stderr line). NO business logic
     lives here — all audit logic is in ``pipeline.py`` + the reused modules.
+
+    Since 2026-08-15 (Story 12.7) it dispatches on the sub-command. The dispatch sits ABOVE
+    everything audit-specific and returns, so an ``audit`` invocation executes exactly the
+    statements it executed before — same order, same calls, same bytes on both streams.
     """
     harden_output_streams()
 
     args = build_parser().parse_args(argv)
+    if args.command == "install-commands":
+        return _run_install_commands(args)
+
     enabled_passes = resolve_passes(args)
     request = build_request(args, enabled_passes)
 

@@ -27,6 +27,20 @@ read the verdict without a human relaying it. Both entry points build the same
 ``AuditRequest`` and consume the same ``AuditVerdict`` — there is no second
 decision path, and no capability reachable through one and not the other.
 
+The distribution ALSO ships DATA, since 2026-08-15 (Story 12.7 / FR35): the
+assistant command assets under ``argus/assets/commands/``. They are placed by the
+second sub-command on the first entry point above::
+
+    argus install-commands [--host …] [--dest …] [--dry-run] [--remove]
+
+~~and no data assets at all: every entry in the wheel is either an ``argus/**``
+module or a ``dist-info`` metadata file, so installing this distribution
+registers no command in any assistant~~ — struck 2026-08-15 (Story 12.7), not
+deleted: it was true until this story. It is a SUB-COMMAND, not a fifth alias, so
+the count above is unchanged and stays the ONE statement of it here; the assets
+ship because ``flit_core`` walks the whole package directory, with no
+build-backend change and no second version or entry-point constant introduced.
+
 It installs and runs **with no Minions package present** — ArgusAgent imports
 nothing from a host product and depends on no monorepo layout.
 

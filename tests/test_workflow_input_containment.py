@@ -92,7 +92,11 @@ from tests.test_invocation_contract import executable_line_numbers
 _REPO_ROOT: Final[Path] = Path(__file__).resolve().parents[1]
 
 _GUARD_FILE: Final[str] = "tests/test_workflow_input_containment.py"
-_RESOLVER_FILE: Final[str] = "tests/test_invocation_contract.py"
+# WHERE the single run-block resolver is DECLARED. Moved 2026-08-15 by Story 12.7 from
+# `tests/test_invocation_contract.py` to its sibling when that file crossed the NFR-M1 ceiling; the
+# import path below is a preserved re-export, so what changed is the declaration site and nothing
+# else. `-30` now proves the "exactly one" claim over every tracked `.py`, not over this one name.
+_RESOLVER_FILE: Final[str] = "tests/invocation_sources.py"
 
 # ─────────────────────────────────────────────────────────────────────────────
 # The corpus — resolved by GLOB, never by a hand-written list
@@ -395,6 +399,33 @@ _PRE_FIX_STRICT_LINE: Final[str] = (
 
 def _action_yml() -> str:
     return (_REPO_ROOT / "action.yml").read_text(encoding="utf-8")
+
+
+def _repository_python_sources() -> dict[str, str]:
+    """Every ``.py`` file in this working tree, as ``{repo-relative posix path: source}``.
+
+    Added 2026-08-15 by Story 12.7 so ``-30``'s *"exactly ONE definition of
+    `executable_line_numbers`"* claim closes over the REPOSITORY rather than over one named file. A
+    file-scoped count can only ever see the file it names, so it would have gone on passing while a
+    second copy grew anywhere else — which is the shape of the very defect this module exists for.
+
+    ``pathlib`` rather than ``git ls-files``: this module is **stdlib only, no ``subprocess``** (see
+    the module docstring), and that constraint is not worth spending on a convenience. Virtual
+    environments, caches and the git directory are excluded because they are not this repository's
+    source; every other directory is included by default, which is the direction that keeps a new
+    fork visible.
+    """
+    skip = {".venv", "venv", "__pycache__", ".git", ".mypy_cache", ".pytest_cache", "build", "dist"}
+    found: dict[str, str] = {}
+    for path in sorted(_REPO_ROOT.rglob("*.py")):
+        if skip & set(path.relative_to(_REPO_ROOT).parts):
+            continue
+        try:
+            found[path.relative_to(_REPO_ROOT).as_posix()] = path.read_text(encoding="utf-8")
+        except (OSError, UnicodeDecodeError):  # pragma: no cover - unreadable working-tree file
+            continue
+    assert found, "the repository source walk found no .py file at all — `-30` would be vacuous"
+    return found
 
 
 # ─────────────────────────────────────────────────────────────────────────────
@@ -753,10 +784,29 @@ def test_TC_ArgusAgent_SECURITY_001_30_the_guard_is_not_vacuous_and_owns_no_seco
         "(install and audit), so the resolver is no longer resolving"
     )
 
-    resolver_source = (_REPO_ROOT / _RESOLVER_FILE).read_text(encoding="utf-8")
-    assert resolver_source.count("def executable_line_numbers(") == 1, (
-        f"{_RESOLVER_FILE} no longer holds exactly ONE definition of `executable_line_numbers`"
+    # CORRECTED 2026-08-15 by Story 12.7, and STRENGTHENED rather than relaxed. The resolver moved
+    # from `tests/test_invocation_contract.py` to its sibling `tests/invocation_sources.py` when
+    # that file crossed the NFR-M1 ceiling (a cohesion split with a re-export; every import path is
+    # unchanged, which is why the import assertion below still reads the same). Simply re-pointing
+    # `_RESOLVER_FILE` would have preserved the letter of this check and lost its POINT — the claim
+    # is *"exactly one definition exists"*, and a file-scoped count can only ever see the file it
+    # names. So the count now closes over EVERY tracked `.py` in the repository: a fork anywhere is
+    # red, including in a file nobody thought to name here.
+    # Matched as a DEFINITION at the start of a line, never as a substring, for the reason the
+    # comment below the next assertion already gives: this module names the symbol repeatedly in
+    # its own prose and assertion messages, and a bare substring count fires on itself.
+    _definition = re.compile(r"^\s*def executable_line_numbers\s*\(", re.MULTILINE)
+    definitions = {
+        rel: len(_definition.findall(source))
+        for rel, source in _repository_python_sources().items()
+        if _definition.search(source)
+    }
+    assert definitions == {_RESOLVER_FILE: 1}, (
+        "`executable_line_numbers` must be declared EXACTLY ONCE in this repository, in "
+        f"{_RESOLVER_FILE}. Measured: {definitions}. AR7 / architecture §3.3 — a rule implemented "
+        "twice drifts in one of the two, and this one decides which lines are shell source."
     )
+    resolver_source = (_REPO_ROOT / _RESOLVER_FILE).read_text(encoding="utf-8")
     assert "def _executable_line_numbers(" not in resolver_source, (
         "the private spelling is back alongside the public one — that is two names for one rule, "
         "which is how a caller ends up on the stale copy"
@@ -773,9 +823,10 @@ def test_TC_ArgusAgent_SECURITY_001_30_the_guard_is_not_vacuous_and_owns_no_seco
     assert "from tests.test_invocation_contract import executable_line_numbers" in own_source, (
         "the import from the single declaration was removed"
     )
-    assert executable_line_numbers.__module__ == "tests.test_invocation_contract", (
+    assert executable_line_numbers.__module__ == "tests.invocation_sources", (
         "the imported resolver is no longer the one declared in "
-        f"{_RESOLVER_FILE}: {executable_line_numbers.__module__}"
+        f"{_RESOLVER_FILE}: {executable_line_numbers.__module__}. The import path above is a "
+        "RE-EXPORT and is preserved on purpose; what must not change is which function it reaches."
     )
 
     # The generalisation itself, asserted rather than trusted: the ORIGINAL rule returned an empty
