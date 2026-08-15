@@ -51,6 +51,7 @@ from __future__ import annotations
 import re
 import subprocess
 import sys
+from dataclasses import replace
 from pathlib import Path
 
 _REPO_ROOT = Path(__file__).resolve().parents[1]
@@ -871,14 +872,18 @@ def test_TC_ArgusAgent_DOCS_001_25_the_release_status_is_derived_not_transcribed
     possible, so the surfaces render the derived value and this asserts they do — in both
     directions:
 
-    * with the RECORDED observation the status must be NOT ESTABLISHED, and the recorded run
-      must NOT cover HEAD. The day `master` is pushed and `audit-ci.yml` runs to success on
-      the released commit, the recorded observation is replaced, the derivation returns a
-      citation, the statement changes, and every surface goes RED until it is re-rendered.
-      That red is the guard working (AC9's ordering).
-    * fed an observation that DOES cover the released sha, the same function must produce a
-      real citation carrying the run id AND its sha — a derivation that can only ever say
-      NOT ESTABLISHED would be a constant wearing a function's clothes.
+    * with the RECORDED observation the status is ESTABLISHED, and the citation must carry
+      the run id, the sha that run covers, and the SCOPE of what the run did not evaluate.
+      Re-derived 2026-08-16 under ledger follow-up `DF-12-9-A`: `master` was pushed, run
+      31908861401 covers HEAD with 3/3 legs green, and the transition this guard was written
+      to force actually happened. The assertions did not move to meet it — they were driven
+      RED by the new observation and then re-pointed at the branch the observation now takes,
+      with the OTHER branch kept and still driven by the real superseded observation, so
+      neither half is graded by its own author.
+    * fed the SUPERSEDED observation — a real run that does not cover HEAD — the same
+      function must still return NOT ESTABLISHED, name that run as superseded WITH its sha,
+      and name the human step. A derivation that can only ever cite is exactly as much a
+      constant wearing a function's clothes as one that can only ever abstain.
     """
     head = _head_sha()
     assert re.fullmatch(r"[0-9a-f]{40}", head), (
@@ -887,24 +892,68 @@ def test_TC_ArgusAgent_DOCS_001_25_the_release_status_is_derived_not_transcribed
     )
 
     status = rn.derive_release_status(rn.RECORDED_GATE_OBSERVATION, head)
-    assert not status.established, (
-        "the recorded gate observation now covers HEAD and reports success, so the release "
-        "status is no longer NOT ESTABLISHED. That is not a failure — it is the transition "
-        "this guard exists to force: re-derive the statement, replace it on every surface in "
-        f"{list(_STATUS_STATEMENT_REQUIRED)}, and update CHANGELOG.md's honesty preamble "
-        "with the release URL (Story 12.9 / AC9)."
+    assert status.established, (
+        "the recorded gate observation no longer covers HEAD, or no longer reports success, "
+        "so the release status has fallen back to NOT ESTABLISHED. That is not a failure — "
+        "it is this guard working in the other direction: HEAD has moved past the run that "
+        "was cited. Re-observe the gate (`gh run list --workflow=audit-ci.yml --branch "
+        "master`), record the new observation in `release_notes.RECORDED_GATE_OBSERVATION`, "
+        f"and re-render the statement onto every surface in {list(_STATUS_STATEMENT_REQUIRED)}."
     )
-    assert rn.NOT_ESTABLISHED in status.statement
-    # The superseded run is NAMED with its sha — a run id without one is the half-truth
-    # `architecture.md:614-616` uses this very run id to illustrate.
+    assert rn.NOT_ESTABLISHED not in status.statement
+    # A citation carries the run id AND the sha that run covers, in the same breath — a bare
+    # id is the half-truth `architecture.md:614-616` uses run 31341363300 to illustrate.
     assert rn.RECORDED_GATE_OBSERVATION.run_id in status.statement
     assert rn.RECORDED_GATE_OBSERVATION.run_sha in status.statement
-    assert "SUPERSEDED" in status.statement, (
-        "the statement quotes a run id without saying what it is; naming it as superseded is "
-        "what stops the sentence from reading as a citation"
+    assert f"{rn.RECORDED_GATE_OBSERVATION.legs} legs green" in status.statement, (
+        "the citation does not state the leg count, which is what says how much of the "
+        "matrix actually ran"
     )
-    assert "push `master`" in status.statement, (
-        "the statement does not name the exact human step that would establish a citation"
+    # ...and this file's own citation reader must accept it, so the generator and the guard
+    # cannot disagree about what a citation is.
+    assert _executed_gate_citations(status.statement), (
+        "the derivation emitted a 'citation' that `_executed_gate_citations` does not "
+        "recognise as one"
+    )
+
+    # ── the SCOPE half: a green run is evidence for what it EXECUTED ──
+    #
+    # Added 2026-08-16 with the citation it qualifies. Story 10.1 wrote the rule against the
+    # only half-truth reachable then (a run id without its tree). The moment a run covers the
+    # released commit a second one opens: the run's green is read as covering guards the run
+    # itself declined to evaluate — and on this repository that is not hypothetical, because
+    # `audit-ci.yml` has no `uv`, so all four installed-artifact guards SKIP on every leg
+    # while the run reports success. A citation that lets a reader infer that proof ran is
+    # the same defect one level along.
+    assert rn.RECORDED_GATE_OBSERVATION.unexercised, (
+        "the recorded observation claims the cited run evaluated everything it carries. If "
+        "that became true, it was a CI change (`uv` on the runner) — record it by "
+        "re-observing the run, and leave this assertion pointing at the observation"
+    )
+    for unexercised in rn.RECORDED_GATE_OBSERVATION.unexercised:
+        assert unexercised in status.statement, (
+            "the citation omits something the observed run recorded as NOT EVALUATED:\n\n"
+            f"{unexercised}\n\nA green run cited without its scope claims coverage the run "
+            "refused to give, which is the half-truth this rule exists to stop."
+        )
+    assert "SCOPE" in status.statement and "NOT EVALUATED" in status.statement
+
+    # The scope is DERIVED from the observation, not appended to every citation as boilerplate
+    # — proven in both directions over the same function, since a caveat that is always there
+    # is decoration and a caveat that is never there is the defect.
+    silent = rn.derive_release_status(
+        replace(rn.RECORDED_GATE_OBSERVATION, unexercised=(), outcomes=""), head
+    )
+    assert silent.established and "SCOPE" not in silent.statement, (
+        "a run that evaluated everything it carries still published a scope caveat; a "
+        "caveat nobody can ever remove is one every reader learns to skip"
+    )
+    invented = rn.derive_release_status(
+        replace(rn.RECORDED_GATE_OBSERVATION, unexercised=("a guard nobody ran",)), head
+    )
+    assert "a guard nobody ran" in invented.statement, (
+        "the scope did not follow the observation, so it is a literal in the derivation "
+        "rather than a rendering of what was observed"
     )
 
     # Every surface that states a release status renders THAT value, byte for byte.
@@ -941,51 +990,50 @@ def test_TC_ArgusAgent_DOCS_001_25_the_release_status_is_derived_not_transcribed
             f"exemption {surface!r} has no substantive reason recorded (the -22 rule)"
         )
 
-    # ── the other direction: the derivation can and does produce a real citation ──
-    established = rn.derive_release_status(
-        rn.GateObservation(
-            run_id="99999999999",
-            run_sha=head,
-            conclusion="success",
-            legs="3/3",
-            workflow="audit-ci.yml",
-            measured_on="2026-08-15",
-        ),
-        head,
+    # ── the other direction: a run that does NOT cover the released commit ──
+    #
+    # Driven by the REAL superseded observation (run 31341363300 / 00c8d1b), retained rather
+    # than deleted (§3.4), so this branch is exercised by an observation that actually
+    # happened instead of by a synthetic one nobody ever published.
+    assert rn.SUPERSEDED_GATE_OBSERVATIONS, (
+        "the superseded observations were deleted. They are the record that this citation "
+        "was earned rather than assumed, and they are what drives the NOT ESTABLISHED "
+        "branch on real data (§3.4 evidence immutability)"
     )
-    assert established.established, (
-        "a run that covers the released sha and concluded success did NOT establish the "
-        "status — the derivation can only ever say NOT ESTABLISHED, which makes it a "
-        "constant rather than a derivation"
+    superseded = rn.derive_release_status(rn.SUPERSEDED_GATE_OBSERVATIONS[0], head)
+    assert not superseded.established, (
+        "a run that does NOT cover the commit being released established the status — the "
+        "whole rule is that a run id is sha-scoped (architecture.md §H, DN-3)"
     )
-    assert "99999999999" in established.statement and head[:7] in established.statement, (
-        "the established citation does not carry BOTH the run id and the sha it covers, "
-        "which is the whole content of the rule (architecture.md §H, DN-3)"
+    assert rn.NOT_ESTABLISHED in superseded.statement
+    assert rn.SUPERSEDED_GATE_OBSERVATIONS[0].run_id in superseded.statement
+    assert rn.SUPERSEDED_GATE_OBSERVATIONS[0].run_sha in superseded.statement
+    assert "SUPERSEDED" in superseded.statement, (
+        "the statement quotes a run id without saying what it is; naming it as superseded is "
+        "what stops the sentence from reading as a citation"
     )
-    assert rn.NOT_ESTABLISHED not in established.statement
-    # And that citation must satisfy THIS FILE's own citation reader — the two halves of the
-    # rule are held to each other rather than each being graded by its own author.
-    assert _executed_gate_citations(established.statement), (
-        "the derivation emitted a 'citation' that `_executed_gate_citations` does not "
-        "recognise as one; the generator and the guard disagree about what a citation is"
+    assert "push `master`" in superseded.statement, (
+        "the statement does not name the exact human step that would establish a citation"
+    )
+    # ...and the citation reader must REFUSE to read it as a citation, which is the
+    # strengthening made on 2026-08-15: a scrupulous NOT ESTABLISHED sentence necessarily
+    # names a run WITH its sha, and reading that as a citation would excuse every other
+    # claim on the surface carrying it.
+    assert not _executed_gate_citations(superseded.statement), (
+        "the honest NOT ESTABLISHED sentence was read as a CITATION; the disqualifier that "
+        "stops that must survive every change to the derivation"
     )
 
     # A run that covers the sha but did NOT succeed is not a citation either.
     failed = rn.derive_release_status(
-        rn.GateObservation(
-            run_id="99999999999",
-            run_sha=head,
-            conclusion="failure",
-            legs="2/3",
-            workflow="audit-ci.yml",
-            measured_on="2026-08-15",
-        ),
+        replace(rn.RECORDED_GATE_OBSERVATION, conclusion="failure", legs="2/3"),
         head,
     )
     assert not failed.established and rn.NOT_ESTABLISHED in failed.statement, (
         "a FAILED run covering the released commit was accepted as evidence of readiness — "
         "that is DF-AUD-APAA-C with the sha filled in"
     )
+    assert not _executed_gate_citations(failed.statement)
 
 
 def test_TC_ArgusAgent_DOCS_001_25b_the_release_surface_scan_actually_bites() -> None:
@@ -1000,6 +1048,19 @@ def test_TC_ArgusAgent_DOCS_001_25b_the_release_surface_scan_actually_bites() ->
     `-21b` is the same control over the planning-record population; this is deliberately not
     a copy of it — it runs the detector over a surface that is really on disk, which is the
     only way to show that the scan reaches these files at all.
+
+    **RE-POINTED 2026-08-16 (ledger follow-up `DF-12-9-A`), and the reason matters.** The
+    original control asserted that `README.md` cites NO executed gate, so a planted claim
+    could not be excused by a citation that did not exist. That premise expired the moment a
+    real gate run covered the released commit: README now carries a citation, and under
+    Story 10.1's rule a surface that cites its gate MAY state a status. Weakening the
+    assertion to accept that would have thrown away the control, so it is replaced by a
+    STRICTER property that could not be stated before there was a citation to state it
+    about: **the derived statement is the ONLY citation README carries.** Strip it and not
+    one run id remains — no hand-typed id, no second gate reference, nothing minting an
+    excuse the derivation did not earn. The planted defect is then run over that stripped
+    text, which is the original control's premise restored by construction rather than by
+    assumption.
     """
     readme = (_REPO_ROOT / "README.md").read_text(encoding="utf-8")
     assert not _status_assertions(readme), (
@@ -1007,24 +1068,51 @@ def test_TC_ArgusAgent_DOCS_001_25b_the_release_surface_scan_actually_bites() ->
         "NOT ESTABLISHED), never by loosening the detector"
     )
 
-    planted = readme + (
+    derived = rn.derive_release_status(rn.RECORDED_GATE_OBSERVATION, _head_sha()).statement
+    assert _executed_gate_citations(readme), (
+        "README.md cites no executed gate at all. If that is correct the status must be "
+        "recorded as NOT ESTABLISHED and this control needs its earlier form back; if it is "
+        "not, the derived statement stopped being rendered onto the surface"
+    )
+    stripped = _flatten(readme).replace(_flatten(derived), " ")
+    assert not _executed_gate_citations(stripped), (
+        "README.md mints a citation that is NOT the derived statement. Every excuse this "
+        "surface offers a status claim must come from the one derivation; a second run id "
+        "typed onto the page is the transcription class AI-E9-7 forbids, and it would "
+        "excuse claims on the strength of evidence nobody re-derived:\n"
+        f"{_executed_gate_citations(stripped)}"
+    )
+
+    planted_body = (
         "\n\n## Release status\n\n"
         "- **Release Status**: Upgraded from `NEEDS TARGETED REWORK` to **READY FOR "
         "RELEASE**!\n"
     )
-    caught = _status_assertions(planted)
+    caught = _status_assertions(readme + planted_body)
     assert caught, (
         "an uncited affirmative release-status claim planted on a REAL release surface was "
         "not caught. The detector does not reach these files, and `-24` is vacuous."
     )
     assert {claim for claim, _ in caught} == {"ready for release"}
-    assert not _executed_gate_citations(planted), (
-        "README.md was read as citing an executed gate; it cites none, so the planted claim "
-        "would have been excused by a citation that does not exist"
+
+    # The original control, over the same real bytes with the earned citation removed: with
+    # nothing to excuse it, the planted claim stands uncited and `-24` would fail on it.
+    assert _status_assertions(stripped + planted_body)
+    assert not _executed_gate_citations(stripped + planted_body), (
+        "the planted claim would have been excused by a citation this surface did not earn"
     )
 
-    # And the honest sentence this story actually writes must NOT be flagged — asserted
-    # verbatim against the real derived statement rather than against a paraphrase of it.
-    assert not _status_assertions(
-        rn.derive_release_status(rn.RECORDED_GATE_OBSERVATION, _head_sha()).statement
-    ), "the derived NOT ESTABLISHED statement was flagged as an unevidenced status claim"
+    # And the honest sentences this project actually publishes must NOT be flagged — asserted
+    # verbatim against the real derived statements rather than against a paraphrase. BOTH
+    # branches, because both are live: the citation is what is on disk today, and the NOT
+    # ESTABLISHED sentence is what returns the moment HEAD moves past the cited run.
+    head = _head_sha()
+    for observation in (
+        rn.RECORDED_GATE_OBSERVATION,
+        *rn.SUPERSEDED_GATE_OBSERVATIONS,
+    ):
+        statement = rn.derive_release_status(observation, head).statement
+        assert not _status_assertions(statement), (
+            "a derived release-status statement was flagged as an unevidenced status "
+            f"claim:\n\n{statement}"
+        )

@@ -44,8 +44,17 @@ versioning intent is [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 >
 > The **workflow itself is committed and has
 > never executed** — it was added on a feature branch and no tag exists in this repository yet — so
-> there is no Actions run id and no release URL to cite. Nothing in this file states or implies that a
+> ~~there is no Actions run id and no release URL to cite~~. Nothing in this file states or implies that a
 > release has been published; when one is, this paragraph gets a URL.
+>
+> 🔴 **NARROWED 2026-08-16 — struck, not deleted (§3.4 evidence immutability).** That clause conflated
+> two different workflows, and one half of it has since become false. `.github/workflows/release.yml`
+> is still committed-and-never-executed and there is still **no release URL** — `git tag -l` and `gh
+> release list` are both empty, re-measured 2026-08-16. But `.github/workflows/audit-ci.yml` — the
+> quality gate, a different workflow — **has** now executed on the commit being released, so an Actions
+> run id to cite does exist. It is cited directly below, with the sha it covers and the scope of what it
+> did not evaluate. A sentence that says "no run id to cite" three lines above a run id is the kind of
+> stale absolute this file exists to stop.
 >
 > **The release status, DERIVED rather than typed** (Story 12.9 / AC2). One function —
 > `scripts/release_notes.py::derive_release_status` — computes it from the observed run, the sha that
@@ -53,14 +62,36 @@ versioning intent is [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 > file and `README.md` carry exactly that value, and the same function renders it into the GitHub
 > Release note, so the three cannot disagree.
 
-CI evidence: NOT ESTABLISHED. No executed gate covers the commit being released — the most recent
+~~CI evidence: NOT ESTABLISHED. No executed gate covers the commit being released — the most recent
 `audit-ci.yml` run is run 31341363300, which covers sha 00c8d1b, 34 commits behind the commit being
 released and therefore evidences a different tree; a run id quoted without the sha it covers is a
 half-truth, so it is named here as SUPERSEDED rather than cited. Observed 2026-08-15 through the GitHub
 API. The human step that would establish one, and the only one: push `master` to `origin` and let
 `audit-ci.yml` run to success on the released commit, then re-derive this sentence from that run. A
 local `pytest`/`mypy`/`bandit` run is necessary, not sufficient, and is recorded as LOCAL
-(architecture.md §H).
+(architecture.md §H).~~
+
+🔴 **SUPERSEDED 2026-08-16 — struck, not deleted (§3.4 evidence immutability).** The human step that
+sentence named was taken: `master` was pushed to `origin`, `audit-ci.yml` executed on the released
+commit, and what follows is the SAME function's output over the new observation. The derivation did not
+change; its input did.
+
+CI evidence: run 31908861401 (cea92689b14f730ff529caeabd74c1f33f84821b, 3/3 legs green) on
+`audit-ci.yml` covers the commit being released. Observed 2026-08-16 through the GitHub API.
+
+SCOPE of that run, because a green run is evidence for what it EXECUTED and this one did not execute
+everything it carries. Each leg reported `1539 passed, 4 skipped`. The run recorded the following as
+NOT EVALUATED rather than as passing, so the citation above does not reach them: (1)
+`tests/test_installed_artifact.py` (`TC-ArgusAgent-RELEASE-001-25`..`-28`) — the fresh-environment
+installed-artifact proof: every `[project.scripts]` console script, `argus --help`, a fixture audit run
+to a real verdict, and an MCP JSON-RPC exchange over stdio through the installed `argus-mcp` shim. All
+four SKIPPED on all three legs, each reporting the named E6 outcome *NOT EVALUATED — uv is not on PATH,
+so the wheel could NOT be installed into a fresh environment and nothing about the INSTALLED
+distribution was checked*. So the front-door claim of this release is held by LOCAL runs only, and this
+citation does not cover it. Provisioning `uv` on the CI runner is a tooling decision that has not been
+taken; it is filed OPEN and unscheduled as `DF-12-9-B`, owned by the Engineering Lead. Reading the
+citation as covering these would be the same class of overstatement as quoting a run id without the sha
+it covers.
 >
 > **The VCS pin is INTERIM.** Its exit condition is named in
 > [Resolving `argus-agent`](#resolving-argus-agent) below, so "interim" has an end rather than becoming
@@ -641,7 +672,7 @@ that **participated** in the audited build, so the key stays a function of the a
 host's installed packages. `CACHE_KEY_SCHEMA_VERSION` is bumped `"2"` → `"3"`; `AstIndex.schema_version`
 `"1"` → `"2"`. Both changes are additive — `grammar_version` is retained.
 
-### Changed — the release note and the release status are generated from their sources, and the status is NOT ESTABLISHED
+### Changed — the release note and the release status are generated from their sources, and the status now cites its gate
 
 **Nothing a pipeline can trip over.** No default, no exit code, no verdict, no threshold and no
 `stdout` byte moves. What changes is what this release says about itself, and how it comes to say it.
@@ -656,11 +687,21 @@ disclosure from `argus/verdict/negative_assurance.py` in its canonical form, and
 from the tag. `TC-ArgusAgent-DOCS-001-67`/`-68` render it and assert every claim against the live
 constant, in both directions.
 
-**The release status is derived and, today, `NOT ESTABLISHED`.** One function computes it from the
+**The release status is derived, and it now CITES the gate.** One function computes it from the
 observed CI run, the sha that run covers, its conclusion and the commit being released; `README.md`,
-this file and the release note all render that one value. The honest answer at this commit is stated in
-the preamble at the top of this file: no executed gate covers the commit being released. That is a
-first-class recordable state, not a gap.
+this file and the release note all render that one value. ~~The honest answer at this commit is stated
+in the preamble at the top of this file: no executed gate covers the commit being released. That is a
+first-class recordable state, not a gap.~~
+
+🔴 **RE-DERIVED 2026-08-16 — struck, not deleted (§3.4), and the section heading above was corrected
+with it.** When this entry was written the derivation's honest output was `NOT ESTABLISHED`, because no
+`audit-ci.yml` run covered the commit being released. `master` has since been pushed and the gate ran
+green on the released commit, so the same function — unchanged — now returns a citation. The statement
+is in the preamble at the top of this file, and it carries its own SCOPE: the cited run reported `1539
+passed, 4 skipped`, and the four skips are the fresh-environment installed-artifact guards, which the
+CI runner cannot execute because it has no `uv`. That proof is held by LOCAL runs only and the citation
+says so. `NOT ESTABLISHED` remains a first-class recordable state and remains this derivation's answer
+the moment the released commit outruns the gate again.
 
 **The install caveats now track the real tag state on every surface that carries them.** The guard that
 holds *"this command does not resolve today"* used to read `README.md` alone while the pin also appears

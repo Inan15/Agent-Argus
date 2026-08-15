@@ -259,7 +259,16 @@ _NOTE_SECTIONS: tuple[str, ...] = (
     # The frame this entry provides is not deferred by the placement either: the honesty
     # preamble at the head of this file carries the same derived status sentence, so a reader
     # meets it before any section at all.
-    "### Changed — the release note and the release status are generated from their sources, and the status is NOT ESTABLISHED",
+    # RENAMED 2026-08-16 (ledger follow-up `DF-12-9-A`), in place — the section keeps its
+    # position, so `-16`'s order pin is untouched and this is not a re-litigation of the
+    # placement decision reasoned above. The heading ended *"and the status is NOT
+    # ESTABLISHED"*, which was true when it was written and became FALSE the moment
+    # `audit-ci.yml` ran green on the released commit. A heading is the one line of a
+    # section every skimming reader takes, so a stale absolute there outranks the body text
+    # that corrects it. The body keeps the superseded sentence STRUCK rather than deleted
+    # (§3.4); only the heading, which cannot carry a strike without the registry asserting
+    # the strike, is restated.
+    "### Changed — the release note and the release status are generated from their sources, and the status now cites its gate",
     "### Resolving `argus-agent`",
     "### Version: one value, one source",
     "### Behaviour: the composite action distinguishes a crash from an assessment",

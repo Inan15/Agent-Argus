@@ -3770,3 +3770,149 @@ for this story against `deferred-work.md` is `+n / -0`, verified programmaticall
 - **`DF-10-4-D`** (the dogfood artifact-currency bootstrap). Cited because Story 12.9 had to decide
   whether it applied: it does **not** — `argus/**` is **byte-unchanged** by this story (DN-7, verified
   by `git diff --stat -- argus`), so no regeneration is owed and none was performed.
+
+---
+
+## Ledger follow-up under `DF-12-9-A` — the gate ran, and the citation was RE-DERIVED (2026-08-16)
+
+**Append-only, as always (§3.4 evidence immutability).** Nothing above this line was edited: the diff
+for this follow-up against `deferred-work.md` is `+n / -0`, verified programmatically
+(`git diff --numstat -- _bmad-output/design-artifacts/ArgusAgent/deferred-work.md`).
+
+**This is NOT a re-opening of Story 12.9, which stays `done`.** It is the outcome of the entry above
+becoming partly answerable: `DF-12-9-A` act (1) — `git push origin master` — was performed by the
+operator, which is the one act that could turn the release status from `NOT ESTABLISHED` into a
+citation. The recorded statement then stopped being accurate. It was an *understatement* rather than an
+over-claim, which is the harmless direction, and it is corrected anyway: `architecture.md:610-627`
+requires the status to be **derived from what was observed**, and a derivation whose input is stale is
+not a derivation, whichever way it errs.
+
+### What was verified, read-only, before anything was written
+
+Every fact below was re-measured through `gh` / `git` rather than taken from the request that prompted
+this work. No workflow was triggered or re-run; no tag, release, push or visibility change was made.
+
+```
+$ git rev-parse HEAD                                        -> cea92689b14f730ff529caeabd74c1f33f84821b
+$ git rev-list --left-right --count origin/master...master  -> 0   0     (origin/master IS HEAD)
+$ gh run list --workflow=audit-ci.yml --branch master
+    31908861401  success  cea9268...  2026-08-15T21:13:58Z   (push, master)
+    31895158449  failure  50eedbd...  2026-08-15T16:18:46Z
+    31341363300  success  00c8d1b...  2026-08-09T23:13:27Z
+$ gh run view 31908861401 --json workflowName,headSha,conclusion,jobs
+    "ArgusAgent Repository Audit & Assurance CI"  (= .github/workflows/audit-ci.yml)
+    headSha cea92689b14f730ff529caeabd74c1f33f84821b, conclusion success,
+    3 matrix legs (3.10 / 3.11 / 3.12), every leg `success`
+$ gh run view 31908861401 --job <each of the 3> --log
+    every leg: "1539 passed, 4 skipped"
+    every leg: SKIPPED [4] tests/test_installed_artifact.py:241: [E6] ... NOT EVALUATED
+$ git tag -l                                                -> empty
+$ gh release list                                           -> empty
+$ gh repo view Inan15/Agent-Argus --json visibility,isPrivate,pushedAt
+    -> PRIVATE / true / 2026-08-15T21:13:56Z
+```
+
+**So for the first time a successful gate run covers the commit being released** — and the run that
+FAILED (31895158449, the POSIX-containment / shallow-clone defect fixed by `40cdb3c`) covers `50eedbd`,
+a different tree, and is deliberately **not** named inside the citation: attaching a run to a tree it
+does not cover is the defect this derivation exists to prevent, and it is no more permissible in the
+pessimistic direction than in the flattering one.
+
+### What was changed, and what deliberately was not
+
+- **`scripts/release_notes.py`** — `RECORDED_GATE_OBSERVATION` now holds the 2026-08-16 observation.
+  `derive_release_status` is **the same function**: no second derivation was written, and no surface
+  types a run id, a sha or a status. The 2026-08-15 observation is **retained** as
+  `SUPERSEDED_GATE_OBSERVATIONS[0]` rather than deleted (§3.4), and it is a live input — it is what
+  drives the `NOT ESTABLISHED` branch in the guard, so that branch is still exercised by an
+  observation that really happened.
+- **`README.md` / `CHANGELOG.md`** — re-rendered. The superseded `NOT ESTABLISHED` paragraph is
+  **struck, not deleted** on both, with a dated correction beside it. `CHANGELOG.md`'s honesty
+  preamble carried a second stale absolute — *"there is no Actions run id and no release URL to
+  cite"* — which conflated two workflows; it is struck and narrowed: `release.yml` is still
+  never-executed and there is still no release URL, but `audit-ci.yml` has run. The `## Unreleased`
+  section heading that ended *"and the status is NOT ESTABLISHED"* is restated in place (position
+  unchanged, so `-16`'s order pin is untouched), because a heading is the one line a skimming reader
+  takes and a correction in the body underneath does not reach them.
+- **The GitHub Release note** — carries the new statement automatically; it renders the derivation and
+  types nothing. Verified by rendering it (`python scripts/release_notes.py --tag v0.1.0`).
+- **NOT changed:** `argus/**` is byte-unchanged (`git diff --stat -- argus` is empty), so
+  `DF-10-4-D`'s dogfood bootstrap is not owed. No guard was loosened, skipped, xfailed or narrowed.
+  No tag, release, push, visibility change or workflow dispatch was performed; `DF-12-9-A` acts
+  (2)-(7) remain unperformed and that entry stays **OPEN** for them.
+
+### The citation carries its SCOPE, and that is the substantive judgement here
+
+A run id quoted without the sha it covers is a claim about an unknown **tree** — the half-truth Story
+10.1 wrote the rule against, because it was the only one reachable while no run covered the release
+commit. The moment one does, a second half-truth opens: **the run's green is read as covering guards
+the run itself declined to evaluate.** On this repository that is not hypothetical. All three legs of
+run 31908861401 reported `1539 passed, 4 skipped`, and the four skips are
+`tests/test_installed_artifact.py::TC-ArgusAgent-RELEASE-001-25`..`-28` — AC1's fresh-environment
+installed-artifact proof, which is **the front-door claim of this release** and the very claim
+`CHANGELOG.md` names a guard for. It did not execute on any leg, because `audit-ci.yml` provisions the
+job with `pip` on a bare ubuntu runner and `uv` is never installed there.
+
+Citing that run without saying so would have implied the installed-artifact proof was exercised by the
+gate. It was not. So the derivation renders the scope **inside the statement**, reaching every surface
+at once: the guards the run recorded as `NOT EVALUATED`, the reason it gave, and the fact that the
+proof is therefore held by LOCAL runs only. The scope is derived from an observed field
+(`GateObservation.unexercised`), not appended as boilerplate — `TC-ArgusAgent-DOCS-001-25` drives both
+directions, so a run that really did evaluate everything publishes no caveat, and a run that did not
+cannot suppress one.
+
+### Filed by this follow-up
+
+- **`DF-12-9-B`** — **the installed-artifact guard is VACUOUS on every CI run, and its own
+  anti-vacuity assertion cannot fire.** Two halves, one entry, because they are one hole:
+  1. **The environment half.** `.github/workflows/audit-ci.yml` never installs `uv`, and
+     `tests/test_installed_artifact.py::unevaluable_install_tooling` correctly reports
+     `release_preflight.Unevaluable("E6", ...)` when `uv` is absent — so `_artifact()` calls
+     `pytest.skip` and **all four** guards (`TC-ArgusAgent-RELEASE-001-25`..`-28`) skip on all three
+     legs of every run. Measured, not inferred: run 31908861401's logs, all three jobs. The guard
+     behaves exactly as designed — it refuses rather than passing silently, which is AR10 / NFR-R1
+     working — but the effect is that the release's front-door claim is enforced **only** on a
+     developer machine that happens to carry `uv`.
+  2. **The unreachable-assertion half.** `-28` closes with *"the installed-artifact guard is skipping
+     in the dev environment; a permanently skipped guard is a guard nobody runs"* — the assertion
+     whose whole job is to stop the skip becoming the normal path. It sits **after**
+     `artifact = _artifact()`, which is the call that skips. So in precisely the environment where the
+     skip HAS become the normal path, the line that would say so is never reached. This is the same
+     shape `tests/test_built_distribution.py::-24` was written to prevent for the *build* tooling —
+     and that one worked: it went red in CI, and `40cdb3c`'s answer was to add `build` + `flit_core`
+     to the `[dev]` extra rather than to loosen the guard. The install half has the assertion but not
+     the reachability.
+  **NOT FIXED HERE, and the boundary is deliberate.** Putting `uv` on the CI runner is a CI-tooling
+  decision for a human — it adds a second package manager to a `pip`-provisioned job — and re-ordering
+  `-28` so its anti-vacuity half runs before the skip is a change to a shipped guard that belongs with
+  that decision rather than ahead of it. Recorded rather than papered over: **the release-status
+  citation now states this limitation in its own text**, on every surface, so a reader of the citation
+  cannot conclude the installed-artifact proof ran.
+  - id: DF-12-9-B
+  - origin_story: ledger follow-up under `DF-12-9-A` (2026-08-16); the defect was MEASURED by this
+    follow-up and is NOT caused by it
+  - owner: **Engineering Lead** (the same human who holds `DF-12-9-A` — this is a CI-provisioning
+    decision, and the two are read together)
+  - target_story: **NONE — unscheduled; Engineering Lead to decide whether `uv` is provisioned on the
+    `audit-ci.yml` runner.** Deliberately not asserted onto a story id (AI-E9-8): a named human is
+    recorded instead of a backlog slot, because the first half is a provisioning choice rather than
+    development work. The second half becomes a small, obvious change the moment the first is decided.
+  - category: assurance (a committed guard that cannot execute where it matters)
+  - severity: 🟡 — it fails SAFE (the guard refuses and names its reason; it never passes silently),
+    and the claim it holds is separately true by LOCAL execution. It is not 🔴 because nothing false
+    is published: the citation now states the limitation in the same breath as the run id.
+  - cross-reference: `DF-12-9-A` (the operator acts; act (1) is now performed, (2)-(7) are not),
+    `DF-10-4-D` (not owed — `argus/**` is byte-unchanged)
+
+### Re-stated, NOT re-filed
+
+- **`DF-12-9-A`** stays **OPEN**. Act (1) `git push origin master` is **performed** (2026-08-15
+  21:13:56Z; `origin/master` = `cea9268`) and is recorded here rather than by editing the entry above.
+  Acts (2) `git tag v0.1.0`, (3) `git push origin v0.1.0`, (4) the GitHub Release, (5) making the
+  repository public, (6) the Marketplace listing (**DN-2**) and (7) a PyPI publish (**DN-1**) are all
+  **still unperformed**, re-verified by execution: `git tag -l` empty, `gh release list` empty,
+  `gh repo view` reports `PRIVATE`. The entry's binding ordering statement is unaffected —
+  `TC-ArgusAgent-DOCS-001-55` / `-55b` was widened before any tag exists, and still is.
+- **`DF-3-4-A`**, **`DF-10-5-C`**, **`DF-12-7-A`**, **`DF-10-3-B`**, **`DF-10-3-C`** — cited by Story
+  12.9 and untouched here. This follow-up adds no capability and closes none of them; a gap filed
+  twice is a gap that gets closed once and left looking open (12.7's rule).

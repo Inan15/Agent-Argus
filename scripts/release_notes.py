@@ -68,6 +68,7 @@ __all__ = [
     "GateObservation",
     "ReleaseStatus",
     "RECORDED_GATE_OBSERVATION",
+    "SUPERSEDED_GATE_OBSERVATIONS",
     "REPOSITORY_VISIBILITY_MEASUREMENT",
     "NOT_ESTABLISHED",
     "derive_release_status",
@@ -112,6 +113,20 @@ class GateObservation:
 
     ``run_id = ""`` means *no run was observed at all*, which is a different fact from *a run
     was observed and it does not cover this commit*; the derivation states which.
+
+    ``outcomes`` and ``unexercised`` are what the run REPORTED ABOUT ITSELF, and they are
+    fields rather than prose for the same reason the sha is (added 2026-08-16, ledger
+    follow-up ``DF-12-9-A``). A run id without its sha is a claim about an unknown *tree*; a
+    green run cited without the guards it declined to evaluate is a claim about an unknown
+    *scope*. Both are the half-truth ``architecture.md:614-616`` forbids, and the second one
+    only becomes reachable the moment a run finally does cover the released commit — which is
+    exactly when nobody is looking for it. So the derivation renders the scope beside the
+    citation, on every surface, or it renders no citation at all.
+
+    ``unexercised`` holds one sentence per guard the run recorded as NOT EVALUATED rather
+    than as passing. Empty is a legitimate observation (*the run exercised everything it
+    carries*) and the derivation says nothing extra in that case; it is not a default that
+    means *not looked at*, which is why the caller records it explicitly.
     """
 
     run_id: str
@@ -121,6 +136,8 @@ class GateObservation:
     workflow: str
     measured_on: str
     behind_by: int = 0
+    outcomes: str = ""
+    unexercised: tuple[str, ...] = ()
 
 
 @dataclass(frozen=True)
@@ -142,23 +159,28 @@ class ReleaseStatus:
 # ─────────────────────────────────────────────────────────────────────────────
 # THE RECORDED OBSERVATION — one dated measurement, one place.
 #
-# Taken 2026-08-15 through the GitHub API, read-only:
+# Superseded observations are kept below rather than deleted (§3.4 evidence immutability):
+# the record that the status was once NOT ESTABLISHED, and why, is the evidence that this
+# citation was earned rather than assumed.
+#
+# ── SUPERSEDED, taken 2026-08-15 through the GitHub API, read-only ───────────
 #
 #     gh run list --workflow=audit-ci.yml --branch master --json databaseId,headSha,conclusion
 #     git rev-list --left-right --count origin/master...master   ->   0   34
 #
-# The newest `audit-ci.yml` run on `master` is 31341363300, `success`, at sha 00c8d1b
-# (2026-08-09), and `origin/master` is 34 commits BEHIND local `master` — every commit Epics
-# 10, 11 and 12 produced is local only. So no executed gate covers the commit being released,
-# and none CAN exist until `master` is pushed, which is an outward-facing operator act.
+# The newest `audit-ci.yml` run on `master` was 31341363300, `success`, at sha 00c8d1b
+# (2026-08-09), and `origin/master` was 34 commits BEHIND local `master` — every commit Epics
+# 10, 11 and 12 produced was local only. So no executed gate covered the commit being
+# released, and none COULD exist until `master` was pushed, which is an outward-facing
+# operator act.
 #
 # ⚠️ Citing run 31341363300 for this release is FORBIDDEN and the prohibition is not
 # stylistic: `architecture.md:614-616` uses THIS RUN ID as its worked example of a half-truth
 # (*"`run 31341363300` is a half-truth; `run 31341363300 (00c8d1b, 3/3 legs green)` is the
-# claim"*). The derivation below therefore names it as SUPERSEDED, with its sha, inside a
-# NOT ESTABLISHED statement — which is the honest use of it and the only one.
-# ─────────────────────────────────────────────────────────────────────────────
-RECORDED_GATE_OBSERVATION = GateObservation(
+# claim"*). The derivation therefore names it as SUPERSEDED, with its sha, inside a NOT
+# ESTABLISHED statement — which is the honest use of it and the only one. It is retained as a
+# live input below so the NOT ESTABLISHED branch is still driven by a real observation.
+_OBSERVATION_2026_08_15 = GateObservation(
     run_id="31341363300",
     run_sha="00c8d1b",
     conclusion="success",
@@ -167,6 +189,68 @@ RECORDED_GATE_OBSERVATION = GateObservation(
     measured_on="2026-08-15",
     behind_by=34,
 )
+
+# ── CURRENT, taken 2026-08-16 through the GitHub API, read-only ──────────────
+#
+#     gh run list --workflow=audit-ci.yml --branch master --json databaseId,headSha,conclusion
+#     gh run view 31908861401 --json workflowName,headSha,conclusion,jobs
+#     gh run view 31908861401 --job <id> --log        (all three legs)
+#     git rev-list --left-right --count origin/master...master   ->   0   0
+#     gh repo view Inan15/Agent-Argus --json visibility,isPrivate,pushedAt
+#
+# The operator act `DF-12-9-A` fenced — `git push origin master` — WAS taken (2026-08-15
+# 21:13:56Z), so for the first time an executed gate covers the commit being released:
+#
+#     run 31908861401  `ArgusAgent Repository Audit & Assurance CI` (audit-ci.yml)
+#                      push on `master`, head sha cea92689b14f730ff529caeabd74c1f33f84821b
+#                      conclusion `success`, 3 matrix legs (3.10 / 3.11 / 3.12) all `success`
+#
+# WHAT THE RUN DID NOT DO, read out of its own logs rather than assumed. Each leg reported
+# `1539 passed, 4 skipped`, and the 4 are one block:
+#
+#     SKIPPED [4] tests/test_installed_artifact.py:241: [E6] ... NOT EVALUATED —
+#     `uv` is not on PATH, so the wheel could NOT be installed into a fresh environment
+#     and nothing about the INSTALLED distribution was checked.
+#
+# `audit-ci.yml` installs with `pip` on a bare ubuntu runner and never installs `uv`, so
+# `TC-ArgusAgent-RELEASE-001-25`..`-28` — AC1's fresh-environment proof, the front-door claim
+# of this release — did not execute on any leg. That is recorded in `unexercised` and rendered
+# INSIDE the citation, because a citation that lets a reader infer the installed-artifact
+# proof ran is the same class of half-truth as a run id quoted without its sha.
+#
+# ⚠️ The FAILED run on the previous sha (31895158449, 50eedbd, the POSIX-containment/shallow
+# clone defect fixed by 40cdb3c) is deliberately NOT named here. It covers a different tree,
+# it is not the run being cited, and `derive_release_status` is a statement about the commit
+# being released — not a run history. Naming a superseded failure inside the citation would
+# invite the mirror-image error of the one this module exists to stop: attaching a run to a
+# tree it does not cover, in the direction that flatters nobody but still misleads.
+# ─────────────────────────────────────────────────────────────────────────────
+RECORDED_GATE_OBSERVATION = GateObservation(
+    run_id="31908861401",
+    run_sha="cea92689b14f730ff529caeabd74c1f33f84821b",
+    conclusion="success",
+    legs="3/3",
+    workflow=_GATE_WORKFLOW,
+    measured_on="2026-08-16",
+    behind_by=0,
+    outcomes="1539 passed, 4 skipped",
+    unexercised=(
+        "`tests/test_installed_artifact.py` (`TC-ArgusAgent-RELEASE-001-25`..`-28`) — the "
+        "fresh-environment installed-artifact proof: every `[project.scripts]` console "
+        "script, `argus --help`, a fixture audit run to a real verdict, and an MCP JSON-RPC "
+        "exchange over stdio through the installed `argus-mcp` shim. All four SKIPPED on all "
+        "three legs, each reporting the named E6 outcome *NOT EVALUATED — uv is not on PATH, "
+        "so the wheel could NOT be installed into a fresh environment and nothing about the "
+        "INSTALLED distribution was checked*. So the front-door claim of this release is "
+        "held by LOCAL runs only, and this citation does not cover it. Provisioning `uv` on "
+        "the CI runner is a tooling decision that has not been taken; it is filed OPEN and "
+        "unscheduled as `DF-12-9-B`, owned by the Engineering Lead.",
+    ),
+)
+
+# Every observation this project has recorded, oldest first. Kept so the record of what the
+# status used to be — and what it was measured against — survives the correction (§3.4).
+SUPERSEDED_GATE_OBSERVATIONS: tuple[GateObservation, ...] = (_OBSERVATION_2026_08_15,)
 
 
 def _covers(observation: GateObservation, released_sha: str) -> bool:
@@ -185,6 +269,33 @@ def _covers(observation: GateObservation, released_sha: str) -> bool:
     return observation.run_sha[:shortest] == released_sha[:shortest]
 
 
+def _scope_of(observation: GateObservation) -> str:
+    """What the cited run did NOT evidence, as the citation's own second half.
+
+    Empty when the run exercised everything it carries — the honest sentence in that case is
+    the citation alone, and appending an empty caveat would teach a reader to skim past a
+    real one. This is deliberately part of :func:`derive_release_status`'s output rather
+    than a separate sentence a surface may or may not render: a scope that any one surface
+    can drop is a scope that eventually gets dropped by the busiest surface.
+    """
+    if not observation.unexercised:
+        return ""
+    reported = (
+        f" Each leg reported `{observation.outcomes}`." if observation.outcomes else ""
+    )
+    items = " ".join(
+        f"({index}) {item}"
+        for index, item in enumerate(observation.unexercised, start=1)
+    )
+    return (
+        "SCOPE of that run, because a green run is evidence for what it EXECUTED and this "
+        f"one did not execute everything it carries.{reported} The run recorded the "
+        "following as NOT EVALUATED rather than as passing, so the citation above does not "
+        f"reach them: {items} Reading the citation as covering these would be the same "
+        "class of overstatement as quoting a run id without the sha it covers."
+    )
+
+
 def derive_release_status(
     observation: GateObservation, released_sha: str
 ) -> ReleaseStatus:
@@ -195,19 +306,28 @@ def derive_release_status(
     the superseded run stated as what it is — *with its sha, because a run id without its sha
     is a half-truth* — and the exact human step that would establish one.
 
+    An ESTABLISHED status carries its **scope** in the same breath as its citation
+    (:func:`_scope_of`). Story 10.1 wrote the rule against one half-truth — a run id quoted
+    without the tree it covers — because that was the half-truth reachable at the time. The
+    moment a run does cover the released commit a second one opens: the run's *green* is
+    read as covering guards the run itself declined to evaluate. Both are answered the same
+    way, by publishing what was observed rather than what the reader would like to infer.
+
     Pure: no clock, no network, no subprocess. The impure half is
     :func:`released_sha_of_checkout` and the ``gh`` read that produced
     :data:`RECORDED_GATE_OBSERVATION`.
     """
     if _covers(observation, released_sha) and observation.conclusion == "success":
+        citation = (
+            f"CI evidence: run {observation.run_id} "
+            f"({observation.run_sha}, {observation.legs} legs green) on "
+            f"`{observation.workflow}` covers the commit being released. "
+            f"Observed {observation.measured_on} through the GitHub API."
+        )
+        scope = _scope_of(observation)
         return ReleaseStatus(
             established=True,
-            statement=(
-                f"CI evidence: run {observation.run_id} "
-                f"({observation.run_sha}, {observation.legs} legs green) on "
-                f"`{observation.workflow}` covers the commit being released. "
-                f"Observed {observation.measured_on} through the GitHub API."
-            ),
+            statement=f"{citation}\n\n{scope}" if scope else citation,
         )
 
     if not observation.run_id:
