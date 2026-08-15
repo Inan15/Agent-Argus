@@ -4,7 +4,7 @@
 
 ## Provenance
 
-- Commit descriptor (`git rev-parse HEAD` at generation): `2826c51b5a25c4ccefaedc7d09c0ff1c0d471b5b`
+- Commit descriptor (`git rev-parse HEAD` at generation): `40cdb3c4f5a4fd4ebde3ed9fb130c56e22881913`
 - Enumerated population (the HONEST label — Story 12.1, closing `DF-10-4-D`): the file list in this artifact is enumerated from the git INDEX (`git ls-files`), NOT from the tree at the commit descriptor above. The two are the same tree exactly when `argus/` carries no staged-or-uncommitted change, and `TC-ArgusAgent-DOGFOOD-001-50` fails unless they agree — so this artifact cannot quietly describe one tree while citing another.
 - Source files (tracked `argus/`): **83**
 
@@ -17,8 +17,8 @@
 - **V1 deterministic total: 415 credits**
 - **Headroom (5/4): +103 credits**
 - **Sized ceiling `$X`: 518 credits** (int — never a float, AR4)
-- Build-cost proxy (total physical LOC): 25321
-- **NFR-C1 baseline ratio (audit-cost / build-cost proxy): `415/25321`** (Fraction/marker — never a float)
+- Build-cost proxy (total physical LOC): 25380
+- **NFR-C1 baseline ratio (audit-cost / build-cost proxy): `83/5076`** (Fraction/marker — never a float)
 
 ## Per-unit contribution basis
 
