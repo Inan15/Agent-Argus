@@ -137,10 +137,10 @@ observation. Nothing about the derivation changed; its input did. The superseded
 is retained in `scripts/release_notes.py` so the record of what this project claimed while it
 had no gate survives the moment it got one.
 
-CI evidence: run 31908861401 (cea92689b14f730ff529caeabd74c1f33f84821b, 3/3 legs green) on
-`audit-ci.yml` covers the commit being released. Observed 2026-08-16 through the GitHub API.
+~~CI evidence: run 31908861401 (cea92689b14f730ff529caeabd74c1f33f84821b, 3/3 legs green) on
+`audit-ci.yml` covers the commit being released. Observed 2026-08-16 through the GitHub API.~~
 
-SCOPE of that run, because a green run is evidence for what it EXECUTED and this one did not
+~~SCOPE of that run, because a green run is evidence for what it EXECUTED and this one did not
 execute everything it carries. Each leg reported `1539 passed, 4 skipped`. The run recorded
 the following as NOT EVALUATED rather than as passing, so the citation above does not reach
 them: (1) `tests/test_installed_artifact.py` (`TC-ArgusAgent-RELEASE-001-25`..`-28`) — the
@@ -153,7 +153,30 @@ So the front-door claim of this release is held by LOCAL runs only, and this cit
 not cover it. Provisioning `uv` on the CI runner is a tooling decision that has not been
 taken; it is filed OPEN and unscheduled as `DF-12-9-B`, owned by the Engineering Lead.
 Reading the citation as covering these would be the same class of overstatement as quoting a
-run id without the sha it covers.
+run id without the sha it covers.~~
+
+🔴 **RE-DERIVED 2026-08-16 — struck, not deleted (§3.4 evidence immutability).** The citation
+above was true of the tree it names and is stale for this one, and the reason is structural
+rather than accidental: recording an observation and rendering it onto these surfaces is ITSELF
+a commit, so `HEAD` moves past the sha the cited run covers the instant the render lands. A
+surface that insisted the gate always cover `HEAD` could be true for one moment and never
+again. What follows is therefore the SAME function over the SAME 2026-08-16 observation, asked
+about the commit you are reading rather than about the commit that run covered — and the struck
+citation stays visible, because *the gate has executed green on this branch, at the sha named
+in it* is a materially different fact from *no gate has ever run*, and a reader is owed both
+halves. `TC-ArgusAgent-DOCS-001-25` asserts that the derivation is right for whichever branch
+the observed facts imply and that these surfaces carry that value; it does not require the
+facts to be one particular way, because a guard that can only pass in a single instant is the
+mirror image of one that can never fail.
+
+CI evidence: NOT ESTABLISHED. No executed gate covers the commit being released — the most
+recent `audit-ci.yml` run is run 31908861401, which covers sha
+cea92689b14f730ff529caeabd74c1f33f84821b and therefore evidences a different tree; a run id
+quoted without the sha it covers is a half-truth, so it is named here as SUPERSEDED rather than
+cited. Observed 2026-08-16 through the GitHub API. The human step that would establish one, and
+the only one: push `master` to `origin` and let `audit-ci.yml` run to success on the released
+commit, then re-derive this sentence from that run. A local `pytest`/`mypy`/`bandit` run is
+necessary, not sufficient, and is recorded as LOCAL (architecture.md §H).
 
 ### Auditing a non-Python repository: nothing extra to install
 
