@@ -111,6 +111,17 @@ _STATUS_DOCUMENTS: tuple[str, ...] = (
     # per-document loop in `-21` short-circuits. No retrospective was edited and no citation minted.
     "epic-10-retro-2026-08-11.md",
     "epic-11-retro-2026-08-12.md",
+    # Registered on 2026-08-15 (AI-E12-1), the same one-line edit for the same reason: `-22`'s
+    # glob closure sees `epic-*-retro-*.md` the moment the file lands, which is the closure
+    # working as designed — the Epic-12 retrospective predicted this red about itself (§6 SD-3)
+    # and was written to go green on registration alone. Verified by execution before
+    # registering, exactly as the entry above records: `_status_assertions()` returns 0 for it
+    # (no phrase in `_STATUS_CLAIMS` occurs in the document at all, denied or otherwise), so
+    # `-21`'s per-document loop short-circuits, and `_executed_gate_citations()` returns 0, so
+    # it mints no excuse for anything. Its release-status statements are all NOT ESTABLISHED
+    # and name the superseded run with the `_CITATION_DENIAL_MARKERS`. No retrospective was
+    # edited and no citation minted.
+    "epic-12-retro-2026-08-15.md",
 )
 
 # Exactly the set the epic's AC names — "any future change proposal or retrospective".

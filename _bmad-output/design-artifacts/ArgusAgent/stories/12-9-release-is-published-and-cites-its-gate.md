@@ -4,7 +4,7 @@ baseline_commit: de05dec77c67a3077c3be6d154b579d024c27901
 
 # Story 12.9: The release is published, and its status cites the gate that published it
 
-Status: review
+Status: done
 
 <!-- Note: Validation is optional. Run validate-create-story for quality check before dev-story. -->
 
@@ -1243,11 +1243,66 @@ verifies its map comment; it does not rewrite it), `pyproject.toml`, `dist/`.
 
 ### Review Findings
 
-_To be completed by the review agent._
+**Code review complete — CLEAN PASS.** Adversarial review (Blind Hunter / Edge Case Hunter /
+Acceptance Auditor layers) plus independent execution found no `decision-needed`, `patch`,
+High or Medium finding. 0 `decision-needed`, 0 `patch`, 0 `defer`, 0 dismissed.
+
+**Independently re-verified by the reviewer, by execution, not taken on the story's say-so:**
+
+- `python -m pytest -q` → **1543 passed, 0 failed, 0 errors, 0 skipped** (161.6s) — matches the
+  claimed baseline 1527 + 16 new exactly.
+- `python -m mypy argus` → **Success: no issues found in 83 source files.**
+- `python -m bandit -r argus -q` → **19 Low / 0 Medium / 0 High, 0 `#nosec`** — and
+  `git diff --stat de05dec..HEAD -- argus` is **empty**, which is a stronger no-new-finding
+  control than a stash run (DN-7 confirmed: `argus/**` byte-unchanged; `action.yml`,
+  `pyproject.toml`, `dist/` also unchanged).
+- **Outward-facing check, read-only `gh`/`git` only:** `git tag -l` empty; `git rev-parse
+  origin/master` → `00c8d1b…` (unmoved); `gh release list` empty; `gh repo view` →
+  `PRIVATE`/`isPrivate: true`. Nothing was pushed, tagged, released, or made public.
+- `gh run list --workflow=audit-ci.yml --branch master` → only three runs ever
+  (`31341363300`@`00c8d1b` success 2026-08-09; two earlier failures); **none covers `de05dec`
+  or `4ef82a0`**, confirming AC2's `NOT ESTABLISHED` is the truth, not a dodge, and that citing
+  `31341363300` is correctly forbidden (`architecture.md:614-616`).
+- Read `scripts/release_notes.py` in full: stdlib-only, never imports `argus`
+  (`TC-ArgusAgent-DOCS-001-70` asserts this structurally); `derive_release_status` is the one
+  function README, CHANGELOG and the release note all render (confirmed by reading the
+  rendered diffs in all three files — identical statement, not three transcriptions).
+- Read `tests/test_evidence_citation.py`'s `_CITATION_DENIAL_MARKERS` addition: verified the
+  "stricter, never looser" claim with a concrete before/after — a sentence naming a run as
+  `superseded`/`not established` is now correctly rejected as a citation (it would otherwise
+  have excused every other claim on that surface), while an ordinary `run <id> … sha <sha> …
+  success` sentence is still recognised (`-21` positive control both ways, lines 645-677).
+- Read `tests/test_installed_artifact.py` in full: genuinely builds a wheel, installs it into a
+  fresh `venv --without-pip` + `uv pip install --no-deps` environment (not the source tree),
+  asserts provenance via `PROBE-INVALID`, and `-28` demonstrates the refusal actually fires
+  (`PYTHONPATH` pointed at the repo → non-zero exit + `PROBE-INVALID` in stderr) — confirms the
+  guard can fail, not just pass.
+- Read `tests/test_built_distribution.py`'s `tag_state_violations`/`-55`/`-55b`: confirmed the
+  closure now covers all four pins across three surfaces (README, CHANGELOG, `docs/first-run.md`)
+  plus `release.yml`'s "HAS NEVER EXECUTED" header, both directions proven through the
+  `_released_versions()` seam with **no real tag created**.
+- Read `.github/workflows/release.yml`: generator invoked with `$TAG` bound through `env:` and
+  quoted, `--notes-file` consumed, no `run:` body interpolates `${{ }}`, `permissions:
+  contents: write` unchanged — Story 11.3's injection invariance intact.
+- Confirmed `deferred-work.md` diff is `+95/-0` (`git diff --numstat`); `DF-10-3-A` closed
+  against real evidence with `target_story` corrected append-only; `DF-12-9-A` filed once with
+  a named owner; `DF-3-4-A`/`DF-10-5-C`/`DF-12-7-A`/`DF-10-3-B`/`DF-10-3-C` cited, not re-filed.
+- Confirmed `tests/test_module_size_ceiling.py` is byte-unchanged (`_EXEMPT_BY_DESIGN` not
+  grown) and the worst non-exempt file (`test_built_distribution.py`) sits at 1181/1200.
+
+**Locked decisions correctly cited, not reopened:** DN-1 (PyPI out of scope), DN-2 (Marketplace
+blocked by repo privacy, not Story 11.3), DN-3 (`NOT ESTABLISHED` is a pass), version stays
+`0.1.0`. AC9's HALT (Task 9's second checkbox unchecked, `DF-12-9-A` filed) is the designed
+terminal state, not a defect, and does not block this pass.
+
+No High or Medium issues. No Low issues rose to the level of an action item; the codebase's own
+extremely high evidentiary bar (dated observations, struck-not-deleted corrections, closure-based
+guards, positive controls) is met throughout this diff.
 
 ## Change Log
 
 | Date | Change |
 |---|---|
+| 2026-08-15 | **`code-review` — CLEAN PASS. `review` → `done`.** Independently re-verified by execution rather than taken on the story's say-so: `pytest` **1543 passed / 0 failed** (161.6s, matches claim exactly); `mypy argus` clean, 83 files; `bandit -r argus` 19 Low/0 Med/0 High with `git diff --stat -- argus` empty (stronger than a stash control); `git tag -l` empty, `origin/master` unmoved, `gh release list` empty, repo still `PRIVATE` — nothing outward-facing occurred. Confirmed via read-only `gh run list` that no `audit-ci.yml` run covers `de05dec` or `4ef82a0`, so AC2's `NOT ESTABLISHED` is the measured truth. Read `scripts/release_notes.py`, `tests/test_installed_artifact.py`, the widened `-55`/`-55b` tag-state closure, `release.yml`'s injection-invariant generator invocation, and the `_CITATION_DENIAL_MARKERS` "stricter never looser" addition end to end; all deliver exactly what they claim. `deferred-work.md` diff confirmed `+95/-0`, `DF-10-3-A` correctly closed, `DF-12-9-A` correctly filed. 0 decision-needed, 0 patch, 0 defer, 0 dismissed — no High/Medium findings; AC9's HALT is the designed terminal state and does not block the pass. See Review Findings above for the full independent-verification record. |
 | 2026-08-15 | **`dev-story` — AC1–AC8 COMPLETE, AC9 HALTED. `ready-for-dev` → `review`.** The terminal state is the intended one (DN-8): **no outward-facing act was performed**, and that is re-asserted BY EXECUTION at hand-off — `git tag -l` empty, `origin/master` unmoved at `00c8d1b` (0/34), `gh release list` empty, repository still `PRIVATE`, no new commit in the reflog. Every `gh` call this story made was a **read**. **Delivered.** *(AC1)* `tests/test_installed_artifact.py` proves the artifact by USING it from a genuinely installed distribution — the wheel installed into a fresh env, a `PROBE-INVALID` refusal unless `argus` resolves inside it, **every** `[project.scripts]` alias by closure (a fifth with a new target **raises**), both `--help` surfaces, a fixture audit to a real verdict whose exit code equals the AR3 map, and a real MCP JSON-RPC exchange through the installed `argus-mcp` shim with the tool name and required argument **derived from `tools/list`**; `CHANGELOG.md:23-29`'s unguarded hand-made claim is struck and replaced by one naming that guard and stating MCP. *(AC2)* one derivation computes the release status; README and CHANGELOG render **that value**; the rule now reaches the imported `_RELEASE_SURFACES` population without forking 10.1's policy tables. **Status: `NOT ESTABLISHED`** with its reason, the superseded run named **with its sha**, and the exact human step — citing `31341363300` is forbidden and the guard now enforces it. *(AC3)* the note is **generated**: the `run:` literal is gone, every claim derived (version, AR3 map incl. the reserved `1`, canonical FR34 disclosure selected by `INSTRUMENT_STATUS`, install command, AC2's status), **DN-4's recommended route taken** — stdlib `ast`, generator never imports `argus`, runs before any install; the rejected alternative is recorded and `-70` asserts it was not taken. *(AC4)* `-55` **widened** from README-only to a closure over the registered surfaces with both floors, both directions proven **through the seam without creating a tag**, `release.yml`'s *"HAS NEVER EXECUTED"* header folded into the same rule; the visibility falsehood **measured, dated, single-sourced** across three surfaces + the note. *(AC5)* `DF-10-3-A` **CLOSED** against 12.8/AC8's remedy, verified by execution first, its non-existent `target_story` corrected append-only; `DF-12-9-A` files the seven unperformed acts once with a named human; five entries cited and **not** re-filed; ledger diff **`+95 / -0`**. *(AC6)* all twelve items dispositioned; architecture §I's four stale cells corrected **and now held by a guard**; `_EXEMPT_BY_DESIGN` **not grown**. *(AC7)* every `RELEASE_EDGE_CASE_IDS` member rehearsed through the real CLI over a real local build; E4's three outcomes all exercised and `UNKNOWN` never becomes `ok`; **E2 re-decided and driven to a refusal locally**, `CI_UNREACHABLE` re-stated with a date; the index exit condition re-affirmed with a date in three places (DN-1). *(AC8)* full dossier in the Dev Agent Record with the publish commands **quoted, not executed**. **Two findings the story did not expect and CORRECTED rather than papered over:** (a) the honest `NOT ESTABLISHED` sentence itself parsed as a well-formed citation — it must name the superseded run *with* its sha — which would have excused every other claim on that surface; the citation reader was made **stricter** (`_CITATION_DENIAL_MARKERS`), never looser, with a two-way positive control; (b) registering the generator as a release surface caught its own docstring quoting the historical `READY FOR RELEASE` defect — resolved by **correcting the sentence**. Also measured against §0's own expectation and recorded: **zero** live status claims existed on all thirteen release surfaces beforehand, so `-25b` plants the verbatim historical defect on README's **real bytes** to prove the scan reaches them. **DN-7 held: `argus/**` is BYTE-UNCHANGED**, so `DF-10-4-D`'s bootstrap is not owed and none was performed. **Gates, all LOCAL:** `pytest` **1543 passed / 0 failed / 0 errors / 0 skipped** (was 1527); `mypy` clean, 83 files; `bandit` 19 Low / 0 Medium / 0 High over a population **byte-identical to `de05dec`**, which is a stronger control than a stash run. NFR-M1 worst non-exempt **1181/1200**, relieved by a **cohesion split**, never by shaving. **CI evidence: NOT ESTABLISHED** — every figure above is LOCAL and does not on its own discharge architecture.md §H. **AWAITING: explicit human authorisation, act by act, for `DF-12-9-A`'s seven acts.** |
 | 2026-08-15 | Story 12.9 created (`bmad-create-story`). Scope: **stage, prove, derive and guard the release — and HALT before publishing it.** Premises re-measured on `de05dec` by execution **and by live GitHub API reads**, because two of them are facts outside the repository. **Six divergences found, two of them outside the tree.** (1) **The epic's central AC is impossible today:** the latest `audit-ci.yml` run on `master` is `31341363300` at `00c8d1b` (2026-08-09) and **`origin/master` is 34 commits BEHIND local `master`** — every Epic-10/11/12 commit is local only, so **no executed gate covers the release commit**; the honest status is `NOT ESTABLISHED`, and citing `31341363300` is the exact half-truth `architecture.md:614-616` uses that run id to illustrate. (2) **The repository is measurably PRIVATE** (`gh repo view` → `isPrivate: true`), which README and CHANGELOG both admit they never measured — so the documented `pip install …@v0.1.0` cannot resolve for any consumer **with or without the tag**, and Marketplace is blocked for a reason unrelated to 11.3 (which is `done`, precondition MET). (3) **`TC-ArgusAgent-DOCS-001-55`, built by 11.5 so the tag caveat "cannot rot in EITHER direction", reads `README.md` only** — the pin appears on **three** surfaces (README ×3, CHANGELOG ×2, `docs/first-run.md` ×1, the last added by **Story 12.8 after `-55` was written**), so creating the tag turns three further caveats into published falsehoods **invisibly**. That is 12.8's explicit hand-over, and AC4 closes it **before** any tag exists. (4) **`release.yml`'s release note is a hand-typed string literal in a `run:` block** transcribing the exit-code contract, the install command and a paraphrase of the FR34 disclosure — and 12.8 changed exit-code semantics without it moving, because nothing checks it. (5) **10.1's citation rule cannot see the consumer surfaces**: `_STATUS_DOCUMENTS` is change-proposals and retros only; README/CHANGELOG/`release.yml` are not excluded with a reason, they are simply outside the guard. (6) **`DF-10-3-A` — the ledger entry that names this story — was already resolved by 12.8/AC8** (its own first candidate remedy) and never closed; its `target_story` also names a story key the tracker does not have. **Decisions recorded rather than assumed:** the **index channel does NOT ship** (DN-1 — four committed statements, one a 9.2 locked decision, and `epics.md:2465` is permissive), the **marketplace channel does NOT ship** (DN-2 — private repo, not 11.3), the version **stays 0.1.0** (9.2/D1), and **`NOT ESTABLISHED` is a passing outcome** (DN-3). **Nine ACs; AC1-AC8 are completable with ZERO outward-facing acts** — build, install-and-use the artifact, derive the citation, generate the note, mechanise the caveats, close the ledger, re-prove E1-E6, assemble a dossier — and **AC9 alone is outward-facing: it enumerates all seven irreversible/outward acts (push master, tag, push tag, GitHub Release, make repo public, Marketplace, PyPI) with blast radius and reversibility, and is written as a HALT requiring explicit human authorisation** (DN-8; `sprint-status.yaml:399`'s standing operator instruction; `release.yml`'s own *"not a decision a story author may take unilaterally"*). Owns `DF-10-3-A`; **cites and does not build** `DF-3-4-A`, `DF-10-5-C`, `DF-12-7-A`, `DF-10-3-B`, `DF-10-3-C`. Status → `ready-for-dev`. |
