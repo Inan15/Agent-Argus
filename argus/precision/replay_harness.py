@@ -14,8 +14,10 @@ float), ArgusAgent-NFR-S1 (no source/secret byte from any cartridge appears in t
 precision result / rows — the result carries only counts + rule-id provenance +
 the fixed-precision ratio string), ArgusAgent-AR4 (precision = TP / (TP + FP) is an
 exact ``Fraction`` stored as a ``"num/den"`` string ratio — NEVER a ``float``),
-ArgusAgent-AR8 (PURE core — no clock, no LLM, no random; its ONE declared impure edge is the
-LAZY ``_registry_module()``, strictly LESS I/O than the module-level import it replaced —
+ArgusAgent-AR8 (PURE core — no clock, no LLM, no random; its declared impure edges are the
+LAZY ``registry_module()`` and, since Story 13.1, the LAZY ``corpus_manifest_module()`` —
+each strictly LESS I/O than the module-level import it replaced, and each resolving a
+DIFFERENT repository-only substrate rather than giving one substrate two doors —
 DF-9-2-A), ArgusAgent-NFR-M1/M2 (<=1200-line files; the frozen Epic-1..6 contracts + the 6.5
 ``_registry.py`` shape are unchanged — this module COMPOSES them, edits none).
 
@@ -86,12 +88,21 @@ from typing import TYPE_CHECKING, Any
 # resolved ON DEMAND, never at module import time (DF-9-2-A). It carries NO source bytes
 # (value-free golden key, the 6.5 NFR-S1 contract), so importing it leaks no secret byte.
 _CARTRIDGES_DIR = Path(__file__).resolve().parents[2] / "tests" / "cartridges"
+# Story 13.1 / AC3a — the REPOSITORY corpus manifest. Same directory property, same reason,
+# same treatment: repository-only, resolved on demand. See :func:`corpus_manifest_module`.
+_CORPUS_DIR = Path(__file__).resolve().parents[2] / "tests" / "corpus"
 if TYPE_CHECKING:
     from _registry import CartridgeSpec, GoldenFinding  # type: ignore[import-not-found]
 
 
-def _registry_module() -> Any:
-    """Resolve ``_registry`` lazily — this function IS this module's declared impure edge."""
+def registry_module() -> Any:
+    """Resolve ``_registry`` lazily — this function IS this module's declared impure edge.
+
+    PUBLIC since Story 13.1 (12.6 / DN-7: *"need a helper from a ``_``-prefixed API? Promote it
+    to public; never reach through"*). ``argus/dogfood/proof_run.py`` and the Story 13.1
+    validation-set manifest both need the registry, and both must reach it through THIS
+    function — a second path to the registry is the fork this codebase keeps refusing.
+    """
     if _CARTRIDGES_DIR.is_dir() and str(_CARTRIDGES_DIR) not in sys.path:
         sys.path.insert(0, str(_CARTRIDGES_DIR))
     import _registry  # type: ignore[import-not-found]
@@ -99,14 +110,45 @@ def _registry_module() -> Any:
     return _registry
 
 
+#: The pre-13.1 private name, preserved so no existing caller breaks. It is an ALIAS, not a
+#: second implementation — there is still exactly one way to reach the registry.
+_registry_module = registry_module
+
+
+def corpus_manifest_module() -> Any:
+    """Resolve the Story 13.1 validation-set manifest lazily (``tests/corpus/_manifest.py``).
+
+    This is a SECOND declared edge, and it is deliberately the same KIND as
+    :func:`registry_module` rather than a second way to reach the same thing: it resolves a
+    DIFFERENT repository-only substrate (the repository corpus, which measures precision)
+    under the identical ``DF-9-2-A`` constraint that put the first one behind a lazy call.
+    A module-level import of either would ship a wheel that cannot import, which
+    ``tests/test_built_distribution.py::-20`` exists to catch.
+
+    Raises ``ImportError`` when the manifest is absent — which is the normal state inside a
+    built distribution. Callers that must survive that (the dogfood proof generator) go
+    through :func:`measure_validation_corpus`, which converts absence into a RECORDED reason
+    rather than a crash or, worse, a fabricated zero.
+    """
+    if _CORPUS_DIR.is_dir() and str(_CORPUS_DIR) not in sys.path:
+        sys.path.insert(0, str(_CORPUS_DIR))
+    import _manifest  # type: ignore[import-not-found]
+
+    return _manifest
+
+
 __all__ = [
     "MatchKey",
     "CartridgePrecisionRow",
     "PrecisionResult",
+    "ValidationCorpusMeasurement",
     "finding_match_key",
     "golden_match_key",
     "compute_precision",
+    "corpus_manifest_module",
+    "measure_validation_corpus",
     "precision_gate_status_for",
+    "registry_module",
 ]
 
 # The shared 6.5 match key: (rule_id, verdict_eligible, advisory). ``verdict_eligible``
@@ -353,13 +395,127 @@ def compute_precision(
     )
 
 
+@dataclass(frozen=True)
+class ValidationCorpusMeasurement:
+    """What the two corpora ACTUALLY hold, measured (Story 13.1 / AC5 — ``DF-8-5-C``).
+
+    ``DF-8-5-C`` was filed because ``argus/dogfood/proof_run.py`` passed
+    ``precision=Fraction(0, 1), n=0`` into the gate status as **literals** — arguments that
+    were never a measurement of anything — and the resulting sentence was published verbatim
+    into a proof artifact *about the very gate those numbers describe*. This type exists so
+    that the numbers a proof artifact publishes come from the corpora rather than from a
+    keyboard.
+
+    **Two counts, because Story 13.1 decided there are two corpora (DN-1).**
+
+    - ``validation_set_n`` — the count of ELIGIBLE members of the REPOSITORY corpus. This is
+      the ``N`` the ≥80% externalization gate is measured over, because the PRD governs.
+    - ``recall_cartridge_rows`` / ``recall_rule_classes`` — the planted-defect cartridge
+      substrate, which measures **recall** (FR20) and does **not** gate externalization.
+
+    Reporting the cartridge count as the gate's ``N`` would read as "floor met" (7 ≥ 5) for a
+    gate the cartridges do not gate at all — a worse published statement than the ``N=0`` it
+    replaced, and in the over-claiming direction rather than the understating one. So the two
+    are carried separately and rendered with their roles named.
+
+    Absence is RECORDED, never silently zeroed: inside a built distribution ``tests/`` is
+    absent (``DF-9-2-A``), so the corresponding ``*_available`` flag goes ``False`` and
+    ``unavailable_reasons`` says which substrate could not be consulted. A zero that means
+    "not consulted" and a zero that means "measured, and it is zero" are different facts.
+    """
+
+    validation_set_n: int
+    validation_set_available: bool
+    recall_cartridge_rows: int
+    recall_rule_classes: int
+    recall_substrate_available: bool
+    #: The locked OI1 floor, RESOLVED from whichever substrate answered — never restated here
+    #: (DN-3: one floor, two populations). ``None`` when NEITHER substrate could be consulted,
+    #: because the honest report of an unreadable floor is "unknown", not the number this
+    #: module happens to remember. A caller that needs it then fails loudly rather than
+    #: publishing an invented constant.
+    floor_n: int | None
+    unavailable_reasons: tuple[str, ...]
+
+    @property
+    def fully_measured(self) -> bool:
+        """Whether BOTH corpora were consulted — i.e. every figure below is a measurement."""
+        return self.validation_set_available and self.recall_substrate_available
+
+    def corpus_note(self) -> str:
+        """The rendered clause naming WHICH corpus each figure describes (never hand-written)."""
+        if self.recall_substrate_available:
+            recall = (
+                f"the planted-defect cartridge corpus holds {self.recall_cartridge_rows} "
+                f"populated rows across {self.recall_rule_classes} distinct rule classes and "
+                "measures RECALL (FR20), NOT this gate"
+            )
+        else:
+            recall = "the cartridge recall corpus was NOT CONSULTED by this run"
+        if self.validation_set_available:
+            corpus = (
+                f"N counts ELIGIBLE members of the REPOSITORY corpus (PRD Validation Approach: "
+                f"N ~ 5-10 real repositories), measured at {self.validation_set_n}"
+            )
+        else:
+            corpus = "the repository corpus manifest was NOT CONSULTED by this run"
+        return f"{corpus}; {recall}"
+
+
+def measure_validation_corpus() -> ValidationCorpusMeasurement:
+    """MEASURE both corpora through the declared lazy edges (Story 13.1 / AC5).
+
+    Every field is read off the substrate; nothing here is a literal. Where a substrate cannot
+    be resolved — the built-distribution case (``DF-9-2-A``) — the count stays 0 AND the reason
+    is recorded, so a downstream renderer can say "not consulted" instead of publishing a zero
+    that looks like a finding. That distinction is the whole content of ``DF-8-5-C``.
+    """
+    reasons: list[str] = []
+
+    validation_set_n = 0
+    validation_set_available = True
+    floor_n: int | None = None
+    try:
+        manifest = corpus_manifest_module()
+        validation_set_n = int(manifest.eligible_member_count())
+        floor_n = int(manifest.validation_floor_n())
+    except Exception as exc:  # pragma: no cover - the built-distribution path
+        validation_set_available = False
+        reasons.append(f"repository-corpus manifest unavailable ({type(exc).__name__}: {exc})")
+
+    recall_rows = 0
+    recall_classes = 0
+    recall_available = True
+    try:
+        registry = registry_module()
+        recall_rows = int(registry.populated_planted_defect_count())
+        recall_classes = int(registry.distinct_rule_class_count())
+        if floor_n is None:
+            floor_n = int(registry.VALIDATION_SET_FLOOR_N)
+    except Exception as exc:  # pragma: no cover - the built-distribution path
+        recall_available = False
+        reasons.append(f"cartridge registry unavailable ({type(exc).__name__}: {exc})")
+
+    return ValidationCorpusMeasurement(
+        validation_set_n=validation_set_n,
+        validation_set_available=validation_set_available,
+        recall_cartridge_rows=recall_rows,
+        recall_rule_classes=recall_classes,
+        recall_substrate_available=recall_available,
+        floor_n=floor_n,
+        unavailable_reasons=tuple(reasons),
+    )
+
+
 def precision_gate_status_for(
     *,
-    precision: Fraction,
+    precision: Fraction | None,
     n: int,
     provisional: bool,
     protocol_path: str,
     floor_n: int | None = None,
+    corpus_note: str | None = None,
+    population_label: str = "labeled cartridges",
 ) -> str:
     """The 6.6 gate-status string — REUSES the 6.5 marker convention (no forked marker).
 
@@ -373,19 +529,47 @@ def precision_gate_status_for(
     Below the N=5 floor the string says "provisional ... EARLY/PROVISIONAL signal"
     and points at the validation protocol; it NEVER says "cleared" unless the gate
     has genuinely flipped (``provisional is False``).
+
+    **Story 13.1 / AC5 — two additive changes, both in the honest direction.**
+
+    ``precision`` accepts ``None``, meaning *this run computed no precision number*. That is
+    the true state of the dogfood proof generator, which audits a repository and does not run
+    the replay harness at all; it previously said so by passing ``Fraction(0, 1)``, which
+    renders ``precision=0/1`` — a statement that the tool's precision was measured and found to
+    be zero. "Not computed" and "measured zero" are different claims and the surface now
+    distinguishes them. A ``None`` precision with ``provisional=False`` RAISES: a run that
+    computed no number can never report a cleared gate.
+
+    ``corpus_note`` names WHICH corpus ``n`` counts, because after Story 13.1's DN-1 decision
+    there are two and they gate different things. It is supplied already-derived (see
+    :meth:`ValidationCorpusMeasurement.corpus_note`) so that no caller can hand-write it.
+
+    ``population_label`` is the NOUN ``n`` counts. It defaults to ``"labeled cartridges"``, so
+    :func:`compute_precision` — which genuinely folds the cartridge registry — renders exactly
+    the bytes it always did (NFR-P1 byte-stability of the precision surface). The dogfood
+    generator overrides it, because under DN-1 its ``n`` counts **repositories**, and a status
+    line that reported a repository count using the word "cartridges" would be a new false
+    statement introduced by the change that removed an old one.
     """
-    floor_n = _registry_module().VALIDATION_SET_FLOOR_N if floor_n is None else floor_n
-    ratio = _ratio_string(precision)
+    floor_n = registry_module().VALIDATION_SET_FLOOR_N if floor_n is None else floor_n
+    if precision is None and not provisional:
+        raise ValueError(
+            "precision_gate_status_for(precision=None, provisional=False): this run computed "
+            "NO precision number, so it cannot report a cleared gate. The >=80% gate is "
+            "cleared only by the adjudication run of the validation protocol (OI1)."
+        )
+    ratio = "NOT COMPUTED BY THIS RUN" if precision is None else _ratio_string(precision)
+    note = "" if corpus_note is None else f" ({corpus_note})"
     if provisional:
         return (
             f"provisional (Story 6.6 precision harness; precision={ratio} over FINDINGS "
-            f"not repos; N={n} labeled cartridges populated, floor N={floor_n}; "
+            f"not repos; N={n} {population_label} populated, floor N={floor_n}{note}; "
             f"the >=80% externalization gate stays PROVISIONAL until N>={floor_n} "
             f"with the validation protocol applied — this number is an EARLY/PROVISIONAL "
             f"signal, NOT a cleared gate; adjudication method: {protocol_path})"
         )
     return (
         f"cleared (Story 6.6 precision harness; precision={ratio} >= 4/5 over FINDINGS; "
-        f"N={n} labeled cartridges >= floor N={floor_n}; the validation "
+        f"N={n} {population_label} >= floor N={floor_n}{note}; the validation "
         f"protocol's per-metric pass/fail is recorded cleared — {protocol_path})"
     )

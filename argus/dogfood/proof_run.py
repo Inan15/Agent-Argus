@@ -176,6 +176,7 @@ from argus.pipeline_persist import CRITICAL_SUBSYSTEMS_PRODUCER
 from argus.precision.replay_harness import (
     MatchKey,
     finding_match_key,
+    measure_validation_corpus,
     precision_gate_status_for,
 )
 from argus.store.integrity import IntegrityReport, lint_referential_integrity
@@ -198,9 +199,16 @@ __all__ = [
     "run_dogfood",
     "adjudication_rows",
     "cost_summary",
+    "derive_gate_status",
     "build_dogfood_proof",
     "render_proof_markdown",
 ]
+
+#: The human-adjudication protocol this generator points at, declared once so the path the
+#: artifact publishes and the path the guard checks cannot drift apart (AI-E9-7).
+PRECISION_PROTOCOL_PATH = (
+    "_bmad-output/design-artifacts/ArgusAgent/precision-validation-protocol.md"
+)
 
 DOGFOOD_PROOF_SCHEMA_VERSION = "1"
 
@@ -575,6 +583,65 @@ def run_dogfood(
     )
 
 
+def derive_gate_status() -> str:
+    """The precision-gate status line this proof publishes — DERIVED, never hand-written.
+
+    **Story 13.1 / AC5 — the fix for ``DF-8-5-C``.** This call site previously read::
+
+        gate_status = precision_gate_status_for(
+            precision=Fraction(0, 1),
+            n=0,
+            provisional=True,
+            ...
+        )
+
+    Both arguments were **literals**. Neither was a measurement of anything, and the resulting
+    sentence — *"precision=0/1 over FINDINGS not repos; N=0 labeled cartridges populated, floor
+    N=5"* — was rendered verbatim into ``minions-dogfood-proof.md``, a proof artifact **about
+    the very gate those numbers describe**. A hand-written number in a proof artifact is the
+    defect class Epic 8 exists to delete, and it survived five epics inside the generator that
+    exists to prevent it.
+
+    **The correction, and its direction.** ``n=0`` UNDERSTATED the cartridge corpus, which
+    holds 7 populated rows across 5 distinct rule classes — so it never made a gate look
+    cleared, and nothing published was an over-claim. That is why this is filed 🟢 and closed
+    as a correctness fix rather than as a false-assurance incident.
+
+    **What it is NOT corrected to, and why (Story 13.1 / DN-7).** The obvious fix — pass
+    ``n=populated_planted_defect_count()`` = 7 — would publish *"N=7 … floor N=5"*, which reads
+    as **floor met** for a gate the cartridges do not gate at all. Story 13.1 / DN-1 decided the
+    **PRD governs**: the ≥80% externalization gate is measured over a corpus of *real
+    repositories*, while the cartridges measure **recall** (FR20). So ``n`` is the ELIGIBLE
+    member count of the REPOSITORY corpus — measured, and currently **0** — and the cartridge
+    substrate is reported alongside it with its role named. The published number is the same
+    ``0`` it always was; the difference is that it is now a measurement of a named population
+    instead of a literal, and it says which population it counts.
+
+    ``precision`` is ``None`` — *not computed by this run* — because that is the truth: this
+    generator audits a repository and never invokes the replay harness. Saying "zero" was a
+    stronger and false claim. The harness refuses to render a ``None`` precision as anything
+    but provisional, so this call cannot become a cleared gate by editing one keyword.
+
+    Pure apart from the two declared lazy substrate edges (``DF-9-2-A``); reads no clock, makes
+    no LLM call, and never passes a true ``protocol_cleared`` — the flag is not passed at all.
+
+    (That sentence is deliberately worded around the literal ``TC-ArgusAgent-DOGFOOD-001-30``
+    greps this package for. The guard is a substring scan by design, so prose that quotes the
+    forbidden assignment would trip it; the right response to that is to reword the prose, not
+    to teach the guard about docstrings.)
+    """
+    measurement = measure_validation_corpus()
+    return precision_gate_status_for(
+        precision=None,
+        n=measurement.validation_set_n,
+        provisional=True,
+        protocol_path=PRECISION_PROTOCOL_PATH,
+        floor_n=measurement.floor_n,
+        corpus_note=measurement.corpus_note(),
+        population_label="independent repositories in the validation set",
+    )
+
+
 def build_dogfood_proof(
     repo_root: str | Path,
     snapshot_dir: Path,
@@ -639,12 +706,7 @@ def build_dogfood_proof(
     # authoritative here — the proof reports the gate status string with provisional=True
     # (protocol_cleared is NEVER passed True). The status string carries the harness's
     # provisional framing + the pointer to the human-adjudication protocol.
-    gate_status = precision_gate_status_for(
-        precision=Fraction(0, 1),
-        n=0,
-        provisional=True,
-        protocol_path="_bmad-output/design-artifacts/ArgusAgent/precision-validation-protocol.md",
-    )
+    gate_status = derive_gate_status()
 
     return DogfoodProofRun(
         commit_descriptor=plan.commit_descriptor,
