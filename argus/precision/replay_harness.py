@@ -143,12 +143,15 @@ __all__ = [
     "PrecisionResult",
     "ValidationCorpusMeasurement",
     "finding_match_key",
+    "gate_is_provisional",
     "golden_match_key",
     "compute_precision",
     "corpus_manifest_module",
     "measure_validation_corpus",
+    "precision_fraction",
     "precision_gate_status_for",
     "registry_module",
+    "PRECISION_GATE_THRESHOLD",
 ]
 
 # The shared 6.5 match key: (rule_id, verdict_eligible, advisory). ``verdict_eligible``
@@ -229,16 +232,103 @@ class PrecisionResult:
     floor_n: int
     provisional: bool
     gate_status: str
+    #: Story 13.2 / AC1b — whether the precision DENOMINATOR (TP + FP) was non-empty.
+    #: ``False`` means this run measured NOTHING: no finding entered the denominator, so
+    #: there is no 80% result to compare against a threshold. ``precision`` still carries
+    #: the pre-13.2 ``Fraction(1, 1)`` "no false positive emitted" convention for callers
+    #: that read it, but that value is NOT a measurement when this flag is ``False`` —
+    #: read :attr:`precision_or_none` instead, and note that both
+    #: :attr:`meets_threshold` and the gate are forced negative here.
+    precision_evaluable: bool = True
+    #: Story 13.2 / AC1c — whether §5's "0 blocking FP on a CLEAN repo" condition was
+    #: measurable at all over the population this run folded. ``False`` means no member
+    #: of the population satisfies the clean-repo predicate (empty golden key AND
+    #: ``max_blocking == 0``), so ``clean_repo_fp`` is 0 BY CONSTRUCTION rather than by
+    #: measurement. A condition that cannot fail is not a threshold, so it is reported
+    #: NOT APPLICABLE with a reason instead of silently passing.
+    clean_repo_fp_applicable: bool = True
+    #: The sentence naming WHICH population the two flags above were resolved over, and
+    #: — when a flag is ``False`` — why. Never hand-written at a call site.
+    measurement_note: str = ""
+
+    @property
+    def precision_or_none(self) -> Fraction | None:
+        """The precision as a MEASUREMENT: ``None`` when the denominator was empty.
+
+        The honest surface (13.1 / DN-8's precedent, applied one level down): "no result"
+        and "a perfect result" are different claims, and ``Fraction(1, 1)`` states the
+        second. Pass this straight into :func:`precision_gate_status_for`, which already
+        renders ``None`` as ``"NOT COMPUTED BY THIS RUN"`` and refuses to clear a gate on it.
+        """
+        return self.precision if self.precision_evaluable else None
 
     @property
     def meets_threshold(self) -> bool:
-        """Whether the EXACT precision Fraction is >= 80% (Fraction(4, 5)) — no float."""
-        return self.precision >= Fraction(4, 5)
+        """Whether the EXACT precision Fraction is >= 80% (Fraction(4, 5)) — no float.
+
+        **Story 13.2 / AC1b:** an UNEVALUABLE run never meets the threshold. Before 13.2
+        a corpus that emitted nothing at all returned ``Fraction(1, 1)`` here and passed
+        — measured, on ``bc55e36``, as ``0 TP / 0 FP / 8 FN -> precision=1/1 ->
+        provisional=False -> gate_status "cleared"``. An empty denominator is not an 80%
+        result; it is no result.
+        """
+        return self.precision_evaluable and self.precision >= PRECISION_GATE_THRESHOLD
 
 
 # The locked >=80%-precision externalization gate threshold, as an EXACT Fraction
-# (NEVER a float). The PRD's >=80% precision gate.
-_PRECISION_GATE_THRESHOLD = Fraction(4, 5)
+# (NEVER a float). The PRD's >=80% precision gate. PUBLIC since Story 13.2 (12.6 / DN-7:
+# promote, never reach through a `_`-prefixed name) because the adjudication fold in
+# ``argus/precision/adjudication.py`` compares against the SAME threshold object — a
+# second literal `4/5` is how two thresholds happen.
+PRECISION_GATE_THRESHOLD = Fraction(4, 5)
+
+#: The pre-13.2 private name, preserved so no existing caller breaks. An ALIAS.
+_PRECISION_GATE_THRESHOLD = PRECISION_GATE_THRESHOLD
+
+
+def precision_fraction(total_tp: int, total_fp: int) -> Fraction | None:
+    """THE precision arithmetic — ``TP / (TP + FP)`` as an exact ``Fraction`` (AR4).
+
+    **One implementation, two populations** (Story 13.2). The cartridge fold
+    (:func:`compute_precision`) and the repository-corpus adjudication fold
+    (:func:`argus.precision.adjudication.fold_adjudicated_precision`) both call this, so
+    the arithmetic that gates externalization cannot drift between the corpus that
+    measures recall and the corpus that measures the gate. Forking it per corpus is
+    exactly what AR7 forbids and is how this project came to have two corpora.
+
+    Returns ``None`` — **not** ``Fraction(1, 1)`` — when the denominator is empty. That
+    convention (*"no false positive emitted"*) is why a corpus emitting nothing at all
+    reported a cleared >=80% gate on ``bc55e36``; the caller must decide what an
+    unmeasured population means rather than inheriting a flattering default.
+    """
+    denominator = total_tp + total_fp
+    return Fraction(total_tp, denominator) if denominator else None
+
+
+def gate_is_provisional(
+    *,
+    n: int,
+    floor_n: int,
+    protocol_cleared: bool,
+    precision: Fraction | None,
+) -> bool:
+    """THE gate predicate (DN-PROVISIONAL) — one implementation, two populations.
+
+    The gate is PROVISIONAL unless **all four** hold: the population reached the locked
+    floor, the protocol's per-metric pass/fail is recorded cleared by the CALLER (never
+    defaulted), a precision number was actually **computed**, and it meets the >=80%
+    threshold as an exact ``Fraction``.
+
+    The third conjunct is Story 13.2 / AC1b, and it is the one that was missing: a
+    ``None`` precision — no finding in the denominator — can never clear the gate,
+    because there is no measurement to clear it with.
+    """
+    return not (
+        n >= floor_n
+        and protocol_cleared
+        and precision is not None
+        and precision >= PRECISION_GATE_THRESHOLD
+    )
 
 
 def _is_clean_repo(spec: CartridgeSpec) -> bool:
@@ -267,6 +357,7 @@ def compute_precision(
     registry: tuple[CartridgeSpec, ...] | None = None,
     protocol_cleared: bool = False,
     protocol_path: str = "_bmad-output/design-artifacts/ArgusAgent/precision-validation-protocol.md",
+    population_n: int | None = None,
 ) -> PrecisionResult:
     """Diff emitted findings against the registry ground truth → a PURE PrecisionResult.
 
@@ -297,6 +388,32 @@ def compute_precision(
     caller did not record) raises ``KeyError`` with the cartridge id — a NAMED
     failure, never a silent skip (the AI-E5-1 no-crash leg; the caller converts a
     staging raise into a NAMED assertion before reaching here).
+
+    **Story 13.2 / AC1 — three ADDITIVE corrections, every default preserving today's
+    behaviour byte-for-byte** (DN-2: a contract test edited to accommodate a change has
+    stopped being a contract test). All three were reproduced BY EXECUTION before they
+    were fixed, and all three were independently reachable without a single adjudicated
+    finding:
+
+    - **AC1a — ``n`` counts the population that was actually folded.** ``registry=``
+      injection has existed since 6.6, but ``n`` was read from the module-level
+      ``populated_planted_defect_count()`` regardless: injecting a **2**-member registry
+      reported ``N=7`` and a gate string saying *"cleared … N=7 labeled cartridges >=
+      floor N=5"*. The count now closes over the resolved population. ``population_n``
+      additionally lets a caller supply a **measured** count for a population this
+      function does not itself iterate — the repository corpus, whose N is
+      ``tests/corpus/_manifest.eligible_member_count()`` (13.1 / AC3a). It is for a
+      MEASUREMENT, never a literal; see
+      :func:`argus.precision.adjudication.validation_set_population_n`.
+    - **AC1b — an empty denominator is UNEVALUABLE, never cleared.** A corpus emitting
+      nothing at all (0 TP / 0 FP / 8 FN) returned ``precision=1/1``,
+      ``provisional=False`` and a gate string reading *"cleared"*. It now sets
+      ``precision_evaluable=False``, forces the gate provisional, and renders an
+      ``"unevaluable"`` status carrying the degenerate counts.
+    - **AC1c — the clean-repo blocking-FP condition names its population.**
+      ``clean_repo_fp_applicable`` is ``False``, with a reason on
+      ``measurement_note``, when no member of the folded population can satisfy the
+      clean-repo predicate at all.
     """
     registry_module = _registry_module()
     registry = registry_module.CARTRIDGE_REGISTRY if registry is None else registry
@@ -353,24 +470,64 @@ def compute_precision(
             )
         )
 
-    # Precision = TP / (TP + FP) over FINDINGS (the OI1 lock), exact Fraction (AR4).
-    # An empty denominator (no finding emitted) is Fraction(1, 1) — "no FP emitted";
-    # the degenerate count is visible via total_fp/total_tp on the result.
-    precision_den = total_tp + total_fp
-    precision = Fraction(total_tp, precision_den) if precision_den else Fraction(1, 1)
+    # Precision = TP / (TP + FP) over FINDINGS (the OI1 lock), exact Fraction (AR4),
+    # through the SINGLE arithmetic both corpora share. ``None`` means the denominator
+    # was empty — AC1b: nothing was measured, so nothing can be cleared.
+    measured_precision = precision_fraction(total_tp, total_fp)
+    precision_evaluable = measured_precision is not None
+    # The pre-13.2 "no false positive emitted" convention is PRESERVED on the
+    # ``precision`` field so every existing caller reads exactly the bytes it always
+    # did (NFR-P1 byte-stability), but it is now labelled: ``precision_evaluable``
+    # says whether that Fraction is a measurement or a convention.
+    precision = Fraction(1, 1) if measured_precision is None else measured_precision
     recall_den = total_tp + total_fn
     recall = Fraction(total_tp, recall_den) if recall_den else Fraction(1, 1)
 
-    n = registry_module.populated_planted_defect_count()
-    # DN-PROVISIONAL: the gate is provisional UNLESS the corpus genuinely reached
-    # N>=5 distinct planted-defect cartridges AND the protocol pass/fail is recorded
-    # cleared AND the exact precision Fraction meets the >=80% threshold. The harness
-    # never silently clears the gate from a thin corpus (the OI1 over-claim ban).
-    provisional = not (
-        n >= floor_n
-        and protocol_cleared
-        and precision >= _PRECISION_GATE_THRESHOLD
+    # AC1a — ``n`` counts the population that was ACTUALLY folded. ``registry`` is the
+    # RESOLVED population by this point, so passing it explicitly yields the identical
+    # number for the default (unsupplied) case and the HONEST number for an injected
+    # one. Measured on ``bc55e36``: injecting a 2-member registry reported ``N=7`` and a
+    # gate string reading "cleared ... N=7 labeled cartridges >= floor N=5". The count
+    # is still the registry's OWN predicate — a second eligible-member count here is the
+    # fork 13.1 / DN-3 refused, and would let the two disagree about N.
+    n = int(population_n) if population_n is not None else (
+        registry_module.populated_planted_defect_count(registry)
     )
+    # DN-PROVISIONAL, through the SHARED predicate (13.2): N>=floor AND the caller
+    # recorded the protocol cleared AND a precision number was COMPUTED AND it meets
+    # >=80%. The harness never silently clears the gate (the OI1 over-claim ban).
+    provisional = gate_is_provisional(
+        n=n,
+        floor_n=floor_n,
+        protocol_cleared=protocol_cleared,
+        precision=measured_precision,
+    )
+
+    # AC1c — §5's clean-repo blocking-FP condition must NAME the population it was
+    # measured over, and say so when that population contains no clean member at all.
+    # ``_is_clean_repo`` needs an empty golden key AND ``max_blocking == 0``; a
+    # repository-corpus member has neither, so on that population the condition is
+    # vacuously 0 for every possible input. A condition that cannot fail is not a
+    # threshold, and reporting it as satisfied is the strongest kind of false green.
+    clean_rows = tuple(row.cartridge_id for row in rows if row.is_clean_repo)
+    clean_repo_fp_applicable = bool(clean_rows)
+    notes = [
+        f"clean-repo blocking-FP condition measured over {len(clean_rows)} clean member(s) "
+        f"of {len(rows)} ({', '.join(clean_rows)})"
+        if clean_rows
+        else (
+            f"clean-repo blocking-FP condition NOT APPLICABLE over this population: none "
+            f"of its {len(rows)} member(s) satisfies the clean-repo predicate (empty "
+            f"golden key AND max_blocking == 0), so clean_repo_fp is 0 BY CONSTRUCTION "
+            f"and not by measurement"
+        )
+    ]
+    if not precision_evaluable:
+        notes.append(
+            f"precision UNEVALUABLE: the denominator (TP + FP) is empty over "
+            f"{len(rows)} member(s) — {total_tp} TP, {total_fp} FP, {total_fn} FN. An "
+            f"empty denominator is not an 80% result; it is no result"
+        )
 
     return PrecisionResult(
         rows=tuple(rows),
@@ -386,12 +543,16 @@ def compute_precision(
         floor_n=floor_n,
         provisional=provisional,
         gate_status=precision_gate_status_for(
-            precision=precision,
+            precision=measured_precision,
             n=n,
             provisional=provisional,
             protocol_path=protocol_path,
             floor_n=floor_n,
+            evaluable=precision_evaluable,
         ),
+        precision_evaluable=precision_evaluable,
+        clean_repo_fp_applicable=clean_repo_fp_applicable,
+        measurement_note="; ".join(notes),
     )
 
 
@@ -549,6 +710,7 @@ def precision_gate_status_for(
     floor_n: int | None = None,
     corpus_note: str | None = None,
     population_label: str = "labeled cartridges",
+    evaluable: bool = True,
 ) -> str:
     """The 6.6 gate-status string — REUSES the 6.5 marker convention (no forked marker).
 
@@ -591,8 +753,24 @@ def precision_gate_status_for(
             "NO precision number, so it cannot report a cleared gate. The >=80% gate is "
             "cleared only by the adjudication run of the validation protocol (OI1)."
         )
+    if not evaluable and not provisional:
+        raise ValueError(
+            "precision_gate_status_for(evaluable=False, provisional=False): this run's "
+            "precision denominator was EMPTY, so it measured nothing and cannot report a "
+            "cleared gate. An empty denominator is not an 80% result; it is no result "
+            "(Story 13.2 / AC1b)."
+        )
     ratio = "NOT COMPUTED BY THIS RUN" if precision is None else _ratio_string(precision)
     note = "" if corpus_note is None else f" ({corpus_note})"
+    if not evaluable:
+        return (
+            f"unevaluable (Story 6.6 precision harness, Story 13.2 / AC1b; precision "
+            f"DENOMINATOR EMPTY — no finding entered TP+FP over this population, so "
+            f"precision={ratio} is NOT a measurement; N={n} {population_label}, floor "
+            f"N={floor_n}{note}; the >=80% externalization gate is NEITHER cleared NOR "
+            f"met — it is UNEVALUABLE and is recorded as such; adjudication method: "
+            f"{protocol_path})"
+        )
     if provisional:
         return (
             f"provisional (Story 6.6 precision harness; precision={ratio} over FINDINGS "

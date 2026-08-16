@@ -4166,3 +4166,189 @@ per §3.4: nothing above is rewritten, including the entry this note corrects.
 > appends are clean `+n / -0`. Recorded because AC6 states a mechanical `+n / -0` rule, and
 > quietly reporting a number that does not match what `git` prints is the exact habit this
 > ledger exists to prevent.
+
+---
+
+## Story 13.2 dispositions — 2026-08-16
+
+Story 13.2 (*Adjudicate every finding, by a named human*) — the **instrument** half. Appended per
+§3.4: nothing above is rewritten, and every ruling below states what was **measured by execution**
+rather than what a prior story record claimed. That distinction is this section's subject twice
+over: it is what `AI-E12-3` asked for, and it is what `AI-E12-6`'s new guard now enforces.
+
+### The four human-adjudication entries — RE-SCOPED, with the instrument delivered and the judgement NOT taken
+
+- **`DF-6-6-A`, `DF-6-6-A-P1`, `DF-6-6-A-P2`, `DF-7-2-A` — all four stay OPEN, owned, and their
+  remaining scope is re-recorded here with a reason.** None is closed, and none is left pointing
+  at a run that has now happened. AC8.1 of Story 13.2 required exactly this choice, and closure is
+  not available: the act these four describe **has not been performed**.
+  - **What Story 13.2 DID deliver, and it is not the judgement.** The whole instrument: a
+    committed, append-only, machine-readable adjudication record
+    (`validation-corpus/adjudication-record.json`, **31 rows**, one per emitted blocking finding
+    from the five members Story 13.1 / AC3b ratified); a closed disposition vocabulary that
+    **raises** on an unregistered member; adjudicator attribution asserted against protocol §2 at
+    **construction**; append-only supersession (§3.4 — strike, never erase); an exhaustiveness
+    proof with a non-vacuity floor; the reuse of 13.1's **existing** byte-reproducibility result
+    as §4's determinism precondition; expert-hours as a `Fraction` field reported against §3's
+    ceiling; and the fold from human dispositions into the **shared** precision arithmetic.
+  - **What was NOT delivered, deliberately: a single disposition.** All 31 rows are
+    `UNADJUDICATED` and carry **no adjudicator**. The fold over the committed record returns
+    `Unevaluable`, **recorded with residual 31**. No agent may adjudicate — protocol §2 assigns it
+    to the **Engineering Lead**, and `sprint-status.yaml:414`/`:416` name **XAgent007**. *An
+    autonomous story that tags its own findings TP has measured nothing and has produced the exact
+    artifact Epic 13 exists to make impossible.* This is enforced, not promised:
+    `AdjudicationRow.__post_init__` **raises** if an `UNADJUDICATED` row carries an adjudicator id,
+    so a machine signing the named human's name is a construction-time failure.
+  - **The remaining scope, stated so no reader has to infer it.** For all four entries what
+    remains is **one act**: XAgent007 adjudicates each of the 31 blocking findings TP/FP at its
+    cited locator under protocol §4 as amended, records the actual expert-hours, and appends the
+    rows. `blocking-worklist.md` is the human-readable list; the record is the machine one. After
+    that, Story 13.3 computes the four §5 conditions. Nothing else is outstanding on the
+    instrument side.
+  - **`DF-7-2-A`'s original text remains unperformable as written and is NOT re-fixed here** —
+    Story 13.1 already recorded why (the Story 7.2 dogfood run *"can never be re-derived in this
+    repository"*, hence `provenance: superseded`, `eligible_for_n: False`). Its adjudication target
+    is the repository corpus, as 13.1 recorded and this story mechanised.
+  - id: DF-6-6-A / DF-6-6-A-P1 / DF-6-6-A-P2 / DF-7-2-A
+  - owner: **Engineering Lead (XAgent007)** — unchanged, and now with a delivered instrument and a
+    populated 31-row worklist in front of it
+  - target_story: **13-2-adjudicate-every-finding-by-a-named-human**, whose AC7 is recorded
+    **HALTED — awaiting the named adjudicator** (the Story 12.9 / AC9 precedent, where a halt is
+    the *designed* terminal state). NOT re-homed to 13.3: 13.3 computes over an adjudicated record
+    and cannot begin without one.
+  - status: **OPEN, owned, instrument-complete, judgement outstanding**
+
+### `AI-E12-3` — the four falsely-closed entries, VERIFIED BY EXECUTION and disposed
+
+The Epic-12 retrospective ranked this #4 and required *"verification by execution and then either a
+closure entry or a re-record with a reason."* All four were re-measured against the tree at
+`1816524`. **Two are genuinely delivered and are closed here against that evidence; one is
+delivered on a different surface than its entry proposed and is closed with the divergence stated;
+one is NOT delivered and its story record was wrong.**
+
+- **`DF-8-3-A` — CLOSED 2026-08-16 against evidence.** The entry asked that the FR16
+  critical-subsystem heuristic exclusion be named to an operator in prose. **Measured:**
+  `CriticalSubsystemSet.heuristic_excluded_ineligible` is read back and rendered in **both** human
+  surfaces — `argus/reports/generator.py:331-332` and `argus/reports/plain_english.py:706-707`.
+  Story 12.4's record claimed this and the claim is **true in code**; what was missing was the
+  ledger entry, which is precisely the `AI-E12-6` class. Closed by the evidence, not by the claim.
+  - id: DF-8-3-A · owner: Engineering Lead (XAgent007) · status: **CLOSED 2026-08-16**
+- **`DF-10-4-A` — CLOSED 2026-08-16 against evidence, with the divergence stated.** The entry
+  described the readability callout as **all-or-nothing**, so a polyglot repository learns nothing
+  about its failed Go grammar. **Measured:** the all-or-nothing trigger in `_grammar_diagnosis` is
+  **unchanged** — `argus/reports/generator.py:436-439` still documents it and still returns early
+  when any language is eligible. What Story 12.5 delivered instead is a **separate
+  point-of-downgrade surface**: `render_grammar_downgrade_summary`, wired into `argus/cli.py:268`
+  and `:931` and `argus/reports/generator.py:25`, which reports per-failure-class reasons on a
+  **default** run regardless of the trigger. The operator-facing gap the entry was filed about is
+  therefore closed; **the mechanism named in the entry is not the mechanism that closed it**, and
+  that is recorded rather than glossed, because a closure justified by the wrong surface is how an
+  entry gets re-opened by the next person who reads the original code.
+  - id: DF-10-4-A · owner: Engineering Lead (XAgent007) · status: **CLOSED 2026-08-16**
+- **`DF-10-4-B` — NOT DELIVERED. Re-recorded OPEN with a named owner, and TWO story records that
+  claim otherwise are corrected here.** The entry asks for a **production reader** of
+  `DetectorResult.degraded` in the terminal / next-action output. **Measured tree-wide at
+  `1816524`: there is none.** `argus/reports/generator.py:420-422` says so **in its own
+  docstring** — *"`DetectorResult.degraded` records it and no production code reads it back —
+  filed as `DF-10-4-B`"* — and every other occurrence of the attribute is a **write** in
+  `argus/detectors/*` or an unrelated `deep_pass` degradation counter.
+  **`12-4-every-outcome-names-its-next-action.md` records it as an integrated, checked-off task
+  (`:126`, `:152`) and `10-5-a-v1-commitment-is-delivered-or-explicitly-not-v1.md` records a
+  closure. Both are FALSE against the tree.** This is the single clearest instance of the class
+  `AI-E12-6` exists to close, and the new guard
+  (`tests/test_governance_record_integrity.py::TC-ArgusAgent-DOCS-001-78`) found it independently.
+  **Not fixed here:** adding a reader changes operator-facing report content, which no Story 13.2
+  AC owns, and doing it inside the precision-gate story would be exactly the unscoped drift this
+  ledger exists to catch.
+  - id: DF-10-4-B · owner: **Engineering Lead (XAgent007)** · target_story: **NONE — unscheduled
+    with a named owner** (`AI-E9-8`: never `NONE` *alone*; the owner is named) · category: reports
+    · severity: 🟡 — nothing false is published to an operator; a recorded condition is simply
+    never surfaced · status: **OPEN, owned, unscheduled; story records corrected**
+- **`DF-12-3-A` — the DISCLOSURE half is CLOSED 2026-08-16; the MECHANISM half is re-recorded
+  OPEN.** The entry has two halves and they were being conflated. **Disclosure — measured
+  delivered:** `argus/reports/plain_english.py:249` and `:257` carry the exact sentence *"results
+  are recomputed per run and not served from the offline stage memo store"*, which is what Story
+  12.4's task claimed and it is true. **Mechanism — measured NOT delivered:** PRD §501's *"a re-run
+  returns the recorded result"* still does not hold with `--deep-audit`; the deep pass is
+  recomputed. So the story record's claim is **half true**, and a single CLOSED line would have
+  published the wrong half.
+  - id: DF-12-3-A · owner: **Engineering Lead (XAgent007)** · target_story: **NONE — unscheduled
+    with a named owner** for the mechanism half · status: **disclosure half CLOSED 2026-08-16;
+    mechanism half OPEN, owned, unscheduled**
+
+### `AI-E12-6` — LANDED, and it found nineteen instances on its first run
+
+- **The ledger-claim cross-check guard exists.** `tests/test_governance_record_integrity.py`
+  (`TC-ArgusAgent-DOCS-001-78`) extracts every `DF-*` a committed story file claims to CLOSE and
+  fails unless `deferred-work.md` carries a matching disposition. Non-vacuous by construction: it
+  asserts `> 0` ledger closures and `> 0` extracted claims **before** asserting anything about
+  them, and it drives its own analyzers over synthetic input as a positive control.
+  **Measured on landing: 47 closure claims across the story corpus, of which 19 are unbacked** —
+  including `DF-10-4-A` (Story 12.5) and `DF-8-3-A` (Story 8.3), i.e. the guard reproduced
+  `AI-E12-3`'s finding from scratch. The 19 are registered **by name, with this date and this
+  owner**, in `_UNBACKED_AT_LANDING`, following Story 12.1's `_EXEMPT_BY_DESIGN` precedent for a
+  correct rule landing over a repository that predates it. **The registry can only shrink** — an
+  entry that becomes backed **fails** — and any *new* unbacked claim fails immediately, which
+  covers Story 13.2 and everything after it.
+  - **Why it was not made green by closing the nineteen.** That would be `AI-E12-3`'s own defect —
+    closing entries in prose rather than against evidence — committed inside the guard written to
+    stop it. This story has evidence for four of them and ruled on those four above.
+  - id: AI-E12-6 · owner: Engineering Lead (XAgent007) · status: **guard LANDED 2026-08-16;
+    19-entry backlog registered, dated and owned**
+
+### `AI-E12-5` — the guard-adequacy clause is REGISTERED; `AI-E11-8`'s two rules are RE-HOMED
+
+- **The GUARD-ADEQUACY CLAUSE is now in `architecture.md` §Enforcement**, in the established form
+  (rule text + enforcing module + test ids), asserted present by `TC-ArgusAgent-DOCS-001-77`,
+  together with the input-side twin the Epic-12 retrospective §3.5 found (*a guard over the SHAPE
+  of an input is not a guard over its EFFECT*). **Fourth consecutive retrospective to ask; first
+  registration.** Registered by Story 13.2 rather than by the Architect it was assigned to, for the
+  reason `AI-E12-5` states itself: Story 13.3 needs it on the most consequential guard in the
+  project, and 13.2 is the story that builds that guard.
+  - id: AI-E12-5 · owner: Architect / Engineering Lead (XAgent007) · status: **CLOSED 2026-08-16
+    for the guard-adequacy clause**
+- **`AI-E11-8` — the two Epic-11 rules are NOT registered here, and are re-homed with a named
+  owner rather than left to a fifth retrospective.** (a) **workflow input containment** (Story
+  11.3) and (b) **built-artifact inspection** (Story 11.5). Both are outside Story 13.2's write
+  set — neither concerns the precision gate, and a story that edited §Enforcement for unrelated
+  rules would be doing unscoped work in the story whose whole subject is a scoped, recorded act.
+  Recorded here so the count is honest: **learned three times, registered zero.**
+  - id: AI-E11-8 · owner: **Architect, escalating to Engineering Lead (XAgent007)** ·
+    target_story: **NONE — unscheduled with a named owner** (`AI-E9-8`) · status: **OPEN, owned,
+    re-homed**
+
+### Filed by this story
+
+- **`DF-13-2-A` — the adjudication instrument is complete and the adjudication has NOT happened.**
+  The record holds 31 `UNADJUDICATED` rows; `AdjudicationRecord.exhaustiveness()` returns
+  `Unevaluable` with residual 31; `expert_hours` is `null` (**NOT RECORDED**, never zero). The
+  externalization gate is therefore **not** cleared and moved no closer to cleared: of protocol
+  §5's four conditions exactly one holds (N = 5 ≥ 5, from Story 13.1), the ≥80% figure is
+  **UNEVALUABLE**, the clean-repo blocking-FP condition is **NOT APPLICABLE** over the repository
+  corpus with its reason recorded, and no adjudication run is recorded cleared.
+  **Deliberately not worked around.** Populating dispositions to make the exhaustiveness guard go
+  green would clear the externalization gate on evidence that does not exist, and every guard
+  downstream — including Story 13.3's — would agree that it had.
+  - id: DF-13-2-A
+  - origin_story: 13-2-adjudicate-every-finding-by-a-named-human
+  - owner: **Engineering Lead (XAgent007)** — protocol §2 primary adjudicator
+  - target_story: **13-2 AC7 on adjudication** — the instrument, the guards and the 31-row
+    worklist are delivered and committed; what is outstanding is the judgement itself
+  - category: precision gate (a delivered instrument awaiting a human act)
+  - severity: 🟠 — the critical path to clearing the externalization gate. Not 🔴 because nothing
+    false is published: every surface reports the gate PROVISIONAL or UNEVALUABLE, and
+    `protocol_cleared` has still never been `True` anywhere in the tree.
+
+### Re-stated, NOT re-filed
+
+- **`DF-12-9-A` stays OPEN and untouched.** Story 13.2 published **nothing**: re-verified by
+  execution at hand-off — `git tag -l` empty, `origin/master` unmoved, no push, no release, no
+  visibility change.
+- **`DF-9-2-A`** — honoured, not closed. `argus/precision/adjudication.py` resolves **no**
+  repository-only path at module level; the repository corpus is reached through the existing lazy
+  `corpus_manifest_module()` edge, and the record path is a repository-relative **string** the
+  caller resolves. A module-level import of `tests/` or `_bmad-output/` would ship a wheel that
+  cannot import, which `tests/test_built_distribution.py` exists to catch.
+- **`DF-8-5-B` / `DF-10-4-D` bootstrap** — applied, because `argus/**` moved: the `argus/` delta
+  was committed first, the three dogfood artifacts were regenerated through their own renderers,
+  and the regeneration was committed separately (`AI-E12-11`).

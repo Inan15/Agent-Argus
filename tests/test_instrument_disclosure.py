@@ -273,6 +273,14 @@ _PROTOCOL_CLEARED_TEST_EXEMPTIONS: dict[str, str] = {
         "TC-ArgusAgent-PRECISION-001-08/-09 prove the N>=5 floor binds even when "
         "protocol_cleared=True is claimed, and that the flip needs all three conditions."
     ),
+    "tests/test_gate_flip_path.py": (
+        "Story 13.2 / AC1. TC-ArgusAgent-PRECISION-001-32/-35 REPRODUCE the two defects "
+        "measured on bc55e36 — an injected 2-member registry reporting N=7, and a corpus "
+        "emitting nothing reporting precision=1/1 / provisional=False / 'cleared' — and "
+        "both reproductions require protocol_cleared=True, because that flag was the ONLY "
+        "thing standing between this repository and a false cleared claim. The guards "
+        "assert the gate is REFUSED; none of them clears it."
+    ),
 }
 
 

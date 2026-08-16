@@ -262,17 +262,32 @@ CARTRIDGE_REGISTRY: tuple[CartridgeSpec, ...] = (
 )
 
 
-def populated_planted_defect_count() -> int:
+#: The cartridge kinds that are LABELED true-positive rows. Named once so the predicate
+#: below and any population it is applied to cannot drift apart.
+LABELED_CARTRIDGE_KINDS: tuple[str, ...] = ("planted_defect", "holdout")
+
+
+def populated_planted_defect_count(
+    registry: tuple[CartridgeSpec, ...] | None = None,
+) -> int:
     """The count of labeled true-positive cartridges populated (OI1 precision-over-findings).
 
     Counts ``planted_defect`` + ``holdout`` rows (the labeled cartridges whose findings
     contribute to a future precision number). Clean controls, the trap, and the
     no-crash row are the true-negative / robustness denominator, not the
     planted-defect numerator. Reported (not gated-on) in ``PRECISION_GATE_STATUS``.
+
+    **Story 13.2 / AC1a — ADDITIVE ``registry`` parameter, default unchanged.** The
+    6.6 harness lets a caller INJECT a population (``compute_precision(registry=...)``)
+    but read ``n`` from this function's module-level default, so a 2-member injected
+    corpus reported ``N=7`` — measured, with the gate string saying *"cleared … N=7
+    labeled cartridges >= floor N=5"*. Applying **this** predicate to the population
+    actually folded is the fix; authoring a second eligible-member count is the fork
+    13.1 / DN-3 refused, and would let the two disagree about N. Passing
+    ``CARTRIDGE_REGISTRY`` explicitly returns exactly what the no-argument call returns.
     """
-    return sum(
-        1 for spec in CARTRIDGE_REGISTRY if spec.kind in ("planted_defect", "holdout")
-    )
+    specs = CARTRIDGE_REGISTRY if registry is None else registry
+    return sum(1 for spec in specs if spec.kind in LABELED_CARTRIDGE_KINDS)
 
 
 def distinct_rule_classes() -> tuple[str, ...]:

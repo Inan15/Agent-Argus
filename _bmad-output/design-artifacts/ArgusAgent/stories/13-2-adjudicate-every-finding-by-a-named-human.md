@@ -1,6 +1,6 @@
 # Story 13.2: Adjudicate every finding, by a named human
 
-Status: ready-for-dev
+Status: review
 
 <!-- Created 2026-08-16 by create-story. Every premise below was re-measured by execution on
      HEAD bc55e36 before this file was written; see §0. Three defects in the gate-flip path were
@@ -483,52 +483,54 @@ Epics 10–12:
 
 ## Tasks & Subtasks
 
-- [ ] **Task 0 — Confirm the precondition (AC: all)**
-  - [ ] Verify 13.1 is `done` in `sprint-status.yaml` and its corpus manifest exists
-  - [ ] Record whether 13.1's AC3b completed or HALTED — it decides AC7's terminal state
-  - [ ] Re-assert the start condition by execution: the adjudicator is named
-- [ ] **Task 1 — Re-measure every §0/§0.1/§0.3 premise on your implementation baseline (AC: all)**
-  - [ ] Re-run the two §0.1 snippets; record the actual output in Debug Log §1
-  - [ ] Record confirmations *and* divergences; if a premise moved under 13.1, say so before acting
-- [ ] **Task 2 — Close the three flip-path defects, additively (AC1)**
-  - [ ] AC1a: `n` counts the adjudicated population; RED-then-green against the 2-member reproduction
-  - [ ] AC1b: an empty denominator is `Unevaluable`, never `cleared`; RED against the 0/0/8 reproduction
-  - [ ] AC1c: §5's clean-repo condition names its corpus or is recorded not-applicable with a reason
-  - [ ] Prove additivity: the 6.6/7.1 contract tests pass **unedited**
-  - [ ] Register any new `protocol_cleared=True` test file in `_PROTOCOL_CLEARED_TEST_EXEMPTIONS`
-- [ ] **Task 3 — Amend the protocol BEFORE the run (AC2)**
-  - [ ] Decide and record the unit: per finding **or** per class; correct §4/§5/§7's wording to match
-  - [ ] Amend §1/§2/§3/§4 for the repository corpus, rebased onto 13.1's amendments
-  - [ ] Append to the change log with date + reason (strike, never erase)
-  - [ ] Guard: the record's protocol version equals the change log head; RED on a superseded version
-- [ ] **Task 4 — Build the adjudication record (AC3)**
-  - [ ] Schema keyed on `finding_match_key`; closed disposition vocabulary that **raises**
-  - [ ] Append-only with supersession; a correction carries its date and reason
-  - [ ] Committed in git (**not** `.argus/` — `.gitignore:19`); NFR-S1 asserted
-  - [ ] Adjudicator attribution checked against protocol §2's role table
-- [ ] **Task 5 — Prove exhaustiveness and determinism (AC4, AC6)**
-  - [ ] Every emitted key has exactly one live disposition; residuals → `Unevaluable`, counted
-  - [ ] Non-vacuity: > 0 rows asserted before any other assertion
-  - [ ] Byte-reproducibility proven first, via the existing check, recorded on the record
-- [ ] **Task 6 — Record expert-hours (AC5)**
-  - [ ] Actual hours as a field; compared to §3's ≤4h as a **report**, not a gate
-  - [ ] If exceeded, record what made it expensive — never trim the adjudication to fit
-- [ ] **Task 7 — The run (AC7 — see ESCALATION)**
-  - [ ] Present the adjudication-ready finding set to the named human, per §4 as written
-  - [ ] Record each disposition with its locator, reason, date and adjudicator
-  - [ ] If the corpus is absent/under-populated: mark **`Unevaluable` — recorded**, with the count and
+- [x] **Task 0 — Confirm the precondition (AC: all)**
+  - [x] Verify 13.1 is `done` in `sprint-status.yaml` and its corpus manifest exists
+  - [x] Record whether 13.1's AC3b completed or HALTED — it decides AC7's terminal state
+  - [x] Re-assert the start condition by execution: the adjudicator is named
+- [x] **Task 1 — Re-measure every §0/§0.1/§0.3 premise on your implementation baseline (AC: all)**
+  - [x] Re-run the two §0.1 snippets; record the actual output in Debug Log §1
+  - [x] Record confirmations *and* divergences; if a premise moved under 13.1, say so before acting
+- [x] **Task 2 — Close the three flip-path defects, additively (AC1)**
+  - [x] AC1a: `n` counts the adjudicated population; RED-then-green against the 2-member reproduction
+  - [x] AC1b: an empty denominator is `Unevaluable`, never `cleared`; RED against the 0/0/8 reproduction
+  - [x] AC1c: §5's clean-repo condition names its corpus or is recorded not-applicable with a reason
+  - [x] Prove additivity: the 6.6/7.1 contract tests pass **unedited**
+  - [x] Register any new `protocol_cleared=True` test file in `_PROTOCOL_CLEARED_TEST_EXEMPTIONS`
+- [x] **Task 3 — Amend the protocol BEFORE the run (AC2)**
+  - [x] Decide and record the unit: per finding **or** per class; correct §4/§5/§7's wording to match
+  - [x] Amend §1/§2/§3/§4 for the repository corpus, rebased onto 13.1's amendments
+  - [x] Append to the change log with date + reason (strike, never erase)
+  - [x] Guard: the record's protocol version equals the change log head; RED on a superseded version
+- [x] **Task 4 — Build the adjudication record (AC3)**
+  - [x] Schema keyed on `finding_match_key`; closed disposition vocabulary that **raises**
+  - [x] Append-only with supersession; a correction carries its date and reason
+  - [x] Committed in git (**not** `.argus/` — `.gitignore:19`); NFR-S1 asserted
+  - [x] Adjudicator attribution checked against protocol §2's role table
+- [x] **Task 5 — Prove exhaustiveness and determinism (AC4, AC6)**
+  - [x] Every emitted key has exactly one live disposition; residuals → `Unevaluable`, counted
+  - [x] Non-vacuity: > 0 rows asserted before any other assertion
+  - [x] Byte-reproducibility proven first, via the existing check, recorded on the record
+- [x] **Task 6 — Record expert-hours (AC5)**
+  - [x] Actual hours as a field; compared to §3's ≤4h as a **report**, not a gate
+  - [x] If exceeded, record what made it expensive — never trim the adjudication to fit
+- [x] **Task 7 — The run (AC7 — see ESCALATION)**
+  - [x] Present the adjudication-ready finding set to the named human, per §4 as written
+  - [ ] ⛔ **HALTED — awaiting the named adjudicator (XAgent007).** Record each disposition
+        with its locator, reason, date and adjudicator. **0 of 31 recorded.** No agent may
+        supply one (DN-6 / ESCALATION); see Debug Log §7 and `DF-13-2-A`
+  - [x] If the corpus is absent/under-populated: mark **`Unevaluable` — recorded**, with the count and
         what would close the gap. **Invent nothing.**
-- [ ] **Task 8 — Ledger and documents (AC8)**
-  - [ ] Close or re-scope `DF-6-6-A` / `-P1` / `-P2` / `DF-7-2-A` with reasons; `+n / -0`
-  - [ ] Land `AI-E12-6`'s ledger-claim cross-check guard, or decide it with a named owner
-  - [ ] Rule on `AI-E12-3`'s four entries (`DF-8-3-A`, `DF-10-4-A`, `DF-10-4-B`, `DF-12-3-A`)
-  - [ ] Register the guard-adequacy clause in §Enforcement (`AI-E12-5`), or re-home it with an owner
-  - [ ] Note `AI-E12-1`'s already-satisfied half rather than redoing it
-- [ ] **Task 9 — Gates and hand-off**
-  - [ ] `pytest` / `mypy` / `bandit` with actual numbers, labelled **LOCAL**
-  - [ ] NFR-M1 re-measured on every touched file (two are effectively full)
-  - [ ] `protocol_cleared` still `False` everywhere in `argus/**`; `-46` still green
-  - [ ] Nothing outward-facing performed; re-assert by execution (`git tag -l`, remote unmoved)
+- [x] **Task 8 — Ledger and documents (AC8)**
+  - [x] Close or re-scope `DF-6-6-A` / `-P1` / `-P2` / `DF-7-2-A` with reasons; `+n / -0`
+  - [x] Land `AI-E12-6`'s ledger-claim cross-check guard, or decide it with a named owner
+  - [x] Rule on `AI-E12-3`'s four entries (`DF-8-3-A`, `DF-10-4-A`, `DF-10-4-B`, `DF-12-3-A`)
+  - [x] Register the guard-adequacy clause in §Enforcement (`AI-E12-5`), or re-home it with an owner
+  - [x] Note `AI-E12-1`'s already-satisfied half rather than redoing it
+- [x] **Task 9 — Gates and hand-off**
+  - [x] `pytest` / `mypy` / `bandit` with actual numbers, labelled **LOCAL**
+  - [x] NFR-M1 re-measured on every touched file (two are effectively full)
+  - [x] `protocol_cleared` still `False` everywhere in `argus/**`; `-46` still green
+  - [x] Nothing outward-facing performed; re-assert by execution (`git tag -l`, remote unmoved)
 
 ---
 
@@ -564,27 +566,276 @@ state and does not block the story's pass.
 
 ### Agent Model Used
 
-<!-- record model + version -->
+Claude Opus 5 (`claude-opus-5[1m]`), via the `bmad-dev-story` workflow, 2026-08-16.
 
 ### Debug Log
 
 #### §1 — Task 1: every §0/§0.1/§0.3 premise re-measured on the implementation baseline, by execution
 
+Baseline **`1816524`** — **NOT** the sha §0 was measured on (`bc55e36`). Story 13.1 landed underneath
+this story across five commits, so every premise was re-measured rather than inherited.
+`origin/master == HEAD`, 0 ahead / 0 behind; `git tag -l` **empty**.
+
+| Premise, as §0/§0.1/§0.3 state it | Re-measured on `1816524` | Consequence |
+|---|---|---|
+| §0.1 (1) — a corpus emitting nothing returns `precision=1/1`, `provisional=False`, gate *"cleared"* | ✅ **REPRODUCED VERBATIM.** `tp=0 fp=0 fn=8 \| precision=1/1 \| provisional=False`, gate `"cleared (… precision=1/1 >= 4/5 … N=7 labeled cartridges >= floor N=5…"` | AC1b's RED. Closed |
+| §0.1 (2) — a 2-member injected registry still reports `N=7` | ✅ **REPRODUCED VERBATIM.** `rows=2 n=7 floor=5 provisional=False`, same *"cleared … N=7"* string | AC1a's RED. Closed |
+| §0.1 (3) — `_is_clean_repo` is vacuous on a repository corpus | ✅ **CONFIRMED by construction** and now measured: folding only the golden-key-bearing cartridges (structurally the repo-corpus shape) gives `clean_repo_fp == 0` with **no member able to fail** | AC1c. Closed |
+| 13.1 is `done` and its corpus manifest exists | ✅ **HOLDS.** `sprint-status.yaml:415` = `done`; `validation-corpus/adjudication-set.json` (2.0 MB) + `blocking-worklist.md` present | **Task 0 precondition MET** |
+| 13.1's AC3b completed or HALTED | ✅ **COMPLETED, RATIFIED.** Operator XAgent007 ratified five members 2026-08-16; `eligible_member_count()` = **5**, floor MET; **31 blocking findings**, all `vacuous_test_ast`; all 5 byte-reproducible | **AC7 is evaluable in principle** — the corpus exists. It is HALTED for the *other* reason: the judgement is a human act |
+| The adjudicator is named | ✅ **HOLDS.** `sprint-status.yaml:414`/`:416` and `deferred-work.md` name **XAgent007**; protocol §2 Engineering Lead | Start condition MET |
+| `replay_harness.py` is **391** lines | ❌ **DRIFTED: 608.** 13.1 added `corpus_manifest_module`, `ValidationCorpusMeasurement`, `measure_validation_corpus` and three `precision_gate_status_for` parameters | The §0.3 inventory is 13.1-shaped; rebased onto it, not over it |
+| Test-id high-water marks `PRECISION-20 · CARTRIDGE-15 · DOGFOOD-52 · DOCS-72 · HITL-31` | ❌ **MOVED by 13.1: PRECISION-31 · DOGFOOD-55 · DOCS-76** (CARTRIDGE-15, HITL-31 unchanged) | New ids continue from the **live** marks: `PRECISION-001-32`.., `DOCS-001-77`.. |
+| NFR-M1 headroom: `test_evidence_citation.py` **1199** (1 left), `test_instrument_disclosure.py` **1179** (21 left) | ✅ **BOTH EXACT.** Also `test_dogfood_proof.py` 1106, `proof_run.py` 760 (was 679) | **Every new guard went in a NEW module.** Nothing was shaved |
+| `protocol_cleared` is never passed `True` from production; exemptions = exactly 2 test files | ✅ **CONFIRMED**, `-46` green | Registered `tests/test_gate_flip_path.py` **by name with its reason** — the set fails in both directions |
+| `AI-E12-6`'s ledger-claim guard does not exist | ✅ **CONFIRMED absent** | AC8.2. **Landed** |
+| `AI-E12-5` — `grep -c "GUARD-ADEQUACY" architecture.md` → 0 | ✅ **CONFIRMED 0** across (now) 17 §Enforcement rules | AC8.4. **Registered** |
+| `AI-E12-3`'s four entries are undisposed | ✅ **CONFIRMED.** `DF-8-3-A`, `DF-10-4-A`, `DF-10-4-B`, `DF-12-3-A` — none carried a disposition | AC8.3. **All four ruled, by execution** |
+| The 6.7 writer is unreusable as a class | ✅ **CONFIRMED.** `DecisionRecordWriter.append` takes only `EscalationResolution`; `.gitignore:19` ignores `.argus/` | DN-3. Discipline reused, class not |
+| Baseline gates | ✅ `mypy` **83 files clean**; `bandit` **19 Low / 0 Med / 0 High**; the 13.1 suite figure is **1561** | Deltas reported against these |
+
 #### §2 — RED evidence, captured at the real seam (AI-E11-1 clause ii), before or during each guard
+
+| Guard | Observable | Planted / live defect | RED | GREEN |
+|---|---|---|---|---|
+| `PRECISION-001-32` | `PrecisionResult.n` + the `N=` figure in `gate_status` | **live, not planted** — the §0.1 (2) snippet | `rows=2 n=7 floor=5 provisional=False`, *"cleared … N=7 labeled cartridges >= floor N=5"* | `rows=2 n=2 provisional=True`, `unevaluable (…)` |
+| `PRECISION-001-33` | `n` for every **generated** prefix of the live registry vs the registry's own predicate | a second eligible-member count would diverge on ≥1 prefix | (design-time) | 10 generated populations, 0 divergences |
+| `PRECISION-001-35` | `provisional`, `meets_threshold`, `precision_evaluable`, first word of `gate_status` | **live** — the §0.1 (1) snippet | `precision=1/1 provisional=False` → `"cleared …"` | `evaluable=False meets=False provisional=True` → `"unevaluable …"` |
+| `PRECISION-001-36` | can the renderer be made to say *cleared* for an unmeasured run | 16 **generated** (tp, fp) combinations + both honesty flags | `precision_gate_status_for(evaluable=False, provisional=False)` returned a string | now **raises**; 15/16 non-cleared, exactly 1 legitimately cleared |
+| `PRECISION-001-37` | `clean_repo_fp_applicable` | **generated** from the live registry: fold only the golden-key-bearing members | condition reported satisfied over a population that cannot fail it | `applicable=False` + `NOT APPLICABLE … BY CONSTRUCTION` |
+| `PRECISION-001-43` | what `AdjudicationRecord` accepts | three variants **generated from the committed record's own first row**: a non-superseding second row, a correction naming a missing row, a correction naming a different finding | all three constructed silently before the invariant existed | all three **raise**; the superseded row stays present |
+| `PRECISION-001-45` | `protocol_version` vs the change-log head | a **V9.9** row prepended to a copy of the real protocol | the record still matched → guard pinned to whatever it first saw | head moves to `V9.9`, the record no longer matches |
+| `PRECISION-001-47` | `exhaustiveness()` | **generated from the record**: judge all 31, then remove exactly one | a fold over the adjudicated subset would have reported a ratio | `Unevaluable(residual_count=1)`; `BORDERLINE` is also a residual |
+| `PRECISION-001-49` | ordering of the §4 preconditions | a **full** sweep of 31 TP judgements over a `reproducibility_verified=False` record | a determinism check evaluated *beside* the ratio would still publish `31/31` | `precision is None`, `evaluable=False`, `unevaluable …` |
+| `DOCS-001-78` | claimed `DF-*` closures vs the ledger | **live, and it found 19** | 19 unbacked claims across 15 story files, incl. `DF-10-4-A` (12.5) and `DF-8-3-A` — i.e. it reproduced `AI-E12-3` from scratch | 17 registered dated+owned; 2 (`DF-8-3-A`, `DF-10-4-A`) **removed the same day** because this story closed them against evidence |
+
+**A RED I planted in my own guard and did not weaken.** `DOCS-001-78`'s first id pattern was lazy
+(`DF-[A-Za-z0-9-]*?[A-Za-z0-9]`), so it matched `DF-12` inside `DF-12-3-A` and produced **eight false
+accusations** on its first run — a guard failing in the direction that looks like a finding. Fixed by
+matching the id **whole and greedily**; the wrong pattern and the reason are recorded in the module,
+because the next person to widen it will reach for a lazy quantifier too.
+
+**A RED that was not mine and was not planted.** `tests/test_dogfood_plan.py::-03` went red the moment
+`argus/precision/adjudication.py` landed: total tracked `argus/` LOC moved 25 776 → 25 856 and the
+committed partition plan cites the old figure. That is the `DF-8-5-B` / `DF-10-4-D` artifact-currency
+bootstrap working exactly as designed (`AI-E12-11`), and it was resolved by the sanctioned sequence —
+commit the `argus/` delta, regenerate through the renderers, commit the regeneration separately —
+never by editing an artifact or loosening an assertion.
 
 #### §3 — findings this story did not expect, and corrected rather than papered over
 
+1. **`DF-10-4-B` is NOT delivered, and two story records say it is.** `AI-E12-3` asked for
+   verification by execution; this is what execution found. `argus/reports/generator.py:420-422`
+   states **in its own docstring** that *"`DetectorResult.degraded` records it and no production code
+   reads it back"*, and a tree-wide sweep confirms every other occurrence is a write. Yet
+   `12-4-…md:126`/`:152` records it as an integrated, checked-off task and `10-5-…md` records a
+   closure. Both are false against the tree. **Re-recorded OPEN with a named owner; not fixed here**,
+   because adding an operator-facing reader is report behaviour no 13.2 AC owns.
+2. **`DF-10-4-A` is delivered — by a different mechanism than its entry names.** The all-or-nothing
+   trigger the entry describes is **unchanged** (`generator.py:436-439` still documents and performs
+   it); what closed the operator-facing gap is 12.5's separate `render_grammar_downgrade_summary`
+   surface, wired at `cli.py:931`. Closed **with the divergence stated**, because a closure justified
+   by the wrong surface is how an entry gets re-opened by the next person who reads the original code.
+3. **`DF-12-3-A` is half true, and a single CLOSED line would have published the wrong half.** The
+   *disclosure* exists verbatim (`plain_english.py:249`/`:257`); the *mechanism* (PRD §501 — a re-run
+   returns the recorded result under `--deep-audit`) does not. Split: disclosure CLOSED, mechanism
+   re-recorded OPEN with an owner.
+4. **The obvious reuse for the fold is wrong, and silently so.** Synthesising a golden key from the
+   TP dispositions and letting `compute_precision` diff against it — the natural reading of DN-1 —
+   classifies by class MEMBERSHIP, so a class in the golden key contributes its **whole**
+   multiplicity as TP. On a real repository one class routinely holds both real and false findings.
+   Adding a multiplicity map to `compute_precision` (the story's own suggested alternative) carries
+   the multiset faithfully and **still** assigns all 24 `minions` findings to one side. Resolved as
+   DN-2b: fork nothing, share the **arithmetic**.
+5. **`_UNBACKED_AT_LANDING` shrank on the day it landed** — `DF-8-3-A` and `DF-10-4-A` had to be
+   removed within the same change, because ruling them CLOSED in the ledger made the guard's own
+   shrink assertion fire. That is the registry behaving correctly on its first run, and it is
+   recorded rather than quietly edited.
+
 #### §4 — measured environment facts that changed the design
+
+- **`_bmad-output/` is tracked and `.argus/` is ignored** (`.gitignore:19`), which is the whole of
+  DN-3. The record lives beside 13.1's corpus artifacts, in git, and `PRECISION-001-40` asserts
+  `git ls-files` returns it — a path assertion would have passed for an ignored file.
+- **`argus/precision/adjudication.py` resolves NO repository-only path at module level.** The corpus
+  is reached through 13.1's existing lazy `corpus_manifest_module()` edge and the record path is a
+  repository-relative **string** the caller resolves (`DF-9-2-A`; `tests/test_built_distribution.py`
+  is the guard that would have caught the alternative only after a wheel was built).
+- ⚠️ **Windows-only local gates, ubuntu CI.** Every path in the new code is `pathlib`; every file
+  read passes `encoding="utf-8"` explicitly; the record is written `newline="\n"`; and the locator
+  regex **rejects** a drive letter, a leading `/`, a `..` segment and a backslash — so a Windows-only
+  locator is a construction-time failure rather than a POSIX-only bug shipped behind a green local
+  suite. `PRECISION-001-44` generates five adversarial locators to prove it.
+- **The suite reaches no network.** The new modules import only `hashlib`, `re`, `dataclasses`,
+  `fractions`, `pathlib`, `subprocess` (one `git ls-files`) and this project's own serializer.
+- **No new third-party dependency** was added or needed.
 
 #### §5 — gates, all LOCAL (architecture.md §H: a local run is necessary, never sufficient)
 
+| Gate | Result | Baseline (13.1 on `1816524`) |
+|---|---|---|
+| `pytest` (full suite) | **1585 passed / 0 failed / 0 errors / 0 skipped**, exit 0 | 1561 → **+24** (7 `PRECISION-001-32..-38`, 14 `PRECISION-001-39..-52`, 3 `DOCS-001-77..-79`) |
+| `mypy argus` | **Success: no issues found in 84 source files** | 83 → 84 (`adjudication.py`), clean |
+| `bandit -r argus` | **19 Low / 0 Medium / 0 High** (confidence 0 Low / 6 Med / 13 High) | identical |
+| NFR-M1 (≤1200) | `replay_harness` **684** · `adjudication` **699** · `test_adjudication_record` **581** · `test_gate_flip_path` **327** · `test_governance_record_integrity` **261** · `build_adjudication_record` **226** · `test_instrument_disclosure` **1187** (13 left) · `_registry` **347** | no new file within 500 lines of the ceiling; nothing shaved |
+| `deferred-work.md` append-only | `git diff --numstat` → **186 / 0** | `+n / -0` satisfied |
+| `-46` (`protocol_cleared` disclosure) | **green**; exemption set now names 3 test files, each with its reason | the set fails in both directions |
+
+**CI evidence: NOT ESTABLISHED.** No CI run covers any Epic-10/-11/-12/-13 sha; `audit-ci.yml`'s
+latest run covers `00c8d1b` (2026-08-09). ⚠️ **These gates ran on Windows only.**
+
+**Nothing outward-facing was performed**, re-asserted by execution at hand-off: `git tag -l`
+**empty**, `origin/master` **unmoved**. No push, no tag, no release, no visibility change.
+`DF-12-9-A` untouched. The six untracked root artifacts (`AI-E12-12`) were **not swept** and none
+entered the corpus.
+
 #### §6 — decisions taken, with their rejected alternatives
+
+- **DN-1 — ADOPTED.** The adjudication record IS the golden key for the repository corpus, exactly as
+  protocol §2 already says. *Rejected:* a second precision function per corpus.
+- **DN-2 — ADOPTED.** Every harness change is an additive keyword whose default preserves today's
+  behaviour. Proven: `TC-ArgusAgent-DOGFOOD-001-11`/`-12` and `TC-ArgusAgent-PRECISION-001-08`/`-09`
+  pass **byte-unedited**. *Rejected:* changing `compute_precision`'s semantics in place.
+- **🆕 DN-2a — the unit of adjudication is the FINDING, not the rule CLASS** (AC2's decision).
+  Protocol §7 locks it and §7's own heading forbids softening; the alternative — amending §4/§5/§7 to
+  say *class* — would redefine the gate's denominator **downward**, and on this corpus 31 blocking
+  findings are 1 class, so the gate would have been computed over a denominator of **one**. Written
+  into the protocol as **V1.3 before** the record was generated, and the ordering is mechanical:
+  `PRECISION-001-45` fails a record whose `protocol_version` is not the change-log head.
+- **🆕 DN-2b — the fold shares the ARITHMETIC, not the function.** `fold_adjudicated_precision`
+  counts dispositions directly and calls `precision_fraction`, `gate_is_provisional`,
+  `PRECISION_GATE_THRESHOLD` and `precision_gate_status_for` — the same objects `compute_precision`
+  uses. *Rejected (and it was the story's own suggestion):* a multiplicity map on `compute_precision`.
+  It carries the multiset correctly and still cannot express *"this class is 20 TP and 4 FP"*,
+  because the golden-key diff classifies by membership. See §3.4.
+- **DN-3 — ADOPTED.** Committed repository artifact; the 6.7 writer reused as a *discipline*.
+  *Rejected:* shoehorning adjudications into `EscalationResolution` under `.argus/`.
+- **DN-4 — ADOPTED.** `argus.store.canonical.dumps_bytes` only; row ids are content-addressed through
+  it. No second serializer, hasher or envelope.
+- **DN-5 — ADOPTED.** Three outcomes, `release_preflight.py`'s precedent. `AdjudicationUnevaluable`
+  is a **type**, not a flag, so no call site can treat it as falsy by forgetting to look.
+- **DN-6 — ADOPTED, and made structural.** `UNADJUDICATED` is the only member an automated producer
+  may write, and a row carrying it **raises** if it has an adjudicator id. *Rejected:* an LLM
+  pre-classification the human "reviews".
+- **DN-7 — ADOPTED.** `protocol_cleared` stays `False`; `INSTRUMENT_STATUS` untouched; `-46` green.
+- **🆕 DN-8 — the 19 historical unbacked ledger claims are a dated, owned, SHRINKING registry.**
+  *Rejected:* closing 19 entries this story has no evidence for — `AI-E12-3`'s own defect committed
+  inside the guard written to stop it. *Also rejected:* narrowing the guard to recent stories, which
+  is the move Story 12.1 files as a defect. A listed entry that becomes backed **fails**.
+- **🆕 DN-9 — `AI-E11-8`'s two Epic-11 rules are re-homed, not registered.** Both are outside this
+  story's write set; registering unrelated rules inside the story whose subject is a scoped, recorded
+  act would be the drift the ledger exists to catch. Recorded with a named owner (`AI-E9-8`).
 
 #### §7 — the adjudication: who, when, how many hours, and what was NOT adjudicated
 
+**No finding was adjudicated. Zero. This is the designed terminal state, and it is recorded, not
+skipped.**
+
+- **Who:** protocol §2 assigns the judgement to the **Engineering Lead**, and
+  `sprint-status.yaml:414`/`:416` name **XAgent007**. No agent may supply a disposition, and this
+  session had no operator present.
+- **When:** not yet. `expert_hours` is `null` — **NOT RECORDED**, never `0`; a zero would claim the
+  work took no time rather than that it has not happened.
+- **What is ready:** all **31** blocking findings — 24 `minions` + 7 `agent-smith`, every one
+  `vacuous_test_ast` — are in the committed record as `UNADJUDICATED` rows, each with its member,
+  its `finding_match_key` identity, its locator, and **no adjudicator**. `blocking-worklist.md` is
+  the human-readable form.
+- **What the instrument reports over that record, measured:** `exhaustiveness()` →
+  `Unevaluable(residual_count=31, adjudicated_count=0)`; `precision` → `None` /
+  `"NOT COMPUTED BY THIS RUN"`; `provisional` → `True` **even when the caller claims
+  `protocol_cleared=True`**; `gate_status` → `"unevaluable …"`; `clean_repo_fp_applicable` → `False`
+  with its reason.
+- **What was NOT done, deliberately:** no disposition was invented, inferred from a rule id, guessed
+  from a locator, or defaulted to make `PRECISION-001-47` go green. *A fabricated adjudication in the
+  story that defines adjudication would clear the externalization gate on evidence that does not
+  exist, and every guard downstream — including 13.3's — would agree that it had.*
+- **What closes the gap, in one act:** XAgent007 judges each of the 31 at its cited locator per §4,
+  records the hours, and appends the rows. Filed as `DF-13-2-A`.
+
 ### Completion Notes
 
+**AC1 ✅ — all three flip-path defects closed, additively.** (a) `n` now closes over the population
+actually folded, through the registry's **own** predicate given an additive parameter — no second
+count (13.1 / DN-3). (b) An empty denominator is `precision_evaluable=False`, `meets_threshold`
+forced `False`, the gate forced provisional, and a **third** gate-status outcome, `unevaluable`;
+`precision_gate_status_for(evaluable=False, provisional=False)` raises. (c) The clean-repo condition
+names its population and reports NOT APPLICABLE where no member can fail it. **Additivity proven:**
+the 6.6/7.1 contract tests (`DOGFOOD-001-11`/`-12`, `PRECISION-001-08`/`-09`) pass **byte-unedited**.
+
+**AC2 ✅ — the protocol is amended BEFORE the run, and the ordering is mechanical.** V1.3 decides
+**the unit is the FINDING** (§7 upheld, not softened), defines the finding identity, records why the
+obvious fold is wrong, and amends §1/§2/§3/§4/§5 — rebased onto 13.1's V1.1/V1.2 text, struck never
+erased. `PRECISION-001-45` fails any record whose `protocol_version` is not the change log's head,
+proven RED by prepending a V9.9 row to a copy of the real document.
+
+**AC3 ✅ — the record exists, in git, machine-readable, human-attributed.** 31 rows keyed on
+`(member_id, rule_id, verdict_eligible, advisory, locator)` with the 6.6 match key reused unchanged;
+a closed vocabulary that **raises**; append-only supersession where a correction must name the row it
+replaces and the superseded row is retained; NFR-S1 enforced **structurally** by a closed schema plus
+a locator regex that rejects drive letters, absolute paths, `..` and backslashes; attribution checked
+against protocol §2's role table **in both directions**.
+
+**AC4 ✅ — exhaustiveness proven, with the non-vacuity floor inside the guard.** Every emitted finding
+must carry exactly one live TP/FP disposition; a residual yields `Unevaluable` **with its count and
+what would close the gap**; an **empty** population is itself `Unevaluable`, not "exhaustive over
+nothing". The adversarial variant is generated from the committed record.
+
+**AC5 ✅ — hours are a `Fraction` field, reported not enforced.** The ≤4h ceiling is cross-checked
+against §3's own text (`AI-E9-7`), an overrun reads *"RECORDED, NOT FAILED"*, and `null` reads
+*"NOT RECORDED"*, never zero.
+
+**AC6 ✅ — determinism first, via the EXISTING check.** 13.1's per-member
+`byte_reproducible_across_two_runs` is carried onto the record with its source named; the fold
+evaluates it **before** exhaustiveness and before the ratio, proven by a fixture with 31 TP
+judgements over a non-reproducible corpus that still produces no number.
+
+**AC7 ⛔ HALTED — awaiting the named adjudicator.** See §7. The corpus exists (13.1 delivered N=5 and
+31 blocking findings), so this is not the under-population case: it is the case the ⛔ ESCALATION
+section names, and the Story 12.9 / AC9 precedent applies. Recorded as `Unevaluable`, residual 31,
+with `DF-13-2-A` filed.
+
+**AC8 ✅ —** `deferred-work.md` **`+186 / -0`**. The four human-adjudication entries stay OPEN with
+their remaining scope re-recorded and none left pointing at a run that has happened.
+`AI-E12-6`'s guard **landed** and found 19 unbacked claims on its first run, reproducing `AI-E12-3`
+independently. All four of `AI-E12-3`'s entries **ruled by execution**: `DF-8-3-A` CLOSED,
+`DF-10-4-A` CLOSED with its divergence, `DF-10-4-B` **NOT delivered** and re-recorded OPEN with two
+false story records corrected, `DF-12-3-A` split. The **GUARD-ADEQUACY CLAUSE** is registered in
+§Enforcement (`AI-E12-5`, fourth request / first registration) with its input-side twin, alongside
+two more Story 13.2 rules; `AI-E11-8` re-homed with a named owner. `AI-E12-1`'s satisfied half
+recorded, not redone. Every new guard is in a **new** module — nothing was shaved.
+
+**The gate did not move, and could not have.** `protocol_cleared` is still `False` and still never
+passed `True` from `argus/**`; `INSTRUMENT_STATUS` is untouched; one of §5's four conditions holds
+(N=5, from 13.1) and the other three do not — the ≥80% figure is **UNEVALUABLE**, the clean-repo
+condition is **NOT APPLICABLE** with its reason, and no adjudication run is recorded. This story
+makes the measurement possible and refuses to make it up.
+
 ### File List
+
+**NEW**
+
+| Path | What |
+|---|---|
+| `argus/precision/adjudication.py` | AC2–AC6 — the adjudication record: closed vocabulary, attributed rows, append-only supersession, exhaustiveness + determinism, the expert-hours report, and the fold into the shared arithmetic |
+| `scripts/build_adjudication_record.py` | AC3/AC7 — seeds/re-seeds the record from 13.1's adjudication set; append-only, and structurally incapable of adjudicating |
+| `_bmad-output/design-artifacts/ArgusAgent/validation-corpus/adjudication-record.json` | AC3/AC7 — the committed record. 31 `UNADJUDICATED` rows, zero judgements |
+| `tests/test_gate_flip_path.py` | `TC-ArgusAgent-PRECISION-001-32`..`-38` (AC1) |
+| `tests/test_adjudication_record.py` | `TC-ArgusAgent-PRECISION-001-39`..`-52` (AC2–AC7) |
+| `tests/test_governance_record_integrity.py` | `TC-ArgusAgent-DOCS-001-77`..`-79` (AC8.2/8.3/8.4) |
+
+**MODIFIED**
+
+| Path | What |
+|---|---|
+| `argus/precision/replay_harness.py` | AC1a/b/c — `precision_fraction` + `gate_is_provisional` extracted as the SHARED arithmetic; `PRECISION_GATE_THRESHOLD` promoted public (alias kept); `population_n` added; `n` closes over the folded population; `precision_evaluable` / `clean_repo_fp_applicable` / `measurement_note` / `precision_or_none` added; `meets_threshold` gated on evaluability; `precision_gate_status_for` gains `evaluable` and a third outcome |
+| `tests/cartridges/_registry.py` | AC1a — `populated_planted_defect_count(registry=None)`: additive parameter, default identical; `LABELED_CARTRIDGE_KINDS` named once |
+| `tests/test_instrument_disclosure.py` | `tests/test_gate_flip_path.py` registered by name in `_PROTOCOL_CLEARED_TEST_EXEMPTIONS` with its reason |
+| `_bmad-output/…/precision-validation-protocol.md` | AC2/AC5/AC1b/AC1c — §1, §2, §3, §4, §5 amended; §6/§7 unchanged and re-affirmed; **V1.3** change-log entry |
+| `_bmad-output/…/architecture.md` | AC8.4 — three §Enforcement registrations: the GUARD-ADEQUACY CLAUSE, adjudication-record enforcement, ledger-claim cross-check enforcement |
+| `_bmad-output/…/deferred-work.md` | AC8.1–8.3 — append-only `+186 / -0` |
+| `_bmad-output/…/minions-dogfood-proof.md` · `-partition-plan.md` · `-budget-plan.md` | regenerated through their own renderers (`DF-8-5-B` / `DF-10-4-D` bootstrap, `argus/` LOC moved) |
+| `_bmad-output/…/sprint-status.yaml` | status transitions |
+| `_bmad-output/…/stories/13-2-…md` | this file |
 
 ### Review Findings
 
@@ -594,4 +845,5 @@ state and does not block the story's pass.
 
 | Date | Version | Description | Author |
 |------|---------|-------------|--------|
+| 2026-08-16 | v0.2 | **AC1–AC6 and AC8 complete; AC7 HALTED by design; status -> review.** All three §0.1 flip-path defects **reproduced verbatim on `1816524`** and closed additively — a 2-member injected corpus reported `N=7`, a corpus emitting nothing reported `precision=1/1` / `provisional=False` / *"cleared"*, and §5's clean-repo condition was vacuous on the corpus that gates externalization. The 6.6/7.1 contract tests pass **byte-unedited**. Protocol **V1.3** amended **before** the record was generated and decides the unit is the **FINDING** (§7 upheld, not softened — on this corpus 31 blocking findings are **1** rule class, so a per-class fold would have gated on a denominator of one); the ordering is mechanical, not a promise. The adjudication record is committed in git with **31 `UNADJUDICATED` rows and zero judgements**: no agent may adjudicate, and an `UNADJUDICATED` row carrying an adjudicator id now **raises at construction**. AC7 is **HALTED — awaiting XAgent007** (Story 12.9 / AC9 precedent), recorded as `Unevaluable` with residual **31**, filed as `DF-13-2-A`. AC8: ledger `+186 / -0`; `AI-E12-6`'s guard **landed** and found **19** unbacked ledger claims on its first run, reproducing `AI-E12-3` independently; all four of `AI-E12-3`'s entries **ruled by execution** (`DF-10-4-B` is **not** delivered and two story records saying otherwise are corrected); the **GUARD-ADEQUACY CLAUSE** is registered in §Enforcement at the fourth request. Gates LOCAL: pytest **1585/0/0**, mypy clean **84** files, bandit **19 Low / 0 Med / 0 High**. `protocol_cleared` still `False` everywhere; nothing outward-facing. | Developer (dev-story) |
 | 2026-08-16 | v0.1 | Story contexted. Premises re-measured on `bc55e36`. **Three defects in the gate-flip path found by execution** — `n` ignores the injected population (reports 7 for a 2-member corpus), an empty precision denominator returns `1/1` and reads "cleared", and §5's clean-repo FP condition is vacuous on a repository corpus. Also recorded: the protocol's "precision over FINDINGS" and the harness's per-class arithmetic are different quantities; the 6.7 decision writer is unreusable as a class (wrong semantic, gitignored destination); and `AI-E12-6`, `AI-E12-3` and `AI-E12-5` are all unlanded and all named by the Epic-12 retrospective as Epic-13 preconditions. | Scrum Master (create-story) |
