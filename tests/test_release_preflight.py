@@ -297,11 +297,21 @@ _TEST_TREE_IMPORT = "_registry"
 
 # Every `argus/**` module that NAMES the repository-only test tree, in any position —
 # module level or inside a function body. This is what an `ast` walk can see, and it is
-# ALL it can see. Post-fix these five still name `_registry` and all five import cleanly
+# ALL it can see. Post-fix these six still name `_registry` and all six import cleanly
 # from the wheel; the two sets are unrelated, which is the point of separating them.
+#
+# `argus/precision/adjudication.py` joined the set on 2026-08-16 (Story 13.2) and the
+# addition is DELIBERATE, which is what this registry exists to force someone to say. It
+# names the repository-only tree ONLY in prose — its docstrings explain that the
+# repository corpus lives at `tests/corpus/_manifest.py` — and it reaches that substrate
+# exclusively through `replay_harness.corpus_manifest_module()`, the declared lazy edge
+# (DF-9-2-A). It resolves NO repository path at module level, which is the property that
+# actually decides whether a wheel can import, and which
+# TC-ArgusAgent-RELEASE-001-20 measures on a real built artifact.
 _MODULES_NAMING_THE_TEST_TREE_IMPORT: frozenset[str] = frozenset(
     {
         "argus/precision/__init__.py",
+        "argus/precision/adjudication.py",
         "argus/precision/replay_harness.py",
         "argus/dogfood/proof_types.py",
         "argus/dogfood/proof_render.py",

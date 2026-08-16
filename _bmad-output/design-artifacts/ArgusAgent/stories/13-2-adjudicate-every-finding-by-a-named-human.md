@@ -677,9 +677,27 @@ never by editing an artifact or loosening an assertion.
 | `pytest` (full suite) | **1585 passed / 0 failed / 0 errors / 0 skipped**, exit 0 | 1561 → **+24** (7 `PRECISION-001-32..-38`, 14 `PRECISION-001-39..-52`, 3 `DOCS-001-77..-79`) |
 | `mypy argus` | **Success: no issues found in 84 source files** | 83 → 84 (`adjudication.py`), clean |
 | `bandit -r argus` | **19 Low / 0 Medium / 0 High** (confidence 0 Low / 6 Med / 13 High) | identical |
-| NFR-M1 (≤1200) | `replay_harness` **684** · `adjudication` **699** · `test_adjudication_record` **581** · `test_gate_flip_path` **327** · `test_governance_record_integrity` **261** · `build_adjudication_record` **226** · `test_instrument_disclosure` **1187** (13 left) · `_registry` **347** | no new file within 500 lines of the ceiling; nothing shaved |
+| NFR-M1 (≤1200) | measured by `len(text.splitlines())`, the sweep's own idiom: `adjudication` **923** · `replay_harness` **786** · `test_adjudication_record` **768** · `test_release_preflight` **948** · `test_gate_flip_path` **354** · `_registry` **347** · `test_governance_record_integrity` **311** · `build_adjudication_record` **228** · `test_instrument_disclosure` **1194** (6 left) | `TC-ArgusAgent-MAINT-001-01..-05` **green**; no unexempted breach. Every new guard went in a **NEW** module and nothing was shaved — `test_evidence_citation.py` is untouched at **1199** |
 | `deferred-work.md` append-only | `git diff --numstat` → **186 / 0** | `+n / -0` satisfied |
-| `-46` (`protocol_cleared` disclosure) | **green**; exemption set now names 3 test files, each with its reason | the set fails in both directions |
+| `-46` (`protocol_cleared` disclosure) | **green**; the exemption set now names **4** test files, each with its reason | the set fails in both directions — both new files were caught by it, not remembered |
+
+**Four guards went RED on the full-suite run and every one of them was a guard working.** None was
+loosened; each was answered by recording a decision or by correcting a document.
+
+1. `TC-ArgusAgent-DOCS-001-46` — `tests/test_adjudication_record.py` passes `protocol_cleared=True`
+   (in `-49` and `-52`, both to prove the gate is REFUSED). **Registered by name with its reason.**
+   I had registered `test_gate_flip_path.py` from memory and forgotten the second file; the closure
+   caught it, which is precisely why this project stopped trusting hand-counted enumerations.
+2. `TC-ArgusAgent-RELEASE-001-11` — `argus/precision/adjudication.py` joined the set of `argus/**`
+   modules **naming** the repository-only tree. Registered as a **deliberate** decision with the
+   reason: it names `tests/corpus/_manifest.py` only in prose, reaches it exclusively through the
+   declared lazy `corpus_manifest_module()` edge, and resolves no repository path at module level.
+3. `TC-ArgusAgent-DOCS-001-54` — four published figures went stale the moment a module was added:
+   `README.md` (importable modules 83→84, wheel entries 91→92, sdist members 90→91) and
+   `CHANGELOG.md` (83→84 twice). **The artifact is the fact**; the documents were corrected, and the
+   guard measured them against a freshly built wheel rather than against each other.
+4. `TC-ArgusAgent-DOCS-001-78` — **my own new guard, firing on my own story record.** See the
+   Completion Notes; the correction is recorded there rather than quietly applied.
 
 **CI evidence: NOT ESTABLISHED.** No CI run covers any Epic-10/-11/-12/-13 sha; `audit-ci.yml`'s
 latest run covers `00c8d1b` (2026-08-09). ⚠️ **These gates ran on Windows only.**
@@ -797,9 +815,18 @@ with `DF-13-2-A` filed.
 **AC8 ✅ —** `deferred-work.md` **`+186 / -0`**. The four human-adjudication entries stay OPEN with
 their remaining scope re-recorded and none left pointing at a run that has happened.
 `AI-E12-6`'s guard **landed** and found 19 unbacked claims on its first run, reproducing `AI-E12-3`
-independently. All four of `AI-E12-3`'s entries **ruled by execution**: `DF-8-3-A` CLOSED,
-`DF-10-4-A` CLOSED with its divergence, `DF-10-4-B` **NOT delivered** and re-recorded OPEN with two
-false story records corrected, `DF-12-3-A` split. The **GUARD-ADEQUACY CLAUSE** is registered in
+independently. All four of `AI-E12-3`'s entries **ruled by execution**: `DF-8-3-A` CLOSED, and
+`DF-10-4-A` CLOSED with its divergence stated.
+`DF-10-4-B` is **NOT delivered** — re-recorded OPEN with a named owner, and two story records
+saying otherwise are corrected. `DF-12-3-A` is split: disclosure half closed, mechanism half OPEN.
+
+> **This paragraph was itself corrected by `DOCS-001-78`, on its first run over this story.** The
+> original wording put `DF-10-4-B` on the same line as a closure verb, so the new guard read it as a
+> claim that the ledger never received — and it was right to: a reader skimming that line would have
+> drawn the same conclusion. The guard's author was its first subject, which is the most useful
+> possible evidence that it is not vacuous.
+
+The **GUARD-ADEQUACY CLAUSE** is registered in
 §Enforcement (`AI-E12-5`, fourth request / first registration) with its input-side twin, alongside
 two more Story 13.2 rules; `AI-E11-8` re-homed with a named owner. `AI-E12-1`'s satisfied half
 recorded, not redone. Every new guard is in a **new** module — nothing was shaved.
@@ -829,7 +856,9 @@ makes the measurement possible and refuses to make it up.
 |---|---|
 | `argus/precision/replay_harness.py` | AC1a/b/c — `precision_fraction` + `gate_is_provisional` extracted as the SHARED arithmetic; `PRECISION_GATE_THRESHOLD` promoted public (alias kept); `population_n` added; `n` closes over the folded population; `precision_evaluable` / `clean_repo_fp_applicable` / `measurement_note` / `precision_or_none` added; `meets_threshold` gated on evaluability; `precision_gate_status_for` gains `evaluable` and a third outcome |
 | `tests/cartridges/_registry.py` | AC1a — `populated_planted_defect_count(registry=None)`: additive parameter, default identical; `LABELED_CARTRIDGE_KINDS` named once |
-| `tests/test_instrument_disclosure.py` | `tests/test_gate_flip_path.py` registered by name in `_PROTOCOL_CLEARED_TEST_EXEMPTIONS` with its reason |
+| `tests/test_instrument_disclosure.py` | `tests/test_gate_flip_path.py` and `tests/test_adjudication_record.py` registered by name in `_PROTOCOL_CLEARED_TEST_EXEMPTIONS`, each with its reason |
+| `tests/test_release_preflight.py` | `argus/precision/adjudication.py` registered in `_MODULES_NAMING_THE_TEST_TREE_IMPORT` as a deliberate decision, with the reason it is safe (prose only; the lazy edge; no module-level path) |
+| `README.md` · `CHANGELOG.md` | `TC-ArgusAgent-DOCS-001-54` — the four published built-artifact figures re-derived against a freshly built wheel (modules 83→84, wheel entries 91→92, sdist members 90→91) |
 | `_bmad-output/…/precision-validation-protocol.md` | AC2/AC5/AC1b/AC1c — §1, §2, §3, §4, §5 amended; §6/§7 unchanged and re-affirmed; **V1.3** change-log entry |
 | `_bmad-output/…/architecture.md` | AC8.4 — three §Enforcement registrations: the GUARD-ADEQUACY CLAUSE, adjudication-record enforcement, ledger-claim cross-check enforcement |
 | `_bmad-output/…/deferred-work.md` | AC8.1–8.3 — append-only `+186 / -0` |

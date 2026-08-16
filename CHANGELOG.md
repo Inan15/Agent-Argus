@@ -818,7 +818,7 @@ to block, and flipping the default here would pre-empt a policy decision that be
 ### Packaging: what the distribution contains
 
 `[tool.flit.module] name = "argus"` packages the `argus` Python package and nothing else. Measured on the
-built artifacts: the wheel holds 83 modules plus the packaged command assets and metadata; the sdist adds
+built artifacts: the wheel holds 84 modules plus the packaged command assets and metadata; the sdist adds
 `pyproject.toml`, `README.md`, `LICENSE` and `PKG-INFO`. The RAM workflow directories (`audit/`,
 `phases/`, `templates/`) and the installer scripts are **repository-only** — see README.md for the full
 capability split. *(Amended 2026-08-15 by Story 12.7: the module figure moved with the tree, ~~`adapters/`~~
@@ -827,9 +827,11 @@ zero data assets — `flit_core` ships every file under `argus/`, so the command
 with no build-backend change and reach the sdist because they are tracked.)*
 
 Measured on the built wheel with this repository removed from `sys.path`, one clean subprocess per module:
-**83 of the 83 shipped modules import.** None fail. (The figure read 73 of 73 when `0.1.0` was
+**84 of the 84 shipped modules import.** None fail. (The figure read 73 of 73 when `0.1.0` was
 written; it is DERIVED from the freshly built artifact by `TC-ArgusAgent-DOCS-001-54` — *the artifact
-is the fact* — and moved to 74 on 2026-08-13 when Story 12.2 added `argus/audit/deep_pass.py`, then
+is the fact* — and moved to 84 on 2026-08-16 when Story 13.2 added
+`argus/precision/adjudication.py`, the adjudication record the >=80%-precision gate is measured
+from, then to 74 on 2026-08-13 when Story 12.2 added `argus/audit/deep_pass.py`, then
 to 75 later the same day when Story 12.3 added `argus/cache/stage_memo.py`, the production call site
 that wires the FR27/NFR-D1 memoization store, then to 78 on 2026-08-15 when Story 12.6 added the
 three-module `argus/mcp/` stdio adapter behind the `argus-mcp` entry point, then to 83 the same day

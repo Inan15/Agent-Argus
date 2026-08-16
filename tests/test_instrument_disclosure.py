@@ -273,6 +273,13 @@ _PROTOCOL_CLEARED_TEST_EXEMPTIONS: dict[str, str] = {
         "TC-ArgusAgent-PRECISION-001-08/-09 prove the N>=5 floor binds even when "
         "protocol_cleared=True is claimed, and that the flip needs all three conditions."
     ),
+    "tests/test_adjudication_record.py": (
+        "Story 13.2 / AC6, AC7. TC-ArgusAgent-PRECISION-001-49/-52 pass protocol_cleared=True "
+        "to prove the gate is REFUSED anyway — once over a NON-REPRODUCIBLE corpus carrying a "
+        "full sweep of TP judgements (§4's determinism precondition binds before the "
+        "arithmetic), and once over the live committed record, where 31 UNADJUDICATED rows "
+        "must yield Unevaluable rather than a number. Neither clears anything."
+    ),
     "tests/test_gate_flip_path.py": (
         "Story 13.2 / AC1. TC-ArgusAgent-PRECISION-001-32/-35 REPRODUCE the two defects "
         "measured on bc55e36 — an injected 2-member registry reporting N=7, and a corpus "
