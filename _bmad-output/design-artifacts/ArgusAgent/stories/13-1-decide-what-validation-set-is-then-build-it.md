@@ -4,7 +4,7 @@ baseline_commit: bc55e361d46b1a33672d0214c7d8e1a97190d0dc
 
 # Story 13.1: Decide what the validation set is, then build it
 
-Status: in-progress
+Status: review
 
 <!-- Created 2026-08-16 by create-story. Every premise below was re-measured by execution on
      HEAD bc55e36 before this file was written; see §0. Validation is optional — run
@@ -373,13 +373,13 @@ From Story 12.9 (the immediately preceding story, clean-pass review) and Epics 1
   - [x] Guard: rendered figure == derived figure; RED against the reverted literals
   - [x] Regenerate `minions-dogfood-proof.md` via its generator; **bootstrap sequence** per §Previous story intelligence
   - [x] Record the correction as a correction, including that it understated
-- [ ] **Task 6 — Populate the corpus to N ≥ 5 (AC3b — see ESCALATION)** — ⏸️ **RATIFIED, AWAITING THE MEMBER LIST**
+- [x] **Task 6 — Populate the corpus to N ≥ 5 (AC3b — see ESCALATION)** — ✅ **RATIFIED AND EXECUTED**
   - [x] Escalate to the named operator (XAgent007) rather than self-authorising
-  - [x] Operator RATIFIED 2026-08-16, electing to name the repositories themselves
-  - [ ] Receive the repository list — **outstanding; nothing is fabricated in the interim**
-  - [ ] On receipt: stage each at its pinned sha, audit through unmodified `run_audit_detailed`
-  - [ ] Prove byte-reproducibility across two runs
-  - [ ] Emit the adjudication-ready finding set in the `finding_match_key` shape for 13.2
+  - [x] Operator RATIFIED 2026-08-16 and named five repositories
+  - [x] Measure every candidate before admission — pin, language mix, licence
+  - [x] Stage each at its pinned sha, audit through unmodified `run_audit_detailed`
+  - [x] Prove byte-reproducibility across two runs — **5 of 5 reproducible**
+  - [x] Emit the adjudication-ready finding set in the `finding_match_key` shape for 13.2
 - [x] **Task 7 — Ledger and documents (AC6)**
   - [x] Close `DF-8-5-C` with its evidence; `+n / -0` on `deferred-work.md`
   - [x] Progress-note `DF-6-6-A` / `-P1` / `-P2` / `DF-7-2-A` with the corpus they now adjudicate
@@ -606,11 +606,41 @@ exclusions are recorded **in the manifest**: the self-audit (`provenance: self`)
 Minions run (`provenance: superseded`), and the cartridges — which are not members at all, asserted
 in both directions.
 
-**AC3b ⏸️ RATIFIED, AWAITING THE MEMBER LIST** — escalated rather than self-authorised. The operator
-(XAgent007) ratified on 2026-08-16 and elected to name the repositories themselves; that list has not
-yet been supplied, so the manifest holds **zero** eligible members and says so on every surface that
-reports it. **Nothing was fabricated to make a count look met.** Filed as `DF-13-1-A` (🟠,
-critical-path) with the operator named.
+**AC3b ✅ RATIFIED AND EXECUTED** — escalated rather than self-authorised; the operator (XAgent007)
+ratified on 2026-08-16 and named five repositories. Each was **measured before admission**, not
+accepted on description. **N = 5, floor MET.**
+
+| Member | Pin | Language (measured) | Verdict | Blocking | Total | Deep | Repro |
+|---|---|---|---|---|---|---|---|
+| `ai-body-runtime` | `4480ffd` | python 15 | `RELEASE_READY` | 0 | 13 | 2/3 | ✅ |
+| `agent-markovich` | `a561668` | python 65 | `INSUFFICIENT_COVERAGE` | 0 | 272 | 24/65 | ✅ |
+| `minions` | `ec63b72` | python 591 | `NOT_READY_FOR_RELEASE` | **24** | 2946 | 74/197 | ✅ |
+| `xagents-webapp` | `33a8652` | typescript 810 | `INSUFFICIENT_COVERAGE` | 0 | 1507 | 513/862 | ✅ |
+| `agent-smith` | `9ab774d` | ts 226 / py 168 / rust 34 | `NOT_READY_FOR_RELEASE` | **7** | 1280 | 72/145 | ✅ |
+
+**31 blocking findings — the precision denominator 13.2 adjudicates — and every one is
+`vacuous_test_ast`,** the moat detector. 5987 advisory findings are recorded but are not false
+accusations and do not enter the denominator (protocol §4, as amended). Delivered as
+`validation-corpus/adjudication-set.json` (machine, 2 MB) plus `blocking-worklist.md` (the 31 a
+human actually judges — a 2 MB JSON is a machine artifact, and an adjudication list nobody can read
+is an adjudication that does not happen).
+
+**Three things AC3b did NOT do.** It pre-adjudicated nothing — every TP/FP field is `null` and
+`-31` asserts they stay null. It cloned nothing — fetching is the operator act the escalation
+exists for, so the runner reads existing checkouts and **verifies each against its pin, refusing on
+mismatch**. And it fabricated nothing: `ai_body_runtime` was not a git repository at ratification and
+was therefore unpinnable and unadjudicable, which was **escalated rather than worked around** —
+`git init` was performed only on the operator's explicit instruction, and the manifest row records
+that the pin has content but no history.
+
+**The corpus's honest limitations, recorded per member rather than in a footnote.** `minions`
+carries the strongest caveat: **Argus was developed against it** — it began life inside that repo as
+`minions_core/apaa/` and Story 7.2 ran over it — so a high precision score there is the least
+transferable evidence in the corpus, and the repository corpus has no author-blind holdout mechanism
+to offset it the way the cartridges do. `xagents-webapp` is the opposite and the most valuable: 810
+TypeScript files against a detector suite written almost entirely for Python. And `independent` here
+means **not the tool auditing itself** — not third-party; all five are XAgents repos and four are
+agent-authored, which is exactly what the PRD specifies and is still the corpus's main limitation.
 
 **AC4 ✅** — "usage is not evidence" is a **schema property**: `MANIFEST_FIELDS` is closed and checked
 in both directions, `NEVER_ELIGIBLE_FIELDS` enumerates the ban (stars, installs, downloads, …), and
@@ -673,6 +703,6 @@ clearing conditions and does not try to.
 
 | Date | Version | Description | Author |
 |------|---------|-------------|--------|
-| 2026-08-16 | v0.3 | AC3b ratified by the operator, who elected to name the repositories; awaiting the member list. All other ACs complete. | Developer (dev-story) |
+| 2026-08-16 | v0.4 | **AC3b RATIFIED AND EXECUTED — all 7 ACs complete; status -> review.** Operator named five repositories; each measured before admission. N=5, floor MET. All five byte-reproducible across two runs. 31 blocking findings (24 minions + 7 agent-smith, all `vacuous_test_ast`) emitted adjudication-ready for 13.2, nothing pre-adjudicated. `ai_body_runtime` was unpinnable (no git) and was escalated, not worked around. Gates LOCAL: pytest **1561/0/0**, mypy clean 83 files. | Developer (dev-story) |
 | 2026-08-16 | v0.2 | AC1–AC6 implemented. DN-1 adopted: the PRD governs, the protocol amended not replaced. The architecture's last OPEN input closed **by decision** at all three sites with a counting guard. Validation-set manifest built with a closed schema and a derived floor. `DF-8-5-C` closed by derivation + artifact regeneration (DN-7/DN-8: the gate's `N` is the repository corpus and `precision` is *not computed*, not zero). `DF-10-2-A` ruled with its premise corrected by measurement — Rust extracts structs, so the ledger's "zero definitions" was wrong for one of its four languages. Gates LOCAL: pytest **1560/0/0**, mypy clean 83 files, bandit 19 Low / 0 Med / 0 High. Nothing outward-facing. | Developer (dev-story) |
 | 2026-08-16 | v0.1 | Story contexted. Premises re-measured on `bc55e36`; four stale epic citations, one off-by-one, two already-satisfied action items and three dead protocol paths recorded in §0. | Scrum Master (create-story) |
