@@ -1,6 +1,6 @@
 """Story 13.1 — the VALIDATION SET: what it is, and that its figures are MEASURED.
 
-Verification areas ``TC-ArgusAgent-PRECISION-001-21``..``-29`` (the manifest — continuing the
+Verification areas ``TC-ArgusAgent-PRECISION-001-21``..``-31`` (the manifest — continuing the
 6.6 precision area, since the validation set IS the precision gate's substrate) and
 ``TC-ArgusAgent-DOGFOOD-001-53``..``-55`` (AC5 — the published figure is DERIVED). **No new
 area is opened**; both populations already exist and the story's §Testing forbids opening one
@@ -20,11 +20,18 @@ denominator, which is the "measure your own homework" failure Epic 13 exists to 
 ``-24`` asserts no cartridge id is a manifest member, in both directions.
 
 **Non-vacuity is mandatory** (the ``-39`` / ``-118`` / ``-05`` precedent). A manifest guard that
-iterates an empty tuple passes forever — and the manifest legitimately holds **zero eligible
-members** today, which is exactly the state in which a careless guard is silent. So ``-21``
-refuses an empty manifest, every closure below asserts the row count it actually examined, and
-``-27`` generates its adversarial variants **from the real members** rather than hand-writing
-them (``AI-E10-5``: the list is never the contract).
+iterates an empty tuple passes forever — and the manifest held **zero eligible members** until
+the AC3b ratification of 2026-08-16, which is exactly the state in which a careless guard is
+silent. So ``-21`` refuses an empty manifest, every closure below asserts the row count it
+actually examined, and ``-27`` generates its adversarial variants **from the real members**
+rather than hand-writing them (``AI-E10-5``: the list is never the contract).
+
+**On the ratification, and why several assertions here changed on 2026-08-16.** ``-25``,
+``-27``, ``-53`` and the artifact guard all went RED when the corpus went from 0 to 5 eligible
+members. That is the design working: they were written to fail loudly on a corpus change rather
+than absorb one silently. Each was updated **deliberately** and none was loosened — ``-25`` in
+particular now pins the ratified membership **by name**, which is strictly stronger than the
+count it replaced, because a count alone would let a fabricated member replace a real one.
 
 **Network-free by construction** (DN-5). Nothing here fetches a repository. ``-28`` proves that
 structurally with an ``ast`` closure over the manifest module rather than by assertion, because
@@ -34,6 +41,8 @@ structurally with an ``ast`` closure over the manifest module rather than by ass
 from __future__ import annotations
 
 import ast
+import json
+import re
 import sys
 import tempfile
 from dataclasses import FrozenInstanceError, fields, replace
@@ -75,6 +84,14 @@ _PROOF_ARTIFACT = (
     _REPO_ROOT / "_bmad-output" / "design-artifacts" / "ArgusAgent" / "minions-dogfood-proof.md"
 )
 _PROOF_RUN_SOURCE = _REPO_ROOT / "argus" / "dogfood" / "proof_run.py"
+_ADJUDICATION_SET = (
+    _REPO_ROOT
+    / "_bmad-output"
+    / "design-artifacts"
+    / "ArgusAgent"
+    / "validation-corpus"
+    / "adjudication-set.json"
+)
 
 
 # ─────────────────────────────────────────────────────────────────────────────────────
@@ -604,6 +621,93 @@ def _known_language_tokens() -> set[str]:
     from argus.shared.source_languages import LANGUAGE_BY_SUFFIX
 
     return set(LANGUAGE_BY_SUFFIX.values())
+
+
+def test_TC_ArgusAgent_PRECISION_001_31_the_adjudication_set_is_complete_and_carries_no_source() -> None:
+    """TC-ArgusAgent-PRECISION-001-31 — AC3b: the built corpus is adjudicable, and leaks nothing.
+
+    Driver: the committed ``validation-corpus/adjudication-set.json``. AC3b's output is what
+    Story 13.2 consumes, so the properties that make it consumable are asserted rather than
+    assumed:
+
+    (a) **every ratified member is present**, checked against the manifest rather than a list —
+        a corpus that quietly audited four of five would otherwise reach 13.2 as if complete;
+    (b) **every member is byte-reproducible across two runs**, protocol §4's precondition for
+        an adjudication being valid at all;
+    (c) **every finding carries the full ``finding_match_key`` identity and ≥1 locator** (FR13),
+        because a finding a human cannot locate is a finding they cannot judge;
+    (d) **nothing is pre-adjudicated** — the TP/FP fields are null. A runner that scored its own
+        output would have proven nothing, and this is the assertion that stops one being added;
+    (e) **NFR-S1: no audited source byte** anywhere in the artifact.
+    """
+    if not _ADJUDICATION_SET.is_file():
+        raise AssertionError(
+            f"{_ADJUDICATION_SET.relative_to(_REPO_ROOT).as_posix()} is missing. AC3b's corpus "
+            "run produces it: `python scripts/audit_validation_corpus.py --checkout-root ...`. "
+            "It is committed, not generated on demand — 13.2 adjudicates THIS artifact."
+        )
+    payload = json.loads(_ADJUDICATION_SET.read_text(encoding="utf-8"))
+    members = {m["member_id"]: m for m in payload["members"]}
+
+    ratified = {s.member_id for s in eligible_members()}
+    assert set(members) == ratified, (
+        "the adjudication set and the ratified manifest membership disagree: "
+        f"audited-only={sorted(set(members) - ratified)} "
+        f"manifest-only={sorted(ratified - set(members))}. Every eligible member must have "
+        "been audited, or 13.2 adjudicates a corpus smaller than the one N counts."
+    )
+    assert len(members) == VALIDATION_SET_FLOOR_N == 5
+
+    by_id = {s.member_id: s for s in eligible_members()}
+    total_findings = 0
+    for member_id, m in sorted(members.items()):
+        assert m["byte_reproducible_across_two_runs"] is True, (
+            f"{member_id} is not byte-reproducible across two runs. Protocol §4 makes "
+            "reproducibility the precondition for adjudication being valid — a finding that "
+            "may not reappear cannot be judged."
+        )
+        assert m["pinned_sha"] == by_id[member_id].commit_sha, (
+            f"{member_id}: the audited sha is not the manifest's pin. The run must be of the "
+            "tree the manifest names, or the adjudication describes different code."
+        )
+        assert m["source_file_count"] > 0, f"{member_id}: audited zero source files"
+        assert m["findings"], f"{member_id}: no findings recorded at all"
+
+        for finding in m["findings"]:
+            total_findings += 1
+            assert isinstance(finding["rule_id"], str) and finding["rule_id"]
+            assert isinstance(finding["verdict_eligible"], bool)
+            assert isinstance(finding["advisory"], bool)
+            assert finding["locators"], (
+                f"{member_id}: a {finding['rule_id']!r} finding carries NO locator. FR13 "
+                "requires >=1 verifiable locator on every emitted finding, and a finding a "
+                "human cannot locate is one they cannot adjudicate."
+            )
+            # (d) Nothing is pre-adjudicated. This is the human's column.
+            assert finding["adjudication"] is None, (
+                f"{member_id}: a finding arrives PRE-ADJUDICATED as "
+                f"{finding['adjudication']!r}. Classifying TP/FP is the named human's act "
+                "(protocol §2/§4); a corpus that judges itself has proven nothing — which is "
+                "the entire reason Epic 13 exists."
+            )
+            assert finding["adjudicator"] is None and finding["rationale"] is None
+
+    assert total_findings >= 100, (
+        f"only {total_findings} findings across five real repositories — implausibly few; the "
+        "run probably enumerated almost nothing and the corpus would be vacuous"
+    )
+
+    # (e) NFR-S1. The artifact may carry rule ids, booleans, `path:line` locators and counts —
+    # never audited source. Locators are checked structurally: `path:line`, no code punctuation.
+    locator_shape = re.compile(r"^[^\n]+:\d+$")
+    for m in members.values():
+        for finding in m["findings"]:
+            for locator in finding["locators"]:
+                assert locator_shape.match(locator), (
+                    f"locator {locator!r} is not a bare `path:line` reference. NFR-S1 permits "
+                    "metadata and locators only; a locator carrying source text would leak "
+                    "audited bytes into a committed artifact."
+                )
 
 
 # ─────────────────────────────────────────────────────────────────────────────────────
