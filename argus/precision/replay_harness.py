@@ -465,21 +465,48 @@ class ValidationCorpusMeasurement:
 def measure_validation_corpus() -> ValidationCorpusMeasurement:
     """MEASURE both corpora through the declared lazy edges (Story 13.1 / AC5).
 
-    Every field is read off the substrate; nothing here is a literal. Where a substrate cannot
-    be resolved — the built-distribution case (``DF-9-2-A``) — the count stays 0 AND the reason
-    is recorded, so a downstream renderer can say "not consulted" instead of publishing a zero
-    that looks like a finding. That distinction is the whole content of ``DF-8-5-C``.
+    Every field is read off the substrate; nothing here is a literal. Where a substrate is
+    **absent** — the built-distribution case (``DF-9-2-A``), which raises ``ImportError`` — the
+    count stays 0 AND the reason is recorded, so a downstream renderer can say "not consulted"
+    instead of publishing a zero that looks like a finding. That distinction is the whole
+    content of ``DF-8-5-C``.
+
+    **Absence is not the same as breakage, and only absence is tolerated** (code-review R2). A
+    substrate that exists but raises anything other than ``ImportError`` — a malformed manifest
+    row, an API drift, a ``TypeError`` — is a defect in the corpus data itself, and it
+    **propagates**. Reporting it as "not consulted" would convert a data-integrity failure into
+    a benign note inside the very artifact this module exists to keep honest.
+
+    **What the caller must handle:** ``floor_n`` is ``None`` when the locked floor could not be
+    resolved at all. There is no honest default — the floor is the gate's own threshold — so a
+    caller that needs it must fail loudly and say why. See
+    :func:`argus.dogfood.proof_run.derive_gate_status`, which raises a typed error rather than
+    letting a second registry lookup surface a bare ``ImportError`` from deep in the stack.
     """
     reasons: list[str] = []
 
+    # THREE INDEPENDENT RESOLUTIONS, THREE INDEPENDENT try BLOCKS (code-review R2).
+    #
+    # These were originally two blocks, and the manifest block ALSO resolved the floor via
+    # ``manifest.validation_floor_n()`` — which routes through ``registry_module()``. So a
+    # failure of the CARTRIDGE registry was caught by the MANIFEST's handler: the result
+    # reported ``validation_set_available=False`` and blamed the manifest, while
+    # ``validation_set_n`` still held the real, already-measured count. ``corpus_note()`` then
+    # rendered "the repository corpus manifest was NOT CONSULTED by this run" beside a number
+    # that had in fact been consulted. A published figure contradicting its own provenance note
+    # is precisely the ``DF-8-5-C`` failure class this module exists to close, reproduced inside
+    # the fix for it. Each substrate now fails only for itself.
+    #
+    # ONLY ``ImportError`` means "absent". Anything else means the substrate EXISTS and is
+    # BROKEN — e.g. ``CorpusMemberSpec.__post_init__`` raising ``ValueError`` on a bad manifest
+    # row, which happens at import while ``VALIDATION_CORPUS`` is constructed. A bare
+    # ``except Exception`` reported that as ordinary absence, silently converting a data-integrity
+    # defect into a benign-looking "not consulted" note in a proof artifact. Those propagate now.
     validation_set_n = 0
     validation_set_available = True
-    floor_n: int | None = None
     try:
-        manifest = corpus_manifest_module()
-        validation_set_n = int(manifest.eligible_member_count())
-        floor_n = int(manifest.validation_floor_n())
-    except Exception as exc:  # pragma: no cover - the built-distribution path
+        validation_set_n = int(corpus_manifest_module().eligible_member_count())
+    except ImportError as exc:  # pragma: no cover - the built-distribution path
         validation_set_available = False
         reasons.append(f"repository-corpus manifest unavailable ({type(exc).__name__}: {exc})")
 
@@ -490,11 +517,17 @@ def measure_validation_corpus() -> ValidationCorpusMeasurement:
         registry = registry_module()
         recall_rows = int(registry.populated_planted_defect_count())
         recall_classes = int(registry.distinct_rule_class_count())
-        if floor_n is None:
-            floor_n = int(registry.VALIDATION_SET_FLOOR_N)
-    except Exception as exc:  # pragma: no cover - the built-distribution path
+    except ImportError as exc:  # pragma: no cover - the built-distribution path
         recall_available = False
         reasons.append(f"cartridge registry unavailable ({type(exc).__name__}: {exc})")
+
+    # The locked floor is resolved from the registry DIRECTLY — it is the single source (DN-3),
+    # and reading it here rather than through the manifest is what removes the coupling above.
+    floor_n: int | None = None
+    try:
+        floor_n = int(registry_module().VALIDATION_SET_FLOOR_N)
+    except ImportError as exc:  # pragma: no cover - the built-distribution path
+        reasons.append(f"locked floor unresolvable ({type(exc).__name__}: {exc})")
 
     return ValidationCorpusMeasurement(
         validation_set_n=validation_set_n,

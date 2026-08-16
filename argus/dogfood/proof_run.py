@@ -612,10 +612,13 @@ def derive_gate_status() -> str:
     as **floor met** for a gate the cartridges do not gate at all. Story 13.1 / DN-1 decided the
     **PRD governs**: the ≥80% externalization gate is measured over a corpus of *real
     repositories*, while the cartridges measure **recall** (FR20). So ``n`` is the ELIGIBLE
-    member count of the REPOSITORY corpus — measured, and currently **0** — and the cartridge
-    substrate is reported alongside it with its role named. The published number is the same
-    ``0`` it always was; the difference is that it is now a measurement of a named population
-    instead of a literal, and it says which population it counts.
+    member count of the REPOSITORY corpus — **measured on every call, and deliberately not
+    quoted here** — and the cartridge substrate is reported alongside it with its role named.
+
+    This paragraph used to say the count was *"currently 0"*. That was true when written and
+    false four commits later, once AC3b ratified five members: a hand-written figure going stale
+    inside the docstring of the function that exists to stop hand-written figures going stale
+    (code-review R1). The count lives in the manifest and is read from there on every call.
 
     ``precision`` is ``None`` — *not computed by this run* — because that is the truth: this
     generator audits a repository and never invokes the replay harness. Saying "zero" was a
@@ -631,6 +634,22 @@ def derive_gate_status() -> str:
     to teach the guard about docstrings.)
     """
     measurement = measure_validation_corpus()
+    if measurement.floor_n is None:
+        # Code-review R4. `precision_gate_status_for` resolves a None floor by calling
+        # `registry_module()` again — which, in the only state that produces a None floor, has
+        # just failed. The operator would have seen a bare ImportError surfacing from a second
+        # lookup two frames deep, with nothing connecting it to the real cause. Failing loudly
+        # is right (there is no honest default for the gate's own threshold: inventing 5 would
+        # publish an unmeasured constant, which is DF-8-5-C again), but it must fail SAYING SO.
+        raise DogfoodProofError(
+            "the locked validation-set floor could not be resolved from any substrate, so this "
+            "run cannot state the gate's threshold. Reasons: "
+            + "; ".join(measurement.unavailable_reasons or ("none recorded",))
+            + ". This is expected inside a built distribution, where tests/ is absent by design "
+            "(DF-9-2-A) — the dogfood generator is a repository-only tool and is invoked from "
+            "scripts/regenerate_dogfood_artifacts.py. No floor is assumed: publishing an "
+            "unmeasured threshold is the defect class this generator exists to prevent."
+        )
     return precision_gate_status_for(
         precision=None,
         n=measurement.validation_set_n,

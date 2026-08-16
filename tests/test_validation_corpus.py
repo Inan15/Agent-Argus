@@ -21,10 +21,11 @@ denominator, which is the "measure your own homework" failure Epic 13 exists to 
 
 **Non-vacuity is mandatory** (the ``-39`` / ``-118`` / ``-05`` precedent). A manifest guard that
 iterates an empty tuple passes forever — and the manifest held **zero eligible members** until
-the AC3b ratification of 2026-08-16, which is exactly the state in which a careless guard is
-silent. So ``-21`` refuses an empty manifest, every closure below asserts the row count it
-actually examined, and ``-27`` generates its adversarial variants **from the real members**
-rather than hand-writing them (``AI-E10-5``: the list is never the contract).
+the AC3b ratification of 2026-08-16 took it to **five** — and an empty corpus is exactly the
+state in which a careless guard is silent. So ``-21`` refuses an empty manifest, every closure
+below asserts the row count it actually examined, and ``-27`` generates its adversarial variants
+**from the real members** rather than hand-writing them (``AI-E10-5``: the list is never the
+contract).
 
 **On the ratification, and why several assertions here changed on 2026-08-16.** ``-25``,
 ``-27``, ``-53`` and the artifact guard all went RED when the corpus went from 0 to 5 eligible
@@ -109,9 +110,9 @@ def test_TC_ArgusAgent_PRECISION_001_21_the_manifest_is_populated_and_every_row_
     """
     assert VALIDATION_CORPUS, (
         "the validation-set manifest is EMPTY. Every closure in this file would iterate zero "
-        "rows and pass vacuously — which is precisely the state the corpus is in today "
-        "(zero ELIGIBLE members), so the manifest must still record the members it excludes "
-        "and why. An empty manifest is not the same fact as an empty eligible set."
+        "rows and pass vacuously. Even with zero ELIGIBLE members — the corpus state before the "
+        "AC3b ratification — the manifest must still record the members it EXCLUDES and why. "
+        "An empty manifest is not the same fact as an empty eligible set."
     )
 
     examined = 0

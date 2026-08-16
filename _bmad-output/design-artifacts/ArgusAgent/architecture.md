@@ -225,7 +225,11 @@ languages the tool claims**), Auditability (NFR-A1–3, hash-chained additive-on
   and provenance per member, with exclusions recorded in the manifest itself and the floor **derived**
   from the same `VALIDATION_SET_FLOOR_N = 5` rather than forked. **This closes the input by DECISION;
   it does not clear the gate.** Measured at resolution: **`N = 0` eligible members**, no adjudication
-  run, `protocol_cleared` never `True`. Enforced by **`tests/test_validation_set_decision.py`**
+  run, `protocol_cleared` never `True`. **Updated the same day, 2026-08-16: the operator ratified five
+  members under AC3b, so `N = 5` and the floor is MET** — the resolution-time zero is kept struck-not-
+  erased because it is the state the DECISION was taken in. Reaching the floor is one of four §5
+  conditions; the other three (the adjudication run, the ≥80% figure, zero clean-repo blocking FPs) are
+  unmet, so the gate remains **PROVISIONAL**. Enforced by **`tests/test_validation_set_decision.py`**
   (`TC-ArgusAgent-DOCS-001-73`..`-76`).
 - 🆕 **Minions-dogfood scale risk** (R5, pre-mortem) — Minions is ~70 modules; V1 audit units are
   ≤40 files/15k LOC with a 20%-deep floor. The single proof artifact risks landing as
@@ -837,7 +841,11 @@ non-deterministic LLM substrate.
   and provenance per member, with exclusions recorded in the manifest itself and the floor **derived**
   from the same `VALIDATION_SET_FLOOR_N = 5` rather than forked. **This closes the input by DECISION;
   it does not clear the gate.** Measured at resolution: **`N = 0` eligible members**, no adjudication
-  run, `protocol_cleared` never `True`. Enforced by **`tests/test_validation_set_decision.py`**
+  run, `protocol_cleared` never `True`. **Updated the same day, 2026-08-16: the operator ratified five
+  members under AC3b, so `N = 5` and the floor is MET** — the resolution-time zero is kept struck-not-
+  erased because it is the state the DECISION was taken in. Reaching the floor is one of four §5
+  conditions; the other three (the adjudication run, the ≥80% figure, zero clean-repo blocking FPs) are
+  unmet, so the gate remains **PROVISIONAL**. Enforced by **`tests/test_validation_set_decision.py`**
   (`TC-ArgusAgent-DOCS-001-73`..`-76`).
 
   **On the two-site history, which is the reason this entry is worded identically at three sites:**
@@ -1316,7 +1324,11 @@ tests/security/
   and provenance per member, with exclusions recorded in the manifest itself and the floor **derived**
   from the same `VALIDATION_SET_FLOOR_N = 5` rather than forked. **This closes the input by DECISION;
   it does not clear the gate.** Measured at resolution: **`N = 0` eligible members**, no adjudication
-  run, `protocol_cleared` never `True`. Enforced by **`tests/test_validation_set_decision.py`**
+  run, `protocol_cleared` never `True`. **Updated the same day, 2026-08-16: the operator ratified five
+  members under AC3b, so `N = 5` and the floor is MET** — the resolution-time zero is kept struck-not-
+  erased because it is the state the DECISION was taken in. Reaching the floor is one of four §5
+  conditions; the other three (the adjudication run, the ≥80% figure, zero clean-repo blocking FPs) are
+  unmet, so the gate remains **PROVISIONAL**. Enforced by **`tests/test_validation_set_decision.py`**
   (`TC-ArgusAgent-DOCS-001-73`..`-76`).
 - **Nice-to-have:** a worked envelope/cache-key example doc; a `cloc`/SAST tool-availability probe.
 

@@ -39,8 +39,10 @@ named human can adjudicate anything.
   human step this whole epic exists to reach (Story 13.2), and a runner that scored its own
   output would have proven nothing.
 
-Exit codes: ``0`` every member audited and reproducible · ``2`` a pin mismatch, a missing
-checkout, or a non-reproducible member · ``3`` an audit raised.
+Exit codes: ``0`` every member audited and reproducible · ``2`` a refusal the operator must act
+on (a malformed ``--map``, an absolute mapped path, a missing checkout, a pin mismatch, no
+tracked sources, or a non-reproducible member) · ``3`` an audit raised an unexpected error.
+Refusals are :class:`CorpusRefusal`, never ``SystemExit`` — see that class for why.
 """
 
 from __future__ import annotations
@@ -51,7 +53,7 @@ import subprocess
 import sys
 import tempfile
 from dataclasses import dataclass
-from pathlib import Path
+from pathlib import Path, PurePosixPath
 
 _REPO_ROOT = Path(__file__).resolve().parents[1]
 if str(_REPO_ROOT) not in sys.path:  # running as a script, not an installed console entry
@@ -107,6 +109,19 @@ class MemberRun:
     total_finding_count: int
     reproducible: bool
     findings: tuple[dict[str, object], ...]
+
+
+class CorpusRefusal(Exception):
+    """A refusal the operator must act on — reported cleanly, and mapped to exit code 2.
+
+    Code-review R5. These were ``raise SystemExit(<str>)``, which looked like it produced the
+    documented exit code 2 and did not: ``SystemExit`` carrying a string makes Python print the
+    string and exit **1**. Worse, ``SystemExit`` derives from ``BaseException``, so the
+    ``except (DogfoodProofError, Exception)`` handler in :func:`main` never caught it and the
+    ``isinstance(exc, SystemExit): raise`` line inside that handler was unreachable code that
+    read as though it were doing something. A refusal is now an ordinary exception with one
+    handler and one documented exit code.
+    """
 
 
 def _locator_strings(finding: object) -> list[str]:
@@ -181,10 +196,13 @@ def _run_member(spec: object, checkout: Path) -> MemberRun:
     pinned = spec.commit_sha  # type: ignore[attr-defined]
 
     head = _git(checkout, "rev-parse", "HEAD")
-    actual = head.stdout.decode().strip()
+    # errors="replace" matches every other git decode in this file (code-review R9). A
+    # corrupted git state should surface as a pin mismatch this script REFUSES on, not as an
+    # uncaught UnicodeDecodeError.
+    actual = head.stdout.decode("utf-8", "replace").strip()
     if head.returncode != 0 or actual != pinned:
-        raise SystemExit(
-            f"REFUSED — {member_id}: checkout {checkout} is at {actual or '<unresolvable>'}, "
+        raise CorpusRefusal(
+            f"{member_id}: checkout {checkout} is at {actual or '<unresolvable>'}, "
             f"but the manifest pins {pinned}. The pin is the precondition for the run being "
             "byte-reproducible and therefore adjudicable (protocol §4). Check out the pinned "
             "sha, or amend the manifest DELIBERATELY in a story that records why it moved."
@@ -192,7 +210,7 @@ def _run_member(spec: object, checkout: Path) -> MemberRun:
 
     sources = _tracked_sources(checkout)
     if not sources:
-        raise SystemExit(f"REFUSED — {member_id}: no tracked source files enumerated")
+        raise CorpusRefusal(f"{member_id}: no tracked source files enumerated")
 
     print(f"  {member_id}: {len(sources)} tracked source files at {pinned[:8]} — run 1/2", flush=True)
     with tempfile.TemporaryDirectory(prefix=f"argus-corpus-{member_id}-a-") as tmp_a:
@@ -264,7 +282,35 @@ def main(argv: list[str] | None = None) -> int:
     args = parser.parse_args(argv)
 
     root = Path(args.checkout_root)
-    overrides = dict(pair.split("=", 1) for pair in args.map)
+
+    # Code-review R8/R6. `dict(pair.split("=", 1) for pair in args.map)` raised a raw
+    # `ValueError: dictionary update sequence element #0 has length 1` on `--map foo`, dumping a
+    # traceback at an operator in a script where every other failure prints a clean REFUSED.
+    # And an ABSOLUTE mapped value silently escaped --checkout-root entirely, because
+    # `Path("C:/root") / "D:/elsewhere"` is `D:/elsewhere` — pathlib discards the left operand.
+    # The metavar promised RELATIVE_PATH; nothing enforced it. Both are refusals now.
+    overrides: dict[str, str] = {}
+    for pair in args.map:
+        if "=" not in pair:
+            print(
+                f"REFUSED — --map {pair!r} is not MEMBER_ID=RELATIVE_PATH (no '=' found)",
+                file=sys.stderr,
+            )
+            return 2
+        member_id, _, rel = pair.partition("=")
+        if not member_id.strip() or not rel.strip():
+            print(f"REFUSED — --map {pair!r} has an empty member id or path", file=sys.stderr)
+            return 2
+        if PurePosixPath(rel.replace("\\", "/")).is_absolute() or Path(rel).is_absolute():
+            print(
+                f"REFUSED — --map {pair!r} names an ABSOLUTE path. It must be relative to "
+                "--checkout-root: pathlib discards the root when the right operand is "
+                "absolute, so an absolute value would silently audit a tree outside the "
+                "directory the operator scoped this run to.",
+                file=sys.stderr,
+            )
+            return 2
+        overrides[member_id.strip()] = rel.strip()
 
     manifest = corpus_manifest_module()
     members = [s for s in manifest.eligible_members() if not args.only or s.member_id in args.only]
@@ -276,7 +322,11 @@ def main(argv: list[str] | None = None) -> int:
     runs: list[MemberRun] = []
     for spec in members:
         checkout = root / overrides.get(spec.member_id, spec.member_id)
-        if not (checkout / ".git").is_dir():
+        # `.exists()`, not `.is_dir()` (code-review R7): in a git WORKTREE or a SUBMODULE, `.git`
+        # is a plain FILE containing a `gitdir:` pointer. Both are fully valid repositories, and
+        # `is_dir()` refused them as "no git checkout" — which would have blocked an operator
+        # who staged the corpus with `git worktree add`, for no real reason.
+        if not (checkout / ".git").exists():
             print(
                 f"REFUSED — {spec.member_id}: no git checkout at {checkout}. This runner never "
                 "clones (the AC3b escalation): point --map at an existing checkout.",
@@ -285,9 +335,10 @@ def main(argv: list[str] | None = None) -> int:
             return 2
         try:
             runs.append(_run_member(spec, checkout))
-        except (DogfoodProofError, Exception) as exc:  # noqa: BLE001 - reported, never swallowed
-            if isinstance(exc, SystemExit):
-                raise
+        except CorpusRefusal as exc:
+            print(f"REFUSED — {exc}", file=sys.stderr)
+            return 2
+        except Exception as exc:  # noqa: BLE001 - reported with its type, never swallowed
             print(f"AUDIT FAILED — {spec.member_id}: {type(exc).__name__}: {exc}", file=sys.stderr)
             return 3
 
@@ -347,14 +398,36 @@ def main(argv: list[str] | None = None) -> int:
         blocking = [f for f in r.findings if f["verdict_eligible"]]
         grand_total += len(blocking)
         lines += [
-            f"## {r.member_id} — {len(blocking)} blocking",
+            f"## {r.member_id} — {len(blocking)} blocking" + ("" if r.reproducible else "  ⛔ WITHHELD"),
             "",
             f"Pin `{r.pinned_sha}` · {r.primary_language} · {r.source_file_count} source files "
             f"· verdict `{r.verdict}` (exit {r.exit_code}) · deep {r.deep_ratio}",
             "",
         ]
+        if not r.reproducible:
+            # Code-review R3. Findings are WITHHELD for a non-reproducible member (correct —
+            # protocol §4 makes reproducibility the precondition for adjudication). But the
+            # empty list then rendered as "0 blocking / nothing to adjudicate", byte-identical
+            # to a genuinely clean member, and was written to disk BEFORE the exit-2 fired. A
+            # human reading the artifact rather than the process exit code was told the member
+            # was clean. "Withheld" and "clean" are opposite facts and must never render alike.
+            lines += [
+                f"> ⛔ **FINDINGS WITHHELD — this member is NOT byte-reproducible.** Its two "
+                f"runs disagreed, so protocol §4's determinism precondition is unmet and its "
+                f"findings cannot be validly adjudicated. It reported "
+                f"{r.blocking_finding_count} blocking / {r.total_finding_count} total findings "
+                f"on the first run; those identities are deliberately ABSENT from this worklist "
+                f"and from `adjudication-set.json`. **This is not a clean member.** Do not "
+                f"adjudicate it and do not count it toward N until the run is reproducible.",
+                "",
+            ]
+            continue
         if not blocking:
-            lines += ["_No blocking finding. Nothing to adjudicate for this member._", ""]
+            lines += [
+                "_No blocking finding, and this member IS byte-reproducible — genuinely nothing "
+                "to adjudicate._",
+                "",
+            ]
             continue
         lines += ["| # | rule_id | locator | TP/FP | adjudicator | rationale |", "|---|---|---|---|---|---|"]
         for i, f in enumerate(blocking, 1):

@@ -22,8 +22,9 @@ Measures             **Recall** — did we find what we hid?        **Precision*
 Denominator          Golden keys the team authored                Findings the tool emitted on
                                                                   code nobody planted
 Gates externalizing  **No**                                       **Yes** — the ≥80% gate
-Status               Delivered, CI-asserted (FR20)                **Built here; empty of eligible
-                                                                  members until 13.2 adjudicates**
+Status               Delivered, CI-asserted (FR20)                **Built here; POPULATED to N=5
+                                                                  by the AC3b ratification,
+                                                                  awaiting 13.2's adjudication**
 ===================  ==========================================  ==============================
 
 **Story 13.1 decided the PRD governs** (2026-08-16). The alternative — letting the protocol
@@ -299,12 +300,17 @@ class CorpusMemberSpec:
 # ─────────────────────────────────────────────────────────────────────────────────────────────
 # THE MANIFEST. A member that is not here is not in N.
 #
-# It holds ZERO eligible members today, and that is the honest state Story 13.1 hands to 13.2 —
-# not an omission. AC3b (populating it to N ≥ 5 from independent repositories) is gated on one
-# explicit operator ratification, because choosing which repositories are legitimate members and
-# fetching third-party source are operator acts, not autonomous ones. Fabricating plausible
-# repository names to make a count look met would be the worst available outcome in the story
-# that defines the corpus.
+# It holds FIVE eligible members. It held ZERO until the AC3b ratification of 2026-08-16, and
+# that zero was the honest state up to that point — AC3b (populating it to N ≥ 5 from independent
+# repositories) is gated on one explicit operator ratification, because choosing which
+# repositories are legitimate members and fetching third-party source are operator acts, not
+# autonomous ones. Fabricating plausible repository names to make a count look met would have
+# been the worst available outcome in the story that defines the corpus, so the manifest stayed
+# empty and said so until a named human ratified it.
+#
+# REACHING THE FLOOR IS NOT CLEARING THE GATE. N ≥ 5 is one of four §5 conditions; the
+# adjudication run, the ≥80% figure and the zero-clean-repo-blocking-FP condition are all still
+# outstanding, and `protocol_cleared` has never been `True`.
 #
 # The two rows below are the RECORDED EXCLUSIONS AC3a requires to live in the manifest itself
 # rather than in prose elsewhere. The third exclusion — the cartridges — is not a row at all:

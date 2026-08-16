@@ -4082,3 +4082,87 @@ rewritten, and every entry below states what was MEASURED rather than what was a
   (`registry_module()` / `corpus_manifest_module()`). `TC-ArgusAgent-PRECISION-001-29` asserts no
   `argus/**` module imports either at module level, which is the seam
   `tests/test_built_distribution.py::-20` would otherwise catch only after a wheel was built.
+---
+
+## Story 13.1 code-review correction — 2026-08-16
+
+Raised by code review iteration 1 (three adversarial layers, all three independently). Appended
+per §3.4: nothing above is rewritten, including the entry this note corrects.
+
+### Corrected by this note
+
+- **`DF-13-1-A` — the entry above is FACTUALLY WRONG as of HEAD, and the correction is appended
+  rather than applied in place.** It reads *"the validation-set manifest is SPECIFIED and EMPTY;
+  populating it is an operator act that has not been performed … the manifest holds **zero**
+  eligible members and says so everywhere it is reported."* **That was true when it was filed and
+  false four commits later, in the same story.** Measured at HEAD: `eligible_member_count()`
+  returns **5** and `meets_validation_floor()` returns **True**.
+  - **What actually happened.** The entry was written while AC3b was still escalated. The operator
+    (XAgent007) then **ratified five members** — `ai-body-runtime`, `agent-markovich`, `minions`,
+    `xagents-webapp`, `agent-smith` — each measured before admission and audited through the
+    unmodified `run_audit_detailed` (commit `1518cf2`, then `1d044af`). All five are
+    **byte-reproducible across two runs**. **31 blocking findings** (24 `minions` + 7
+    `agent-smith`, every one `vacuous_test_ast`) are emitted adjudication-ready, nothing
+    pre-adjudicated.
+  - **`DF-13-1-A` is therefore CLOSED**, not merely corrected: the act it was filed to track —
+    the operator ratification and the corpus build — was performed. What remains is Story 13.2's
+    human adjudication, which is `DF-7-2-A` / `DF-6-6-A`'s territory and was never this entry's.
+  - **The defect class, named plainly, because it is this project's dominant one.** A
+    hand-written figure went stale inside the story that closed `DF-8-5-C` — a defect defined as
+    *a hand-written figure diverging from measured reality*. The **derived** surfaces
+    (`minions-dogfood-proof.md`, the manifest, the gate status) all tracked the change correctly
+    and needed no edit; only the prose rotted. That is the story's own thesis demonstrating
+    itself in both directions at once.
+  - **Worst detail, and the reason this is filed rather than quietly fixed:**
+    `tests/test_validation_set_decision.py` **required** the literal string `N = 0 eligible
+    members` to appear in `prd.md`. A guard written to protect the record was enforcing the
+    falsehood and holding the suite green over it. `TC-ArgusAgent-DOCS-001-75` now **derives**
+    the count from the manifest and fails if any document disagrees with the live corpus — so
+    ratifying a sixth member turns it red until the documents are updated.
+  - **Corrected in the same change, all struck-not-erased:** `prd.md` (§Measurable Outcomes and
+    the open-inputs table), `precision-validation-protocol.md` §5 + a **V1.2** change-log row,
+    `architecture.md` at **all three** resolution sites (identically — `-73` counts them), and
+    four stale docstrings in `tests/corpus/_manifest.py`, `argus/dogfood/proof_run.py` and
+    `tests/test_validation_corpus.py`.
+  - id: DF-13-1-A
+  - status: **CLOSED 2026-08-16** — ratified, populated, audited. Superseding the "OPEN, owned"
+    state recorded above.
+  - owner: Engineering Lead (XAgent007) — unchanged
+  - cross-reference: `DF-7-2-A` / `DF-6-6-A` / `-P1` / `-P2` (the human adjudication, still OPEN
+    and now with a real population to adjudicate); `DF-8-5-C` (closed earlier in this story — the
+    defect class this correction is an instance of)
+
+### Also corrected by this review, in code rather than prose
+
+- **`argus/precision/replay_harness.py::measure_validation_corpus` conflated two substrates.**
+  `validation_floor_n()` routes through `registry_module()`, so a **cartridge-registry** failure
+  was caught by the **manifest's** handler: the result reported `validation_set_available=False`
+  and blamed the manifest while `validation_set_n` still carried the real measured count, and
+  `corpus_note()` rendered *"the repository corpus manifest was NOT CONSULTED by this run"*
+  beside a number that had been consulted. **A published figure contradicting its own provenance
+  note is `DF-8-5-C` reproduced inside the fix for `DF-8-5-C`.** Split into three independent
+  `try` blocks, and the floor is now read from the registry directly (DN-3's single source),
+  which removes the coupling entirely. **Not filed as a new ledger id** because it is closed in
+  the same change that found it.
+- **The same handler caught `Exception`, not `ImportError`.** A malformed manifest row raises
+  `ValueError` from `CorpusMemberSpec.__post_init__` at import time; that was being reported as
+  ordinary "not consulted" absence, silently converting a data-integrity defect into a benign
+  note in a proof artifact. Only `ImportError` now means absent; everything else propagates.
+- **`scripts/audit_validation_corpus.py` rendered a WITHHELD member as a CLEAN one.** Findings
+  from a non-byte-reproducible member are withheld (correct, protocol §4) — but the worklist then
+  folded an empty list and wrote *"0 blocking / Nothing to adjudicate"*, byte-identical to a
+  genuinely clean member, **and persisted it before the exit-2 fired**. A human reading the
+  artifact rather than the process exit code was told a member was clean when its findings had
+  been suppressed. Now renders an explicit `⛔ FINDINGS WITHHELD` block naming the first-run
+  counts and stating it is *not* a clean member.
+
+> **Note on this file''s diff numstat, recorded rather than glossed (2026-08-16).** `git diff
+> --numstat` reports **-1** for this append. **No ledger content was erased** — verified by
+> `git diff --word-diff`, which shows additions only, and the affected line
+> (*"…`tests/test_built_distribution.py::-20` would otherwise catch only after a wheel was
+> built."*) is present and byte-identical. The `-1` is the **newline-at-end-of-file marker**:
+> Story 13.1''s first append left the file without a trailing newline, so the next append
+> necessarily touched that last line. A trailing newline has now been added so subsequent
+> appends are clean `+n / -0`. Recorded because AC6 states a mechanical `+n / -0` rule, and
+> quietly reporting a number that does not match what `git` prints is the exact habit this
+> ledger exists to prevent.

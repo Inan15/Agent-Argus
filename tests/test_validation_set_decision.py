@@ -30,7 +30,12 @@ behaviour is held by ``tests/test_validation_corpus.py``.
 
 from __future__ import annotations
 
+import sys
 from pathlib import Path
+
+sys.path.insert(0, str(Path(__file__).resolve().parent / "corpus"))
+
+from _manifest import eligible_member_count  # noqa: E402
 
 _REPO_ROOT = Path(__file__).resolve().parents[1]
 _ARTIFACT_DIR = _REPO_ROOT / "_bmad-output" / "design-artifacts" / "ArgusAgent"
@@ -84,7 +89,13 @@ _RESOLUTION_CLAUSES: tuple[tuple[str, str], ...] = (
     ),
     (
         "`N = 0` eligible members",
-        "the measured state at resolution, so a later reader can tell whether it moved",
+        "the measured state AT RESOLUTION, kept struck-not-erased so a later reader can tell "
+        "the corpus moved rather than finding a number that was quietly overwritten",
+    ),
+    (
+        "the operator ratified five members under AC3b",
+        "the state AFTER ratification. Recording only the resolution-time zero is what made "
+        "this document stale within the same story (code-review R1)",
     ),
     (
         "tests/test_validation_set_decision.py",
@@ -200,12 +211,30 @@ def test_TC_ArgusAgent_DOCS_001_75_both_documents_record_which_governs_and_which
             "tests/corpus/_manifest.py",
             "the PRD points at where membership is now decided",
         ),
-        ("N = 0 eligible members", "the measured state, not an aspiration"),
     ):
         assert _flatten(required) in prd, (
             f"prd.md does not record {required!r} — {why}. AC1 requires the decision in BOTH "
             "documents, dated and reasoned."
         )
+
+    # THE MEASURED STATE IS DERIVED, NEVER TRANSCRIBED (code-review R1).
+    #
+    # This assertion used to be a literal: `("N = 0 eligible members", "the measured state, not
+    # an aspiration")`. It was true when written and false eight commits later, because AC3b
+    # ratified five members and only the DERIVED surfaces followed. The guard did not merely
+    # fail to notice — it REQUIRED the stale string to remain, so correcting the PRD would have
+    # turned the suite red. A guard that pins a measurement as a literal is the exact defect
+    # `DF-8-5-C` names, and it had been reproduced inside the story that closed it.
+    #
+    # It now reads the live count and requires the document to agree with it. Ratify a sixth
+    # member and this goes red until the PRD is updated — which is the whole point.
+    live_n = eligible_member_count()
+    assert f"N = {live_n} eligible members" in prd or f"N = {live_n}" in prd, (
+        f"prd.md does not state the LIVE eligible-member count ({live_n}). The manifest is the "
+        "one named place a member exists, so the PRD's figure must be re-derived from it "
+        "whenever membership moves — never left at whatever was true when the sentence was "
+        "written. This is the DF-8-5-C rule applied to prose."
+    )
 
     for required, why in (
         ("AMENDMENT 2026-08-16 (Story 13.1)", "the amendment is dated and attributed"),

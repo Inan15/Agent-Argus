@@ -699,6 +699,89 @@ clearing conditions and does not try to.
 
 <!-- The reviewer writes findings HERE, in this file, not only into sprint-status.yaml (AI-E12-10). -->
 
+#### code-review 2026-08-16 (iteration 1) — 3 layers on Sonnet, 9 findings, 1 dismissed
+
+Layers: Blind Hunter (adversarial general) · Edge Case Hunter (path-walking) · Acceptance Auditor
+(diff vs this spec). All three ran with **no** conversation context and were told that the author's
+own Completion Notes are not evidence. **All three independently raised R1 as High** — the strongest
+possible signal, since none could see the others' output.
+
+**Verdict: CHANGES REQUESTED.** Every AC is *structurally* satisfied — the Auditor verified AC1,
+AC2, AC3a, AC3b, AC4, AC5, AC6 and every "What it is NOT" red line as met — but the story shipped a
+**stale published figure that a guard now freezes**, which is the exact defect class the story
+exists to delete.
+
+- [ ] **[Review][Patch] R1 (HIGH) — the corpus count is stale at `N = 0` in every hand-written decision document, and `-75` FREEZES it** [`tests/test_validation_set_decision.py:86`, `:203`]
+      Live truth: `eligible_member_count() == 5`, `meets_validation_floor() == True`. Still asserting
+      zero: `prd.md:196` (*"Measured 2026-08-16: N = 0 eligible members … awaiting operator
+      ratification"* — the ratification happened the same day), `precision-validation-protocol.md:191`
+      + its V1.1 change-log row, `architecture.md:227`/`:839`/`:1318` (all three resolution sites),
+      and `deferred-work.md:4036`/`:4044` (`DF-13-1-A`, *"it was **not performed**"* — flatly false).
+      Also stale in four docstrings: `tests/corpus/_manifest.py:25`/`:302`,
+      `argus/dogfood/proof_run.py:615` (*"measured, and currently 0"* — the function returns 5),
+      `tests/test_validation_corpus.py:23`/`:113`.
+      **Root cause:** AC1/AC2/AC6 were written when the corpus genuinely was empty; AC3b then
+      populated it, and only the *derived* surfaces followed. The derived artifact
+      (`minions-dogfood-proof.md`) is correct **because** it is derived — which is the story's own
+      thesis proving itself, and the prose proving the converse.
+      **Worst part:** `-75` requires the literal string `` `N = 0` eligible members `` to be present
+      in `prd.md`, so a guard written to protect the record now *enforces the falsehood* and keeps
+      the suite green. `deferred-work.md` is append-only, so `DF-13-1-A` needs a correcting appended
+      entry, never an edit.
+- [ ] **[Review][Patch] R2 (HIGH) — `measure_validation_corpus()` conflates two independent resolutions: it mislabels which substrate failed and publishes a real `n` beside "NOT CONSULTED"** [`argus/precision/replay_harness.py:478-484`]
+      `validation_floor_n()` routes through `registry_module()`, so if the manifest resolves but the
+      cartridge registry does not, the single `try` reports `validation_set_n=5` **and**
+      `validation_set_available=False`, and `corpus_note()` renders *"the repository corpus manifest
+      was NOT CONSULTED by this run"* — blaming the wrong substrate while publishing a number it
+      claims not to have read. Self-contradictory output from the module written to stop exactly
+      that (`DF-8-5-C`). Confirmed by probe. Second half: the bare `except Exception` also swallows
+      `ValueError` from `CorpusMemberSpec.__post_init__`, so a genuinely broken manifest row reports
+      as ordinary absence. Both branches are `pragma: no cover`.
+- [ ] **[Review][Patch] R3 (HIGH) — a non-reproducible member renders as "0 blocking — nothing to adjudicate" and is persisted before the failure fires** [`scripts/audit_validation_corpus.py:263-266`, `:347-360`, `:366-374`]
+      Findings are withheld when `reproducible=False` (correct), but the worklist builder then folds
+      an empty list and writes *"## member — 0 blocking / No blocking finding. Nothing to adjudicate
+      for this member."* to `blocking-worklist.md` — byte-identical to a genuinely clean member — and
+      writes it to disk **before** the `non_repro` check returns exit 2. A human reading the artifact
+      rather than the exit code is actively misled about the corpus that gates externalization.
+      *(Reviewer rated Med; raised to High — an artifact that cannot distinguish "clean" from
+      "withheld" is the honesty defect this epic exists to remove.)*
+- [ ] **[Review][Patch] R4 (MED) — `floor_n=None` crashes with a re-raised `ImportError` instead of the degradation its docstring promises** [`argus/precision/replay_harness.py:554`]
+      `measure_validation_corpus()` documents that an unresolvable substrate is *recorded*, not
+      fatal; `precision_gate_status_for` then does `registry_module().VALIDATION_SET_FLOOR_N if
+      floor_n is None`, re-raising uncaught. Failing loudly is the right behaviour here — but the
+      docstring must say so, and the failure should be typed and explained rather than a bare import
+      error surfacing from a second lookup.
+- [ ] **[Review][Patch] R5 (MED) — the documented exit-code contract is wrong; the `SystemExit` handler is dead code** [`scripts/audit_validation_corpus.py:184-195`, `:284-290`]
+      `SystemExit` derives from `BaseException`, so `except (DogfoodProofError, Exception)` never
+      catches it and `if isinstance(exc, SystemExit): raise` can never run. `raise SystemExit(<str>)`
+      exits **1**, while the module docstring documents **2** for a pin mismatch or a missing
+      checkout. Verified by probe. Raised independently by two layers.
+- [ ] **[Review][Patch] R6 (MED) — `--map id=<absolute path>` silently escapes `--checkout-root`** [`scripts/audit_validation_corpus.py:267`, `:290`]
+      `Path("C:/root") / "D:/elsewhere"` → `D:\elsewhere` (pathlib discards the left operand on an
+      absolute right). The metavar promises `RELATIVE_PATH` and nothing enforces it. The pin check
+      still runs, so a wrong tree is usually caught — but the audited location is unconstrained.
+- [ ] **[Review][Patch] R7 (MED) — `.git`-as-a-file checkouts (git worktrees, submodules) are refused as "no git checkout"** [`scripts/audit_validation_corpus.py:279`]
+      `(checkout / ".git").is_dir()` is `False` for a worktree or submodule, both fully valid
+      repositories. Would have blocked the operator for a legitimate layout.
+- [ ] **[Review][Patch] R8 (LOW) — `--map` without `=` dumps a raw traceback** [`scripts/audit_validation_corpus.py:267`]
+      `dict(pair.split("=", 1) ...)` raises `ValueError: dictionary update sequence element #0 has
+      length 1`. Every other failure path in this script prints a clean `REFUSED —`.
+- [ ] **[Review][Patch] R9 (LOW) — `head.stdout.decode()` lacks `errors="replace"`** [`scripts/audit_validation_corpus.py:184`]
+      Inconsistent with `_tracked_sources`, which tolerates bad bytes. Only bites on corrupted git
+      state, but the inconsistency is the kind that outlives the reason for it.
+
+**Dismissed as noise (1):** `architecture.md` at 1354 lines against NFR-M1's 1200-line ceiling —
+NFR-M1's population is `git ls-files -- '*.py'` (`tests/test_module_size_ceiling.py:156`); markdown
+is outside its stated scope. The Auditor flagged and self-cleared this.
+
+**Explicitly cleared by the Auditor, verified against the tree rather than the story's prose:** the
+resolution paragraph is byte-identical at all three architecture sites; the floor is derived, never
+forked (checked by `ast` walk); `deferred-work.md` is `+166/-0`; `tests/cartridges/_registry.py` is
+untouched; 0 of 6018 findings are pre-adjudicated; no source byte appears under `tests/corpus/` or
+`validation-corpus/`; `protocol_cleared=True` appears in no production module; thresholds unmoved;
+`git tag -l` empty and nothing pushed. The Blind Hunter separately re-verified the DN-6 grammar
+claims against the real `tree-sitter-rust`/`-c` grammars and confirmed them accurate, not overstated.
+
 ## Change Log
 
 | Date | Version | Description | Author |
