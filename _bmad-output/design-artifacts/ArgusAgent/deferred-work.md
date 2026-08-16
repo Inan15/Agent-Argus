@@ -3916,3 +3916,169 @@ cannot suppress one.
 - **`DF-3-4-A`**, **`DF-10-5-C`**, **`DF-12-7-A`**, **`DF-10-3-B`**, **`DF-10-3-C`** — cited by Story
   12.9 and untouched here. This follow-up adds no capability and closes none of them; a gap filed
   twice is a gap that gets closed once and left looking open (12.7's rule).
+
+---
+
+## Story 13.1 closure + progress notes — 2026-08-16
+
+Story 13.1 (*Decide what the validation set is, then build it*) — the corpus DECISION and the
+manifest that makes Story 13.2's adjudication possible. Append-only per §3.4: nothing above is
+rewritten, and every entry below states what was MEASURED rather than what was assumed.
+
+### Closed by this story
+
+- **`DF-8-5-C` — CLOSED 2026-08-16 against evidence.** The generator no longer passes a literal
+  corpus figure. `argus/dogfood/proof_run.py` now calls the new `derive_gate_status()`, which
+  reads both corpora through `argus.precision.replay_harness.measure_validation_corpus()` and
+  renders the result; `minions-dogfood-proof.md` was regenerated through its own renderer
+  (`scripts/regenerate_dogfood_artifacts.py` at `59a2ad4`), never hand-edited.
+  - **Guarded:** `TC-ArgusAgent-DOGFOOD-001-53` (the measurement equals an independent fold over
+    both tables), `-54` (the committed artifact carries the LIVE derivation, verbatim), `-55`
+    (the literals cannot return: an `ast` read of the call site, plus the harness now RAISING on
+    `precision=None, provisional=False`). **RED-first discharged at the real seam** — reverting
+    the call site to `precision=Fraction(0, 1), n=0` turns `-54` and `-55` RED; restoring turns
+    them green.
+  - **⚠️ NOT closed the way the entry proposed, and the divergence is deliberate.** This entry's
+    close condition said *"pass the measured `distinct_rule_class_count()` /
+    `populated_planted_defect_count()`"* — i.e. publish `n=7`. That was written before Story 13.1
+    took the DN-1 decision, and following it literally would have published *"N=7 … floor N=5"*,
+    which reads as **floor MET** for a gate the cartridges do not gate at all. That is a worse
+    published statement than the one it replaced, and in the **over-claiming** direction rather
+    than the understating one. Under DN-1 the gate's `N` is the **repository** corpus, measured
+    at **0**, and the cartridge substrate (7 populated rows / 5 distinct rule classes, measured
+    live) is reported beside it with its role named. **The published number is the same `0` it
+    always was; what changed is that it is now a measurement of a named population instead of a
+    literal.** The `precision` argument became `None` — *"NOT COMPUTED BY THIS RUN"* — because
+    that is the truth: this generator audits a repository and never invokes the replay harness.
+    `precision=0/1` was the stronger, false claim that it had been measured and found to be zero.
+  - **The direction of the original error is preserved as the entry recorded it:** the literal
+    `n=0` UNDERSTATED the cartridge corpus, so nothing published was ever an over-claim and no
+    gate was ever made to look cleared. It is nonetheless a hand-written number in a proof
+    artifact *about the very gate this epic measures*, and it survived five epics inside the
+    generator that exists to prevent exactly that.
+  - **Tracker citation corrected while closing (AI-E12-3 / AI-E12-6).** Three documents cited
+    this one defect at three different lines: `epics.md` and the tree agree on
+    `proof_run.py:643-644`; `sprint-status.yaml` said `:764-765`, which **does not exist** — the
+    file was 611 lines. The `:764-765` figure appears in this ledger at `:944` and `:1619` too.
+    Those lines are NOT rewritten (§3.4); the correct citation is recorded here instead.
+
+### Progress notes — NOT closed, and the target they adjudicate has moved
+
+- **`DF-6-6-A` / `-P1` / `-P2` / `DF-7-2-A` — all four stay OPEN and are NOT rewritten.** They
+  are the HUMAN half (the Eng-Lead + QA-Lead TP/FP adjudication), owned by **XAgent007**, and
+  Story 13.1 is autonomous by design — a story that adjudicates its own corpus has proven
+  nothing. This note records **which corpus each now adjudicates**, because Story 8.5 already
+  moved that target once without telling them (`deferred-work.md:813-839`) and this story moves
+  it again — this time deliberately, and this time recorded.
+  - **The target is now the REPOSITORY corpus**, `tests/corpus/_manifest.py::VALIDATION_CORPUS`,
+    per Story 13.1 / DN-1: the PRD governs, so the ≥80% gate is measured over real repositories
+    and `precision-validation-protocol.md` §5's cartridge floor is struck.
+  - **What that means for each:** the adjudication these entries describe is no longer performed
+    over cartridge findings at all. `DF-6-6-A`'s "grow the corpus to N=5 distinct classes" was
+    **satisfied for the cartridges** (5 classes across 7 rows, measured) and that satisfaction
+    **does not advance the gate** — it is now recorded as recall evidence (FR20). `DF-7-2-A`'s
+    adjudication over the 7.2 dogfood findings is **unperformable as written**: that run *"can
+    never be re-derived in this repository"*, which is why it is recorded in the manifest as
+    `provenance: superseded`, `eligible_for_n: False`.
+  - **What actually discharges them:** Story 13.2, adjudicating the findings from the members
+    ratified under Story 13.1 / AC3b. **AC3b was NOT performed** (see below), so the population
+    those entries will be adjudicated over does not yet exist. None of the four is closable
+    until it does.
+
+### Ruled on, as `AI-E9-8` requires (a named human, never `target_story: NONE` alone)
+
+- **`DF-10-2-A` — RULED 2026-08-16. Decided as a CORPUS-ELIGIBILITY rule, not as a detector
+  story** (Story 13.1 / DN-6). Four consecutive retrospectives named it critical-path
+  (`AI-E10-4` → `AI-E11-7` → `AI-E12-9`) with `target_story: NONE`, and `AI-E11-7` said what was
+  needed was *"a dated decision, not an implementation"*. This is that decision.
+  - **The rule:** a validation-set member whose `primary_language` cannot support `audited_deep`
+    grounding **cannot count toward N**. It is enforced where the row is CONSTRUCTED —
+    `CorpusMemberSpec.__post_init__` raises — so it cannot be skipped at a call site, and it is
+    guarded by `TC-ArgusAgent-PRECISION-001-26` / `-27` / `-30`.
+  - **⚠️ MEASURED CORRECTION to this entry's own premise, recorded rather than inherited.** The
+    entry states that C, C++, Ruby **and Rust** *"ground cleanly and extract zero definitions"*.
+    Re-measured 2026-08-16 by executing `build_ast_index` over a probe file per language at the
+    pinned grammar versions: **three of the four hold; Rust does not.** Rust extracts its
+    `struct_item` and misses only functions, because the extractor's vocabulary entry is
+    `fn_item` — **a node type `tree-sitter-rust` does not emit** (the emitted one is
+    `function_item`), so that entry matches nothing. Per-language mechanisms, all measured:
+    **C** (0 defs) and **C++** (0 defs) — `function_definition` IS in the vocabulary, but a C/C++
+    function carries its name under a `declarator` field while `_node_name` reads `name` only, so
+    every definition is matched and then dropped for having no name; C++ classes are
+    `class_specifier`, absent from the vocabulary. **Ruby** (0 defs) — a pure vocabulary gap: its
+    nodes are `method` and `class`, the extractor knows `method_definition` / `class_definition`.
+  - **Rust stays ineligible**, on the narrower and correct ground: a member whose FUNCTIONS can
+    never be grounded cannot support the `audited_deep` claims the gate is about, and admitting
+    it on the strength of struct extraction alone is the over-claim OI1 forbids.
+  - **The underlying detector gap is NOT fixed here and is NOT claimed to be.** Fixing it means
+    editing `_DEF_KIND_BY_NODE` and `_node_name` in `argus/index/ast_index.py`, which no Story
+    13.1 AC owns, and which would change grounding results across four languages — a behaviour
+    change that belongs to a story that says so. `AST_INELIGIBILITY_REASONS` records the measured
+    mechanism per language so the eventual fix has a starting point rather than a slogan.
+  - **The eligibility rule is self-retiring:** `TC-ArgusAgent-PRECISION-001-30` re-measures the
+    zero-extraction set on every run and FAILS if it moves, in both directions — so a language
+    that starts extracting definitions cannot stay banned by inertia, and a language that stops
+    cannot silently become eligible.
+  - id: DF-10-2-A
+  - owner: **Engineering Lead (XAgent007)** — unchanged; the ruling is recorded, not re-homed
+  - target_story: **13-1-decide-what-validation-set-is-then-build-it** for the CORPUS-ELIGIBILITY
+    half (ruled here, dated, guarded). The **detector half** — making C / C++ / Ruby / Rust
+    extract definitions — remains **unscheduled with a named owner (XAgent007)**, deliberately
+    not asserted onto a story id (`AI-E9-8`), because it is a multi-language grounding change
+    rather than corpus work.
+  - status: **corpus half CLOSED; detector half OPEN, owned, unscheduled**
+
+### Filed by this story
+
+- **`DF-13-1-A`** — **the validation-set manifest is SPECIFIED and EMPTY; populating it is an
+  operator act that has not been performed.** Story 13.1 / AC3b requires N ≥ 5 independent
+  repositories staged at pinned shas and audited through the unmodified
+  `pipeline.run_audit_detailed`. It was **not performed**, and the story's own ESCALATION
+  designates that a legitimate terminal state (the Story 12.9 / AC9 precedent) for two reasons
+  that are both operator judgements rather than development work: **(1) which repositories** —
+  licence, provenance and independence are calls with an accountable owner, and the manifest is
+  a *proposal* until ratified; **(2) fetching** — cloning external code is a network act against
+  third-party hosts, performed on the operator's machine.
+  **Deliberately NOT worked around.** Populating the manifest with plausible repository names to
+  make a count look met would be a fabricated corpus in the story that defines the corpus — the
+  worst available outcome — so the manifest holds **zero** eligible members and says so
+  everywhere it is reported.
+  - id: DF-13-1-A
+  - origin_story: 13-1-decide-what-validation-set-is-then-build-it
+  - owner: **Engineering Lead (XAgent007)** — the same named human the protocol §2 designates as
+    primary adjudicator and whom `sprint-status.yaml:414`/`:416` already name
+  - target_story: **13-1 AC3b on ratification** — the specification, the guards and the derived
+    floor are all delivered and committed; what is outstanding is the single ratification act
+    plus the staging it authorises. It is NOT re-homed to 13.2, because 13.2 adjudicates a
+    populated corpus and cannot begin without one.
+  - category: corpus (a specified population awaiting an operator act)
+  - severity: 🟠 — it is the **critical path** to clearing the externalization gate, and Epic 13
+    is the only work in the plan that can remove the tool's provisional status. It is not 🔴
+    because nothing false is published: the gate is reported PROVISIONAL on every surface, the
+    manifest reports `N = 0` derived rather than asserted, and no over-claim exists anywhere.
+
+### Re-stated, NOT re-filed
+
+- **`AI-E10-8`** (*"`argus/pipeline.py` is 1331 lines against NFR-M1"*) — **ALREADY FIXED; the
+  action item was never told.** Re-measured 2026-08-16: **1111** lines, under the 1200 ceiling.
+  Story 12.1 closed it. **Not re-fixed here**, and recorded so the next story does not spend a
+  cycle on it. *Second-order note:* `sprint-status.yaml`'s create-story entry for this story
+  records the same file as **1005** lines. Neither figure is a typo — **1005 is what
+  `Get-Content | Measure-Object -Line` returns**, because that idiom scores an empty line as
+  zero lines and this file has 106 blank ones. The true physical count is **1111**
+  (`len(text.splitlines())`, which is what `tests/test_module_size_ceiling.py` uses). Both are
+  under the ceiling, so the conclusion is unaffected — but a 10% silent undercount is a real
+  hazard for a project whose maintainability standard is a line ceiling, and it is recorded here
+  rather than left to surprise the next person who measures on Windows.
+- **`AI-E12-1`** (*"register `epic-12-retro-2026-08-15.md` in `_STATUS_DOCUMENTS`"*) —
+  **first half ALREADY DONE**, verified at `tests/test_evidence_citation.py:125`. Not
+  re-registered. The second half (making registration part of the retrospective step's DoD)
+  remains unverified and is not this story's.
+- **`DF-12-9-A`** stays **OPEN and untouched.** Story 13.1 published **nothing**: re-verified by
+  execution at hand-off — `git tag -l` empty, and no push was performed. No release, no tag, no
+  visibility change.
+- **`DF-9-2-A`** — honoured, not closed. Both `tests/cartridges/` and the new `tests/corpus/` are
+  repository-only, and both are reached through the declared lazy edges
+  (`registry_module()` / `corpus_manifest_module()`). `TC-ArgusAgent-PRECISION-001-29` asserts no
+  `argus/**` module imports either at module level, which is the seam
+  `tests/test_built_distribution.py::-20` would otherwise catch only after a wheel was built.

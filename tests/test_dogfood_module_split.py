@@ -71,6 +71,23 @@ _PRE_SPLIT_PUBLIC_SURFACE: frozenset[str] = frozenset(
     }
 )
 
+# Names ADDED to the shim's public surface after the split, each with the story that added it
+# and why. The split guard's job is to stop the surface SHRINKING (and to stop a name becoming
+# a fork); it was never meant to freeze the module against additive growth. But growth must not
+# be SILENT either — an unrecorded new public name is how a shim quietly becomes a second API —
+# so it is admitted here as data with a reason, following the `_EXEMPT_BY_DESIGN` /
+# `_EXCLUDED_BY_DESIGN` precedent. `-45` checks this registry in BOTH directions.
+_ADDED_SINCE_SPLIT: dict[str, str] = {
+    "derive_gate_status": (
+        "Story 13.1 / AC5 (DF-8-5-C). The precision-gate status line was built INLINE inside "
+        "build_dogfood_proof from the literals `precision=Fraction(0, 1), n=0`. Deriving it "
+        "required a named function so that the guard asserting 'the rendered figure equals the "
+        "derived figure' (TC-ArgusAgent-DOGFOOD-001-54) can call the SAME composition the "
+        "generator uses, rather than reimplementing it — which would be the fork AR7 forbids "
+        "and would let the artifact and its guard drift apart while both stayed green."
+    ),
+}
+
 # The five frozen dataclasses that moved, and the module they moved to.
 _MOVED_TO_TYPES = (
     "AdjudicationRow",
@@ -137,7 +154,30 @@ def test_TC_ArgusAgent_DOGFOOD_001_45_public_import_surface_survives_the_split()
         assert name in namespace, f"`from argus.dogfood.proof_run import {name}` failed"
 
     # Non-vacuity: the surface is the real one, not an empty set that trivially passes.
-    assert len(surface) == len(_PRE_SPLIT_PUBLIC_SURFACE) == 17
+    assert len(_PRE_SPLIT_PUBLIC_SURFACE) == 17
+    assert surface >= _PRE_SPLIT_PUBLIC_SURFACE
+
+    # (d) Growth is permitted, but never SILENT. This assertion used to read
+    #     `len(surface) == 17`, which was labelled non-vacuity but also froze the module
+    #     against additive change — so the first legitimate new export (Story 13.1's
+    #     `derive_gate_status`) failed a guard whose stated purpose is to catch REMOVALS,
+    #     already checked at (a). The equality is replaced by a REGISTRY so that both
+    #     directions stay closed: an unrecorded new public name fails, and a registry entry
+    #     for a name that is no longer exported fails too, so this list cannot become a
+    #     parking lot (the `_EXEMPT_BY_DESIGN` shrinking-registry precedent).
+    added = surface - _PRE_SPLIT_PUBLIC_SURFACE
+    assert added == set(_ADDED_SINCE_SPLIT), (
+        "the shim's public surface grew or shrank without being recorded. "
+        f"unrecorded-additions={sorted(added - set(_ADDED_SINCE_SPLIT))} "
+        f"stale-registry-entries={sorted(set(_ADDED_SINCE_SPLIT) - added)}. A new public name "
+        "on a re-export shim is how a shim quietly becomes a second API — name it in "
+        "_ADDED_SINCE_SPLIT with the story that added it and why."
+    )
+    for name, reason in sorted(_ADDED_SINCE_SPLIT.items()):
+        assert len(reason.split()) >= 20, (
+            f"_ADDED_SINCE_SPLIT[{name!r}] carries no substantive reason. An addition without "
+            "a reason is an oversight wearing a decision's clothes (_PRESERVED_RECORD)."
+        )
 
 
 def test_TC_ArgusAgent_DOGFOOD_001_46_moved_names_are_reexports_not_forks() -> None:

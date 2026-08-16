@@ -203,13 +203,30 @@ languages the tool claims**), Auditability (NFR-A1–3, hash-chained additive-on
 - **Validation-set `N` must be resolved BEFORE precision-harness design** (John) — `N` + the labeling
   protocol define the harness ground-truth shape (schema, corpus, statistical floor for a defensible 80%).
   This is the one open input that gates an ARCHITECTURE choice, not merely scope.
-  ✅ **CLOSED 2026-08-10b — assigned, not answered.** It was never resolved by decision: the harness
+  ~~✅ **CLOSED 2026-08-10b — assigned, not answered.** It was never resolved by decision: the harness
   was built (Story 6.6) and `precision-validation-protocol.md` fixed `N` **implicitly** as `N ≥ 5`
   **labeled cartridges**, while PRD L161 specifies `N ≈ 5–10` **real repositories** — two corpora,
-  never reconciled. **Story 13.1 owns the adjudication** and must amend whichever document loses.
+  never reconciled. **Story 13.1 owns the adjudication** and must amend whichever document loses.~~
   *(This marker and the §Still OPEN entry are the SAME item at two sites; the 2026-08-10b proposal
   amended only the latter — recorded here because a two-site claim fixed at one site is the exact
   defect Story 10.2 exists to close.)*
+
+  ✅ **RESOLVED BY DECISION 2026-08-16 (Story 13.1 / DN-1) — the PRD governs.** *(VALIDATION-SET
+  RESOLUTION — the identical paragraph is recorded at §Still OPEN and in §Gap Analysis, so no site
+  survives saying something else.)* The validation set is **`N ≈ 5–10` real repositories** with a
+  floor of **`N ≥ 5`**, per PRD §Validation Approach; `precision-validation-protocol.md` §5's
+  conflicting **`N ≥ 5` labeled planted-defect cartridges** floor is **struck**. **Reason:** the two
+  documents specified different *quantities*, not two opinions about one — the cartridges measure
+  **recall** against defects the team planted and answered, while the gate must measure **precision**
+  on code nobody planted. A gate clearable by the team's own plants is not an externalization gate.
+  The cartridges are **re-labelled, not demoted**: they remain the FR20 recall instrument, CI-asserted
+  and unchanged. **Membership is a closed, machine-readable manifest** —
+  `tests/corpus/_manifest.py::VALIDATION_CORPUS` — carrying a pinned commit sha, licence, language
+  and provenance per member, with exclusions recorded in the manifest itself and the floor **derived**
+  from the same `VALIDATION_SET_FLOOR_N = 5` rather than forked. **This closes the input by DECISION;
+  it does not clear the gate.** Measured at resolution: **`N = 0` eligible members**, no adjudication
+  run, `protocol_cleared` never `True`. Enforced by **`tests/test_validation_set_decision.py`**
+  (`TC-ArgusAgent-DOCS-001-73`..`-76`).
 - 🆕 **Minions-dogfood scale risk** (R5, pre-mortem) — Minions is ~70 modules; V1 audit units are
   ≤40 files/15k LOC with a 20%-deep floor. The single proof artifact risks landing as
   `INSUFFICIENT_COVERAGE` ("not assessed"), leaving the strategic question ("does Minions have an audit
@@ -799,12 +816,34 @@ non-deterministic LLM substrate.
 
 ### Still OPEN (delivery-detail, not architecture-blocking)
 - ~~Validation-set `N` (gates precision-harness ground-truth shape — resolve before harness build).~~
-  **Still open, and the "resolve before harness build" condition was not met.** The harness was built
+  ~~**Still open, and the "resolve before harness build" condition was not met.** The harness was built
   (Story 6.6) and `precision-validation-protocol.md` resolved `N` **implicitly** — as `N ≥ 5` **labeled
   cartridges** — while PRD L161 specifies `N ≈ 5–10` **real repositories**. **Two corpora, never
   reconciled.** L152-154 called this *"the one open input that gates an ARCHITECTURE choice"*; it was
   closed by implementation rather than by decision. **Owned by Story 13.1**, which must pick one
-  definition and amend the other. *(Recorded 2026-08-10b.)*
+  definition and amend the other.~~ *(Recorded 2026-08-10b.)*
+
+  ✅ **RESOLVED BY DECISION 2026-08-16 (Story 13.1 / DN-1) — the PRD governs.** *(VALIDATION-SET
+  RESOLUTION — the identical paragraph is recorded at §Architectural Decisions and in §Gap Analysis,
+  so no site survives saying something else.)* The validation set is **`N ≈ 5–10` real repositories**
+  with a floor of **`N ≥ 5`**, per PRD §Validation Approach; `precision-validation-protocol.md` §5's
+  conflicting **`N ≥ 5` labeled planted-defect cartridges** floor is **struck**. **Reason:** the two
+  documents specified different *quantities*, not two opinions about one — the cartridges measure
+  **recall** against defects the team planted and answered, while the gate must measure **precision**
+  on code nobody planted. A gate clearable by the team's own plants is not an externalization gate.
+  The cartridges are **re-labelled, not demoted**: they remain the FR20 recall instrument, CI-asserted
+  and unchanged. **Membership is a closed, machine-readable manifest** —
+  `tests/corpus/_manifest.py::VALIDATION_CORPUS` — carrying a pinned commit sha, licence, language
+  and provenance per member, with exclusions recorded in the manifest itself and the floor **derived**
+  from the same `VALIDATION_SET_FLOOR_N = 5` rather than forked. **This closes the input by DECISION;
+  it does not clear the gate.** Measured at resolution: **`N = 0` eligible members**, no adjudication
+  run, `protocol_cleared` never `True`. Enforced by **`tests/test_validation_set_decision.py`**
+  (`TC-ArgusAgent-DOCS-001-73`..`-76`).
+
+  **On the two-site history, which is the reason this entry is worded identically at three sites:**
+  the 2026-08-10b proposal amended this site and left the §Architectural Decisions marker saying
+  `CLOSED`, producing a plan that contradicted itself for three epics — one site reading
+  *closed-as-assigned*, the other *still open*. Closing one again would have repeated it exactly.
 - ~~Minions-dogfood partition + budget-sizing plan (so the proof run doesn't land
   `INSUFFICIENT_COVERAGE`).~~ ✅ **CLOSED 2026-08-10b — DELIVERED by Story 7.1.** Artifacts on disk:
   `minions-dogfood-partition-plan.md`, `minions-dogfood-budget-plan.md`.
@@ -920,6 +959,22 @@ so a proposal cannot escape the rule by being new — and fails any status claim
 executed-gate citation (run id **plus** the sha it covers) nor a **NOT ESTABLISHED** marker. A rule that
 lives only in a test is not a rule and a rule that lives only in prose is not enforced, so `-23` asserts
 this section and the §H rule text are both still present.
+
+**Validation-set enforcement** *(added 2026-08-16 by Story 13.1 / AC2)*: the **VALIDATION-SET
+RESOLUTION** above — *the ≥80%-precision externalization gate is measured over a corpus of real
+repositories, never over the planted-defect cartridges* — is enforced by
+**`tests/test_validation_set_decision.py`** (`TC-ArgusAgent-DOCS-001-73`..`-76`) and
+**`tests/test_validation_corpus.py`** (`TC-ArgusAgent-PRECISION-001-21`..`-30`,
+`TC-ArgusAgent-DOGFOOD-001-53`..`-55`). The resolution text must be present **at all three sites
+that state it** — §Architectural Decisions, §Still OPEN and §Gap Analysis — and identical at each,
+because this input spent three epics recorded as `CLOSED` at one site and *"still open"* at another,
+and closing one site again would have reproduced that exactly. Membership is a **closed** manifest:
+an unregistered member raises rather than resolving, a usage-shaped field (`stars`, `installs`,
+`downloads`) can never be added to the schema, an exclusion without a written reason fails, and the
+floor is **derived** from the single `VALIDATION_SET_FLOOR_N` rather than transcribed. The published
+gate figure is derived too — `TC-ArgusAgent-DOGFOOD-001-54` asserts the committed proof artifact
+carries the **live derivation**, so a hand-written corpus number fails before it is published
+(`DF-8-5-C`). An architecture decision with no guard is how this one drifted for three epics.
 
 **Invocation-contract enforcement** *(added 2026-08-10 by Story 10.3 / `DF-AUD-APAA-E`)*: the §A
 **invocation contract** is enforced by **`tests/test_invocation_contract.py`**
@@ -1241,9 +1296,28 @@ tests/security/
 
 ### Gap Analysis
 - **Critical gaps:** none — the architecture does not block implementation.
-- **Important gaps (pre-epic delivery inputs, resolve in epic planning):** validation-set `N` (gates the
-  precision-harness ground-truth shape); Minions-dogfood partition + budget-sizing plan (so the proof run
-  doesn't land `INSUFFICIENT_COVERAGE`); budget-ceiling `$X` default.
+- **Important gaps (pre-epic delivery inputs, resolve in epic planning):** ~~validation-set `N` (gates the
+  precision-harness ground-truth shape)~~ **— see the VALIDATION-SET RESOLUTION below**; Minions-dogfood
+  partition + budget-sizing plan (so the proof run doesn't land `INSUFFICIENT_COVERAGE`) — CLOSED
+  2026-08-10b, delivered by Story 7.1; budget-ceiling `$X` default — CLOSED 2026-08-10b as OI3, the
+  resolution being "there is no default".
+
+  ✅ **RESOLVED BY DECISION 2026-08-16 (Story 13.1 / DN-1) — the PRD governs.** *(VALIDATION-SET
+  RESOLUTION — the identical paragraph is recorded at §Architectural Decisions and at §Still OPEN,
+  so no site survives saying something else.)* The validation set is **`N ≈ 5–10` real repositories**
+  with a floor of **`N ≥ 5`**, per PRD §Validation Approach; `precision-validation-protocol.md` §5's
+  conflicting **`N ≥ 5` labeled planted-defect cartridges** floor is **struck**. **Reason:** the two
+  documents specified different *quantities*, not two opinions about one — the cartridges measure
+  **recall** against defects the team planted and answered, while the gate must measure **precision**
+  on code nobody planted. A gate clearable by the team's own plants is not an externalization gate.
+  The cartridges are **re-labelled, not demoted**: they remain the FR20 recall instrument, CI-asserted
+  and unchanged. **Membership is a closed, machine-readable manifest** —
+  `tests/corpus/_manifest.py::VALIDATION_CORPUS` — carrying a pinned commit sha, licence, language
+  and provenance per member, with exclusions recorded in the manifest itself and the floor **derived**
+  from the same `VALIDATION_SET_FLOOR_N = 5` rather than forked. **This closes the input by DECISION;
+  it does not clear the gate.** Measured at resolution: **`N = 0` eligible members**, no adjudication
+  run, `protocol_cleared` never `True`. Enforced by **`tests/test_validation_set_decision.py`**
+  (`TC-ArgusAgent-DOCS-001-73`..`-76`).
 - **Nice-to-have:** a worked envelope/cache-key example doc; a `cloc`/SAST tool-availability probe.
 
 ### Architecture Completeness Checklist

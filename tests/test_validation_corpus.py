@@ -35,6 +35,7 @@ from __future__ import annotations
 
 import ast
 import sys
+import tempfile
 from dataclasses import FrozenInstanceError, fields, replace
 from pathlib import Path
 
@@ -45,6 +46,7 @@ sys.path.insert(0, str(Path(__file__).resolve().parent / "corpus"))
 sys.path.insert(0, str(Path(__file__).resolve().parent / "cartridges"))
 
 from _manifest import (  # noqa: E402
+    AST_INELIGIBILITY_REASONS,
     AST_INELIGIBLE_LANGUAGES,
     MANIFEST_FIELDS,
     NEVER_ELIGIBLE_FIELDS,
@@ -462,6 +464,114 @@ def test_TC_ArgusAgent_PRECISION_001_29_the_manifest_is_repository_only_like_the
                 "`replay_harness.registry_module()` / `corpus_manifest_module()`, or the built "
                 "wheel cannot import (DF-9-2-A)."
             )
+
+
+def test_TC_ArgusAgent_PRECISION_001_30_the_DN_6_language_ruling_is_RE_MEASURED_not_remembered() -> None:
+    """TC-ArgusAgent-PRECISION-001-30 — DN-6/DF-10-2-A: the eligibility ruling is checked against the tool.
+
+    Driver: ``argus.index.ast_index.build_ast_index`` over a probe file per language, built
+    here and thrown away. ``AST_INELIGIBLE_LANGUAGES`` is a **ruling about what the shipped
+    extractor can do**, and a ruling recorded as a constant is a ruling that rots — ``DF-10-2-A``
+    has been carried by four consecutive retrospectives, and in that time its own wording drifted
+    away from the measurement (see below). So the table is re-derived rather than trusted.
+
+    **Both directions, because either is a real defect.** A language listed as ineligible that
+    now extracts definitions means the corpus is refusing members it could accept; a language
+    NOT listed that extracts nothing means the corpus would silently admit a member no file of
+    which can reach ``audited_deep`` — which is the fake-N shape DN-6 exists to stop.
+
+    **The measured correction this guard pins (recorded, not smoothed over).** ``DF-10-2-A``
+    says C, C++, Ruby **and Rust** *"ground cleanly and extract zero definitions"*. Three of the
+    four hold. **Rust does not**: it extracts ``struct_item`` and misses only functions, because
+    the extractor's vocabulary entry is ``fn_item`` — a node type ``tree-sitter-rust`` does not
+    emit (the real one is ``function_item``). Rust stays ineligible on the DN-6 rule — a member
+    whose functions can never be grounded cannot support the ``audited_deep`` claims the gate is
+    about — but it is ineligible for a *different and narrower* reason than the ledger states,
+    and ``AST_INELIGIBILITY_REASONS`` records the mechanism per language rather than the slogan.
+    """
+    # NOT importorskip. The ten grammars became CORE dependencies in Story 12.5 ("default
+    # install grounds languages it claims"), so their absence is a packaging regression rather
+    # than an environment this guard should quietly tolerate — and DN-5 forbids a silent skip
+    # where the honest outcome is a recorded failure.
+    import tree_sitter  # noqa: F401
+    from argus.index.ast_index import build_ast_index
+
+    probes: dict[str, tuple[str, str]] = {
+        "c": ("probe.c", "int add(int a, int b) { return a + b; }\n"),
+        "cpp": ("probe.cpp", "class Foo { public: int bar() { return 1; } };\n"),
+        "ruby": ("probe.rb", "class Foo\n  def bar\n    1\n  end\nend\n"),
+        "rust": ("probe.rs", "struct Foo { x: i32 }\nfn bar() -> i32 { 1 }\n"),
+        "python": ("probe.py", "def bar():\n    return 1\n"),
+        "go": ("probe.go", "func Bar() int { return 1 }\n"),
+        "java": ("probe.java", "class Foo { int bar() { return 1; } }\n"),
+        "javascript": ("probe.js", "function bar() { return 1; }\n"),
+        "typescript": ("probe.ts", "function bar(): number { return 1; }\n"),
+        "php": ("probe.php", "<?php function bar() { return 1; }\n"),
+    }
+    assert set(probes) == _known_language_tokens(), (
+        "the probe set and the shipped language vocabulary disagree — a language was added to "
+        f"argus/shared/source_languages.py without a probe here. probes-only="
+        f"{sorted(set(probes) - _known_language_tokens())} "
+        f"vocabulary-only={sorted(_known_language_tokens() - set(probes))}. DN-6 must rule on "
+        "every language the tool can enumerate, or an unruled one becomes eligible by default."
+    )
+
+    with tempfile.TemporaryDirectory(prefix="argus-dn6-probe-") as tmp:
+        root = Path(tmp)
+        for _language, (name, body) in probes.items():
+            (root / name).write_text(body, encoding="utf-8")
+        index = build_ast_index(str(root), sorted(name for name, _ in probes.values()))
+
+    definitions_by_file = {entry.file_path: len(entry.definitions) for entry in index.entries}
+    assert len(definitions_by_file) == len(probes), (
+        f"the probe index returned {len(definitions_by_file)} entries for {len(probes)} probes "
+        "— the measurement is incomplete, so neither direction below would mean anything"
+    )
+
+    extracts_nothing: set[str] = set()
+    for language, (name, _body) in probes.items():
+        assert name in definitions_by_file, f"{name} was not indexed at all"
+        if definitions_by_file[name] == 0:
+            extracts_nothing.add(language)
+
+    assert extracts_nothing == {"c", "cpp", "ruby"}, (
+        "the set of languages extracting ZERO definitions moved. Measured now: "
+        f"{sorted(extracts_nothing)}; measured 2026-08-16: ['c', 'cpp', 'ruby']. Re-measure and "
+        "amend AST_INELIGIBILITY_REASONS DELIBERATELY — this is a corpus-eligibility ruling "
+        "(DN-6), and it must state what the extractor does rather than what a ledger entry "
+        "written four retrospectives ago said it does."
+    )
+
+    # Every language that extracts nothing MUST be ineligible — the fake-N direction.
+    silent = extracts_nothing - AST_INELIGIBLE_LANGUAGES
+    assert not silent, (
+        f"language(s) {sorted(silent)} extract zero definitions yet are eligible for N. No file "
+        "in them can reach audited_deep, so a member in one would count toward the floor while "
+        "being structurally incapable of supporting the claims the gate measures."
+    )
+
+    # Rust: ineligible, but NOT for the reason the ledger gives. Pin the real mechanism.
+    assert "rust" in AST_INELIGIBLE_LANGUAGES
+    assert definitions_by_file["probe.rs"] > 0, (
+        "Rust now extracts nothing. If tree-sitter-rust or the extractor vocabulary changed, "
+        "AST_INELIGIBILITY_REASONS['rust'] is now describing the wrong mechanism — it records "
+        "that Rust extracts structs and misses only functions (`fn_item` matches no real node "
+        "type; the emitted one is `function_item`)."
+    )
+
+    for language in sorted(AST_INELIGIBLE_LANGUAGES):
+        reason = AST_INELIGIBILITY_REASONS[language]
+        assert "MEASURED" in reason and len(reason.split()) >= 20, (
+            f"AST_INELIGIBILITY_REASONS[{language!r}] does not record a MEASURED mechanism. "
+            "AI-E9-8 / AI-E8-6: a ruling without its evidence is a label."
+        )
+
+
+def _known_language_tokens() -> set[str]:
+    """The shipped vocabulary, read from the module that owns it (never re-listed)."""
+    from argus.shared.source_languages import LANGUAGE_BY_SUFFIX
+
+    return set(LANGUAGE_BY_SUFFIX.values())
 
 
 # ─────────────────────────────────────────────────────────────────────────────────────
