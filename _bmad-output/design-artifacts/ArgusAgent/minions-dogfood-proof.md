@@ -10,17 +10,17 @@ The frozen `pipeline.run_audit_detailed` (REUSED — no fork) was run over the g
 
 **This is a SELF-audit — Argus auditing Argus (Story 8.5 / AC2).** The subject is this repository's own package, not an independent codebase. A self-audit is MATERIALLY WEAKER evidence than the independent-repository run it supersedes: the tool and the tree share authorship, so the run cannot demonstrate that the tool finds defects it was not written alongside. It is reportable as a reproducibility and no-source-retention demonstration; it is NEVER independent corroboration of the tool's detection ability. The independent Story-7.2 run over the Minions platform repository is preserved verbatim at `minions-dogfood-proof-story-7-2-superseded.md` and cannot be re-executed here, because that source is not in this repository. The filename `minions-dogfood-proof.md` is a retained HISTORICAL identifier (an evidence path that moves is an evidence path that gets lost); the subject is what this section names, not what the filename suggests.
 
-- Commit descriptor (`git rev-parse HEAD` at generation): `40cdb3c4f5a4fd4ebde3ed9fb130c56e22881913`
+- Commit descriptor (`git rev-parse HEAD` at generation): `59a2ad4ffe83e2247a89bd0fa43c1f968dbc22b5`
 - Enumerated population (the HONEST label — Story 12.1, closing `DF-10-4-D`): the file list in this artifact is enumerated from the git INDEX (`git ls-files`), NOT from the tree at the commit descriptor above. The two are the same tree exactly when `argus/` carries no staged-or-uncommitted change, and `TC-ArgusAgent-DOGFOOD-001-50` fails unless they agree — so this artifact cannot quietly describe one tree while citing another.
 - Source files audited: **83**
-- Total physical LOC (build-cost proxy): **25380**
+- Total physical LOC (build-cost proxy): **25626**
 - Partition units (7.1 plan, CONSUMED): **3**
 - **Verdict: `RELEASE_READY` (exit `0`)**
 - **Decision row (FR16 / DR-3), as DISCLOSED by the gate: `row_3_gates_met`**
 - Coverage-ledger deep-%: **`63/83`** (exact `Fraction`, never a float — AR4)
 - Coverage-ledger deep count / total entries: **63 / 83**
 - Blocking (verdict-eligible) findings: **0**
-- Total findings emitted: **120**
+- Total findings emitted: **121**
 
 ### 1a. The assessed population the row was computed from (DR-3)
 
@@ -48,15 +48,15 @@ The run's V1 deterministic zero-token cost total is **415 credits** (folded via 
 
 - Under `BudgetConfig(ceiling_credits=843)` the run FITS (`ceiling_reached is False`): **True**
 - Under a ceiling ONE credit below the total the run BREACHES (the >=-is-a-breach REUSE — the 3.2 halt->skip->downgrade->report path fires): **True**
-- NFR-C1 baseline ratio (audit-cost / build-cost proxy): `83/5076` (`Fraction`/marker — never a float)
+- NFR-C1 baseline ratio (audit-cost / build-cost proxy): `415/25626` (`Fraction`/marker — never a float)
 
 ## 3. The SIGNED, source-free evidence bundle (AC-BUNDLE / FR29 / NFR-A1 / NFR-S1)
 
 Exported via the done 4.3 `build_evidence_bundle` + persisted via `persist_evidence_bundle` (REUSED — no forked bundle model / serializer), serialized THROUGH the single 1.1 `canonical.dumps_bytes` and stamped by the 1.1 content-addressed, **prev-hash-chained** envelope (the ArgusAgent "signature"; the point-in-time stamp is the envelope `created_at`, EXCLUDED from the hash — NFR-A1/D3).
 
-- Persisted bundle locator: `state/66def1de9781e149273e09b1f4a1dfe913cb110b16c72581d37bcf61b0c93269.json`
-- Bundle content hash (the signature): `66def1de9781e149273e09b1f4a1dfe913cb110b16c72581d37bcf61b0c93269`
-- Canonical bundle byte length: **61493**
+- Persisted bundle locator: `state/69050f6b439b055410d77c1ad03d886ab1fb408d7a073017a11ed8da4c9ff720.json`
+- Bundle content hash (the signature): `69050f6b439b055410d77c1ad03d886ab1fb408d7a073017a11ed8da4c9ff720`
+- Canonical bundle byte length: **61908**
 - Referential-integrity report consistent (4.2 lint): **True**
 - **No-source-retention MOAT (NFR-S1 / NFR-S3):** the bundle retains NO source byte and NO secret value — the moat is STRUCTURAL (no bundle field holds a source/secret value; only locations + redacted indicators). Proven over the REAL audited tree by `tests/test_secret_containment.py` (`TC-ArgusAgent-SECURITY-001-23`) and `tests/test_dogfood_proof.py` (`TC-ArgusAgent-DOGFOOD-001-22`).
 - **100% reproducibility (AC-REPRODUCIBLE / NFR-D1 / P1):** two dogfood runs on the same tracked content yield a BYTE-IDENTICAL verdict + bundle canonical bytes (the builder sorts/order-fixes every collection; no clock/float/set-order in the hashed payload). Demonstrated (RED against injected non-determinism, then green) in `tests/test_dogfood_proof.py` (`TC-ArgusAgent-DOGFOOD-001-24`).
@@ -79,11 +79,11 @@ The REAL dogfood findings are laid out below by the 6.6 `finding_match_key` iden
 |---|---|---|---|---|---|
 | `cross_partition` | False | True | 2 | `argus/audit/deep_pass.py:1`; `argus/mcp/protocol.py:1` | &nbsp; |
 | `hardcoded_secret` | False | True | 26 | `argus/audit/open_llm_adapter.py:170`; `argus/cache/key.py:140`; `argus/cache/key.py:181`; `argus/cache/key.py:190`; `argus/cache/key.py:80` | &nbsp; |
-| `orphan_code` | False | True | 92 | `argus/audit/deep_audit.py:54`; `argus/audit/minions_llm_adapter.py:25`; `argus/audit/ports.py:163`; `argus/cache/invalidation.py:127`; `argus/cache/invalidation.py:255` | &nbsp; |
+| `orphan_code` | False | True | 93 | `argus/audit/deep_audit.py:54`; `argus/audit/minions_llm_adapter.py:25`; `argus/audit/ports.py:163`; `argus/cache/invalidation.py:127`; `argus/cache/invalidation.py:255` | &nbsp; |
 
 ## 7. The ≥80%-precision gate STAYS PROVISIONAL (AC-PROVISIONAL / OI1 keystone)
 
 The synthetic corpus (7.1: 5 distinct classes) bootstrapped a PROVISIONAL ≥80%-precision gate. **The gate is cleared ONLY by the human TP/FP adjudication over the REAL dogfood findings above** — a HUMAN step (Eng-Lead + QA-Lead), OUT of scope for this autonomous story. This proof presents NO ≥80% number as authoritative / cleared, does NOT flip `protocol_cleared`, and does NOT flip the 6.5 `precision_gate_status()` marker.
 
-- Gate status: `provisional (Story 6.6 precision harness; precision=0/1 over FINDINGS not repos; N=0 labeled cartridges populated, floor N=5; the >=80% externalization gate stays PROVISIONAL until N>=5 with the validation protocol applied — this number is an EARLY/PROVISIONAL signal, NOT a cleared gate; adjudication method: _bmad-output/design-artifacts/ArgusAgent/precision-validation-protocol.md)`
+- Gate status: `provisional (Story 6.6 precision harness; precision=NOT COMPUTED BY THIS RUN over FINDINGS not repos; N=0 independent repositories in the validation set populated, floor N=5 (N counts ELIGIBLE members of the REPOSITORY corpus (PRD Validation Approach: N ~ 5-10 real repositories), measured at 0; the planted-defect cartridge corpus holds 7 populated rows across 5 distinct rule classes and measures RECALL (FR20), NOT this gate); the >=80% externalization gate stays PROVISIONAL until N>=5 with the validation protocol applied — this number is an EARLY/PROVISIONAL signal, NOT a cleared gate; adjudication method: _bmad-output/design-artifacts/ArgusAgent/precision-validation-protocol.md)`
 - The still-open human-adjudication step is filed as a defer (six CC-3 fields, `target_story: epic-7-minions-dogfood-precision`) in `deferred-work.md`.
