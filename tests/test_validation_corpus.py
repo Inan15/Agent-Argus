@@ -174,7 +174,9 @@ def test_TC_ArgusAgent_PRECISION_001_23_an_unregistered_member_RAISES() -> None:
         resolved += 1
     assert resolved == len(VALIDATION_CORPUS) >= 2, "the resolution closure ran over too few rows"
 
-    for absent in ("", "not-a-member", "argus", "minions", "vacuous_basic"):
+    # NB "minions" was in this list until 2026-08-16, when the operator ratified it as a real
+    # member — so the guard correctly went red rather than quietly testing a false premise.
+    for absent in ("", "not-a-member", "argus", "minions-v2", "vacuous_basic"):
         with pytest.raises(UnregisteredCorpusMember) as excinfo:
             member(absent)
         assert absent in str(excinfo.value) or not absent, (
@@ -271,22 +273,47 @@ def test_TC_ArgusAgent_PRECISION_001_25_the_floor_is_DERIVED_and_there_is_only_O
     assert derived == len(eligible_members()) == len(
         [s for s in VALIDATION_CORPUS if s.eligible_for_n]
     ), "eligible_member_count() disagrees with a direct fold over the manifest"
-    assert derived == 0, (
-        f"the manifest reports {derived} ELIGIBLE members. If AC3b has genuinely been ratified "
-        "and populated, update this assertion DELIBERATELY in the story that did it — do not "
-        "loosen it. A member appearing here without an operator ratification is a fabricated "
-        "corpus in the story that defines the corpus."
+
+    # THE RATIFIED SET, pinned BY NAME rather than by count (updated deliberately 2026-08-16,
+    # when this assertion went red at `derived == 0` exactly as it was written to). Pinning the
+    # ids is strictly stronger than pinning the number: a fabricated member cannot be smuggled
+    # in by removing a real one, which a bare `== 5` would permit. Every id below was named by
+    # the Engineering Lead (XAgent007) in the AC3b ratification and MEASURED before admission.
+    ratified = {
+        "ai-body-runtime",
+        "agent-markovich",
+        "minions",
+        "xagents-webapp",
+        "agent-smith",
+    }
+    assert {s.member_id for s in eligible_members()} == ratified, (
+        "the ELIGIBLE membership is not the ratified set. Adding a member is an OPERATOR act "
+        "(Story 13.1 / AC3b escalation) — update this set only in a story that records the "
+        "ratification, and never to make a count look met. A fabricated corpus in the story "
+        "that defines the corpus is the worst available outcome."
     )
-    assert meets_validation_floor() is False, (
-        "the validation floor reports MET at zero eligible members — the gate's whole premise"
+    assert derived == len(ratified) == VALIDATION_SET_FLOOR_N == 5
+    assert meets_validation_floor() is True, (
+        "the floor reports UNMET at five ratified members — the derivation is broken"
     )
+
+    # Every eligible member is genuinely pinned and genuinely independent (the two properties
+    # that make it adjudicable at all), re-asserted here over the live rows.
+    for spec in eligible_members():
+        assert spec.provenance == "independent"
+        assert len(spec.commit_sha) == 40 and set(spec.commit_sha) <= set("0123456789abcdef")
+        assert spec.ineligible_reason is None
 
     status = validation_set_status()
     assert str(derived) in status and str(VALIDATION_SET_FLOOR_N) in status, (
         "the derived status string must carry both the measured count and the floor"
     )
-    assert "cleared" not in status.split("NOT")[0].lower(), (
-        "the validation-set status must never lead with a cleared claim"
+    # Reaching the floor is NECESSARY and NOT SUFFICIENT. The status may now say "floor MET",
+    # but it must still refuse to imply the GATE is cleared — that needs 13.2's adjudication.
+    assert "floor MET" in status and "NOT sufficient" in status, (
+        "the status reports the floor met without stating that the floor is not the gate. "
+        "N >= 5 is one of four §5 conditions; the other three are the adjudication run, the "
+        ">=80% figure and the zero clean-repo blocking FP count."
     )
 
 
@@ -375,9 +402,14 @@ def test_TC_ArgusAgent_PRECISION_001_27_adversarial_variants_are_GENERATED_from_
             replace(spec, eligible_for_n=True, ineligible_reason=None)
         generated += 1
 
-    assert generated >= 2 * len(VALIDATION_CORPUS) >= 4, (
-        f"only {generated} adversarial variants were generated from {len(VALIDATION_CORPUS)} "
-        "real members — the closure ran over almost nothing and proves almost nothing"
+    # An ELIGIBLE row yields one variant, an INELIGIBLE row yields two, so the expected count
+    # is derived from the real composition rather than from a fixed multiple — a bare
+    # `2 * len(...)` went red the moment the corpus stopped being all-ineligible (2026-08-16),
+    # which was the guard being arithmetically wrong rather than the manifest being wrong.
+    expected = sum(1 if s.eligible_for_n else 2 for s in VALIDATION_CORPUS)
+    assert generated == expected >= len(VALIDATION_CORPUS) >= 5, (
+        f"generated {generated} adversarial variants, expected {expected} from "
+        f"{len(VALIDATION_CORPUS)} real members — the closure did not run over the population"
     )
 
 
@@ -609,7 +641,10 @@ def test_TC_ArgusAgent_DOGFOOD_001_53_the_corpus_measurement_is_a_measurement() 
         }
     )
 
-    assert measured.validation_set_n == expected_n == 0
+    # Updated deliberately 2026-08-16: was `== 0`, and went red on the AC3b ratification
+    # exactly as designed. The point of the assertion is that the number is a MEASUREMENT of
+    # the manifest, so it is checked against an independent fold rather than against a literal.
+    assert measured.validation_set_n == expected_n == 5
     assert measured.recall_cartridge_rows == expected_rows == 7, (
         "the recall substrate is no longer 7 populated rows. If a cartridge was added or "
         "removed, re-measure and update this DELIBERATELY — DF-8-5-C exists because a figure "

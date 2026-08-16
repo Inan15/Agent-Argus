@@ -109,6 +109,13 @@ MANIFEST_FIELDS: tuple[str, ...] = (
     "provenance",
     "eligible_for_n",
     "ineligible_reason",
+    # Added 2026-08-16 with the AC3b ratification, DELIBERATELY and not silently (`-22`
+    # checks this tuple against the dataclass in both directions, so the extension could not
+    # have been made quietly). It carries what Story 13.2's adjudicator must know about a
+    # member BEFORE judging its findings — e.g. that Argus's detectors were developed against
+    # that very repository. It is emphatically NOT an eligibility escape hatch: it does not
+    # affect any count, and an ELIGIBLE member still may not carry an ``ineligible_reason``.
+    "adjudication_caveat",
 )
 
 #: Fields that may NEVER exist on a member, enumerated so the ban is testable rather than
@@ -216,6 +223,9 @@ class CorpusMemberSpec:
     - ``eligible_for_n`` — whether this member may count toward the locked floor.
     - ``ineligible_reason`` — REQUIRED whenever ``eligible_for_n`` is ``False``. An exclusion
       without a reason is an oversight wearing a decision's clothes.
+    - ``adjudication_caveat`` — OPTIONAL, and read by a human rather than by a fold: what
+      Story 13.2's adjudicator must know about this member before judging its findings. It
+      changes no count and grants no eligibility.
 
     The row **validates itself at construction**, not at read time, so a call site cannot build
     an invalid member and hope nobody folds it.
@@ -229,6 +239,7 @@ class CorpusMemberSpec:
     provenance: str
     eligible_for_n: bool
     ineligible_reason: str | None = None
+    adjudication_caveat: str | None = None
 
     def __post_init__(self) -> None:
         if self.provenance not in PROVENANCE_VALUES:
@@ -301,6 +312,129 @@ class CorpusMemberSpec:
 # directions that no cartridge id appears here.
 # ─────────────────────────────────────────────────────────────────────────────────────────────
 VALIDATION_CORPUS: tuple[CorpusMemberSpec, ...] = (
+    # ── RATIFIED 2026-08-16 by the Engineering Lead (XAgent007), Story 13.1 / AC3b ──────────
+    # Five members, named by the operator. Each was MEASURED before admission, not accepted on
+    # description: git HEAD resolved, tracked-file language mix folded through
+    # `argus.shared.source_languages.LANGUAGE_BY_SUFFIX`, and licence checked by looking for a
+    # tracked LICENSE/COPYING file (none of the five has one — see the licence strings).
+    #
+    # ON "INDEPENDENT", STATED PLAINLY BECAUSE IT IS THE CORPUS'S MAIN LIMITATION.
+    # The PRD specifies "N ~ 5-10 real XAgents repos, starting with Minions", so same-org
+    # repositories ARE the governing corpus and these five satisfy it as written. `independent`
+    # here means what it has always meant in this project's record — NOT the tool auditing
+    # itself, the distinction that made the 8.5 self-audit worthless as gate evidence. It does
+    # NOT mean third-party. All five are XAgents projects, and four of the five are themselves
+    # agent-authored (they carry `_bmad/`, `.claude/`, `.agents/`). That is on-thesis rather
+    # than accidental — the PRD's primary user is "the Engineering Lead running APAA on an
+    # XAgents repo", and AI-authored code is the defect population Argus exists to find — but a
+    # reader must not mistake this corpus for an arms-length external one. Recorded here so
+    # 13.2's adjudication and 13.3's published figure inherit the caveat rather than the
+    # impression.
+    CorpusMemberSpec(
+        member_id="ai-body-runtime",
+        repository_url="file:///D:/ProjectX/XAgents/XAgents/ai_body_runtime",
+        commit_sha="4480ffdeb4c56e232d230ebb67572117b72dd754",
+        licence="proprietary — XAgents internal (no LICENSE file tracked; operator-recorded)",
+        primary_language="python",
+        provenance="independent",
+        eligible_for_n=True,
+        adjudication_caveat=(
+            "PIN IS A FRESH INITIAL COMMIT, NOT REAL HISTORY. This tree was NOT under version "
+            "control when it was ratified (no .git directory), so it could not be pinned and "
+            "was therefore not adjudicable: DN-4 pins by commit, and protocol §4 makes "
+            "byte-reproducibility the precondition for any adjudication being valid. On the "
+            "operator's explicit instruction (2026-08-16) `git init` + a single initial commit "
+            "were performed, producing this sha. The CONTENT is the operator's real working "
+            "tree; the COMMIT is minutes old and has no history behind it. The pin is therefore "
+            "sound for reproducibility — the point of pinning — but carries no provenance, and "
+            "nothing here should be read as evidence about how the code was developed. "
+            "`repository_url` is a local file:// locator because the tree has no remote."
+        ),
+    ),
+    CorpusMemberSpec(
+        member_id="agent-markovich",
+        repository_url="https://github.com/Inan15/Agent-Markovich.git",
+        commit_sha="a561668636d8dac922b72d548ad92fdcc814a2ac",
+        licence="proprietary — XAgents internal (no LICENSE file tracked; operator-recorded)",
+        primary_language="python",
+        provenance="independent",
+        eligible_for_n=True,
+        adjudication_caveat=(
+            "The cleanest member of the five: 98 tracked files, 65 of them Python and NOTHING "
+            "else — no second language to dilute the grounding, and the working tree was CLEAN "
+            "at ratification (0 uncommitted entries), so the audited pin is exactly what the "
+            "operator was looking at."
+        ),
+    ),
+    CorpusMemberSpec(
+        member_id="minions",
+        repository_url="https://github.com/varinderpratap/minions.git",
+        commit_sha="ec63b7293b7036bf910a0d1b5e61aba7dc551526",
+        licence="proprietary — XAgents internal (no LICENSE file tracked; operator-recorded)",
+        primary_language="python",
+        provenance="independent",
+        eligible_for_n=True,
+        adjudication_caveat=(
+            "⚠️ OVERFITTING RISK — THE STRONGEST CAVEAT IN THIS MANIFEST, AND THE ADJUDICATOR "
+            "MUST WEIGH IT. Argus was DEVELOPED AGAINST THIS REPOSITORY. It began life inside "
+            "it as `minions_core/apaa/` and was separated out on 2026-08-03; Story 7.2's "
+            "capstone dogfood ran over it (2906 findings); the PRD names it as the validation "
+            "set's starting point. So its detectors have been read against, tuned around and "
+            "demonstrated on this code in a way that is true of no other member. This is "
+            "exactly the bias the cartridge corpus handles with author-blind HOLDOUT rows, and "
+            "the repository corpus has no equivalent mechanism. Treat a high precision score on "
+            "this member as the LEAST transferable evidence in the corpus, and prefer the other "
+            "four when judging whether the >=80% gate genuinely generalises. "
+            "SEPARATELY, A LEDGER CORRECTION: deferred-work.md:832-836 records that the Story "
+            "7.2 run 'can never be re-derived in this repository'. Re-measured 2026-08-16 — "
+            "that statement is TRUE OF THE ARGUS REPOSITORY and MISLEADING AS A GENERAL CLAIM. "
+            "The Minions source is present on this machine and resolves at the pin above, so a "
+            "NEW run over it is derivable; what can never be re-derived is the SPECIFIC 7.2 "
+            "artifact at its own sha. The distinct `minions-story-7-2-superseded` row below is "
+            "that artifact and stays ineligible; this row is a NEW pin, audited fresh."
+        ),
+    ),
+    CorpusMemberSpec(
+        member_id="xagents-webapp",
+        repository_url="https://github.com/varinderpratap/XAgents-WebApp.git",
+        commit_sha="33a86525a4981c2725133c3f297ce003c1ef8a2b",
+        licence="proprietary — XAgents internal (no LICENSE file tracked; operator-recorded)",
+        primary_language="typescript",
+        provenance="independent",
+        eligible_for_n=True,
+        adjudication_caveat=(
+            "THE MOST VALUABLE MEMBER FOR THE GATE, AND THE ONE MOST LIKELY TO EXPOSE A "
+            "LIMITATION. Measured: 862 source files, 810 TypeScript, 36 Python, 16 JavaScript "
+            "— the only member where Python is a rounding error. Story 10.2 delivered "
+            "multi-language grounding for every language in `source_languages.py`, and "
+            "TypeScript extracts definitions (measured), so this member is eligible under DN-6. "
+            "But almost every detector in this tool was written and validated against Python, "
+            "so findings here are the corpus's real test of whether the >=80% precision claim "
+            "survives outside the language it was built for. One uncommitted entry existed at "
+            "ratification; the audit runs the PIN, not the working tree."
+        ),
+    ),
+    CorpusMemberSpec(
+        member_id="agent-smith",
+        repository_url="https://github.com/Inan15/agent-smith.git",
+        commit_sha="9ab774d7bf5d61da552c61094b2d478f72dfbb6d",
+        licence="proprietary — XAgents internal (no LICENSE file tracked; operator-recorded)",
+        primary_language="typescript",
+        provenance="independent",
+        eligible_for_n=True,
+        adjudication_caveat=(
+            "THE POLYGLOT MEMBER, and the one whose coverage figure needs reading carefully. "
+            "Measured: 435 source files — 226 TypeScript, 168 Python, 34 Rust, 7 JavaScript. "
+            "`primary_language` is recorded as the measured plurality (TypeScript), which is "
+            "what DN-6 rules on. The 34 RUST files are the point of interest: Rust grounds "
+            "cleanly but its FUNCTIONS never extract (DF-10-2-A / DN-6 — the extractor's "
+            "vocabulary entry `fn_item` is not a node type tree-sitter-rust emits), so those "
+            "files can reach the index and still never support an `audited_deep` claim. Expect "
+            "the coverage ledger to reflect that, and do NOT read a low deep-% here as a defect "
+            "in the repository — it is a known limitation of the tool, filed and owned. "
+            "16 uncommitted entries existed at ratification; the audit runs the PIN."
+        ),
+    ),
     CorpusMemberSpec(
         member_id="argus-self-audit",
         repository_url="https://github.com/XAgentsLabs007/ArgusAgent",
