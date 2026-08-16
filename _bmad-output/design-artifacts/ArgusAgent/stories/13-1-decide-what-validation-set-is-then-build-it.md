@@ -4,7 +4,7 @@ baseline_commit: bc55e361d46b1a33672d0214c7d8e1a97190d0dc
 
 # Story 13.1: Decide what the validation set is, then build it
 
-Status: review
+Status: done
 
 <!-- Created 2026-08-16 by create-story. Every premise below was re-measured by execution on
      HEAD bc55e36 before this file was written; see §0. Validation is optional — run
@@ -711,7 +711,7 @@ AC2, AC3a, AC3b, AC4, AC5, AC6 and every "What it is NOT" red line as met — bu
 **stale published figure that a guard now freezes**, which is the exact defect class the story
 exists to delete.
 
-- [ ] **[Review][Patch] R1 (HIGH) — the corpus count is stale at `N = 0` in every hand-written decision document, and `-75` FREEZES it** [`tests/test_validation_set_decision.py:86`, `:203`]
+- [x] **[Review][Patch] R1 (HIGH) — the corpus count is stale at `N = 0` in every hand-written decision document, and `-75` FREEZES it** [`tests/test_validation_set_decision.py:86`, `:203`]
       Live truth: `eligible_member_count() == 5`, `meets_validation_floor() == True`. Still asserting
       zero: `prd.md:196` (*"Measured 2026-08-16: N = 0 eligible members … awaiting operator
       ratification"* — the ratification happened the same day), `precision-validation-protocol.md:191`
@@ -728,7 +728,7 @@ exists to delete.
       in `prd.md`, so a guard written to protect the record now *enforces the falsehood* and keeps
       the suite green. `deferred-work.md` is append-only, so `DF-13-1-A` needs a correcting appended
       entry, never an edit.
-- [ ] **[Review][Patch] R2 (HIGH) — `measure_validation_corpus()` conflates two independent resolutions: it mislabels which substrate failed and publishes a real `n` beside "NOT CONSULTED"** [`argus/precision/replay_harness.py:478-484`]
+- [x] **[Review][Patch] R2 (HIGH) — `measure_validation_corpus()` conflates two independent resolutions: it mislabels which substrate failed and publishes a real `n` beside "NOT CONSULTED"** [`argus/precision/replay_harness.py:478-484`]
       `validation_floor_n()` routes through `registry_module()`, so if the manifest resolves but the
       cartridge registry does not, the single `try` reports `validation_set_n=5` **and**
       `validation_set_available=False`, and `corpus_note()` renders *"the repository corpus manifest
@@ -737,7 +737,7 @@ exists to delete.
       that (`DF-8-5-C`). Confirmed by probe. Second half: the bare `except Exception` also swallows
       `ValueError` from `CorpusMemberSpec.__post_init__`, so a genuinely broken manifest row reports
       as ordinary absence. Both branches are `pragma: no cover`.
-- [ ] **[Review][Patch] R3 (HIGH) — a non-reproducible member renders as "0 blocking — nothing to adjudicate" and is persisted before the failure fires** [`scripts/audit_validation_corpus.py:263-266`, `:347-360`, `:366-374`]
+- [x] **[Review][Patch] R3 (HIGH) — a non-reproducible member renders as "0 blocking — nothing to adjudicate" and is persisted before the failure fires** [`scripts/audit_validation_corpus.py:263-266`, `:347-360`, `:366-374`]
       Findings are withheld when `reproducible=False` (correct), but the worklist builder then folds
       an empty list and writes *"## member — 0 blocking / No blocking finding. Nothing to adjudicate
       for this member."* to `blocking-worklist.md` — byte-identical to a genuinely clean member — and
@@ -745,30 +745,63 @@ exists to delete.
       rather than the exit code is actively misled about the corpus that gates externalization.
       *(Reviewer rated Med; raised to High — an artifact that cannot distinguish "clean" from
       "withheld" is the honesty defect this epic exists to remove.)*
-- [ ] **[Review][Patch] R4 (MED) — `floor_n=None` crashes with a re-raised `ImportError` instead of the degradation its docstring promises** [`argus/precision/replay_harness.py:554`]
+- [x] **[Review][Patch] R4 (MED) — `floor_n=None` crashes with a re-raised `ImportError` instead of the degradation its docstring promises** [`argus/precision/replay_harness.py:554`]
       `measure_validation_corpus()` documents that an unresolvable substrate is *recorded*, not
       fatal; `precision_gate_status_for` then does `registry_module().VALIDATION_SET_FLOOR_N if
       floor_n is None`, re-raising uncaught. Failing loudly is the right behaviour here — but the
       docstring must say so, and the failure should be typed and explained rather than a bare import
       error surfacing from a second lookup.
-- [ ] **[Review][Patch] R5 (MED) — the documented exit-code contract is wrong; the `SystemExit` handler is dead code** [`scripts/audit_validation_corpus.py:184-195`, `:284-290`]
+- [x] **[Review][Patch] R5 (MED) — the documented exit-code contract is wrong; the `SystemExit` handler is dead code** [`scripts/audit_validation_corpus.py:184-195`, `:284-290`]
       `SystemExit` derives from `BaseException`, so `except (DogfoodProofError, Exception)` never
       catches it and `if isinstance(exc, SystemExit): raise` can never run. `raise SystemExit(<str>)`
       exits **1**, while the module docstring documents **2** for a pin mismatch or a missing
       checkout. Verified by probe. Raised independently by two layers.
-- [ ] **[Review][Patch] R6 (MED) — `--map id=<absolute path>` silently escapes `--checkout-root`** [`scripts/audit_validation_corpus.py:267`, `:290`]
+- [x] **[Review][Patch] R6 (MED) — `--map id=<absolute path>` silently escapes `--checkout-root`** [`scripts/audit_validation_corpus.py:267`, `:290`]
       `Path("C:/root") / "D:/elsewhere"` → `D:\elsewhere` (pathlib discards the left operand on an
       absolute right). The metavar promises `RELATIVE_PATH` and nothing enforces it. The pin check
       still runs, so a wrong tree is usually caught — but the audited location is unconstrained.
-- [ ] **[Review][Patch] R7 (MED) — `.git`-as-a-file checkouts (git worktrees, submodules) are refused as "no git checkout"** [`scripts/audit_validation_corpus.py:279`]
+- [x] **[Review][Patch] R7 (MED) — `.git`-as-a-file checkouts (git worktrees, submodules) are refused as "no git checkout"** [`scripts/audit_validation_corpus.py:279`]
       `(checkout / ".git").is_dir()` is `False` for a worktree or submodule, both fully valid
       repositories. Would have blocked the operator for a legitimate layout.
-- [ ] **[Review][Patch] R8 (LOW) — `--map` without `=` dumps a raw traceback** [`scripts/audit_validation_corpus.py:267`]
+- [x] **[Review][Patch] R8 (LOW) — `--map` without `=` dumps a raw traceback** [`scripts/audit_validation_corpus.py:267`]
       `dict(pair.split("=", 1) ...)` raises `ValueError: dictionary update sequence element #0 has
       length 1`. Every other failure path in this script prints a clean `REFUSED —`.
-- [ ] **[Review][Patch] R9 (LOW) — `head.stdout.decode()` lacks `errors="replace"`** [`scripts/audit_validation_corpus.py:184`]
+- [x] **[Review][Patch] R9 (LOW) — `head.stdout.decode()` lacks `errors="replace"`** [`scripts/audit_validation_corpus.py:184`]
       Inconsistent with `_tracked_sources`, which tolerates bad bytes. Only bites on corrupted git
       state, but the inconsistency is the kind that outlives the reason for it.
+
+#### code-review 2026-08-16 — fix round: ALL 9 RESOLVED, none deferred, none loosened
+
+**Gates after the fixes, all LOCAL:** `pytest` **1561 passed / 0 failed / 0 skipped** · `mypy`
+**Success, 83 files** · `bandit` **19 Low / 0 Medium / 0 High** — all identical to the pre-review
+baseline, so nothing was traded away to make the fixes land.
+
+**RED-first evidence for the fix to R1, at the real seam** (`AI-E11-1` clause ii). The whole
+lesson of R1 is that the old guard *could not fail*, so the new one had to be shown failing:
+ratifying a **sixth** member in the manifest without touching the documents turns
+`TC-ArgusAgent-DOCS-001-75` **RED** — *"prd.md does not state the LIVE eligible-member count
+(6)"* — and it goes green again on restore. The old literal-substring form would have stayed
+green through exactly that change, which is how it stayed green through the fifth.
+
+**Refusal paths re-verified by execution** (R5/R6/R8): `--map foo` → `REFUSED — … is not
+MEMBER_ID=RELATIVE_PATH`, exit **2**; `--map minions=D:/elsewhere` → `REFUSED — … names an
+ABSOLUTE path`, exit **2**; a pin mismatch → `REFUSED — minions: checkout … is at 0571de1 … but
+the manifest pins ec63b72`, exit **2**. Previously the last of these exited **1** while the
+docstring promised 2, and the first dumped a raw traceback.
+
+**Corpus re-run after the fixes** — identical measured results (5/5 byte-reproducible, 31
+blocking, all `vacuous_test_ast`), confirming the changes altered reporting and refusal
+behaviour without touching what the audit finds.
+
+**What I got wrong, stated plainly for the retrospective.** R1 is not a slip in a corner: I
+applied this story's central rule — *a published figure must be derived, never typed* — to the
+code and not to the prose, inside the story that exists to establish that rule. The derived
+surfaces (the manifest, the gate status, `minions-dogfood-proof.md`) all tracked the ratification
+with no edit at all; only the hand-written sentences rotted, and a guard I wrote was pinning one
+of them in place. R2 is the same failure one level down: `DF-8-5-C` is *a figure published beside
+a provenance claim that contradicts it*, and the conflated `try` block could produce exactly that
+inside the module written to prevent it. Both were found by reviewers who could not see my
+reasoning, which is the argument for the review layer being blind.
 
 **Dismissed as noise (1):** `architecture.md` at 1354 lines against NFR-M1's 1200-line ceiling —
 NFR-M1's population is `git ls-files -- '*.py'` (`tests/test_module_size_ceiling.py:156`); markdown
@@ -786,6 +819,7 @@ claims against the real `tree-sitter-rust`/`-c` grammars and confirmed them accu
 
 | Date | Version | Description | Author |
 |------|---------|-------------|--------|
+| 2026-08-16 | v0.5 | **Code review iteration 1: PASS after fixes — status review -> done.** Three adversarial layers on Sonnet, no shared context; 9 findings, 1 dismissed, **all 9 resolved, none deferred, none loosened**. All three layers independently raised R1: the corpus figure was stale at `N = 0` across prd.md / the protocol / all three architecture sites / `DF-13-1-A`, while the manifest returned 5 — and `DOCS-001-75` **required** the stale literal, so a guard was enforcing the falsehood. It now DERIVES the count and was proven RED against a 6th ratified member. R2: `measure_validation_corpus()` conflated two substrates and could publish a real `n` beside 'NOT CONSULTED' — DF-8-5-C inside the fix for DF-8-5-C. R3: a withheld member rendered as a clean one. Gates unchanged: pytest **1561/0/0**, mypy clean 83 files, bandit 19 Low. | Developer (code-review fix round) |
 | 2026-08-16 | v0.4 | **AC3b RATIFIED AND EXECUTED — all 7 ACs complete; status -> review.** Operator named five repositories; each measured before admission. N=5, floor MET. All five byte-reproducible across two runs. 31 blocking findings (24 minions + 7 agent-smith, all `vacuous_test_ast`) emitted adjudication-ready for 13.2, nothing pre-adjudicated. `ai_body_runtime` was unpinnable (no git) and was escalated, not worked around. Gates LOCAL: pytest **1561/0/0**, mypy clean 83 files. | Developer (dev-story) |
 | 2026-08-16 | v0.2 | AC1–AC6 implemented. DN-1 adopted: the PRD governs, the protocol amended not replaced. The architecture's last OPEN input closed **by decision** at all three sites with a counting guard. Validation-set manifest built with a closed schema and a derived floor. `DF-8-5-C` closed by derivation + artifact regeneration (DN-7/DN-8: the gate's `N` is the repository corpus and `precision` is *not computed*, not zero). `DF-10-2-A` ruled with its premise corrected by measurement — Rust extracts structs, so the ledger's "zero definitions" was wrong for one of its four languages. Gates LOCAL: pytest **1560/0/0**, mypy clean 83 files, bandit 19 Low / 0 Med / 0 High. Nothing outward-facing. | Developer (dev-story) |
 | 2026-08-16 | v0.1 | Story contexted. Premises re-measured on `bc55e36`; four stale epic citations, one off-by-one, two already-satisfied action items and three dead protocol paths recorded in §0. | Scrum Master (create-story) |

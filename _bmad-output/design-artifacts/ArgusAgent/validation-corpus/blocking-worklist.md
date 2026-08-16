@@ -12,13 +12,13 @@
 
 Pin `4480ffdeb4c56e232d230ebb67572117b72dd754` · python · 15 source files · verdict `RELEASE_READY` (exit 0) · deep 2/3
 
-_No blocking finding. Nothing to adjudicate for this member._
+_No blocking finding, and this member IS byte-reproducible — genuinely nothing to adjudicate._
 
 ## agent-markovich — 0 blocking
 
 Pin `a561668636d8dac922b72d548ad92fdcc814a2ac` · python · 65 source files · verdict `INSUFFICIENT_COVERAGE` (exit 3) · deep 24/65
 
-_No blocking finding. Nothing to adjudicate for this member._
+_No blocking finding, and this member IS byte-reproducible — genuinely nothing to adjudicate._
 
 ## minions — 24 blocking
 
@@ -55,7 +55,7 @@ Pin `ec63b7293b7036bf910a0d1b5e61aba7dc551526` · python · 591 source files · 
 
 Pin `33a86525a4981c2725133c3f297ce003c1ef8a2b` · typescript · 862 source files · verdict `INSUFFICIENT_COVERAGE` (exit 3) · deep 513/862
 
-_No blocking finding. Nothing to adjudicate for this member._
+_No blocking finding, and this member IS byte-reproducible — genuinely nothing to adjudicate._
 
 ## agent-smith — 7 blocking
 

@@ -12374,7 +12374,7 @@
           "verdict_eligible": false,
           "advisory": true,
           "locators": [
-            "tests/providers/test_ollama_vendor_conformance.py:135"
+            "tests/providers/test_ollama_vendor_conformance.py:142"
           ],
           "adjudication": null,
           "adjudicator": null,
@@ -12385,7 +12385,7 @@
           "verdict_eligible": false,
           "advisory": true,
           "locators": [
-            "tests/providers/test_ollama_vendor_conformance.py:143"
+            "tests/providers/test_ollama_vendor_conformance.py:150"
           ],
           "adjudication": null,
           "adjudicator": null,
@@ -12396,7 +12396,7 @@
           "verdict_eligible": false,
           "advisory": true,
           "locators": [
-            "tests/providers/test_ollama_vendor_conformance.py:146"
+            "tests/providers/test_ollama_vendor_conformance.py:153"
           ],
           "adjudication": null,
           "adjudicator": null,
@@ -12407,7 +12407,7 @@
           "verdict_eligible": false,
           "advisory": true,
           "locators": [
-            "tests/providers/test_ollama_vendor_conformance.py:152"
+            "tests/providers/test_ollama_vendor_conformance.py:159"
           ],
           "adjudication": null,
           "adjudicator": null,
@@ -12418,7 +12418,7 @@
           "verdict_eligible": false,
           "advisory": true,
           "locators": [
-            "tests/providers/test_ollama_vendor_conformance.py:251"
+            "tests/providers/test_ollama_vendor_conformance.py:258"
           ],
           "adjudication": null,
           "adjudicator": null,
@@ -12429,7 +12429,7 @@
           "verdict_eligible": false,
           "advisory": true,
           "locators": [
-            "tests/providers/test_ollama_vendor_conformance.py:291"
+            "tests/providers/test_ollama_vendor_conformance.py:298"
           ],
           "adjudication": null,
           "adjudicator": null,
@@ -12968,7 +12968,7 @@
           "verdict_eligible": false,
           "advisory": true,
           "locators": [
-            "tests/providers/test_vendor_cassette_replay.py:127"
+            "tests/providers/test_vendor_cassette_replay.py:135"
           ],
           "adjudication": null,
           "adjudicator": null,
@@ -12979,29 +12979,7 @@
           "verdict_eligible": false,
           "advisory": true,
           "locators": [
-            "tests/providers/test_vendor_cassette_replay.py:132"
-          ],
-          "adjudication": null,
-          "adjudicator": null,
-          "rationale": null
-        },
-        {
-          "rule_id": "orphan_code",
-          "verdict_eligible": false,
-          "advisory": true,
-          "locators": [
-            "tests/providers/test_vendor_cassette_replay.py:137"
-          ],
-          "adjudication": null,
-          "adjudicator": null,
-          "rationale": null
-        },
-        {
-          "rule_id": "orphan_code",
-          "verdict_eligible": false,
-          "advisory": true,
-          "locators": [
-            "tests/providers/test_vendor_cassette_replay.py:141"
+            "tests/providers/test_vendor_cassette_replay.py:140"
           ],
           "adjudication": null,
           "adjudicator": null,
@@ -13023,7 +13001,7 @@
           "verdict_eligible": false,
           "advisory": true,
           "locators": [
-            "tests/providers/test_vendor_cassette_replay.py:151"
+            "tests/providers/test_vendor_cassette_replay.py:149"
           ],
           "adjudication": null,
           "adjudicator": null,
@@ -13034,7 +13012,7 @@
           "verdict_eligible": false,
           "advisory": true,
           "locators": [
-            "tests/providers/test_vendor_cassette_replay.py:156"
+            "tests/providers/test_vendor_cassette_replay.py:153"
           ],
           "adjudication": null,
           "adjudicator": null,
@@ -13045,7 +13023,7 @@
           "verdict_eligible": false,
           "advisory": true,
           "locators": [
-            "tests/providers/test_vendor_cassette_replay.py:190"
+            "tests/providers/test_vendor_cassette_replay.py:159"
           ],
           "adjudication": null,
           "adjudicator": null,
@@ -13056,7 +13034,7 @@
           "verdict_eligible": false,
           "advisory": true,
           "locators": [
-            "tests/providers/test_vendor_cassette_replay.py:212"
+            "tests/providers/test_vendor_cassette_replay.py:164"
           ],
           "adjudication": null,
           "adjudicator": null,
@@ -13067,7 +13045,29 @@
           "verdict_eligible": false,
           "advisory": true,
           "locators": [
-            "tests/providers/test_vendor_cassette_replay.py:273"
+            "tests/providers/test_vendor_cassette_replay.py:198"
+          ],
+          "adjudication": null,
+          "adjudicator": null,
+          "rationale": null
+        },
+        {
+          "rule_id": "orphan_code",
+          "verdict_eligible": false,
+          "advisory": true,
+          "locators": [
+            "tests/providers/test_vendor_cassette_replay.py:220"
+          ],
+          "adjudication": null,
+          "adjudicator": null,
+          "rationale": null
+        },
+        {
+          "rule_id": "orphan_code",
+          "verdict_eligible": false,
+          "advisory": true,
+          "locators": [
+            "tests/providers/test_vendor_cassette_replay.py:281"
           ],
           "adjudication": null,
           "adjudicator": null,
@@ -13210,7 +13210,7 @@
           "verdict_eligible": false,
           "advisory": true,
           "locators": [
-            "tests/providers/vendor_conformance/assertions.py:111"
+            "tests/providers/vendor_conformance/assertions.py:103"
           ],
           "adjudication": null,
           "adjudicator": null,
@@ -13221,7 +13221,7 @@
           "verdict_eligible": false,
           "advisory": true,
           "locators": [
-            "tests/providers/vendor_conformance/assertions.py:118"
+            "tests/providers/vendor_conformance/assertions.py:117"
           ],
           "adjudication": null,
           "adjudicator": null,
@@ -13232,7 +13232,7 @@
           "verdict_eligible": false,
           "advisory": true,
           "locators": [
-            "tests/providers/vendor_conformance/assertions.py:69"
+            "tests/providers/vendor_conformance/assertions.py:124"
           ],
           "adjudication": null,
           "adjudicator": null,
@@ -13243,7 +13243,7 @@
           "verdict_eligible": false,
           "advisory": true,
           "locators": [
-            "tests/providers/vendor_conformance/assertions.py:79"
+            "tests/providers/vendor_conformance/assertions.py:75"
           ],
           "adjudication": null,
           "adjudicator": null,
@@ -13254,7 +13254,7 @@
           "verdict_eligible": false,
           "advisory": true,
           "locators": [
-            "tests/providers/vendor_conformance/assertions.py:88"
+            "tests/providers/vendor_conformance/assertions.py:85"
           ],
           "adjudication": null,
           "adjudicator": null,
@@ -13265,7 +13265,7 @@
           "verdict_eligible": false,
           "advisory": true,
           "locators": [
-            "tests/providers/vendor_conformance/assertions.py:97"
+            "tests/providers/vendor_conformance/assertions.py:94"
           ],
           "adjudication": null,
           "adjudicator": null,
@@ -29688,7 +29688,7 @@
           "verdict_eligible": false,
           "advisory": true,
           "locators": [
-            "tests/providers/test_ollama_vendor_conformance.py:254"
+            "tests/providers/test_ollama_vendor_conformance.py:261"
           ],
           "adjudication": null,
           "adjudicator": null,
@@ -29699,7 +29699,7 @@
           "verdict_eligible": false,
           "advisory": true,
           "locators": [
-            "tests/providers/test_ollama_vendor_conformance.py:322"
+            "tests/providers/test_ollama_vendor_conformance.py:329"
           ],
           "adjudication": null,
           "adjudicator": null,
@@ -29710,7 +29710,7 @@
           "verdict_eligible": false,
           "advisory": true,
           "locators": [
-            "tests/providers/test_ollama_vendor_conformance.py:345"
+            "tests/providers/test_ollama_vendor_conformance.py:352"
           ],
           "adjudication": null,
           "adjudicator": null,
@@ -29721,7 +29721,7 @@
           "verdict_eligible": false,
           "advisory": true,
           "locators": [
-            "tests/providers/test_ollama_vendor_conformance.py:395"
+            "tests/providers/test_ollama_vendor_conformance.py:402"
           ],
           "adjudication": null,
           "adjudicator": null,
@@ -29732,7 +29732,7 @@
           "verdict_eligible": false,
           "advisory": true,
           "locators": [
-            "tests/providers/test_ollama_vendor_conformance.py:409"
+            "tests/providers/test_ollama_vendor_conformance.py:416"
           ],
           "adjudication": null,
           "adjudicator": null,
@@ -30623,7 +30623,7 @@
           "verdict_eligible": false,
           "advisory": true,
           "locators": [
-            "tests/providers/test_vendor_cassette_replay.py:193"
+            "tests/providers/test_vendor_cassette_replay.py:201"
           ],
           "adjudication": null,
           "adjudicator": null,
@@ -30634,18 +30634,7 @@
           "verdict_eligible": false,
           "advisory": true,
           "locators": [
-            "tests/providers/test_vendor_cassette_replay.py:216"
-          ],
-          "adjudication": null,
-          "adjudicator": null,
-          "rationale": null
-        },
-        {
-          "rule_id": "vacuous_test_heuristic",
-          "verdict_eligible": false,
-          "advisory": true,
-          "locators": [
-            "tests/providers/test_vendor_cassette_replay.py:254"
+            "tests/providers/test_vendor_cassette_replay.py:224"
           ],
           "adjudication": null,
           "adjudicator": null,
@@ -30667,7 +30656,18 @@
           "verdict_eligible": false,
           "advisory": true,
           "locators": [
-            "tests/providers/test_vendor_cassette_replay.py:306"
+            "tests/providers/test_vendor_cassette_replay.py:270"
+          ],
+          "adjudication": null,
+          "adjudicator": null,
+          "rationale": null
+        },
+        {
+          "rule_id": "vacuous_test_heuristic",
+          "verdict_eligible": false,
+          "advisory": true,
+          "locators": [
+            "tests/providers/test_vendor_cassette_replay.py:314"
           ],
           "adjudication": null,
           "adjudicator": null,
