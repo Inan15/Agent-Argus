@@ -139,6 +139,24 @@ _OBSERVING_CALL_RE = re.compile(
 _OPEN_BRACKETS = "([{"
 _CLOSE_BRACKETS = ")]}"
 
+#: A CONTINUATION-CLAUSE header carrying no code of its own past the colon — ``except:`` /
+#: ``except V as e:`` / ``except* V:`` / ``else:`` / ``finally:`` / ``case P:``. These are
+#: CLAUSES of a compound statement, not statements: CPython builds ONE ``ast.Try`` however
+#: many handlers it carries, ONE ``ast.If`` however its ``orelse`` is spelled and ONE
+#: ``ast.Match`` however many arms it has, and neither ``ast.ExceptHandler`` nor
+#: ``ast.match_case`` is an ``ast.stmt`` at all. See
+#: :func:`_is_continuation_clause_header` for the measurement that put this here.
+#:
+#: ⛔ ``elif`` is deliberately absent: ``if/elif`` is a NESTED ``ast.If``, i.e. a genuine
+#: extra statement, and sweeping it in here would under-count.
+#:
+#: ``case`` is a SOFT keyword, so the test is shape-based — "opens with ``case`` and ends at
+#: a colon" — and is applied to the STRING-BLANKED text so a colon inside a literal cannot
+#: end it. An annotated assignment to a name called ``case`` (``case: int = f()``) does not
+#: end at a colon and is not matched. Anchored ``\A``/``\Z`` and never ``^``/``$``, per the
+#: platform-neutrality contract in this module's docstring (AC8.1).
+_CONTINUATION_CLAUSE_RE = re.compile(r"\A(?:except|else|finally|case)\b.*:\Z")
+
 
 def opens_bare_assert(stripped: str) -> bool:
     """Whether *stripped* (a left-stripped source line) opens a bare ``assert``.
@@ -369,22 +387,45 @@ def logical_statement_count(source_lines: list[str], start: int, end: int) -> in
       re-derived);
     - a docstring, or any other multi-line string literal, counts **once** — not once per
       line of prose;
+    - a bare continuation-clause header (``except`` / ``else`` / ``finally`` / ``case``) and
+      a decorator count for **nothing**, because CPython builds no ``ast.stmt`` for either
+      (:func:`_is_continuation_clause_header`, :func:`_is_decorator`);
     - blank lines, comment-only lines and bare closing brackets count for nothing.
 
     Measured against CPython's own ``ast`` module (every ``ast.stmt`` in the body,
     recursively) over the 1,848 flagged minions tests, the LINE count this replaced ran at
-    **1.907×** ground truth; this runs at **1.005×**. Note what the residual is: a compound
-    header and its body are two statements to CPython and to this scan alike
-    (``with x:`` / ``    y()``), while the inline one-line form ``with x: y()`` is one line
-    and is counted once — a bounded, deterministic under-count in the direction that RAISES
-    density, i.e. away from a flag.
+    **1.9071×** ground truth (29,093 ÷ 15,255); this runs at **1.0000×** — 15,255 ÷ 15,255,
+    exact on **1,848 of 1,848** spans. Over agent-smith's 681: **0.9997×**, exact on 680.
+    Over the whole 4,673-function pinned population: **4,672 exact, 0 over-counts, 1
+    under-count**.
+
+    **The residual, and its DIRECTION — corrected 2026-08-18 after it was measured wrong**
+    ----------------------------------------------------------------------------------------
+    This paragraph used to claim the residual was *"a bounded, deterministic under-count in
+    the direction that RAISES density, i.e. away from a flag"*. ⛔ **At the time it was
+    written that was the wrong direction**, and a claim about a SAFETY direction is the last
+    thing that may be asserted rather than measured in this detector. Re-measured over the
+    non-exact spans of the first implementation: **64 of 64** (minions) and **27 of 28**
+    (agent-smith) were OVER-counts, which LOWER density and bias TOWARDS a flag — the very
+    failure mode Story 14.2 exists to remove, reintroduced smaller and differently shaped. The
+    dominant mechanism was a continuation-clause header opening a statement of its own
+    (``try/except/else/finally`` scored 8 against CPython's 5); the rest was decorators.
+
+    Both were then FIXED rather than documented, and the direction re-measured: **0
+    over-counts remain in either member**. What is left is one span in 4,673 — the inline
+    compound header, ``def f(): return 0`` or ``with x(): y()``, which is two statements to
+    CPython and one line here. That IS a bounded under-count, so the original claim is now
+    true of the code as it stands, having been made true instead of merely asserted. Flags
+    GAINED by the correction: **0** on both members (structurally so — the denominator can
+    only shrink, density can only rise, the floor fires from below, and ``mock_ratio`` is
+    taken over ``call_sites``, never over this count).
 
     Line-terminator-agnostic by construction: it reads the ``source.splitlines()`` list the
     detector already holds, so ``"a\\r\\nb"`` and ``"a\\nb"`` are the same input (AC8.1).
     """
     return sum(
         _simple_statement_segments(text)
-        for text in _statement_texts(source_lines, start, end).values()
+        for text in _counted_statement_texts(source_lines, start, end).values()
     )
 
 
@@ -406,7 +447,7 @@ def body_statement_count(source_lines: list[str], start: int, end: int) -> int:
     statements, which the caller reads as "no denominator" and does NOT flag — the safe
     direction, and byte-identical to what the line count it replaced did with it.
     """
-    texts = _statement_texts(source_lines, start, end)
+    texts = _counted_statement_texts(source_lines, start, end)
     if not texts:
         return 0
     header = min(texts)
@@ -425,6 +466,76 @@ def _statement_texts(source_lines: list[str], start: int, end: int) -> dict[int,
     return {
         opens: " ".join(part for part in fragments if part)
         for opens, fragments in parts.items()
+    }
+
+
+def _is_continuation_clause_header(code: str) -> bool:
+    """Whether *code* — ONE whole logical statement — is a bare continuation-clause header.
+
+    ADDED 2026-08-18 (Story 14.2, review iteration 1), and the reason is a measurement that
+    contradicted a claim rather than a preference. :func:`logical_statement_count`'s docstring
+    asserted that its residual against CPython was *"a bounded under-count in the direction
+    that RAISES density, i.e. away from a flag"*. Re-measured over the non-exact spans of the
+    pinned corpora, **64 of 64** (minions) and **27 of 28** (agent-smith) were OVER-counts —
+    the opposite direction, which LOWERS density and biases TOWARDS a flag. A claim about a
+    SAFETY direction, stated backwards, in a detector whose method is "measured, not
+    asserted".
+
+    The dominant mechanism was this: :func:`_scan_span` opens a logical statement on every
+    line that starts one, and an ``except`` / ``else`` / ``finally`` / ``case`` header starts
+    a CLAUSE rather than a statement. ``try/except/else/finally`` scored **8** against
+    CPython's **5**; two real corpus instances ran 15-vs-11 and 39-vs-35.
+
+    Applied at the COUNT and deliberately not in :func:`_scan_span`, so that
+    :func:`logical_statement_starts` — fact (b)'s boundary map, and Story 14.1's moat rests on
+    it — is byte-identical: a call on a clause-header line is still attributed to that line.
+    Fixing the denominator must not reach into the corroboration path (DN-14-2-1's coupling
+    class, arriving through a different door).
+
+    Error direction of the exclusion itself is the SAFE one, structurally rather than by
+    hope: the denominator can only shrink, ``assertion_density`` can only rise, the ``1/4``
+    floor fires from BELOW, and ``mock_ratio`` is taken over ``call_sites`` and never over the
+    statement count — so nothing can GAIN a flag from it. Measured: **0** gained on both
+    pinned corpora.
+    """
+    return _CONTINUATION_CLAUSE_RE.match(_blank_strings(code).strip()) is not None
+
+
+def _is_decorator(code: str) -> bool:
+    """Whether *code* — ONE whole logical statement — is a DECORATOR.
+
+    A decorator is an expression CPython hangs off the ``FunctionDef``/``ClassDef`` it
+    decorates (``decorator_list``); it is not an ``ast.stmt`` and adds none. ``@`` cannot
+    BEGIN a Python expression — its only other uses, ``a @ b`` and ``a @= b``, both start at
+    the left operand — so at a statement-start position this test is exact rather than
+    heuristic. A decorator wrapped over several lines is assembled into one logical statement
+    by :func:`_statement_texts` and is therefore excluded once, not once per line.
+
+    Measured (Story 14.2, review iteration 1): after the clause-header rule above, this was
+    the ONLY remaining over-count in the whole 4,673-function pinned population — one span,
+    ``test_quality_gate_default_on.py::test_unevaluable_toggle_resolves_to_enforcing``, whose
+    body defines a nested class carrying an ``@property``. Fixing it is what makes the
+    residual's direction UNAMBIGUOUS, which is the point of the correction this pair of rules
+    belongs to: what is left over-counts nothing and under-counts only the inline compound
+    header, i.e. it can only RAISE density and only move AWAY from a flag.
+    """
+    return code.lstrip().startswith("@")
+
+
+def _counted_statement_texts(
+    source_lines: list[str], start: int, end: int
+) -> dict[int, str]:
+    """:func:`_statement_texts` minus the syntax CPython counts as no statement of its own.
+
+    Two rules, each with its own predicate and its own measurement: a bare continuation-clause
+    header (:func:`_is_continuation_clause_header`) and a decorator (:func:`_is_decorator`).
+    Both are applied HERE, at the count, and never in :func:`_scan_span`, so
+    :func:`logical_statement_starts` — fact (b)'s boundary map — is untouched.
+    """
+    return {
+        opens: text
+        for opens, text in _statement_texts(source_lines, start, end).items()
+        if not _is_continuation_clause_header(text) and not _is_decorator(text)
     }
 
 

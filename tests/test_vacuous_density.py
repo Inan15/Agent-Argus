@@ -1,6 +1,6 @@
 """The assertion-density half of the vacuous-test detector (Story 14.2).
 
-Verification area ArgusAgent-DETECT (``TC-ArgusAgent-DETECT-001-113``..``-119``). Two
+Verification area ArgusAgent-DETECT (``TC-ArgusAgent-DETECT-001-113``..``-122``). Two
 measured defects and one premise that did not survive:
 
 1. **the DENOMINATOR counted LINES** — a multi-line call, a dict literal, a closing bracket
@@ -12,7 +12,11 @@ measured defects and one premise that did not survive:
    assertion it could not see is present in 13 of the 31 adjudicated spans;
 3. **widening that table CAN manufacture a 🔴** — Story 14.1 recorded that passing the table
    into ``provenance_scan`` as a parameter made fact (b) independent of it. It does not, and
-   ``-114`` reproduces the false accusation that follows.
+   ``-115`` reproduces the false accusation that follows;
+4. **the FIRST fix reintroduced the same defect, smaller and differently shaped** — its
+   residual against CPython was documented as an under-count "away from a flag" and was in
+   fact an OVER-count (64/64 minions, 27/28 agent-smith non-exact spans), biasing TOWARDS a
+   flag. ``-121``/``-122`` close it and pin the direction (review iteration 1).
 
 WHY THIS MODULE EXISTS SEPARATELY FROM ``test_vacuous_detector.py``
 -------------------------------------------------------------------
@@ -43,6 +47,7 @@ import pytest
 from argus.detectors.provenance_scan import (
     body_statement_count,
     logical_statement_count,
+    logical_statement_starts,
     provenance_evidence,
 )
 from argus.detectors.vacuous_test import (
@@ -296,7 +301,10 @@ def test_the_denominator_counts_logical_statements_not_lines(tmp_path: Path) -> 
     change proposal records does NOT reproduce, and it is not a definitional difference
     either: counting only TOP-LEVEL body statements gives 2.664×, so 2.04 is neither. The
     defect is real and large; that particular multiplier was stale.) After this change the
-    same population sums to **15,334** — **1.005×**, exact on **1,784 of 1,848** spans.
+    same population sums to **15,255** — **1.0000×**, exact on **1,848 of 1,848** spans.
+    (Iteration 1 of this story landed at 15,334 / 1.0052× / 1,784-of-1,848; the remaining 64
+    spans were all OVER-counts and are closed by ``-121``, whose docstring records why the
+    direction mattered more than the magnitude.)
 
     The expectations below are asserted against CPython's own ``ast`` module rather than
     transcribed, because a transcribed number tests the author's arithmetic. Both are
@@ -812,3 +820,241 @@ def test_the_statement_scan_is_one_derivation_read_by_both_consumers(tmp_path: P
         1 for line in lines[1:] if line.strip() and not line.strip().startswith("#")
     )
     assert naive == 8 and naive != body
+
+
+# ── -121: a continuation-clause header is not a statement of its own ──────────────────────
+#
+# ``except`` / ``else`` / ``finally`` / ``case`` headers are CLAUSES of a compound statement,
+# not statements. CPython builds ONE ``ast.Try`` however many handlers it carries, ONE
+# ``ast.If`` however its ``orelse`` is spelled and ONE ``ast.Match`` however many ``case``
+# arms it has — ``ast.ExceptHandler`` and ``ast.match_case`` are not ``ast.stmt`` subclasses
+# at all. The last element is the count CPython derives; every row is checked against it, so
+# there is no exemption column here and none is wanted.
+#
+# ⛔ ``elif`` is NOT one of them and is carried below as a NEGATIVE control: ``if/elif`` is a
+# nested ``ast.If``, i.e. a genuine extra statement, so a fix that swept ``elif`` in with the
+# rest would under-count and this row would fail.
+_CLAUSE_HEADER_SHAPES: tuple[tuple[str, str, int], ...] = (
+    (
+        # The review's minimal repro, verbatim: three continuation-clause headers, +3.
+        "try-except-else-finally-is-one-statement-plus-its-bodies",
+        "def test_x():\n"
+        "    try:\n"
+        "        a()\n"
+        "    except ValueError:\n"
+        "        pass\n"
+        "    else:\n"
+        "        b()\n"
+        "    finally:\n"
+        "        c()\n",
+        5,
+    ),
+    (
+        "if-else",
+        "def test_x():\n"
+        "    if sut(1):\n"
+        "        a()\n"
+        "    else:\n"
+        "        b()\n"
+        "    assert c()\n",
+        4,
+    ),
+    (
+        "for-else",
+        "def test_x():\n"
+        "    for value in sut():\n"
+        "        a(value)\n"
+        "    else:\n"
+        "        b()\n"
+        "    assert c()\n",
+        4,
+    ),
+    (
+        "while-else",
+        "def test_x():\n"
+        "    while sut():\n"
+        "        a()\n"
+        "    else:\n"
+        "        b()\n"
+        "    assert c()\n",
+        4,
+    ),
+    (
+        # ``case`` is a SOFT keyword, so the predicate has to be shape-based rather than
+        # word-based. ``ast.match_case`` is not a statement; the two arms are +2 today.
+        "match-case",
+        "def test_x():\n"
+        "    match sut():\n"
+        "        case 1:\n"
+        "            a()\n"
+        "        case _:\n"
+        "            b()\n"
+        "    assert c()\n",
+        4,
+    ),
+    (
+        # A clause header wrapped over several lines is still one clause header — the
+        # predicate has to read the ASSEMBLED logical statement, not the physical line.
+        "wrapped-except-header",
+        "def test_x():\n"
+        "    try:\n"
+        "        a()\n"
+        "    except (\n"
+        "        ValueError,\n"
+        "        TypeError,\n"
+        "    ):\n"
+        "        b()\n"
+        "    assert c()\n",
+        4,
+    ),
+    (
+        # NEGATIVE control 1: ``elif`` IS a statement. Correct before the fix; must stay so.
+        "elif-is-a-real-statement",
+        "def test_x():\n"
+        "    if sut(1):\n"
+        "        a()\n"
+        "    elif sut(2):\n"
+        "        b()\n"
+        "    assert c()\n",
+        5,
+    ),
+    (
+        # NEGATIVE control 2: a clause header carrying its body INLINE still counts, because
+        # the body is a real statement. Correct before the fix; must stay so.
+        "clause-header-with-an-inline-body-still-counts",
+        "def test_x():\n"
+        "    try:\n"
+        "        a()\n"
+        "    except ValueError: b()\n"
+        "    assert c()\n",
+        4,
+    ),
+    (
+        # NEGATIVE control 3: ``case`` as an ordinary NAME. A shape-based predicate keyed on
+        # "starts with ``case`` and ends with a colon" must not eat an annotated assignment.
+        "case-as-an-ordinary-name",
+        "def test_x():\n"
+        "    case: int = sut(1)\n"
+        "    assert case\n",
+        2,
+    ),
+    (
+        # A DECORATOR is an expression hung off the definition it decorates, not a statement.
+        # After the clause-header rule this was the ONLY remaining over-count in the whole
+        # 4,673-function pinned population (one nested ``@property``).
+        "a-decorator-is-not-a-statement",
+        "def test_x():\n"
+        "    class Stub:\n"
+        "        @property\n"
+        "        def value(self):\n"
+        "            return sut()\n"
+        "    assert Stub().value\n",
+        4,
+    ),
+    (
+        # …and a decorator wrapped over several lines is still ONE decorator.
+        "a-wrapped-decorator-is-not-a-statement-either",
+        "def test_x():\n"
+        "    class Stub:\n"
+        "        @registered(\n"
+        "            name='v',\n"
+        "        )\n"
+        "        def value(self):\n"
+        "            return sut()\n"
+        "    assert Stub().value\n",
+        4,
+    ),
+    (
+        # NEGATIVE control 4: ``@`` as the matrix-multiply OPERATOR. It cannot BEGIN an
+        # expression, so a statement using it starts at the left operand and is not matched.
+        "matrix-multiply-is-not-a-decorator",
+        "def test_x():\n"
+        "    product = left() @ right()\n"
+        "    assert product\n",
+        2,
+    ),
+)
+
+
+def test_a_continuation_clause_header_is_not_a_statement_of_its_own(tmp_path: Path) -> None:
+    """TC-ArgusAgent-DETECT-001-121 — AC1.1/AC1.4: the residual's DIRECTION, measured.
+
+    THE DEFECT THIS PINS, and it is a defect of the FIX rather than of the shipped code
+    ---------------------------------------------------------------------------------------
+    ``-113`` recorded the residual against CPython as *"a bounded under-count in the direction
+    that RAISES density, i.e. away from a flag"*, citing the inline ``with x: y()`` compound.
+    **That was measured wrong, and in a story whose whole method is "measured, not asserted"
+    the direction of a SAFETY claim is exactly the thing that may not be asserted.** Of the 64
+    (minions) / 28 (agent-smith) non-exact spans in the 1,784-of-1,848 population, 64/64 and
+    27/28 were OVER-counts — the opposite direction, which LOWERS density and biases TOWARDS a
+    flag. The dominant mechanism was this one: ``_scan_span`` opened a new logical statement on
+    every ``except`` / ``else`` / ``finally`` / ``case`` header, none of which corresponds to
+    any ``ast.stmt`` node at all.
+
+    Measured on the review's own minimal repro before the fix: ``try/except/else/finally``
+    scored **8** against CPython's **5**. Two real corpus instances the review located
+    independently: ``test_prosecutor.py::test_malformed_top_level_arguments_raise_typed_error``
+    (15 vs. 11) and ``test_llm_provider_conformance.py::test_secret_not_in_exception_repr``
+    (39 vs. 35).
+
+    The error direction of the FIX is the safe one and is structural rather than hoped for:
+    the denominator can only SHRINK, ``assertion_density`` can only RISE, the ``1/4`` floor
+    fires from BELOW, and ``mock_ratio`` is over ``call_sites`` and never touches the statement
+    count — so no test can GAIN a flag from this. Measured: 0 gained on both pinned corpora.
+
+    Every row is checked against CPython's own ``ast`` module, and four rows are NEGATIVE
+    controls (``elif``, an inline clause body, ``case`` as an ordinary name, ``@`` as the
+    matrix-multiply operator) so a predicate that over-reached would fail here rather than
+    quietly under-count.
+    """
+    for slug, source, truth in _CLAUSE_HEADER_SHAPES:
+        assert _cpython_body_statements(source, "test_x") == truth, (
+            f"{slug!r}: the row's own expectation ({truth}) disagrees with CPython "
+            f"({_cpython_body_statements(source, 'test_x')}) — fix the row, not the scanner."
+        )
+        score, _, _ = _score_one(tmp_path, source, slug.replace("-", "_"))
+        assert score.statement_count == truth, (
+            f"{slug!r}: CPython counts {truth} body statements, the detector counts "
+            f"{score.statement_count}. A HIGHER count means a clause header is being read as "
+            "a statement of its own, which LOWERS density and biases TOWARDS a flag — the "
+            "direction this story exists to remove. A LOWER count means the predicate has "
+            "over-reached and swallowed a real statement (see the elif control)."
+        )
+
+
+def test_the_clause_header_rule_does_not_move_fact_b(tmp_path: Path) -> None:
+    """TC-ArgusAgent-DETECT-001-122 — AC6: the DENOMINATOR fix stays out of fact (b).
+
+    ``logical_statement_starts`` is fact (b)'s statement-boundary map, and Story 14.1's moat
+    rests on it. Excluding a clause header from the density DENOMINATOR must not change which
+    line a call is attributed to, or a denominator fix would have reached into the
+    corroboration path — the coupling class ``-115`` exists to prevent, arriving through a
+    different door.
+
+    So the exclusion is applied where the counting happens and NOT in the scan: every line of
+    the span still maps to the first line of its own logical statement, clause headers
+    included, exactly as before.
+    """
+    source = (
+        "def test_x():\n"
+        "    try:\n"
+        "        result = sut(\n"
+        "            1,\n"
+        "        )\n"
+        "    except ValueError:\n"
+        "        result = fallback()\n"
+        "    else:\n"
+        "        observe(result)\n"
+        "    assert result\n"
+    )
+    lines = source.splitlines()
+    starts = logical_statement_starts(lines, 1, len(lines))
+    assert starts == {1: 1, 2: 2, 3: 3, 4: 3, 5: 3, 6: 6, 7: 7, 8: 8, 9: 9, 10: 10}, starts
+
+    # …while the COUNT drops the two clause headers, and agrees with CPython.
+    assert body_statement_count(lines, 1, len(lines)) == _cpython_body_statements(
+        source, "test_x"
+    ) == 5
+
+    score, _, _ = _score_one(tmp_path, source, "clause_header_fact_b")
+    assert score.statement_count == 5

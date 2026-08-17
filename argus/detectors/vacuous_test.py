@@ -704,11 +704,21 @@ def _count_statements(source_lines: list[str], start: int, end: int) -> int:
     RE-AUTHORED 2026-08-18, and the reason is measured rather than stylistic. This counted
     every non-blank, non-comment **LINE** of the span. A multi-line call, a dict literal, a
     closing bracket and **every line of a docstring** each scored as a statement, so the
-    denominator ran at **1.907×** CPython's own statement count over the 1,848 flagged
+    denominator ran at **1.9071×** CPython's own statement count over the 1,848 flagged
     minions tests (ground truth: every ``ast.stmt`` in the body, recursively). An inflated
     denominator depresses ``assertion_density`` arithmetically, and the 1/4 floor fires from
     below — so half of every test suite was being flagged for a reason that was arithmetic
-    rather than evidence. The replacement measures **1.005×** of ground truth.
+    rather than evidence. The replacement measures **1.0000×** of ground truth, exact on all
+    1,848 spans (agent-smith: 0.9997×, exact on 680 of 681).
+
+    ⚠️ **The residual's DIRECTION was itself measured wrong first, and that is recorded
+    rather than quietly fixed** (review iteration 1). The first implementation claimed a
+    bounded under-count "away from a flag"; of its non-exact spans, 64/64 (minions) and 27/28
+    (agent-smith) were OVER-counts, biasing TOWARDS a flag — a continuation-clause header
+    (``except``/``else``/``finally``/``case``) or a decorator opening a statement CPython does
+    not build. Both are now excluded at the count; **0** over-counts remain in either member,
+    and **0** flags were gained by the correction. See
+    :func:`~argus.detectors.provenance_scan.logical_statement_count`.
 
     It is a REUSE, not a second scanner (AR7/§3.3, AC1.2): ``provenance_scan`` already had to
     answer *"where does a statement start?"* for fact (b), and two spellings of that question
