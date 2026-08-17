@@ -20,11 +20,33 @@ follows the ``argus/pipeline_stages.py`` / ``argus/pipeline_persist.py`` precede
 a cohesion boundary, no function split across it, and the scorer imports back.
 
 **The callee vocabularies are deliberately NOT here.** ``_ASSERTION_CALLEES`` and
-``_MOCK_CALLEES`` stay in ``vacuous_test.py`` and are PASSED IN, because Story 14.2 owns
-the assertion table and fact (b) must not move when it is widened (Story 14.1 / DN-4).
-Parameters make that structural rather than promised: nothing in this module can grow a
-dependency on a table it cannot see. ``RESULT_OBSERVING_CONTEXT_CALLEES`` is fact (b)'s
-OWN table (DN-3) and therefore does live here.
+``_MOCK_CALLEES`` stay in ``vacuous_test.py`` and are PASSED IN.
+``RESULT_OBSERVING_CONTEXT_CALLEES`` is fact (b)'s OWN table (DN-3) and therefore does live
+here.
+
+⚠️ **What the parameter does and does not guarantee — CORRECTED 2026-08-18 (Story 14.2 /
+AC6.5).** This paragraph used to end *"nothing in this module can grow a dependency on a
+table it cannot see"*, and read as a guarantee that fact (b) could not move when Story 14.2
+widened the assertion table. **That was false as written.** The table is a parameter, so this
+module *does* see it, and reads it in TWO places: the SUT loop in :func:`provenance_evidence`
+(a widened callee stops being a candidate SUT call, which can drop ``consumed_sut_calls`` to
+zero and flip ``sut_result_is_discarded`` TRUE) and :func:`_assertion_statement_lines` (a
+widened callee makes another line an assertion statement, which can raise
+``mock_referencing_assertions`` from zero). Both directions were reproduced end to end: an
+ordinary mock-interaction test whose sole assertion is ``fake.calculate.assert_called_once_with()``
+scores ``asserts=0 density=0 corroborated=False`` on the 23-name table and
+``asserts=1 density=1/5 corroborated=True`` on a widened one — still under the density floor,
+so still flagged, and now VERDICT-ELIGIBLE. A false 🔴 manufactured by the fix for the
+assertion table.
+
+What Story 14.1's DN-4 actually guarantees is that fact (b) does not depend on the assertion
+**COUNT** — no clause here reads ``assertion_sites`` or compares it to a threshold. It never
+guaranteed independence from the assertion **TABLE**, and the two are different things. What
+enforces the rest is **DN-14-2-1**, in the caller: ``vacuous_test.py`` passes the corroboration
+path a FROZEN vocabulary (``_CORROBORATION_ASSERTION_CALLEES``) pinned to 14.1's 23 names,
+while only the density numerator reads the widened ``_ASSERTION_CALLEES``. So this module is
+independent of the widening because of what it is HANDED, not because of what it can see —
+and Story 14.3 can widen the table across four languages without re-opening the moat.
 
 What the scan can and cannot prove (honest scope)
 --------------------------------------------------
@@ -55,6 +77,8 @@ from argus.index.ast_index import CodeEdge
 __all__ = [
     "RESULT_OBSERVING_CONTEXT_CALLEES",
     "ProvenanceEvidence",
+    "body_statement_count",
+    "logical_statement_count",
     "logical_statement_starts",
     "opens_bare_assert",
     "provenance_evidence",
@@ -127,13 +151,17 @@ def opens_bare_assert(stripped: str) -> bool:
     return stripped == "assert" or stripped.startswith("assert ") or stripped.startswith("assert(")
 
 
-def _skip_string(text: str, index: int) -> int:
-    """Index just past the string literal opening at *index* (or end of *text*).
+def _consume_string(text: str, index: int) -> tuple[int, str | None]:
+    """``(index just past the literal at *index*, delimiter still open at end of *text*)``.
 
-    Single- and triple-quoted, backslash-aware. An unterminated literal (a
-    triple-quoted string continuing onto the next line) consumes the rest of the
-    line — a bounded, deterministic degradation, and one the conservative default
-    absorbs: an unreadable statement produces no corroboration.
+    Single- and triple-quoted, backslash-aware. The second element is the TRIPLE
+    delimiter when the literal is still open when the line runs out — that is the
+    cross-line state :func:`logical_statement_count` needs, and the reason this
+    returns a pair rather than an index (Story 14.2 / DN-14-2-2). A single-quoted
+    literal cannot legally span a line without a backslash continuation, so it is
+    reported CLOSED at end of line, which is exactly what this module did before the
+    state existed — the conservative direction, and one the "unresolvable is not
+    evidence" default already absorbs.
     """
     quote = text[index]
     delimiter = quote * 3 if text.startswith(quote * 3, index) else quote
@@ -143,9 +171,14 @@ def _skip_string(text: str, index: int) -> int:
             cursor += 2
             continue
         if text.startswith(delimiter, cursor):
-            return cursor + len(delimiter)
+            return cursor + len(delimiter), None
         cursor += 1
-    return len(text)
+    return len(text), (delimiter if len(delimiter) == 3 else None)
+
+
+def _skip_string(text: str, index: int) -> int:
+    """Index just past the string literal opening at *index* (or end of *text*)."""
+    return _consume_string(text, index)[0]
 
 
 def _code_prefix(line: str) -> str:
@@ -154,16 +187,54 @@ def _code_prefix(line: str) -> str:
     Column indices into the result are valid indices into *line*, which is what lets
     a call site located by regex be split into "what precedes it" and "what follows".
     """
+    return _continued_code_prefix(line, None)[0]
+
+
+def _continued_code_prefix(line: str, pending: str | None) -> tuple[str, str | None]:
+    """:func:`_code_prefix` of *line*, resumed inside a string left open by an earlier line.
+
+    *pending* is the triple-quote delimiter the PREVIOUS line left open, or ``None``.
+    Returns the comment-stripped code text and the delimiter still open after this line.
+
+    Characters belonging to a literal opened on an earlier line are blanked to spaces
+    rather than dropped, so every column index into the result is still a valid index
+    into *line* — the invariant :func:`_locate_call` and the ``preceding``/``statement``
+    split in :func:`provenance_evidence` rest on. A ``#`` inside such a literal is text,
+    not a comment, which is precisely the confusion that made a ``;`` in docstring prose
+    look like a statement separator (§0.2 of Story 14.2: two flags GAINED on the corpus,
+    on a change advertised as flag-reducing).
+    """
+    out: list[str] = []
     cursor = 0
+    if pending is not None:
+        while cursor < len(line):
+            if line[cursor] == "\\":
+                out.append(" " * min(2, len(line) - cursor))
+                cursor += 2
+                continue
+            if line.startswith(pending, cursor):
+                out.append(" " * len(pending))
+                cursor += len(pending)
+                pending = None
+                break
+            out.append(" ")
+            cursor += 1
+        if pending is not None:
+            return "".join(out), pending
     while cursor < len(line):
         char = line[cursor]
         if char == "#":
-            return line[:cursor]
+            break
         if char in "\"'":
-            cursor = _skip_string(line, cursor)
+            end, still_open = _consume_string(line, cursor)
+            out.append(line[cursor:end])
+            cursor = end
+            if still_open is not None:
+                return "".join(out), still_open
             continue
+        out.append(char)
         cursor += 1
-    return line
+    return "".join(out), None
 
 
 def _blank_strings(code: str) -> str:
@@ -227,6 +298,150 @@ def _logical_statement_end(source_lines: list[str], start_line: int, span_end: i
     return span_end
 
 
+class _SpanLine(NamedTuple):
+    """One physical line of a span, as the ONE scan below reads it.
+
+    ``opens`` is the 1-based first line of the logical statement this line belongs to,
+    or ``None`` when the line opens nothing and belongs to nothing (blank, comment-only,
+    at bracket depth 0 and outside any string).
+    """
+
+    line_no: int
+    code: str
+    opens: int | None
+
+
+def _scan_span(source_lines: list[str], start: int, end: int) -> list[_SpanLine]:
+    """THE statement scan of the 1-based inclusive span — declared once, read by both consumers.
+
+    A line continues the previous logical statement when the bracket depth before it is
+    positive, OR the previous code line ended in a backslash, OR a triple-quoted string
+    literal opened earlier is still open. All three are handled by one rule rather than
+    special-cased, because the two Python continuation syntaxes were already broken
+    separately once (see :func:`logical_statement_starts`) and the string state was the
+    third member of the same family.
+
+    **Why the string state is here and not in the caller (AR7/§3.3, AC1.2).**
+    ``logical_statement_starts`` — fact (b)'s statement boundaries — and
+    :func:`logical_statement_count` — the heuristic's density DENOMINATOR — are two
+    consumers of one question: *"where does a statement start?"*. Story 14.2 measured what
+    happens when the second one is written separately: reusing the pre-14.2 line scan put
+    the denominator at 1.134× of CPython's own statement count and **GAINED two flags** on
+    the pinned corpora, both from a ``;`` inside DOCSTRING PROSE being read as a statement
+    separator (``test_sim_real_boundary.py:405``, ``test_plugin_fail_closed.py:376``). With
+    the state added HERE, once, both consumers see it: 1.005× of ground truth and **0** flags
+    gained. Two spellings of "where does a statement start" is the disagreement class this
+    detector keeps closing elsewhere.
+    """
+    scanned: list[_SpanLine] = []
+    current: int | None = None
+    depth = 0
+    continued = False
+    pending: str | None = None
+    for line_no in range(start, end + 1):
+        index = line_no - 1
+        if index < 0 or index >= len(source_lines):
+            continue
+        inside_string = pending is not None
+        code, pending = _continued_code_prefix(source_lines[index], pending)
+        if depth <= 0 and not continued and not inside_string:
+            if not code.strip():
+                current = None  # a blank / comment-only line opens no statement
+                scanned.append(_SpanLine(line_no, code, None))
+                continue
+            current = line_no
+        scanned.append(_SpanLine(line_no, code, current if current is not None else line_no))
+        depth = max(depth + _bracket_delta(code), 0)
+        continued = _continues_onto_next_line(code)
+    return scanned
+
+
+def logical_statement_count(source_lines: list[str], start: int, end: int) -> int:
+    """How many SIMPLE statements the 1-based inclusive span contains (PURE, deterministic).
+
+    The heuristic's assertion-density DENOMINATOR (Story 14.2 / AC1). It counts what
+    Python executes rather than what the author typed:
+
+    - a statement wrapped over several lines — bracketed or backslash-continued — counts
+      **once**, however many lines it occupies;
+    - a ``;``-compound counts once per simple statement, which is the same unit fact (b)
+      already reasons about (:func:`_simple_statement_breaks`, reused here rather than
+      re-derived);
+    - a docstring, or any other multi-line string literal, counts **once** — not once per
+      line of prose;
+    - blank lines, comment-only lines and bare closing brackets count for nothing.
+
+    Measured against CPython's own ``ast`` module (every ``ast.stmt`` in the body,
+    recursively) over the 1,848 flagged minions tests, the LINE count this replaced ran at
+    **1.907×** ground truth; this runs at **1.005×**. Note what the residual is: a compound
+    header and its body are two statements to CPython and to this scan alike
+    (``with x:`` / ``    y()``), while the inline one-line form ``with x: y()`` is one line
+    and is counted once — a bounded, deterministic under-count in the direction that RAISES
+    density, i.e. away from a flag.
+
+    Line-terminator-agnostic by construction: it reads the ``source.splitlines()`` list the
+    detector already holds, so ``"a\\r\\nb"`` and ``"a\\nb"`` are the same input (AC8.1).
+    """
+    return sum(
+        _simple_statement_segments(text)
+        for text in _statement_texts(source_lines, start, end).values()
+    )
+
+
+def body_statement_count(source_lines: list[str], start: int, end: int) -> int:
+    """:func:`logical_statement_count` of the BODY of the function whose ``def`` opens at *start*.
+
+    The ``def`` header is the span's FIRST logical statement — however many lines its
+    signature is wrapped over — so the body is everything else. Deriving it that way rather
+    than "skip line *start*" is what makes a wrapped signature count zero body statements
+    for its own continuation lines::
+
+        def test_wrapped(          # ← the header opens here…
+            a,
+            b,
+        ):                         # ← …and ends here; NONE of this is a body statement
+            assert a               # ← 1
+
+    A degenerate one-line ``def test_x(): assert 1`` therefore reports **0** body
+    statements, which the caller reads as "no denominator" and does NOT flag — the safe
+    direction, and byte-identical to what the line count it replaced did with it.
+    """
+    texts = _statement_texts(source_lines, start, end)
+    if not texts:
+        return 0
+    header = min(texts)
+    return sum(
+        _simple_statement_segments(text) for line, text in texts.items() if line != header
+    )
+
+
+def _statement_texts(source_lines: list[str], start: int, end: int) -> dict[int, str]:
+    """1-based opening line → that whole logical statement's comment-free code text."""
+    parts: dict[int, list[str]] = {}
+    for line in _scan_span(source_lines, start, end):
+        if line.opens is None:
+            continue
+        parts.setdefault(line.opens, []).append(line.code.strip())
+    return {
+        opens: " ".join(part for part in fragments if part)
+        for opens, fragments in parts.items()
+    }
+
+
+def _simple_statement_segments(code: str) -> int:
+    """How many non-empty SIMPLE statements *code* — one whole logical statement — holds.
+
+    ``sut(1, 2); result = sut(3, 4)`` is two; ``x = 1;`` is one (a trailing separator ends
+    nothing new); ``pass`` is one. Reuses :func:`_simple_statement_breaks` so the ``;``
+    rule has exactly one definition in this module.
+    """
+    breaks = _simple_statement_breaks(code)
+    if not breaks:
+        return 1 if code.strip() else 0
+    bounds = (-1, *breaks, len(code))
+    return sum(1 for lo, hi in zip(bounds, bounds[1:]) if code[lo + 1 : hi].strip())
+
+
 def logical_statement_starts(
     source_lines: list[str], start: int, end: int
 ) -> dict[int, int]:
@@ -247,31 +462,21 @@ def logical_statement_starts(
     whose result is thrown away, which promotes a test that genuinely constrains the SUT
     result to verdict-eligible — the exact false-accusation class Story 14.1 exists to
     close. Both syntaxes are handled by the SAME rule (a line is a continuation iff the
-    bracket depth before it is positive OR the previous code line ended in a backslash),
-    because special-casing one of them leaves the other broken.
+    bracket depth before it is positive OR the previous code line ended in a backslash OR a
+    triple-quoted literal opened earlier is still open), because special-casing one of them
+    leaves the other broken — and the third was added by Story 14.2 for exactly that reason.
 
     A line that is blank or comment-only at depth 0 opens nothing and is absent from the
     result. A caller that finds its line absent must treat the statement as unreadable —
     unresolvable is not evidence.
+
+    A PROJECTION of :func:`_scan_span`, never a second walk of the same source (AR7/§3.3).
     """
-    starts: dict[int, int] = {}
-    current: int | None = None
-    depth = 0
-    continued = False
-    for line_no in range(start, end + 1):
-        index = line_no - 1
-        if index < 0 or index >= len(source_lines):
-            continue
-        code = _code_prefix(source_lines[index])
-        if depth <= 0 and not continued:
-            if not code.strip():
-                current = None  # a blank / comment-only line opens no statement
-                continue
-            current = line_no
-        starts[line_no] = current if current is not None else line_no
-        depth = max(depth + _bracket_delta(code), 0)
-        continued = _continues_onto_next_line(code)
-    return starts
+    return {
+        line.line_no: line.opens
+        for line in _scan_span(source_lines, start, end)
+        if line.opens is not None
+    }
 
 
 def _statement_code(source_lines: list[str], start_line: int, end_line: int) -> str:

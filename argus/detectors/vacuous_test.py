@@ -25,16 +25,19 @@ Locked contract decisions (frozen for downstream consumers — 1.6 / Epic-6)
   whose name starts with ``test`` (``test_*`` functions / ``Test*``-class
   ``test_*`` methods). Class definitions themselves are not scored.
 - **Assertion sites** — call edges whose callee is a known assertion primitive
-  (``assertEqual``/``assertTrue``/… unittest family) PLUS bare ``assert``
-  statements counted from the source text within the function span (tree-sitter
-  ``assert_statement`` is not a ``call`` node, so the index edge set does not
-  carry it — we count it from the source lines, deterministically).
+  (the ``unittest`` family, ``unittest.mock``'s ``assert_called*`` methods and
+  pytest's ``raises``/``warns``/``deprecated_call``) **or matches the
+  project-helper naming convention** (``assert*``/``_assert*``), PLUS bare
+  ``assert`` statements counted from the source text within the function span
+  (tree-sitter ``assert_statement`` is not a ``call`` node, so the index edge set
+  does not carry it — we count it from the source lines, deterministically).
 - **Mock construction sites** — call edges whose callee is a known mock primitive
   (``Mock``/``MagicMock``/``patch``/``AsyncMock``/``create_autospec``/…).
-- **assertion-density = assertion_sites / test_body_statements** (statements, not
-  lines — robust to multi-line statements), stored as an exact ``Fraction``.
-  Denominator 0 (no statements) → density is ``Fraction(0)`` and the file
-  degrades (un-analyzable), never flagged.
+- **assertion-density = assertion_sites / test_body_LOGICAL_statements** — a
+  statement wrapped over several lines counts once, a ``;``-compound counts once
+  per simple statement, and a docstring counts once rather than once per line of
+  prose. Stored as an exact ``Fraction``. Denominator 0 (no statements) → density
+  is ``Fraction(0)`` and the file degrades (un-analyzable), never flagged.
 - **mock-ratio = mock_sites / call_sites** (all call edges in the function span),
   stored as an exact ``Fraction``; call_sites 0 → ratio ``Fraction(0)``.
 - **Thresholds (heuristic, documented as such).** FLAG when
@@ -130,18 +133,37 @@ to end on the default zero-token path before the fix and are pinned by
 The signal stays NAME-LEVEL and is a proxy, not dataflow (``DF-14-1-A``; real
 assertion provenance is Story 6.2's). It reads the source text and the 1.4 index
 and nothing else, so the scorer stays PURE (AR8), and it depends on **no count and
-no threshold** — in particular not on ``assertion_sites``, whose callee table
-Story 14.2 widens.
+no threshold** — in particular not on ``assertion_sites``.
 
-The line-oriented scan that answers all of this lives in
+Why there are TWO assertion vocabularies (Story 14.2 — DN-14-2-1 / DN-14-2-4)
+-----------------------------------------------------------------------------
+Story 14.1 left the callee tables here and passed them into the scan, and recorded
+that this made fact (b) independent of the table Story 14.2 widens. **It did not**,
+and the gap was reproduced end to end rather than argued: the scan reads the table
+in two places, and widening it turned an ordinary mock-interaction test — SUT result
+discarded, sole assertion ``fake.calculate.assert_called_once_with()`` — from
+``density=0, corroborated=False`` into ``density=1/5, corroborated=True``. Still
+below the 1/4 floor, so still flagged, and now VERDICT-ELIGIBLE: a false 🔴
+manufactured by the fix for the assertion table. DN-4 guarantees fact (b) does not
+depend on the assertion **COUNT**; it never guaranteed independence from the
+assertion **TABLE**.
+
+So the two questions get two vocabularies. The DENSITY numerator reads
+``_ASSERTION_CALLEES`` + the naming convention and wants BREADTH; facts (a) and (b)
+read ``_CORROBORATION_ASSERTION_CALLEES``, FROZEN at 14.1's 23 names, and want
+STABILITY. Neither is derived from the other. That is what lets Story 14.3 widen the
+vocabulary across four languages without re-opening the moat, and it is what makes
+14.1's promise structural instead of merely written.
+
+The line-oriented scan that answers fact (b) lives in
 ``argus/detectors/provenance_scan.py`` — a separate concern from scoring, split out
-for cohesion and for NFR-M1 headroom (see that module's docstring). The callee
-vocabularies stay HERE and are passed in, so nothing in the scan can grow a
-dependency on the table Story 14.2 widens (DN-4, made structural).
+for cohesion and for NFR-M1 headroom (see that module's docstring). It also owns the
+ONE statement scan both the denominator and fact (b) read (AR7/§3.3).
 """
 
 from __future__ import annotations
 
+import re
 from fractions import Fraction
 from typing import Iterable, Protocol, TypeVar
 
@@ -153,7 +175,11 @@ from argus.detectors.base import (
     FindingDraft,
     build_recording,
 )
-from argus.detectors.provenance_scan import opens_bare_assert, provenance_evidence
+from argus.detectors.provenance_scan import (
+    body_statement_count,
+    opens_bare_assert,
+    provenance_evidence,
+)
 from argus.index.ast_index import AstIndexEntry, CodeEdge, Definition
 from argus.ledger.coverage_ledger import CoverageDepth, grade_entry
 
@@ -164,6 +190,7 @@ __all__ = [
     "MOCK_RATIO_CEILING",
     "VacuousTestScore",
     "VacuousTestDetector",
+    "is_assertion_callee",
     "is_test_file",
     "is_test_classification_content_dependent",
 ]
@@ -175,9 +202,163 @@ RULE_AST = "vacuous_test_ast"
 ASSERTION_DENSITY_FLOOR = Fraction(1, 4)
 MOCK_RATIO_CEILING = Fraction(1, 2)
 
-# Known assertion primitives (unittest family + pytest helpers). A bare ``assert``
-# statement is counted separately from the source span (it is not a call node).
+# ─────────────────────────────────────────────────────────────────────────────────────────
+# TWO assertion vocabularies, because there are TWO QUESTIONS (Story 14.2 / DN-14-2-4).
+#
+# They are NOT two spellings of one table and neither is derived from the other — that is the
+# whole point, and deriving either (``frozen = widened - delta``) would re-couple them the
+# moment Story 14.3 lands. Read them as:
+#
+#   `_ASSERTION_CALLEES`                 asks "does this test ASSERT ANYTHING?" and wants
+#   (the density NUMERATOR)              BREADTH. Missing a name here invents a low density
+#                                        and accuses a real test. Widening it can only RAISE
+#                                        `assertion_sites`, and the floor fires from BELOW, so
+#                                        this half is strictly flag-REDUCING (AC7.4).
+#
+#   `_CORROBORATION_ASSERTION_CALLEES`   asks "which call edges are NOT SUT calls?" and wants
+#   (facts (a) and (b) — the moat)       STABILITY. It is FROZEN. See its own comment.
+# ─────────────────────────────────────────────────────────────────────────────────────────
+
+# Known assertion primitives — the DENSITY NUMERATOR's vocabulary. FLAT and
+# LANGUAGE-AGNOSTIC by contract (NFR-P2 keeps every language conditional inside
+# ``argus/index/``): the groupings below are COMMENTS, which Story 14.3 extends by adding
+# names, never structure it would have to unpick. A bare ``assert`` statement is counted
+# separately from the source span (it is not a call node), and a callee matching the
+# project-helper naming convention is admitted by :func:`_matches_assertion_convention`
+# rather than by an entry smuggled in here (AC7.2).
+#
+# Story 14.2 widened this from 23 names, all ``unittest``, after measuring that an assertion
+# the table could not see is present in 13 of the 31 adjudicated spans. Story 14.3 owns the
+# cross-language half (``expect``/``toBe``/``assertEquals``/``Fatalf``); NONE of it is here.
 _ASSERTION_CALLEES: frozenset[str] = frozenset(
+    {
+        # ── unittest.TestCase, the original 23 ──
+        "assertEqual",
+        "assertNotEqual",
+        "assertTrue",
+        "assertFalse",
+        "assertIs",
+        "assertIsNot",
+        "assertIsNone",
+        "assertIsNotNone",
+        "assertIn",
+        "assertNotIn",
+        "assertRaises",
+        "assertRaisesRegex",
+        "assertAlmostEqual",
+        "assertGreater",
+        "assertLess",
+        "assertGreaterEqual",
+        "assertLessEqual",
+        "assertListEqual",
+        "assertDictEqual",
+        "assertSetEqual",
+        "assertCountEqual",
+        "assertRegex",
+        "fail",
+        # ── unittest.TestCase, the gaps the 23 missed ──
+        "assertIsInstance",
+        "assertNotIsInstance",
+        "assertNotAlmostEqual",
+        "assertNotRegex",
+        "assertSequenceEqual",
+        "assertTupleEqual",
+        "assertMultiLineEqual",
+        "assertWarns",
+        "assertWarnsRegex",
+        "assertLogs",
+        "assertNoLogs",
+        "failIf",
+        "failUnless",
+        # ── pytest's own assertion helpers ──
+        # ``raises``/``warns``/``deprecated_call`` are ASSERTIONS for the density question:
+        # `with pytest.raises(ValueError): parse(bad)` constrains the SUT precisely. They are
+        # also in ``provenance_scan.RESULT_OBSERVING_CONTEXT_CALLEES``, which is fact (b)'s
+        # OWN table and is unaffected by their presence here (Story 14.1 / DN-3 is undisturbed
+        # — that table is read by name, not by set membership in this one).
+        "raises",
+        "warns",
+        "deprecated_call",
+        # ── unittest.mock's assertion methods ──
+        # Every one of these ALSO matches the naming convention below; they are enumerated
+        # anyway because the convention is a fallback for names this project cannot know, and
+        # the ecosystem's own vocabulary should be readable in one place.
+        "assert_called",
+        "assert_called_once",
+        "assert_called_with",
+        "assert_called_once_with",
+        "assert_any_call",
+        "assert_has_calls",
+        "assert_not_called",
+        "assert_awaited",
+        "assert_awaited_once",
+        "assert_awaited_with",
+        "assert_awaited_once_with",
+        "assert_any_await",
+        "assert_has_awaits",
+        "assert_not_awaited",
+    }
+)
+
+#: The PROJECT-HELPER naming convention (Story 14.2 / DN-14-2-3, AC7.2). A separate, named,
+#: documented PREDICATE rather than entries hidden in the frozenset, so Story 14.3 adds names
+#: to a set whose contract it can read in one place.
+#:
+#: Every codebase grows its own assertion helpers — ``_assert_one_rejection``,
+#: ``assert_corpus_holds`` — and no name table can enumerate them. Measured over the 31
+#: adjudicated spans, the table ALONE reproduces neither the "4 of 31 lifted by names" nor the
+#: "13 of 31 spans" figure this story is committed to; with the convention both reproduce
+#: exactly. The numbers pin the design.
+#:
+#: ACCEPTED COLLISION COST, recorded with its error direction (AC7.4): a PRODUCTION helper
+#: coincidentally named ``assert_*`` — or a name that merely begins with those letters, such
+#: as ``asserted_value`` — now counts as an assertion. That can only RAISE ``assertion_sites``
+#: and the floor fires from below, so the error direction is **one fewer flag** — the safe
+#: direction under the locked asymmetry (a false 🔴 is the lethal failure; a real vacuous test
+#: left advisory is tolerable). The corroboration half cannot be reached by it at all, because
+#: that half does not read this predicate (DN-14-2-1).
+#:
+#: ``\w`` is a Unicode class on ``str`` patterns, so ``assert_café_vide`` matches exactly as an
+#: ASCII name does (AC8.3 — the ``nonascii_unicode`` cartridge depends on this), and the
+#: pattern is ``\Z``-anchored rather than ``$``-anchored so no line terminator can satisfy it
+#: (AC8.1).
+_ASSERTION_NAMING_CONVENTION = re.compile(r"\A_?assert\w*\Z")
+
+# ── THE FROZEN VOCABULARY — the moat, made structural (Story 14.2 / DN-14-2-1) ────────────
+#
+# ⛔ THIS TABLE MUST NOT TRACK ``_ASSERTION_CALLEES``, and it is named for its PURPOSE rather
+# than its contents so that stays true as the other one grows. It is pinned to the 23 names
+# Story 14.1 shipped, and Story 14.3 must widen ``_ASSERTION_CALLEES`` and leave this alone.
+#
+# THE MEASURED REASON, not a precaution. Story 14.1's ``provenance_scan`` docstring claimed
+# that passing the table in as a parameter made fact (b) independent of it. It does not: the
+# scan reads the table in two places, and widening it was reproduced END TO END turning an
+# ORDINARY mock-interaction test into a verdict-eligible finding —
+#
+#     def test_compute_calls_the_dependency():
+#         compute([1, 2])                           # SUT reached, result DISCARDED
+#         fake = Mock()
+#         fake.calculate.return_value = 6
+#         fake.calculate()
+#         fake.calculate.assert_called_once_with()  # the only "assertion" in the test
+#
+#     23-name table : asserts=0 stmts=5 density=0   flagged=True  corroborated=False  advisory
+#     widened table : asserts=1 stmts=5 density=1/5 flagged=True  corroborated=True   🔴
+#
+# — via ``_assertion_statement_lines``: that line becomes an assertion statement, it references
+# the mock-bound name ``fake``, and ``mock_referencing_assertions`` goes 0 → 1. Density rises to
+# 1/5, which is still BELOW the 1/4 floor, so the test stays flagged and is now promoted. That
+# is the exact false-accusation class Epic 14 exists to close, manufactured by Epic 14's own fix.
+#
+# The corpus cannot adjudicate this and must not be read as reassurance: widening the table
+# moved corroboration for 0 tests over both members ONLY because 0 of 4,673 are corroborated at
+# all after 14.1 — an EMPTY DENOMINATOR, i.e. UNEVALUABLE, not a confirmation. The mechanism
+# above is the evidence. Rejected alternative: one table everywhere, plus a guard asserting
+# corroboration did not move on the corpus — a test that proves nothing (``AI-E3-1``).
+#
+# DN-4 (Story 14.1) still holds and is a DIFFERENT claim: fact (b) depends on no assertion
+# COUNT and no threshold. This is independence from the TABLE, which DN-4 never gave.
+_CORROBORATION_ASSERTION_CALLEES: frozenset[str] = frozenset(
     {
         "assertEqual",
         "assertNotEqual",
@@ -204,6 +385,30 @@ _ASSERTION_CALLEES: frozenset[str] = frozenset(
         "fail",
     }
 )
+
+
+def is_assertion_callee(callee: str) -> bool:
+    """Whether *callee* counts as an assertion for the DENSITY NUMERATOR (Story 14.2 / AC7.2).
+
+    The name table OR the project-helper naming convention. Declared once and read by the
+    scorer, so "is this an assertion?" has a single answer in this module (AR7/§3.3).
+
+    ⛔ **Not** the question the corroboration path asks. Facts (a) and (b) read
+    :data:`_CORROBORATION_ASSERTION_CALLEES` directly and must never be routed through here —
+    see that table's comment for the false accusation this separation prevents (DN-14-2-1).
+    """
+    return callee in _ASSERTION_CALLEES or _matches_assertion_convention(callee)
+
+
+def _matches_assertion_convention(callee: str) -> bool:
+    """Whether *callee* follows the project-helper assertion naming convention.
+
+    ``assert_valid`` / ``_assert_one_rejection`` / ``assertSomethingProjectSpecific``. Named
+    and documented separately from the frozenset so Story 14.3 extends a set whose contract it
+    can read in one place — see :data:`_ASSERTION_NAMING_CONVENTION` for the measurement that
+    required it and for the accepted collision cost.
+    """
+    return _ASSERTION_NAMING_CONVENTION.match(callee) is not None
 
 # Known mock/patch construction primitives.
 _MOCK_CALLEES: frozenset[str] = frozenset(
@@ -494,23 +699,26 @@ def _count_bare_asserts(source_lines: list[str], start: int, end: int) -> int:
 
 
 def _count_statements(source_lines: list[str], start: int, end: int) -> int:
-    """Best-effort statement count in the body span (non-blank, non-comment lines).
+    """LOGICAL statements in the test body — the density denominator (Story 14.2 / AC1).
 
-    Deterministic heuristic over source lines (no dataflow). Excludes the ``def``
-    header line, blank lines, and full-line comments. Multi-line statements
-    undercount slightly — acceptable for a ratio denominator; the AST subset is
-    the corroboration that gates verdict-eligibility.
+    RE-AUTHORED 2026-08-18, and the reason is measured rather than stylistic. This counted
+    every non-blank, non-comment **LINE** of the span. A multi-line call, a dict literal, a
+    closing bracket and **every line of a docstring** each scored as a statement, so the
+    denominator ran at **1.907×** CPython's own statement count over the 1,848 flagged
+    minions tests (ground truth: every ``ast.stmt`` in the body, recursively). An inflated
+    denominator depresses ``assertion_density`` arithmetically, and the 1/4 floor fires from
+    below — so half of every test suite was being flagged for a reason that was arithmetic
+    rather than evidence. The replacement measures **1.005×** of ground truth.
+
+    It is a REUSE, not a second scanner (AR7/§3.3, AC1.2): ``provenance_scan`` already had to
+    answer *"where does a statement start?"* for fact (b), and two spellings of that question
+    is the disagreement class this detector keeps closing elsewhere. The cross-line string
+    state the docstring case needs was added THERE, once, and both consumers read it.
+
+    Still PURE, still deterministic, still line-terminator-agnostic: it reads the
+    ``source.splitlines()`` list the detector already holds.
     """
-    count = 0
-    for line_no in range(start + 1, end + 1):  # skip the def header line
-        idx = line_no - 1
-        if idx < 0 or idx >= len(source_lines):
-            continue
-        stripped = source_lines[idx].strip()
-        if not stripped or stripped.startswith("#"):
-            continue
-        count += 1
-    return count
+    return body_statement_count(source_lines, start, end)
 
 
 class VacuousTestDetector:
@@ -610,7 +818,10 @@ class VacuousTestDetector:
         start, end = definition.start_line, definition.end_line
         span_edges = _edges_in_span(edges, start, end)
 
-        assertion_call_sites = sum(1 for e in span_edges if e.callee in _ASSERTION_CALLEES)
+        # The DENSITY numerator reads the WIDE vocabulary (table + naming convention); the
+        # corroboration path below reads the FROZEN one. Two questions, not two spellings of
+        # one — DN-14-2-1 / DN-14-2-4.
+        assertion_call_sites = sum(1 for e in span_edges if is_assertion_callee(e.callee))
         bare_asserts = _count_bare_asserts(source_lines, start, end)
         assertion_sites = assertion_call_sites + bare_asserts
 
@@ -648,11 +859,19 @@ class VacuousTestDetector:
 
     @staticmethod
     def _sut_call_sites(span_edges: list[CodeEdge]) -> list[CodeEdge]:
-        """Candidate SUT calls: non-assertion, non-mock callees in the test span (fact a)."""
+        """Candidate SUT calls: non-assertion, non-mock callees in the test span (fact a).
+
+        Reads :data:`_CORROBORATION_ASSERTION_CALLEES`, NEVER the widened table and never
+        :func:`is_assertion_callee` — this is the corroboration path (DN-14-2-1). Widening
+        the vocabulary here can only SHRINK the candidate SUT set, which is a direction that
+        moves fact (a) and fact (b) towards an accusation; the frozen table is what stops
+        Story 14.3's four-language widening from reaching the moat.
+        """
         return [
             e
             for e in span_edges
-            if e.callee not in _ASSERTION_CALLEES and e.callee not in _MOCK_CALLEES
+            if e.callee not in _CORROBORATION_ASSERTION_CALLEES
+            and e.callee not in _MOCK_CALLEES
         ]
 
     def _ast_corroborated(
@@ -691,7 +910,10 @@ class VacuousTestDetector:
             span_edges,
             start,
             end,
-            assertion_callees=_ASSERTION_CALLEES,
+            # ⛔ FROZEN, never `_ASSERTION_CALLEES` (DN-14-2-1). `provenance_scan` reads this
+            # table in two places and BOTH can move towards an accusation when it widens; the
+            # measured false 🔴 is written out beside the table's declaration above.
+            assertion_callees=_CORROBORATION_ASSERTION_CALLEES,
             mock_callees=_MOCK_CALLEES,
         )
         return evidence.sut_result_is_discarded and evidence.mock_referencing_assertions >= 1

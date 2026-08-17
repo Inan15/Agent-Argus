@@ -21,7 +21,10 @@ import pytest
 
 from argus.detectors.provenance_scan import provenance_evidence
 from argus.detectors.vacuous_test import (
-    _ASSERTION_CALLEES,
+    # The FROZEN vocabulary, because the cases below exercise the CORROBORATION path and
+    # that is the table production hands it (Story 14.2 / DN-14-2-1). Passing the widened
+    # `_ASSERTION_CALLEES` here would score a configuration the detector never runs.
+    _CORROBORATION_ASSERTION_CALLEES,
     _MOCK_CALLEES,
     RULE_AST,
     RULE_HEURISTIC,
@@ -353,22 +356,39 @@ def test_a_raises_context_sut_call_is_consumed_not_discarded() -> None:
     inside a result-observing context is CONSUMED by construction. This is the one
     known defect of the out-of-tree feasibility probe, designed in rather than
     inherited.
+
+    FIXTURE STRENGTHENED 2026-08-18 (Story 14.2), RECORDED RATHER THAN NUDGED
+    -------------------------------------------------------------------------
+    The clause under test is unchanged; the fixture around it had to grow. Story 14.2 put
+    ``raises`` into the DENSITY vocabulary — ``with pytest.raises(ValueError): parse(bad)``
+    is an assertion about the SUT, and refusing to count it is one of the ways the old
+    arithmetic invented low densities. That took this fixture from ``1 assert / 6
+    statements`` to ``2 / 6 = 1/3``, i.e. genuinely well-asserting and correctly NOT flagged
+    — at which point ``_corroborated``'s "the heuristic must still FLAG" precondition failed
+    and the *corroboration* clause it exists to reach became unreachable. So five mock
+    configuration lines were added (they emit no call edge and no SUT call, so they move the
+    denominator and nothing else), putting it back under the floor at ``2/10 = 1/5``. The
+    predicate was NOT touched to save the test, and neither was the vocabulary.
     """
     source = (
         "def test_parse_rejects_bad():\n"  # 1
         "    m = Mock()\n"  # 2
         "    m.reason.return_value = 'x'\n"  # 3
-        "    with pytest.raises(ValueError):\n"  # 4
-        "        parse('bad')\n"  # 5 — SUT, but its RAISING is the observation
-        "    pretended = m.reason()\n"  # 6
-        "    assert pretended == 'x'\n"  # 7
+        "    m.detail.return_value = 'y'\n"  # 4
+        "    m.code.return_value = 7\n"  # 5
+        "    m.tag.return_value = 'z'\n"  # 6
+        "    m.extra.return_value = None\n"  # 7
+        "    with pytest.raises(ValueError):\n"  # 8
+        "        parse('bad')\n"  # 9 — SUT, but its RAISING is the observation
+        "    pretended = m.reason()\n"  # 10
+        "    assert pretended == 'x'\n"  # 11 — 2 asserts / 10 statements = 1/5 < 1/4
     )
-    defs = [Definition(name="test_parse_rejects_bad", kind="function", start_line=1, end_line=7)]
+    defs = [Definition(name="test_parse_rejects_bad", kind="function", start_line=1, end_line=11)]
     edges = [
         CodeEdge(callee="Mock", line=2),
-        CodeEdge(callee="raises", line=4),
-        CodeEdge(callee="parse", line=5),
-        CodeEdge(callee="reason", line=6),
+        CodeEdge(callee="raises", line=8),
+        CodeEdge(callee="parse", line=9),
+        CodeEdge(callee="reason", line=10),
     ]
     assert _corroborated(source, defs, edges) is False
 
@@ -378,18 +398,22 @@ def test_a_raises_context_sut_call_is_consumed_not_discarded() -> None:
         "def test_parse_rejects_bad():\n"  # 1
         "    m = Mock()\n"  # 2
         "    m.reason.return_value = 'x'\n"  # 3
-        "    parse('bad')\n"  # 4 — now genuinely discarded
-        "    pretended = m.reason()\n"  # 5
-        "    assert pretended == 'x'\n"  # 6
+        "    m.detail.return_value = 'y'\n"  # 4
+        "    m.code.return_value = 7\n"  # 5
+        "    m.tag.return_value = 'z'\n"  # 6
+        "    m.extra.return_value = None\n"  # 7
+        "    parse('bad')\n"  # 8 — now genuinely discarded
+        "    pretended = m.reason()\n"  # 9
+        "    assert pretended == 'x'\n"  # 10
     )
     assert (
         _corroborated(
             without_context,
-            [Definition(name="test_parse_rejects_bad", kind="function", start_line=1, end_line=6)],
+            [Definition(name="test_parse_rejects_bad", kind="function", start_line=1, end_line=10)],
             [
                 CodeEdge(callee="Mock", line=2),
-                CodeEdge(callee="parse", line=4),
-                CodeEdge(callee="reason", line=5),
+                CodeEdge(callee="parse", line=8),
+                CodeEdge(callee="reason", line=9),
             ],
         )
         is True
@@ -402,30 +426,50 @@ def test_one_consumed_sut_call_withholds_corroboration() -> None:
     A test may throw one SUT result away and still constrain another. Fact (b) is a
     statement about the WHOLE test, so a single consumed result is enough to withhold
     promotion — the asymmetry the moat rests on (a false 🔴 is the lethal failure).
+
+    FIXTURE STRENGTHENED 2026-08-18 (Story 14.2), for the same reason as ``-101`` and
+    recorded the same way: ``assert_called`` now matches the density vocabulary's naming
+    convention, which took this fixture from ``2/9`` to ``3/9 = 1/3`` — above the floor, so
+    correctly not flagged, so ``_corroborated``'s precondition failed and the *consumed-SUT*
+    clause became unreachable. Four mock configuration lines (no call edge, no SUT call) put
+    it back at ``3/13``. Neither the predicate nor the vocabulary was touched to save it.
     """
     source = (
         "def test_mixed():\n"  # 1
         "    warm_up()\n"  # 2 — a discarded SUT call
         "    m = Mock()\n"  # 3
         "    m.value.return_value = 4\n"  # 4
-        "    pretended = m.value()\n"  # 5
-        "    real = compute()\n"  # 6 — …but THIS SUT result is bound…
-        "    m.value.assert_called()\n"  # 7
-        "    m.reset_mock()\n"  # 8
-        "    assert pretended == 4\n"  # 9
-        "    assert real is not None\n"  # 10 — …and CONSTRAINED
+        "    m.detail.return_value = 'd'\n"  # 5
+        "    m.code.return_value = 7\n"  # 6
+        "    m.tag.return_value = 'z'\n"  # 7
+        "    m.extra.return_value = None\n"  # 8
+        "    pretended = m.value()\n"  # 9
+        "    real = compute()\n"  # 10 — …but THIS SUT result is bound…
+        "    m.value.assert_called()\n"  # 11
+        "    m.reset_mock()\n"  # 12
+        "    assert pretended == 4\n"  # 13
+        "    assert real is not None\n"  # 14 — …and CONSTRAINED
     )
-    defs = [Definition(name="test_mixed", kind="function", start_line=1, end_line=10)]
+    defs = [Definition(name="test_mixed", kind="function", start_line=1, end_line=14)]
     edges = [
         CodeEdge(callee="warm_up", line=2),
         CodeEdge(callee="Mock", line=3),
-        CodeEdge(callee="value", line=5),
-        CodeEdge(callee="compute", line=6),
-        # `assert_called` / `reset_mock` are NOT in `_ASSERTION_CALLEES` (Story 14.2
-        # widens that table). They are excluded from the SUT set here on their RECEIVER
-        # chain instead, which is why fact (b) does not move when 14.2 lands — DN-4.
-        CodeEdge(callee="assert_called", line=7),
-        CodeEdge(callee="reset_mock", line=8),
+        CodeEdge(callee="value", line=9),
+        CodeEdge(callee="compute", line=10),
+        # CORRECTED 2026-08-18 (Story 14.2 / AC6.6). This comment used to read: "`assert_called`
+        # / `reset_mock` are NOT in `_ASSERTION_CALLEES` (Story 14.2 widens that table). They
+        # are excluded from the SUT set here on their RECEIVER chain instead, which is why fact
+        # (b) does not move when 14.2 lands — DN-4." The first sentence is now false —
+        # `assert_called` matches the widened vocabulary — and the last was never the whole
+        # reason. It is right about THIS fixture (the receiver chain does the work here, and
+        # still does) and silent about the general case, which is the gap: widening the table
+        # CAN move fact (b), through `_assertion_statement_lines`, and it was reproduced doing
+        # so. DN-4 guarantees independence from the assertion COUNT, not from the TABLE. What
+        # keeps fact (b) still is DN-14-2-1 — the corroboration path reads the FROZEN
+        # `_CORROBORATION_ASSERTION_CALLEES`, so these two names are invisible to it whatever
+        # Story 14.3 adds. See `tests/test_vacuous_density.py::…-114` for that guard.
+        CodeEdge(callee="assert_called", line=11),
+        CodeEdge(callee="reset_mock", line=12),
     ]
     assert _corroborated(source, defs, edges) is False
 
@@ -1065,7 +1109,7 @@ def test_repeated_callee_evidence_does_not_depend_on_edge_order() -> None:
             edges,
             4,
             10,
-            assertion_callees=_ASSERTION_CALLEES,
+            assertion_callees=_CORROBORATION_ASSERTION_CALLEES,
             mock_callees=_MOCK_CALLEES,
         )
         for edges in (forward, reverse)
