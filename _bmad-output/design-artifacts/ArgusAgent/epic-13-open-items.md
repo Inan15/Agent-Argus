@@ -133,8 +133,21 @@ contexted, and the story file's own AC7 table is therefore also a snapshot.** Re
 - `DF-8-5-C` — ✅ the ledger carries a CLOSED disposition (2026-08-16, against evidence).
 - `DF-9-2-C` — ✅ the ledger carries a CLOSED disposition.
 
-**Measured ledger totals on `6c59115`:** 82 distinct `DF-*` ids appear in the ledger; **31** carry
-a closure disposition; **51** do not. The `DF-*` entries this story is directly accountable to:
+**Measured ledger totals on `0889fc0`** — the commit where `deferred-work.md` last changed, so
+these hold for every commit after it: **84** distinct `DF-*` ids appear in the ledger; **31** carry
+a closure disposition; **53** do not.
+
+> *Corrected 2026-08-17 by code review iteration 1 (§3.4, struck not deleted).* This read
+> ~~"Measured ledger totals on `6c59115`: 82 distinct ... 51 do not"~~ — wrong in both figures and
+> in the sha. The ledger gained `+190 / -0` in `0889fc0`, **after** `6c59115`, so the totals could
+> not have been measured on the tree they cited. **How to reproduce them**, rather than re-counting
+> by hand a third time: apply the `_DF_ID` pattern that
+> `tests/test_governance_record_integrity.py` already defines to `deferred-work.md`, which yields
+> **85** raw matches; subtract the single regex artifact `DF-8` (captured from the wildcard prose
+> reference `` `DF-8-*` `` at `deferred-work.md:2219`, which is not a real id) for **84**; and take
+> the closed set from the checked-in `ledger_closed_ids` analyzer for **31**. Open is the
+> difference. The **31** was correct as first written and is unchanged — only the totals were
+> hand-counted, which is the `DF-8-5-C` class this document itself is about. The `DF-*` entries this story is directly accountable to:
 
 - `DF-13-2-A` — **OPEN, and its residual has SHRUNK but not vanished.** The adjudication run it
   was filed for **HAS HAPPENED**: all 31 findings judged by XAgent007 on 2026-08-17, **0

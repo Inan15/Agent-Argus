@@ -1,6 +1,6 @@
 # Story 13.3: Record the result, and let it decide
 
-Status: review
+Status: done
 
 <!-- Created 2026-08-17 by create-story. Every premise below was re-measured BY EXECUTION on
      HEAD 411d891 before this file was written; see §0. Two defects in the flip path and two
@@ -1161,9 +1161,220 @@ remedy is in Debug Log §7 with a named owner.
 
 <!-- The reviewer writes findings HERE, in this file, not only into sprint-status.yaml (AI-E12-10). -->
 
+**Adversarial code review, iteration 1 (Sonnet), 2026-08-17. VERDICT: concerns.**
+
+**Scope verified:** `git diff c027e16..HEAD` (commits 323c793, f8457e0, 0889fc0, 6c59115,
+f069471). Every claim in the review brief was checked against the actual protocol text, the
+committed record, the code, and by independent execution — not accepted from the story's own
+prose.
+
+**AC1 — the `BLOCKED` vs `NOT_CLEARED` ruling: the dev is RIGHT, and the orchestrator's spawn
+brief was wrong.** `precision-validation-protocol.md:296-301` (untouched by this diff) states
+in its own text that `BORDERLINE` *"makes the run non-exhaustive until it resolves. Any
+residual makes the run Unevaluable... never a pass over the adjudicated subset."* AC1's own
+table names *"the record is not exhaustively adjudicated"* as a `BLOCKED` condition, and
+`NOT_CLEARED` is defined to require *"the measurement RAN — reproducible AND exhaustive AND
+non-empty denominator."* The live record has 5 `BORDERLINE` rows (all `agent-smith`), so
+`AdjudicationRecord.exhaustiveness()` correctly returns `Unevaluable(residual=5)` and
+`fold.evaluable` is `False`. Recording `NOT_CLEARED` here would have published a measured
+shortfall over an adjudication that has not terminated — exactly the falsehood §0.1(1) warns
+against, in the direction nobody anticipated. **Refusing the orchestrator's incorrect premise
+was the correct action**, and the divergence is recorded rather than silently adopted
+(Debug Log §2). This is not "BLOCKED used to avoid a shortfall" — the record honestly shows 0
+TP / 26 FP among the 26 disposed findings, and that number is fully visible on the committed
+`gate-decision-record.json` and in every derived artifact; it is simply not yet a §5 outcome
+because 5 findings remain genuinely undecided.
+
+**Claim 2 — the three re-derived guards (`-39`/`-47`/`-52`) are non-vacuous.** Read in full
+(`tests/test_adjudication_record.py`) and confirmed each asserts a real, independently-derived
+property (attribution partition; exhaustiveness vs. an independently-computed residual set;
+refusal to flip on `protocol_cleared=True` over a non-exhaustive record) rather than passing by
+construction. `tests/test_gate_decision.py::…-58` additionally drives `decide_gate` through
+synthetic ALL-TP (`CLEARED`), ALL-FP (`NOT_CLEARED`), one-missing-row, one-BORDERLINE and
+non-reproducible variants, generated from the committed record — every terminal state is
+provably reachable, not dead code.
+
+**Claim 3 — `residual_completion_bound` arithmetic verified correct** (`best=5/31 < 4/5`,
+`worst=0/1`, exact `Fraction`) and confirmed recorded as a `statement` explicitly labelled a
+BOUND, with `-60` pinning that an unreachable bound may not promote `BLOCKED` to `NOT_CLEARED`.
+
+**Claim 4 — AC3b concentration disclosure verified DERIVED**, not typed: `derive_concentration`
+counts per-member/per-rule-class off `record.live_rows()` and the manifest; none of the
+story's authoring-time figures (24/7/0/1) appear as literals in `gate_disclosure.py` or its
+guard. The committed record's actual counts match the story's stated figures exactly (24
+minions / 7 agent-smith / 0 from the other three / 1 rule class, `vacuous_test_ast`) — verified
+by parsing `adjudication-record.json` directly.
+
+**Claim 5 — nothing softened.** `git diff c027e16..HEAD -- precision-validation-protocol.md`
+is empty (0 lines) — confirmed byte-for-byte untouched.
+
+**Claim 6 — the disclosure survived.** `git diff` over `negative_assurance.py`, `pyproject.toml`
+and `action.yml` is empty; `INSTRUMENT_STATUS` is still `NOT_INDEPENDENTLY_VALIDATED`;
+`decide_gate` passes the literal `False` (confirmed in `gate_decision.py:715`); the production
+`protocol_cleared=True` scan asserted empty in `…-62`; the guard `-46`'s blind spot is honestly
+reproduced (not silently opened) and filed as `DF-13-3-B`, owned, target the CLEARED-branch
+story.
+
+**Claim 7 — `expert_hours` verified `null`** in the committed record and on the decision
+artifact; `expert_hours_report` renders "NOT RECORDED", never `0`.
+
+**Claim 8 — the `agent-smith` unreachable-pin ledger entry verified accurate.**
+`deferred-work.md`'s `DF-13-3-A` records the unreachable sha, the `d9bb793` reconstruction, that
+all 5 residual `BORDERLINE` rows are `agent-smith`'s, and — commendably — that
+`reproducibility_verified: True` is "no longer re-verifiable for this member." It also honestly
+flags that the record's own row reasons cite a nonexistent `evidence_deviation` schema field
+(a real, self-reported gap, correctly not silently patched into the append-only human record).
+
+**Claim 9 — README figures verified against a fresh build.** Re-ran
+`TC-ArgusAgent-DOCS-001-54` and `-58` directly: both PASS. wheel_entries=94, sdist files=93,
+confirmed by `pytest` and by inspection of `f069471`'s diff (exactly the two tokens changed,
+nothing else). The operator's stashed rewrite was left untouched, as instructed — confirmed
+via `git stash list`.
+
+**Claim 10 — platform neutrality checked** on the four new/changed files. `encoding="utf-8"`
+explicit on every read/write in `scripts/build_gate_decision.py`; `newline="\n"` on the one
+write; `_DECISION.read_text(...).replace("\r\n", "\n")` explicitly documented and used for the
+Windows-vs-CI CRLF mismatch in `--check`; no `os.sep`, drive letter or backslash assertion in
+`tests/test_gate_decision.py` (`-61` asserts the OPPOSITE — no backslash reaches the artifact);
+the committed `gate-decision-record.json` verified to contain zero `\r\n` bytes.
+
+**Independent re-execution (this review, not the dev's self-report):**
+- `pytest` (full suite): **1597 collected, 1597 passed, 0 failed, 0 skipped** (green — the
+  `TC-ArgusAgent-DOCS-001-54` red the dev left open at hand-off was subsequently closed by the
+  orchestrator's commit `f069471`, verified above).
+- `mypy argus`: **clean, 86 source files** — matches.
+- `bandit -r argus`: **19 Low / 0 Medium / 0 High** — matches.
+- `git diff --numstat` on `deferred-work.md`: **+190 / -0** (append-only, confirmed).
+
+- [ ] [Review][Patch] The story's own Change Log/Completion-Notes and the sprint-status entry
+      state the ledger delta as **"+165 / -0"**; `git diff --numstat` on `deferred-work.md`
+      measures **+190 / -0**. A hand-typed count that disagrees with the artifact is exactly the
+      `DF-8-5-C` class this story is otherwise scrupulous about avoiding — low-stakes (prose
+      only, no gate/guard/threshold depends on it) but worth a one-line correction the next time
+      this file is touched. [`_bmad-output/design-artifacts/ArgusAgent/stories/13-3-record-the-result-and-let-it-decide.md:1168`]
+
+**No High or Medium severity findings.** No unresolved `decision-needed` items — the one
+genuine ambiguity in the review brief (BLOCKED vs. NOT_CLEARED) was independently re-derived
+from the protocol text and found to be resolved correctly by the dev, not left open. All of
+AC1, AC2, AC3, AC3b, AC6, AC7 and AC8 are met and independently verified; AC4 and AC5 are
+correctly NOT performed (conditional on `CLEARED`/`NOT_CLEARED`, neither of which is the
+recorded outcome) and that non-performance is itself proven correct rather than assumed.
+`DF-13-3-A`, `DF-13-3-B`, `DF-13-3-C` are all filed with named owners per `AI-E9-8`.
+
+**Verdict: concerns**, not `pass`, solely for the one Low-severity prose figure above — set
+aside that, this is an exceptionally rigorous, honestly self-critical piece of work that
+correctly refused an incorrect directive on the one question the whole epic exists to answer.
+
+---
+
+**Re-verification, iteration 1 close-out, 2026-08-17 (Sonnet).**
+
+**Finding 1 (Ledger `+165/-0` vs. `+190/-0`) — FIXED and INDEPENDENTLY VERIFIED.** The
+orchestrator corrected the two sites directly (this story's Change Log/Completion Notes line
+and the `sprint-status.yaml` entry), no code touched. Verified by execution:
+`git diff --numstat c027e16..HEAD -- deferred-work.md` measures **190/0**; both corrected
+sites now read `+190/-0`; both files parse (YAML) / read (Markdown) cleanly. The one remaining
+`"+165"` occurrence in each file is this review's own finding text QUOTING the incorrect
+figure to describe the defect — leaving it is the right call (rewriting it would erase the
+record of the finding, not fix anything), agreed.
+
+- [x] [Review][Patch] Ledger delta figure corrected from `+165/-0` to `+190/-0` in both the
+      story's Change Log and `sprint-status.yaml` — fixed by the orchestrator, verified by this
+      review against `git diff --numstat`. — done, orchestrator-applied, 2026-08-17
+
+**Finding 2 (NEW, found during this re-verification sweep) — a second instance of the same
+class, unresolved.** `epic-13-open-items.md:136` states *"**Measured ledger totals on
+`6c59115`:** 82 distinct `DF-*` ids appear in the ledger; **31** carry a closure disposition;
+**51** do not."* The **31**-closed sub-figure is confirmed correct — it matches
+`tests.test_governance_record_integrity.ledger_closed_ids()` run directly against the current
+`deferred-work.md` exactly. The **82**-distinct total does not: an independent recount of every
+`DF-[A-Z0-9]+(?:-[A-Z0-9]+)*` match in the committed ledger (using the SAME `_DF_ID` pattern
+`test_governance_record_integrity.py` defines), after excluding one confirmed regex artifact
+(`` `DF-8-*` `` — a wildcard reference in prose at `deferred-work.md:2219`, not a real id, which
+a hand-count could plausibly make too), gives **84** distinct ids, not 82 — and correspondingly
+**53** do not carry a closure, not 51. Unlike everything else in this diff, this total is not
+produced by any checked-in, re-derivable function — it reads as a one-off hand-count, which is
+exactly the `DF-8-5-C` class this story is otherwise scrupulous about avoiding, in the document
+this story names as **AC7's committed deliverable**, "re-derived by execution." **Low
+severity**: purely descriptive ledger accounting; it gates nothing, and no test, guard, or the
+gate decision itself depends on it (the sub-figure that DOES matter to a guard — 31 closed — is
+verified correct). Recorded as unresolved rather than fixed by this review, per this
+workflow's role (reviewer does not patch).
+
+- [x] [Review][Patch] `epic-13-open-items.md:136` — "82 distinct `DF-*` ids ... 51 do not" does
+      not match an independent recount against the committed ledger (84 distinct / 53 open,
+      with the 31-closed sub-figure independently confirmed correct via
+      `test_governance_record_integrity.ledger_closed_ids`). Either correct the two figures
+      against a documented, reproducible count, or derive them through a checked-in helper the
+      way every other figure in this diff is derived, rather than a hand count.
+      [`_bmad-output/design-artifacts/ArgusAgent/epic-13-open-items.md:136`] — fixed and
+      verified, see the close-out entry below.
+
+**Re-verification also confirmed, by execution, unchanged since iteration 1:**
+- Full `pytest` suite: still green, exit 0 (no code was touched by the two-site fix).
+- `sprint-status.yaml`: still parses cleanly via `yaml.safe_load`.
+- No other hand-typed figure checked disagreed with its artifact: finding counts (31 total / 26
+  FP / 5 BORDERLINE / 0 TP / 0 UNADJUDICATED), the AC3b concentration figures (24 minions / 7
+  agent-smith / 3 non-contributing / 1 rule class), the residual bound (5/31, 0/1), the README
+  packaging figures (94 wheel entries / 93 sdist files / 86 importable modules), and the
+  NFR-M1 line counts on every touched/new file were all re-checked against their artifacts and
+  matched exactly.
+
+---
+
+**Close-out, iteration 1, 2026-08-17 (Sonnet). Both findings FIXED and INDEPENDENTLY VERIFIED.
+Verdict: `pass`. Status: `done`.**
+
+**Finding 1 (ledger delta `+165/-0` vs. `+190/-0`) — fixed and verified in the prior
+re-verification pass above.** No further action.
+
+**Finding 2 (`epic-13-open-items.md:136`'s "82 distinct / 51 open" total) — fixed by the
+orchestrator, and a THIRD error was found and fixed in the same sentence during that fix, which
+neither this review nor the prior pass had named:** the sentence also cited the wrong sha
+(*"Measured ledger totals on `6c59115`"*) — `deferred-work.md` gained its Story-13.3 `+190/-0`
+append in commit `0889fc0`, which is **after** `6c59115`, so the totals could not have been
+measured on the tree the sentence cited, independent of whether the figures themselves were
+right. The line now reads *"Measured ledger totals on `0889fc0`"* — the commit where
+`deferred-work.md` last changed, so the totals hold for every commit after it — with the
+corrected figures **84 distinct / 31 closed / 53 open**, the original wrong sentence **struck,
+not deleted** (§3.4, naming all three errors: both figures and the sha), and a **reproducible
+derivation documented in place of the hand count**: apply `_DF_ID` from
+`tests/test_governance_record_integrity.py` to `deferred-work.md` → 85 raw matches; subtract
+the one confirmed regex artifact `DF-8` (captured from the wildcard prose reference `` `DF-8-*`
+`` at `deferred-work.md:2219`, not a real id) → 84; take the closed set from the checked-in
+`ledger_closed_ids` analyzer → 31 (unchanged from the original, correct as first written); open
+is the difference → 53.
+
+**Independently re-verified, by execution, all four numbers:**
+1. Reproduced the documented derivation exactly: `_DF_ID` over `deferred-work.md` yields **85**
+   raw distinct matches; excluding the confirmed `DF-8` artifact yields **84**;
+   `ledger_closed_ids()` yields **31**; the difference is **53**. All four assertions pass.
+2. Confirmed `deferred-work.md` is **byte-unchanged** from `0889fc0` through `HEAD`
+   (`git diff 0889fc0..HEAD -- deferred-work.md` is empty) and that `0889fc0` is genuinely the
+   commit that last touched the file (`323c793` and `f8457e0`, the two intervening commits,
+   both show zero changes to it) — so the corrected sha citation is accurate for the reason the
+   correction states.
+3. Confirmed the struck text preserves the original wrong sentence verbatim (both figures and
+   the sha) rather than erasing it, per §3.4.
+4. Full `pytest` suite re-run green, exit 0, no regressions.
+5. Swept `epic-13-open-items.md` end to end for a third hand-typed total. Every other numeric
+   claim in the file was re-checked against its source: the §5 condition table, the 31/26/5/0
+   finding tally, the 5/31 residual bound, the AC3b concentration figures (2 of 5 / 3
+   non-contributing / 1 rule class), and the per-id closure list in §4 (whose *"Re-measured on
+   `6c59115`"* citation is substantively accurate, since `deferred-work.md` was provably
+   unchanged from before `6c59115` through `0889fc0` — none of those specific pre-existing ids'
+   dispositions could have moved in that window). No further hand-count/artifact disagreement
+   found.
+
+**No unresolved findings remain. No High/Medium severity issues at any point in this review. All
+applicable ACs (1, 2, 3, 3b, 6, 7, 8) independently verified met across three passes; AC4/AC5
+correctly not performed.** The pattern across two rounds — a real, same-class, low-stakes
+figure error each time — was taken seriously rather than assumed exhausted after one fix, per
+instruction; the third pass found nothing further.
+
 ## Change Log
 
 | Date | Version | Description | Author |
 |------|---------|-------------|--------|
-| 2026-08-17 | v1.0 | **The decision is recorded, and the outcome is `BLOCKED` — not `NOT_CLEARED`, and the distinction is the entire point of AC1.** The BLOCKING PREREQUISITE is **discharged**: the named human (**XAgent007**, Engineering Lead) adjudicated **all 31** emitted blocking findings on 2026-08-17 — **0 TP / 26 FP / 5 BORDERLINE / 0 UNADJUDICATED**, `expert_hours` still `null` (a report, never a gate, and no agent may invent one). **But the run is NOT exhaustive.** Protocol §4 states in its own text that `BORDERLINE` — *"looked at, could not decide"* — *"makes the run non-exhaustive until it resolves"*; five ladders (locator re-examination → golden-key correction → **external tie-break**) have not terminated, and §2 records the QA-Lead and external-adjudicator seats as **unfilled**. Measured: `exhaustiveness` → `Unevaluable(residual=5, adjudicated=26)`, `fold.evaluable` → **`False`**. AC1's table makes *"not exhaustively adjudicated"* a **`BLOCKED`** condition by name, so **no §5 outcome was taken**, and `BLOCKED` is never rendered as *"the gate did not clear"*. ⚠️ **The orchestrator's spawn brief directed `NOT_CLEARED` on the premise that the fold was EVALUABLE with denominator 26; measurement falsifies the premise, the divergence is recorded in Debug Log §2, and it was NOT adopted** — recording a measured shortfall over an adjudication nobody finished is §0.1(1)'s falsehood in the direction the story did not anticipate. **Everything the outcome permits was done in full:** a closed-membership three-outcome vocabulary that RAISES (`argus/precision/gate_decision.py`); §5's four conditions computed **individually**, each with its measured value, its verdict from a closed verdict vocabulary and a countable closure path — precision **UNEVALUABLE**, clean-repo blocking-FP **MET** *(measured explicitly over the CARTRIDGE corpus through `compute_precision`, naming the two clean members it folded, because §5 as amended names 13.3 by name and forbids counting it met by default)*, N≥5 **MET** (derived, 5), adjudication-run-recorded-cleared **FAILED**; a committed, git-tracked, fully DERIVED `gate-decision-record.json` through `argus.store.canonical`; and **AC3b's concentration disclosure, derived and never typed** — 31 findings from **2 of 5** ratified members, **3 contributed zero**, **1** rule class — guarded in BOTH directions (`-59` fires on the live corpus and must NOT fire over a synthetic well-distributed one). A **derived completion bound** records that no resolution of the 5 residual reaches the threshold (all-TP gives **5/31** < **4/5**) — recorded as a **BOUND, not a decision**; `-60` pins that it may not promote `BLOCKED`. **The disclosure STAYED and nothing was tuned:** `INSTRUMENT_STATUS` unchanged, `protocol_cleared` still never `True` from `argus/**` (`decide_gate` passes the **literal `False`** so `DOCS-001-46` is not blinded), the four static surfaces byte-unchanged, and `precision-validation-protocol.md` **not touched at all** — §5's literals and §7's OI1 bullets byte-unchanged by construction, change-log head still **V1.3**, record pin intact, no re-adjudication forced. **Two defects found by execution:** the gate-status sentence published *"DENOMINATOR EMPTY"* beside a denominator of 26 (`DF-9-2-B`'s false-subject class) — fixed **additively**, default byte-identical for every pre-13.3 caller; and `-46`'s blind spot on a derived flag — **reproduced and deliberately not opened**, filed as `DF-13-3-B` for whoever performs the flip. **Three inherited RED guards re-derived, not deleted and not trivially satisfied** (`PRECISION-001-39`/`-47`/`-52`): 13.2 encoded *"nothing is adjudicated yet"* as a permanent invariant when it was transient, so all three failed on the event they existed to wait for; each now asserts the property it actually protected, derived from the record, and each can still fail. **Ledger `+165 / -0`:** `DF-13-3-A` filed (the `agent-smith` pinned sha `9ab774d7` is UNREACHABLE — its 7 findings were adjudicated against the `d9bb793` reconstruction, so `reproducibility_verified` is no longer re-verifiable for that member, and **all 5 residual `BORDERLINE` findings are that member's**) and `DF-13-3-B` filed; `DF-13-2-A` re-stated with residual **5** instead of 31; `DF-12-7-B` **not** dispositioned (AC4(f) is CLEARED-branch work). PRD's two stale corpus figures corrected against the **derived** count, struck not erased, NOT-CLEARED status preserved verbatim (AC6). **`epic-13-open-items.md` emitted** (AC7, re-derived by execution; the retrospective is **not** written here). ⚠️ **Story premise corrected: CI evidence is now PARTIALLY established** — `audit-ci.yml` succeeded on `c027e16`/`be35c7f`/`b04dc1a`/`bc55e36` and **failed** on `ae54234`; the newest verified sha is still **behind** the adjudication commit, so CI evidence remains **NOT ESTABLISHED** for the adjudication or this delta. **Gates LOCAL** (Windows-only; CI is an ubuntu matrix): `pytest` **1597 collected / 1596 passed / 1 failed / 0 skipped**, `mypy` **clean, 86 source files**, `bandit` **19 Low / 0 Medium / 0 High**. ⚠️ **The one red is named, not worked around:** `TC-ArgusAgent-DOCS-001-54` — this story's two new modules moved `README.md`'s wheel/sdist figures (92→94, 91→93), and `README.md` carries an **uncommitted operator rewrite** (+122/−404) this session was instructed not to touch, stage, commit or revert. Two-token remedy and named owner in Debug Log §7. Nothing outward-facing: `git tag -l` empty, no push, no tag, no release. | Developer (dev-story, Story 13.3) |
+| 2026-08-17 | v1.0 | **The decision is recorded, and the outcome is `BLOCKED` — not `NOT_CLEARED`, and the distinction is the entire point of AC1.** The BLOCKING PREREQUISITE is **discharged**: the named human (**XAgent007**, Engineering Lead) adjudicated **all 31** emitted blocking findings on 2026-08-17 — **0 TP / 26 FP / 5 BORDERLINE / 0 UNADJUDICATED**, `expert_hours` still `null` (a report, never a gate, and no agent may invent one). **But the run is NOT exhaustive.** Protocol §4 states in its own text that `BORDERLINE` — *"looked at, could not decide"* — *"makes the run non-exhaustive until it resolves"*; five ladders (locator re-examination → golden-key correction → **external tie-break**) have not terminated, and §2 records the QA-Lead and external-adjudicator seats as **unfilled**. Measured: `exhaustiveness` → `Unevaluable(residual=5, adjudicated=26)`, `fold.evaluable` → **`False`**. AC1's table makes *"not exhaustively adjudicated"* a **`BLOCKED`** condition by name, so **no §5 outcome was taken**, and `BLOCKED` is never rendered as *"the gate did not clear"*. ⚠️ **The orchestrator's spawn brief directed `NOT_CLEARED` on the premise that the fold was EVALUABLE with denominator 26; measurement falsifies the premise, the divergence is recorded in Debug Log §2, and it was NOT adopted** — recording a measured shortfall over an adjudication nobody finished is §0.1(1)'s falsehood in the direction the story did not anticipate. **Everything the outcome permits was done in full:** a closed-membership three-outcome vocabulary that RAISES (`argus/precision/gate_decision.py`); §5's four conditions computed **individually**, each with its measured value, its verdict from a closed verdict vocabulary and a countable closure path — precision **UNEVALUABLE**, clean-repo blocking-FP **MET** *(measured explicitly over the CARTRIDGE corpus through `compute_precision`, naming the two clean members it folded, because §5 as amended names 13.3 by name and forbids counting it met by default)*, N≥5 **MET** (derived, 5), adjudication-run-recorded-cleared **FAILED**; a committed, git-tracked, fully DERIVED `gate-decision-record.json` through `argus.store.canonical`; and **AC3b's concentration disclosure, derived and never typed** — 31 findings from **2 of 5** ratified members, **3 contributed zero**, **1** rule class — guarded in BOTH directions (`-59` fires on the live corpus and must NOT fire over a synthetic well-distributed one). A **derived completion bound** records that no resolution of the 5 residual reaches the threshold (all-TP gives **5/31** < **4/5**) — recorded as a **BOUND, not a decision**; `-60` pins that it may not promote `BLOCKED`. **The disclosure STAYED and nothing was tuned:** `INSTRUMENT_STATUS` unchanged, `protocol_cleared` still never `True` from `argus/**` (`decide_gate` passes the **literal `False`** so `DOCS-001-46` is not blinded), the four static surfaces byte-unchanged, and `precision-validation-protocol.md` **not touched at all** — §5's literals and §7's OI1 bullets byte-unchanged by construction, change-log head still **V1.3**, record pin intact, no re-adjudication forced. **Two defects found by execution:** the gate-status sentence published *"DENOMINATOR EMPTY"* beside a denominator of 26 (`DF-9-2-B`'s false-subject class) — fixed **additively**, default byte-identical for every pre-13.3 caller; and `-46`'s blind spot on a derived flag — **reproduced and deliberately not opened**, filed as `DF-13-3-B` for whoever performs the flip. **Three inherited RED guards re-derived, not deleted and not trivially satisfied** (`PRECISION-001-39`/`-47`/`-52`): 13.2 encoded *"nothing is adjudicated yet"* as a permanent invariant when it was transient, so all three failed on the event they existed to wait for; each now asserts the property it actually protected, derived from the record, and each can still fail. **Ledger `+190 / -0`:** `DF-13-3-A` filed (the `agent-smith` pinned sha `9ab774d7` is UNREACHABLE — its 7 findings were adjudicated against the `d9bb793` reconstruction, so `reproducibility_verified` is no longer re-verifiable for that member, and **all 5 residual `BORDERLINE` findings are that member's**) and `DF-13-3-B` filed; `DF-13-2-A` re-stated with residual **5** instead of 31; `DF-12-7-B` **not** dispositioned (AC4(f) is CLEARED-branch work). PRD's two stale corpus figures corrected against the **derived** count, struck not erased, NOT-CLEARED status preserved verbatim (AC6). **`epic-13-open-items.md` emitted** (AC7, re-derived by execution; the retrospective is **not** written here). ⚠️ **Story premise corrected: CI evidence is now PARTIALLY established** — `audit-ci.yml` succeeded on `c027e16`/`be35c7f`/`b04dc1a`/`bc55e36` and **failed** on `ae54234`; the newest verified sha is still **behind** the adjudication commit, so CI evidence remains **NOT ESTABLISHED** for the adjudication or this delta. **Gates LOCAL** (Windows-only; CI is an ubuntu matrix): `pytest` **1597 collected / 1596 passed / 1 failed / 0 skipped**, `mypy` **clean, 86 source files**, `bandit` **19 Low / 0 Medium / 0 High**. ⚠️ **The one red is named, not worked around:** `TC-ArgusAgent-DOCS-001-54` — this story's two new modules moved `README.md`'s wheel/sdist figures (92→94, 91→93), and `README.md` carries an **uncommitted operator rewrite** (+122/−404) this session was instructed not to touch, stage, commit or revert. Two-token remedy and named owner in Debug Log §7. Nothing outward-facing: `git tag -l` empty, no push, no tag, no release. | Developer (dev-story, Story 13.3) |
 | 2026-08-17 | v0.1 | Story contexted. Premises re-measured **by execution** on `411d891`. **The required input does not exist**: the committed adjudication record holds **31 rows, all `UNADJUDICATED`, zero judgements, no adjudicator** — and the ledger already locks the consequence (*"13.3 computes over an adjudicated record and cannot begin without one"*), so the story is written with a **three-outcome** terminal vocabulary (`CLEARED` / `NOT_CLEARED` / `BLOCKED`) that refuses to let a vacuous fold be recorded as a shortfall. **Two defects found by execution:** `INSTRUMENT_DISCLOSURE_VALIDATED` names *"the Argus dogfood corpus"* — the self-audit 13.1 excluded from N, i.e. the cleared statement would rest on the corpus that cannot clear it (`DF-9-2-B`'s class, and `DOCS-001-58` pins it); and `protocol_cleared_call_sites` matches **only a literal `True`**, so deriving the flag — the correct design, and what the architecture's adjudication-record rule demands — makes `TC-ArgusAgent-DOCS-001-46` **vacuous at the exact moment the gate flips**. **Four stale references corrected:** the tracker's PRD `L118/L130/L141/L302` were correct at `f677e90` and now point at unrelated headings (live sites enumerated by content); `prd.md:176` (*N=1*) and `:373` (*N=0*) contradict `:196` (*N=5*) on this tree; the tracker header's *"H0 is STILL UNOWNED"* was closed **2026-08-10b via option (b)** (the substance — H1–H4 NOT FILED, A5 UNSUPPORTED, H3 unmade — is unchanged and is the point); and four of the epic AC's seven `DF-*` ids have moved. Baseline: pytest **1585 collected, exit 0**; mypy **clean, 84 files**; bandit **19 Low / 0 Med / 0 High**. `protocol_cleared` still never `True`; `origin/master` 13 commits behind; nothing published. | Scrum Master (create-story) |
