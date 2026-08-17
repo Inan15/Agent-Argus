@@ -240,8 +240,8 @@ graded, but has no definition for the depth gate to stand on. Pinned language-by
 
 ### What the distribution contains, and what needs the git repository
 
-MEASURED from the built wheel (`argus_agent-0.1.0-py3-none-any.whl`, 92 entries) and sdist
-(`argus_agent-0.1.0.tar.gz`, 91 files), not inferred: `[tool.flit.module] name = "argus"`
+MEASURED from the built wheel (`argus_agent-0.1.0-py3-none-any.whl`, 94 entries) and sdist
+(`argus_agent-0.1.0.tar.gz`, 93 files), not inferred: `[tool.flit.module] name = "argus"`
 packages **the `argus` Python package and nothing else** — which, since Story 12.7, includes
 the command assets under `argus/assets/commands/`: `flit_core` walks the whole `argus/`
 directory and ships every file in it, so a `.md` there reaches the wheel with **no**
@@ -269,7 +269,11 @@ to contradict each other (see the struck sentence under [Slash Commands](#-slash
 
 > **Measured limitation, stated rather than discovered later — and now measured away.** On a
 > freshly built wheel, with this repository removed from `sys.path` and one clean subprocess
-> per module, **84 of the 84 shipped modules import**. None fail. (84, not 83, since
+> per module, **86 of the 86 shipped modules import**. None fail. (86, not 84, since
+> 2026-08-17: Story 13.3 added `argus/precision/gate_decision.py` and
+> `argus/precision/gate_disclosure.py` — the gate-decision instrument and the renderer that
+> states its outcome; neither resolves a repository path at module level, so both import
+> from the wheel like the rest; 84, not 83, since
 > 2026-08-16: Story 13.2 added `argus/precision/adjudication.py`, the adjudication record
 > the >=80%-precision gate is measured from — it resolves no repository path at module
 > level, so it imports from the wheel like the rest; 83, not 78, since
