@@ -108,23 +108,51 @@ def test_a_name_convention_matches_a_word_not_a_letter_sequence() -> None:
 
 
 def test_vacuous_mock_dominated_test_flagged_and_corroborated() -> None:
-    """TC-ArgusAgent-DETECT-001-86 — a mock-dominated test reaching the SUT is flagged + AST-corroborated."""
-    source = (
+    """TC-ArgusAgent-DETECT-001-86 — RE-AUTHORED 2026-08-17 (Story 14.1 / AC4): what corroboration MEANS.
+
+    WHY THIS TEST CHANGED, RECORDED RATHER THAN ADJUSTED
+    ----------------------------------------------------
+    Until 2026-08-17 this pinned corroboration on a test that binds the real SUT
+    result and asserts it (``sut = widget_under_test(m, dep)`` / ``assert sut``),
+    because fact (b) read ``assertion_sites >= 1 and mock_sites >= 1`` — *"the test
+    constructs a mock"*. That is not what cross-cutting concern #6 requires and it was
+    measured to be indistinguishable from its own input: over the two contributing
+    validation-corpus members, ``ast_corroborated`` agreed with the bare
+    ``mock_sites >= 1`` term in 2,527 of 2,529 heuristically-flagged tests, the rule
+    class emitted 31 blocking findings on that corpus, and the named human adjudicated
+    **0** of them true.
+
+    So this is an INTENDED BEHAVIOUR CHANGE with its reason written down, not a test
+    nudged until it matched new output. It now pins the new contract in **both
+    directions**, because only the pair states it:
+
+    * a mock-heavy test that ASSERTS THE REAL SUT RESULT is **advisory** — however
+      many mocks it builds, and however weak the assertion; and
+    * a test that DISCARDS the SUT result and asserts a mock-derived value is
+      **corroborated** — the shape the planted cartridges carry.
+
+    ``-88``, the false-accusation guard, is unchanged and is not this story's to
+    weaken.
+    """
+    # ── ARM 1: SUT result thrown away, assertion on a mock-derived value → CORROBORATED ──
+    corroborating = (
         "def test_widget():\n"  # line 1
-        "    m = Mock()\n"  # 2
-        "    dep = MagicMock()\n"  # 3
-        "    sut = widget_under_test(m, dep)\n"  # 4
-        "    assert sut\n"  # 5 — 1 assert / 4 statements = 1/4 (not < floor),
-        # but mock_ratio = 2/3 > 1/2 → flagged; reaches SUT + mock-dominated → corroborated
+        "    widget_under_test()\n"  # 2 — SUT reached, result THROWN AWAY
+        "    m = Mock()\n"  # 3
+        "    m.render.return_value = 7\n"  # 4
+        "    pretended = m.render()\n"  # 5 — value bound from a MOCK
+        "    assert pretended == 7\n"  # 6 — …and that is what is asserted
+        # 1 assert / 5 statements = 1/5 < 1/4 → flagged; SUT discarded + mock-derived
+        # assertion → fact (b) holds → corroborated.
     )
-    defs = [Definition(name="test_widget", kind="function", start_line=1, end_line=5)]
+    defs = [Definition(name="test_widget", kind="function", start_line=1, end_line=6)]
     edges = [
-        CodeEdge(callee="Mock", line=2),
-        CodeEdge(callee="MagicMock", line=3),
-        CodeEdge(callee="widget_under_test", line=4),
+        CodeEdge(callee="widget_under_test", line=2),
+        CodeEdge(callee="Mock", line=3),
+        CodeEdge(callee="render", line=5),
     ]
     result = VacuousTestDetector().run(
-        file_path="tests/test_widget.py", source=source, ast_entry=_entry(defs, edges)
+        file_path="tests/test_widget.py", source=corroborating, ast_entry=_entry(defs, edges)
     )
 
     assert len(result.findings) == 1
@@ -132,10 +160,32 @@ def test_vacuous_mock_dominated_test_flagged_and_corroborated() -> None:
     assert finding.advisory is True
     assert finding.rule_id == RULE_AST  # AST-corroborated → verdict-eligible rule
     assert finding.depth_supported is CoverageDepth.AUDITED_SHALLOW
-    assert finding.locators[0].ast_span == "function:test_widget@1-5"
+    assert finding.locators[0].ast_span == "function:test_widget@1-6"
     # graded audited_shallow, never audited_deep
     assert result.entries[0].depth is CoverageDepth.AUDITED_SHALLOW
     assert finding.recording_id in result.entries[0].recording_ids
+
+    # ── ARM 2: the PREVIOUS fixture, verbatim — mock-heavy, but it asserts the SUT
+    # result. Still flagged (mock_ratio 2/3 > 1/2); no longer verdict-eligible. ──
+    sut_asserting = (
+        "def test_widget():\n"  # 1
+        "    m = Mock()\n"  # 2
+        "    dep = MagicMock()\n"  # 3
+        "    sut = widget_under_test(m, dep)\n"  # 4 — SUT result BOUND…
+        "    assert sut\n"  # 5 — …and CONSTRAINED
+    )
+    defs = [Definition(name="test_widget", kind="function", start_line=1, end_line=5)]
+    edges = [
+        CodeEdge(callee="Mock", line=2),
+        CodeEdge(callee="MagicMock", line=3),
+        CodeEdge(callee="widget_under_test", line=4),
+    ]
+    demoted = VacuousTestDetector().run(
+        file_path="tests/test_widget.py", source=sut_asserting, ast_entry=_entry(defs, edges)
+    )
+    assert len(demoted.findings) == 1  # still FLAGGED — the heuristic is unchanged
+    assert demoted.findings[0].rule_id == RULE_HEURISTIC  # …but never verdict-eligible
+    assert demoted.findings[0].depth_supported is None
 
 
 def test_assertionless_test_flagged_advisory_only_when_no_corroboration() -> None:
@@ -274,6 +324,270 @@ def test_score_density_is_exact_fraction() -> None:
     assert score.heuristically_vacuous is True
 
 
+# ── Story 14.1: every branch of the NEW fact (b), reached deliberately ──
+#
+# "Non-vacuity travels with the assertions": a helper that can answer "not
+# corroborated" for a reason that never occurs is decoration, so each clause below has
+# a case that reaches it. All of them are FLAGGED by the (unchanged) heuristic — what
+# is under test is only whether the finding is PROMOTED.
+
+
+def _corroborated(source: str, defs: list[Definition], edges: list[CodeEdge]) -> bool:
+    """Run the real detector and report whether the single finding is verdict-eligible."""
+    result = VacuousTestDetector().run(
+        file_path="tests/test_case.py", source=source, ast_entry=_entry(defs, edges)
+    )
+    assert len(result.findings) == 1, "the heuristic must still FLAG — only promotion is under test"
+    return result.findings[0].rule_id == RULE_AST
+
+
+def test_a_raises_context_sut_call_is_consumed_not_discarded() -> None:
+    """TC-ArgusAgent-DETECT-001-101 — DN-3 / AC1.4: raising IS the observation.
+
+    ``with pytest.raises(X): parse(bad)`` constrains the SUT precisely. Scoring the
+    call as "result thrown away" would re-accuse every fail-closed test in the corpus
+    — the exact false-accusation class this story exists to close — so a SUT call
+    inside a result-observing context is CONSUMED by construction. This is the one
+    known defect of the out-of-tree feasibility probe, designed in rather than
+    inherited.
+    """
+    source = (
+        "def test_parse_rejects_bad():\n"  # 1
+        "    m = Mock()\n"  # 2
+        "    m.reason.return_value = 'x'\n"  # 3
+        "    with pytest.raises(ValueError):\n"  # 4
+        "        parse('bad')\n"  # 5 — SUT, but its RAISING is the observation
+        "    pretended = m.reason()\n"  # 6
+        "    assert pretended == 'x'\n"  # 7
+    )
+    defs = [Definition(name="test_parse_rejects_bad", kind="function", start_line=1, end_line=7)]
+    edges = [
+        CodeEdge(callee="Mock", line=2),
+        CodeEdge(callee="raises", line=4),
+        CodeEdge(callee="parse", line=5),
+        CodeEdge(callee="reason", line=6),
+    ]
+    assert _corroborated(source, defs, edges) is False
+
+    # …and the SAME test with the raises context removed IS corroborated, which is what
+    # proves the context is doing the work rather than some other clause.
+    without_context = (
+        "def test_parse_rejects_bad():\n"  # 1
+        "    m = Mock()\n"  # 2
+        "    m.reason.return_value = 'x'\n"  # 3
+        "    parse('bad')\n"  # 4 — now genuinely discarded
+        "    pretended = m.reason()\n"  # 5
+        "    assert pretended == 'x'\n"  # 6
+    )
+    assert (
+        _corroborated(
+            without_context,
+            [Definition(name="test_parse_rejects_bad", kind="function", start_line=1, end_line=6)],
+            [
+                CodeEdge(callee="Mock", line=2),
+                CodeEdge(callee="parse", line=4),
+                CodeEdge(callee="reason", line=5),
+            ],
+        )
+        is True
+    )
+
+
+def test_one_consumed_sut_call_withholds_corroboration() -> None:
+    """TC-ArgusAgent-DETECT-001-102 — the ``no consumed SUT call`` clause, reached alone.
+
+    A test may throw one SUT result away and still constrain another. Fact (b) is a
+    statement about the WHOLE test, so a single consumed result is enough to withhold
+    promotion — the asymmetry the moat rests on (a false 🔴 is the lethal failure).
+    """
+    source = (
+        "def test_mixed():\n"  # 1
+        "    warm_up()\n"  # 2 — a discarded SUT call
+        "    m = Mock()\n"  # 3
+        "    m.value.return_value = 4\n"  # 4
+        "    pretended = m.value()\n"  # 5
+        "    real = compute()\n"  # 6 — …but THIS SUT result is bound…
+        "    m.value.assert_called()\n"  # 7
+        "    m.reset_mock()\n"  # 8
+        "    assert pretended == 4\n"  # 9
+        "    assert real is not None\n"  # 10 — …and CONSTRAINED
+    )
+    defs = [Definition(name="test_mixed", kind="function", start_line=1, end_line=10)]
+    edges = [
+        CodeEdge(callee="warm_up", line=2),
+        CodeEdge(callee="Mock", line=3),
+        CodeEdge(callee="value", line=5),
+        CodeEdge(callee="compute", line=6),
+        # `assert_called` / `reset_mock` are NOT in `_ASSERTION_CALLEES` (Story 14.2
+        # widens that table). They are excluded from the SUT set here on their RECEIVER
+        # chain instead, which is why fact (b) does not move when 14.2 lands — DN-4.
+        CodeEdge(callee="assert_called", line=7),
+        CodeEdge(callee="reset_mock", line=8),
+    ]
+    assert _corroborated(source, defs, edges) is False
+
+
+def test_discarded_sut_but_no_mock_derived_assertion_is_not_corroborated() -> None:
+    """TC-ArgusAgent-DETECT-001-103 — the ``assertion references a mock-bound name`` clause.
+
+    The SUT result really is thrown away here, so the first two clauses hold. Nothing
+    asserted derives from a mock, so there is no evidence about WHERE the asserted
+    value came from — and "cannot establish" is never promoted to "established".
+    """
+    source = (
+        "def test_no_mock_assertion():\n"  # 1
+        "    warm_up()\n"  # 2 — SUT reached, result discarded
+        "    m = Mock()\n"  # 3
+        "    m.configure(1)\n"  # 4
+        "    m.configure(2)\n"  # 5
+        "    assert 1 + 1 == 2\n"  # 6 — a literal tautology, nothing mock-derived
+    )
+    defs = [Definition(name="test_no_mock_assertion", kind="function", start_line=1, end_line=6)]
+    edges = [
+        CodeEdge(callee="warm_up", line=2),
+        CodeEdge(callee="Mock", line=3),
+        CodeEdge(callee="configure", line=4),
+        CodeEdge(callee="configure", line=5),
+    ]
+    assert _corroborated(source, defs, edges) is False
+
+
+def test_a_call_on_a_mock_bound_name_is_not_a_sut_call() -> None:
+    """TC-ArgusAgent-DETECT-001-104 — mock-derived calls are excluded from the SUT set.
+
+    ``pretended = fake.calculate()`` binds a result, so if it counted as a SUT call it
+    would count as a CONSUMED one and no planted cartridge could ever be promoted. The
+    receiver chain is what distinguishes it, and this is the clause that keeps
+    ``vacuous_basic`` / ``holdout_vacuous`` / ``nonascii_unicode`` corroborated.
+    """
+    source = (
+        "def test_cartridge_shape():\n"  # 1
+        "    compute_total([1, 2, 3])\n"  # 2
+        "    fake = Mock()\n"  # 3
+        "    fake.calculate.return_value = 6\n"  # 4
+        "    pretended = fake.calculate()\n"  # 5 — mock-DERIVED, not a SUT call
+        "    assert pretended == 6\n"  # 6
+    )
+    defs = [Definition(name="test_cartridge_shape", kind="function", start_line=1, end_line=6)]
+    edges = [
+        CodeEdge(callee="compute_total", line=2),
+        CodeEdge(callee="Mock", line=3),
+        CodeEdge(callee="calculate", line=5),
+    ]
+    assert _corroborated(source, defs, edges) is True
+
+
+def test_a_patch_context_binds_its_as_name_as_mock_derived() -> None:
+    """TC-ArgusAgent-DETECT-001-105 — ``with patch(...) as m`` is a mock binding too.
+
+    Without this the whole ``patch``-style dialect would be invisible to fact (b) and
+    an entire family of genuinely vacuous tests would silently stay advisory.
+    """
+    source = (
+        "def test_patched():\n"  # 1
+        "    with patch('svc.client') as fake:\n"  # 2
+        "        fake.ping.return_value = 'pong'\n"  # 3
+        "        boot()\n"  # 4 — SUT reached, result discarded
+        "        echoed = fake.ping()\n"  # 5
+        "        assert echoed == 'pong'\n"  # 6
+    )
+    defs = [Definition(name="test_patched", kind="function", start_line=1, end_line=6)]
+    edges = [
+        CodeEdge(callee="patch", line=2),
+        CodeEdge(callee="boot", line=4),
+        CodeEdge(callee="ping", line=5),
+    ]
+    assert _corroborated(source, defs, edges) is True
+
+
+def test_an_unlocatable_call_is_conservative_not_corroborating() -> None:
+    """TC-ArgusAgent-DETECT-001-106 — unresolvable is not evidence (the conservative default).
+
+    The 1.4 edge set is UNRESOLVED (``DF-1-4-A``): an edge records a callee name and a
+    line, and a call whose function expression spans lines cannot be located in the
+    source text at that line. That is a gap in what can be READ, and a gap is never
+    read as "the result was thrown away" — it is read as consumed, so no corroboration
+    can rest on it.
+    """
+    source = (
+        "def test_split_call():\n"  # 1
+        "    m = Mock()\n"  # 2
+        "    m.value.return_value = 9\n"  # 3
+        "    (service\n"  # 4 — the edge lands HERE…
+        "     .dispatch())\n"  # 5 — …but `dispatch(` is on the next line
+        "    pretended = m.value()\n"  # 6
+        "    assert pretended == 9\n"  # 7
+    )
+    defs = [Definition(name="test_split_call", kind="function", start_line=1, end_line=7)]
+    edges = [
+        CodeEdge(callee="Mock", line=2),
+        CodeEdge(callee="dispatch", line=4),
+        CodeEdge(callee="value", line=6),
+    ]
+    assert _corroborated(source, defs, edges) is False
+
+
+def test_score_is_identical_on_CRLF_and_LF_source() -> None:
+    """TC-ArgusAgent-DETECT-001-107 — the predicate reads SOURCE LINES, so line endings must not matter.
+
+    Local gates here run on Windows and CI runs an ubuntu matrix, and this repository
+    has already shipped a POSIX-only bug out of a green Windows run (``AI-E13-1``).
+    Fact (b) is the most source-text-dependent thing the detector does, so the two
+    encodings of the same file are scored and compared FIELD BY FIELD — not merely
+    checked for the same verdict.
+    """
+    lf = (
+        "def test_cartridge_shape():\n"
+        "    compute_total([1, 2, 3])\n"
+        "    fake = Mock()\n"
+        "    fake.calculate.return_value = 6\n"
+        "    pretended = fake.calculate()\n"
+        "    assert pretended == 6\n"
+    )
+    crlf = lf.replace("\n", "\r\n")
+    assert "\r\n" in crlf  # the fixture really is CRLF
+
+    defn = Definition(name="test_cartridge_shape", kind="function", start_line=1, end_line=6)
+    edges = (
+        CodeEdge(callee="compute_total", line=2),
+        CodeEdge(callee="Mock", line=3),
+        CodeEdge(callee="calculate", line=5),
+    )
+    detector = VacuousTestDetector()
+    lf_score = detector._score(lf.splitlines(), edges, defn)
+    crlf_score = detector._score(crlf.splitlines(), edges, defn)
+
+    assert lf_score == crlf_score
+    assert lf_score.ast_corroborated is True  # …and it is the INTERESTING branch
+
+
+def test_non_ascii_identifiers_bind_and_corroborate() -> None:
+    """TC-ArgusAgent-DETECT-001-108 — name matching is Unicode-safe (the ``nonascii_unicode`` class).
+
+    The ``nonascii_unicode`` cartridge carries a Cyrillic ``тесты/`` directory and a
+    ``café_calc.py``; nothing stops a repository from carrying non-ASCII IDENTIFIERS
+    too. Any name-level predicate that quietly assumed ASCII would fail closed here —
+    silently, and only for those repositories.
+    """
+    source = (
+        "def test_somme_totale_est_vide():\n"  # 1
+        "    somme_totale([1, 2, 3])\n"  # 2
+        "    поддельный = Mock()\n"  # 3
+        "    поддельный.calculer.return_value = 6\n"  # 4
+        "    prétendu = поддельный.calculer()\n"  # 5
+        "    assert prétendu == 6\n"  # 6
+    )
+    defs = [
+        Definition(name="test_somme_totale_est_vide", kind="function", start_line=1, end_line=6)
+    ]
+    edges = [
+        CodeEdge(callee="somme_totale", line=2),
+        CodeEdge(callee="Mock", line=3),
+        CodeEdge(callee="calculer", line=5),
+    ]
+    assert _corroborated(source, defs, edges) is True
+
+
 # ── Integration cases over the real 1.4 AST substrate (tree-sitter) ──
 
 pytest.importorskip("tree_sitter")
@@ -281,11 +595,31 @@ pytest.importorskip("tree_sitter_python")
 
 from argus.index.ast_index import build_ast_index  # noqa: E402
 
+# RE-AUTHORED 2026-08-17 with `-86` and for the same reason (Story 14.1 / AC4): the
+# previous fixture bound the real SUT result (`result = service_call(m, dep)`) and
+# asserted it, which under the corrected fact (b) is ADVISORY, not corroborated. This
+# is now the shape the planted cartridges carry — the SUT is reached and its result is
+# thrown away, while the assertion constrains a value bound from a mock.
 _VACUOUS_FIXTURE = """\
-from unittest.mock import Mock, MagicMock
+from unittest.mock import Mock
 
 
 def test_vacuous():
+    service_call()
+    m = Mock()
+    m.reply.return_value = 7
+    pretended = m.reply()
+    assert pretended == 7
+"""
+
+# The counterpart the moat is really about, and the reason this pair is asserted
+# together: the same mock-heavy setup, but the assertion CONSTRAINS the SUT result.
+# It is still flagged by the heuristic; it must never be verdict-eligible.
+_SUT_ASSERTING_FIXTURE = """\
+from unittest.mock import Mock, MagicMock
+
+
+def test_asserts_the_sut():
     m = Mock()
     dep = MagicMock()
     result = service_call(m, dep)
@@ -300,10 +634,18 @@ def test_genuine():
 
 
 def test_integration_vacuous_flagged_genuine_not(tmp_path: Path) -> None:
-    """TC-ArgusAgent-DETECT-001-94 — over real 1.4 index: vacuous flagged, genuine not (moat)."""
+    """TC-ArgusAgent-DETECT-001-94 — over real 1.4 index: vacuous promoted, SUT-asserting demoted, genuine not flagged.
+
+    The three-way discrimination, over the REAL tree-sitter edge set rather than a
+    hand-built one — because the whole point of Story 14.1 is that the middle case
+    exists at all. Before it, the first two were the same answer.
+    """
     (tmp_path / "test_vacuous.py").write_text(_VACUOUS_FIXTURE, encoding="utf-8")
+    (tmp_path / "test_sut_asserting.py").write_text(_SUT_ASSERTING_FIXTURE, encoding="utf-8")
     (tmp_path / "test_genuine.py").write_text(_GENUINE_FIXTURE, encoding="utf-8")
-    index = build_ast_index(tmp_path, ("test_vacuous.py", "test_genuine.py"))
+    index = build_ast_index(
+        tmp_path, ("test_vacuous.py", "test_sut_asserting.py", "test_genuine.py")
+    )
     by_path = {e.file_path: e for e in index.entries}
 
     detector = VacuousTestDetector()
@@ -315,6 +657,16 @@ def test_integration_vacuous_flagged_genuine_not(tmp_path: Path) -> None:
     )
     assert len(vac.findings) == 1
     assert vac.findings[0].rule_id == RULE_AST  # corroborated over the real edge set
+    assert vac.findings[0].depth_supported is CoverageDepth.AUDITED_SHALLOW
+
+    demoted = detector.run(
+        file_path="test_sut_asserting.py",
+        source=_SUT_ASSERTING_FIXTURE,
+        ast_entry=by_path["test_sut_asserting.py"],
+    )
+    assert len(demoted.findings) == 1  # flagged by the (unchanged) heuristic…
+    assert demoted.findings[0].rule_id == RULE_HEURISTIC  # …and NOT verdict-eligible
+    assert demoted.findings[0].depth_supported is None
 
     gen = detector.run(
         file_path="test_genuine.py",

@@ -32,6 +32,38 @@ opt-in and no cartridge harness. Story 12.4 needs this answer to state plainly w
 blocking verdict is available on the default path.
 
 NO LLM, NO FLAGS, NO HARNESS. The run below is a bare ``argus audit <repo>``.
+
+THE WITNESS WAS RE-AUTHORED ON 2026-08-17, AND WHY THAT IS NOT ADJUSTING A GATE
+-------------------------------------------------------------------------------
+Story 14.1 replaced the vacuous-test detector's AST corroboration fact (b). It used to
+read *"the test constructs a mock"*; cross-cutting concern #6 requires *"the asserted
+values do not derive from the SUT output"*, and the two were measured to be the same
+answer in 2,527 of 2,529 heuristically-flagged tests across the validation corpus —
+on which the rule class emitted 31 blocking findings and the named human adjudicated
+**0** of them true.
+
+The fixture this test used to plant did not survive that correction: it bound the SUT
+result and asserted it (``result = add(1, 2)`` / ``assert result is not None``), which
+is a real, if weak, constraint on the SUT output — so under the corrected predicate it
+is advisory, not verdict-eligible. That raised the escalation this test's own failure
+message demands, it was escalated, and the operator ruled:
+
+**The question this test asks is about the TOOL, and the answer is still YES.** A
+blocking verdict remains reachable on a default, zero-token, no-sign-off run — measured
+3/3 on the planted cartridges under the corrected predicate. The default path still
+blocks; it merely no longer blocks THIS witness. Recording "the default path no longer
+blocks" would therefore have committed a FALSE claim to the README, ``action.yml`` and
+Story 12.4.
+
+And the fixture is not evidence. It is a CONSTRUCTED existence proof, engineered
+against the old detector — the note below about landing "exactly ON the boundary" says
+so in its own words. Replacing a reachability WITNESS is not adjusting a threshold or a
+predicate, and no adjudicated sample is touched.
+
+To keep that distinction checkable rather than asserted, ``-30`` now measures **both
+arms on the same default path**: the new witness is promoted, and the OLD fixture is
+demoted. The second arm is the point — it regression-locks the discrimination Epic 14
+exists to create, and turns a fixture edit into a measurement of the intended change.
 """
 
 from __future__ import annotations
@@ -45,18 +77,43 @@ from argus.detectors.vacuous_test import (
     ASSERTION_DENSITY_FLOOR,
     MOCK_RATIO_CEILING,
     RULE_AST,
+    RULE_HEURISTIC,
 )
 from argus.ledger.coverage_ledger import CoverageDepth
 from argus.models import AuditRequest
 from argus.pipeline import run_audit_detailed
 from argus.verdict.verdict_gate import Verdict
 
-# A test whose assertions are MOCK-DOMINATED while it does reach a real SUT — the two-fact
-# AST corroboration `argus/detectors/vacuous_test.py` requires. Two mock construction
-# sites against one SUT call gives `mock_ratio = 2/3`, which clears the STRICT `>` ceiling
-# of 1/2; a naive one-mock/one-call fixture lands exactly ON the boundary and fires
-# nothing. The thresholds are imported and asserted below rather than transcribed.
+# A GENUINELY VACUOUS test, in the shape the planted cartridges carry: the SUT is
+# reached and its result is THROWN AWAY, while the one assertion constrains a value
+# bound from a separately configured mock. That is the two-fact AST corroboration
+# `argus/detectors/vacuous_test.py` requires — reachability, plus evidence that what is
+# asserted does not derive from the SUT.
+#
+# It is FLAGGED on the density floor: 1 assertion over 5 body statements is 1/5, below
+# the 1/4 floor. (The previous fixture cleared the STRICT `>` mock ceiling instead, with
+# two mock sites against one SUT call; a naive one-mock/one-call fixture lands exactly
+# ON that boundary and fires nothing.) BOTH thresholds are imported and asserted below
+# rather than transcribed, so a change to either still fails here loudly.
 _VACUOUS_TEST_SOURCE = """from unittest.mock import MagicMock
+
+from app.service import add
+
+
+def test_add_is_vacuous():
+    fake = MagicMock()
+    fake.compute.return_value = 3
+    add(1, 2)
+    pretended = fake.compute()
+    assert pretended == 3
+"""
+
+# ARM 2's corpus — the fixture this module planted until 2026-08-17, verbatim. It is
+# mock-heavy and heuristically vacuous, but `assert result is not None` CONSTRAINS the
+# real SUT output, so a correct fact (b) must not corroborate it. Committed here rather
+# than deleted because the demotion is the measurable half of Story 14.1: without it,
+# nothing in the suite would notice fact (b) silently reverting to "a mock exists".
+_SUT_RESULT_ASSERTED_SOURCE = """from unittest.mock import MagicMock
 
 from app.service import add
 
@@ -86,11 +143,11 @@ def multiply(a: int, b: int) -> int:
 '''
 
 
-def _corpus(root: Path) -> Path:
+def _corpus(root: Path, test_source: str = _VACUOUS_TEST_SOURCE) -> Path:
     (root / "app").mkdir(parents=True)
     (root / "tests").mkdir(parents=True)
     (root / "app" / "service.py").write_text(_APP_SOURCE, encoding="utf-8")
-    (root / "tests" / "test_service.py").write_text(_VACUOUS_TEST_SOURCE, encoding="utf-8")
+    (root / "tests" / "test_service.py").write_text(test_source, encoding="utf-8")
     return root
 
 
@@ -110,6 +167,13 @@ def test_TC_ArgusAgent_VERDICT_001_30_a_blocking_verdict_is_reachable_with_no_ll
     blocking path requires NOTHING — no LLM, and no sign-offs (the Prosecutor promotion
     path is a second producer but needs explicit sign-offs, which a default run has none
     of).
+
+    TWO ARMS, ONE PATH (Story 14.1 / the 2026-08-17 re-authoring — see the module
+    docstring). Arm 1 is the reachability answer this test has always carried. Arm 2
+    runs the SAME default ``run_audit_detailed`` over the SAME corpus shape with the
+    OLD fixture and requires that it is **not** verdict-eligible. Without arm 2 the
+    witness swap would be unfalsifiable: a fact (b) that silently reverted to "a mock
+    exists" would keep arm 1 green.
     """
     repo = _corpus(tmp_path / "repo")
 
@@ -146,6 +210,31 @@ def test_TC_ArgusAgent_VERDICT_001_30_a_blocking_verdict_is_reachable_with_no_ll
     # either one fails here loudly instead of silently making this fixture non-vacuous.
     assert ASSERTION_DENSITY_FLOOR.numerator == 1 and ASSERTION_DENSITY_FLOOR.denominator == 4
     assert MOCK_RATIO_CEILING.numerator == 1 and MOCK_RATIO_CEILING.denominator == 2
+
+    # ── ARM 2: the same default path, the OLD fixture — the SUT result is bound and
+    # asserted, so a correct fact (b) must NOT corroborate it. ────────────────────────
+    old_repo = _corpus(tmp_path / "old_repo", test_source=_SUT_RESULT_ASSERTED_SOURCE)
+    old = run_audit_detailed(
+        AuditRequest(repo_path=str(old_repo), commit="HEAD", budget=0, materiality_bar="")
+    ).verdict
+
+    eligible_ast = [
+        f
+        for f in old.ordered_findings
+        if f.rule_id == RULE_AST and f.depth_supported is not None
+    ]
+    assert not eligible_ast, (
+        "a test that ASSERTS THE REAL SUT RESULT was promoted to verdict-eligible. Fact "
+        "(b) is supposed to be 'the asserted values do not derive from the SUT output'; "
+        "if this fires, it has reverted to 'the test constructs a mock' — the shape that "
+        "measured 0 true positives over 31 blocking findings on the validation corpus. "
+        "Do NOT relax this to make a witness pass; re-read Story 14.1 / AC1."
+    )
+    # It is DEMOTED, not made invisible: the heuristic is unchanged, so the finding is
+    # still emitted — advisory, carrying no depth for the 1.6 gate to fold.
+    advisory = [f for f in old.ordered_findings if f.rule_id == RULE_HEURISTIC]
+    assert advisory, "the heuristic flag itself must be unchanged — only PROMOTION moved"
+    assert all(f.depth_supported is None for f in advisory)
 
 
 def test_TC_ArgusAgent_VERDICT_001_31_the_bare_cli_exits_2_on_that_corpus(
