@@ -123,6 +123,7 @@ _STATUS_DOCUMENTS: tuple[str, ...] = (
     # and name the superseded run with the `_CITATION_DENIAL_MARKERS`. No retrospective was
     # edited and no citation minted.
     "epic-12-retro-2026-08-15.md",
+    "epic-13-retro-INTERIM-2026-08-17.md",  # Registered 2026-08-17 by the Epic-13 INTERIM retrospective, discharging AI-E12-1's SECOND half ("make the registration part of the retrospective step's own DoD") for the first time. Same one-line edit, same reason, same verification-before-registration as the two entries above: `-22` was observed RED against this document and GREEN after, and `_status_assertions()` returns 0 for it (no phrase in `_STATUS_CLAIMS` occurs in it at all), so `-21`'s per-document loop short-circuits and the registration is inert. It DOES carry 2 well-formed run+sha citations, which mint an excuse for nothing because there is no claim to excuse. No retrospective was edited. ⚠️ THIS LINE PUTS THIS FILE AT EXACTLY 1200/1200 (NFR-M1; `MAINT-001-03` pins 1201 as the failure). The NEXT status document cannot be registered until this module is split — filed as AI-E13-2, and it blocks the FINAL Epic-13 retrospective.
 )
 
 # Exactly the set the epic's AC names — "any future change proposal or retrospective".
