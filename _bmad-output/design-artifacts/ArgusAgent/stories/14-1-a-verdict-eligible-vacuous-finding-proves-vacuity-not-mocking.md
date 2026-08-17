@@ -930,10 +930,10 @@ loosened, skipped, xfailed or narrowed (`DF-8-5-B`).
 
 | Path | Action |
 |---|---|
-| `argus/detectors/provenance_scan.py` | **ADDED** (iteration 2) — the line-oriented provenance scan extracted from the detector, carrying the logical-statement fix (`logical_statement_starts`, backslash-aware `_logical_statement_end`). 541 lines |
-| `argus/detectors/vacuous_test.py` | **MODIFIED** — iteration 1: new fact (b) (`_RESULT_OBSERVING_CONTEXT_CALLEES`, the source-text scanning primitives, `_provenance_evidence`, a rewritten `_ast_corroborated` + module docstring). Iteration 2: the scan moved to `provenance_scan.py` and is imported back, the callee tables passed in as parameters (DN-4 made structural), docstring re-stated around "logical statement, not physical line". 623 → 1072 → **697** lines (headroom 503) |
-| `tests/test_vacuous_detector.py` | **MODIFIED** — iteration 1: `-86` re-authored as a two-arm intended behaviour change, `-94` re-authored to a three-way discrimination over the real index, new `-101`..`-108`. Iteration 2: **new** `-109` (the five-shape continuation closure, both directions, driven from `_CONTINUATION_SHAPES`) and `-110` (a genuinely discarded call stays corroborated across three wrappings — the fix does not buy safety with recall). 324 → 676 → **872** lines |
-| `tests/test_default_path_blocking_verdict.py` | **MODIFIED** — iteration 1: §0.3 option (A) hardened (new witness + the old fixture verbatim as arm 2). Iteration 2: **new** `TC-ArgusAgent-VERDICT-001-116` — the same default `run_audit_detailed`, the same corpus, both continuation spellings, asserted EQUIVALENT to the unwrapped control. `-30` itself is untouched. 180 → 268 → **390** lines |
+| `argus/detectors/provenance_scan.py` | **ADDED** (iteration 2) — the line-oriented provenance scan extracted from the detector, carrying the logical-statement fix (`logical_statement_starts`, backslash-aware `_logical_statement_end`). **MODIFIED (iteration 3)** — occurrence resolution made stateful (`_locate_call(…, from_column)` plus a per-`(line, callee)` cursor in `provenance_evidence`) so k edges consume k DISTINCT occurrences, and the classification unit narrowed from the logical statement to the `;`-delimited SIMPLE statement (`_simple_statement_breaks`). 541 → **610** lines (headroom 590) |
+| `argus/detectors/vacuous_test.py` | **BYTE-UNCHANGED in iteration 3.** Iteration 1: new fact (b) (`_RESULT_OBSERVING_CONTEXT_CALLEES`, the source-text scanning primitives, `_provenance_evidence`, a rewritten `_ast_corroborated` + module docstring). Iteration 2: the scan moved to `provenance_scan.py` and is imported back, the callee tables passed in as parameters (DN-4 made structural), docstring re-stated around "logical statement, not physical line". 623 → 1072 → **697** lines (headroom 503) |
+| `tests/test_vacuous_detector.py` | **MODIFIED** — iteration 1: `-86` re-authored as a two-arm intended behaviour change, `-94` re-authored to a three-way discrimination over the real index, new `-101`..`-108`. Iteration 2: **new** `-109` (the five-shape continuation closure, both directions, driven from `_CONTINUATION_SHAPES`) and `-110` (a genuinely discarded call stays corroborated across three wrappings — the fix does not buy safety with recall). Iteration 3: **new** `-111` (the nine-shape repeated-callee closure over the REAL tree-sitter index, driven from `_REPEATED_CALLEE_SHAPES`, both directions, including the comprehension / nested / chained neighbours the brief asked to be probed) and `-112` (the evidence is invariant to edge order — the guard that keeps the fix from resting on a premise this index does not honour). 324 → 676 → 872 → **1084** lines |
+| `tests/test_default_path_blocking_verdict.py` | **MODIFIED** — iteration 1: §0.3 option (A) hardened (new witness + the old fixture verbatim as arm 2). Iteration 2: **new** `TC-ArgusAgent-VERDICT-001-116` — the same default `run_audit_detailed`, the same corpus, both continuation spellings, asserted EQUIVALENT to the unwrapped control. `-30` itself is untouched. Iteration 3: **new** `TC-ArgusAgent-VERDICT-001-117` — three arms on the same default `run_audit_detailed`, asserting that the semicolon-compound GENUINE test is not verdict-eligible, that it reaches the SAME verdict as its two-line control, and that a genuinely discarded pair on one line still BLOCKS. `-30` and `-116` untouched. 180 → 268 → 390 → **526** lines |
 | `README.md` | **MODIFIED** (iteration 2) — the published distribution figures, because `TC-ArgusAgent-DOCS-001-54` compares them against a freshly built wheel and the new module moved them: 86/86 → **87/87** importable modules, 94 → **95** wheel entries, 93 → **94** sdist files, with the dated provenance note the surrounding rolling record uses |
 | `CHANGELOG.md` | **MODIFIED** (iteration 2) — the same two figures in the packaging section, for the same guard and the same reason |
 | `_bmad-output/design-artifacts/ArgusAgent/stories/14-1-a-verdict-eligible-vacuous-finding-proves-vacuity-not-mocking.md` | **MODIFIED** — Tasks, Dev Agent Record (iterations 1 and 2), Completion Notes, Review Findings (both checked off, with a dated correction to the High finding's recorded mechanism), File List, Change Log, Status |
@@ -946,6 +946,168 @@ loosened, skipped, xfailed or narrowed (`DF-8-5-B`).
 `architecture.md`, and the six governance artifacts carrying the uncommitted correct-course change.
 The measurement harness used for AC1.2 / AC3 / AC6.2 lives OUT OF TREE in the session scratchpad
 and is not part of the delta.
+
+---
+
+## Dev Agent Record — ITERATION 3 (review findings, 2026-08-17)
+
+Third `dev-story` pass, on HEAD `a727a80`, addressing the single open High finding from
+review iteration 2. It is checked off above with its full resolution; this section carries
+the numbers and the two judgement calls.
+
+### Debug Log — iteration 3
+
+#### The defect, reproduced before anything was touched
+
+Both altitudes, shipped code only:
+
+```
+predicate  (provenance_evidence, real tree-sitter index)
+  sut(1, 2); captured = sut(3, 4)   ->  disc=2 cons=0  ->  vacuous_test_ast   <<< FALSE 🔴
+  sut(1, 2) / captured = sut(3, 4)  ->  disc=1 cons=1  ->  vacuous_test_heuristic
+
+end to end (default run_audit_detailed: no flags, no LLM, no harness)
+  semicolon-dup (GENUINE)  NOT_READY_FOR_RELEASE  exit 2  RULE_AST=1  <<< FALSE 🔴
+  two-lines     (control)  INSUFFICIENT_COVERAGE  exit 3  RULE_AST=0
+  true-vacuous  (recall)   NOT_READY_FOR_RELEASE  exit 2  RULE_AST=1
+```
+
+Both `sut` edges resolved to the FIRST occurrence's column, so the second call — bound to
+`captured` and asserted against a mock — inherited "nothing precedes it". A semicolon, and
+nothing else, decided the build.
+
+#### The shape family, measured through the real index (before → after)
+
+```
+shape                                                        BEFORE     AFTER
+semicolon-dup-genuine   sut(1,2); captured = sut(3,4)        AST  🔴  -> heuristic   FIXED
+semicolon-dup-reversed  captured = sut(3,4); sut(1,2)        heuristic-> heuristic
+two-lines-control                                            heuristic-> heuristic
+semicolon-dup-vacuous   sut(1,2); sut(3,4)                   AST      -> AST         RECALL KEPT
+two-lines-vacuous                                            AST      -> AST
+comprehension-dup       xs = [sut(1), sut(2)]                heuristic-> heuristic
+nested-call-bound       captured = sut(sut(1,2), 3)          heuristic-> heuristic
+nested-call-bare        sut(sut(1,2), 3)                     AST      -> heuristic   moved (safe)
+chained-dup             sut(1,2).thing(); captured = sut(3,4) heuristic-> heuristic
+semicolon-leading-other x = 1; sut(2, 3)                      heuristic-> AST         moved
+```
+
+The two moved rows are consequences of judging the **simple** statement rather than
+accidents, and both are recorded rather than hidden. `nested-call-bare` is now advisory
+because the inner call's result really is consumed — by the outer call — so fact (b)'s
+"no SUT result is consumed" clause genuinely fails once the two occurrences are told
+apart; it is a recall change in the tolerated direction. `x = 1; sut(2, 3)` is now
+corroborated because that SUT result really is discarded; it had been advisory only
+because an unrelated earlier statement shared its physical line. Neither shape occurs in
+the cartridges or in the 31 adjudicated locators, which is measured below rather than
+hoped.
+
+#### ⚠️ A premise of the suggested fix does not hold, and the fix does not use it
+
+The suggestion assumed the 1.4 index emits call edges in left-to-right source order.
+Measured: `ast_index._extract` pops from a stack and extends with `node.children`, so
+siblings are visited RIGHT TO LEFT, and the AR11 `(line, callee)` sort is stable —
+
+```
+def t():
+    alpha(1); beta(2); gamma(3)
+    outer(inner(1), 2)
+
+raw traversal order -> outer, inner, gamma, beta, alpha
+```
+
+Per the brief's instruction, this is **reported rather than silently converted into a
+schema change**. It also turns out not to matter: every count is a pure function of the
+occurrence an edge is assigned, so any bijection between the k edges and the k occurrences
+gives the same counts. DISTINCTNESS is the requirement; ordering is free. `-112` pins that
+as a property instead of leaving it as an argument, and asserts the counts are the correct
+`(1, 1)` so an order-invariant-but-wrong fix cannot pass it. **`CodeEdge` is byte-unchanged
+and the 1.4 index — which the orphan/dead-code detector also consumes — was not touched.**
+
+#### The predicate was NOT weakened — re-measured, not assumed
+
+Both members re-staged from `git show <sha>:<path>` at the **unchanged** pinned shas
+(`minions@ec63b729`, `agent-smith@9ab774d7`; Windows path form passed to `git -C`, §0.4)
+and re-scored through the shipped index and the shipped detector:
+
+| Population | Requirement | Iteration 2 | Iteration 3 |
+|---|---|---|---|
+| 3 planted cartridges (incl. `holdout_vacuous`, `nonascii_unicode`) | keep corroboration | 3/3 | **3/3** |
+| 31 adjudicated locators at the pinned shas | not verdict-eligible | 0/31 | **0/31** |
+| minions test functions / flagged | flag rate unchanged | 3,551 / 1,848 (52.0%) | **3,551 / 1,848 (52.0%)** |
+| agent-smith test functions / flagged | flag rate unchanged | 1,122 / 681 | **1,122 / 681** |
+| minions / agent-smith promotions | — | 0 / 0 | **0 / 0** |
+| `ast_corroborated == (mock_sites >= 1)` on the mock-bearing sub-population | broken | 0/36 | **0/36** |
+
+Byte-identical on every row. AC6.2 therefore still holds — nothing leaked into the flag
+path — and AC1.2's equivalence is still broken on the only sub-population where the two
+terms can differ.
+
+#### RED-then-green, at BOTH altitudes
+
+Each guard was run against the **pre-fix** predicate first and observed to fail:
+
+```
+pre-fix: -111 FAILED ("'semicolon-compound-bound': expected ast_corroborated=False, got True")
+pre-fix: -112 FAILED (counts were (2, 0), not (1, 1))
+pre-fix: -117 FAILED (default run_audit_detailed promoted the semicolon-compound test)
+post-fix: -111, -112, -117 all pass
+```
+
+### Completion Notes — iteration 3
+
+- **AC6 still holds.** `_count_statements`, `_ASSERTION_CALLEES`, `_MOCK_CALLEES`,
+  `ASSERTION_DENSITY_FLOOR` and `MOCK_RATIO_CEILING` are untouched by this round —
+  `argus/detectors/vacuous_test.py` is byte-unchanged in iteration 3, and the two tables
+  remain PARAMETERS of `provenance_evidence`, so fact (b) still receives neither
+  `assertion_sites` nor `mock_sites` (DN-4).
+- **AC5 still holds.** No arithmetic was added: `_simple_statement_breaks` returns a tuple
+  of column indices and the classification is still a `bool` over integer counts — no
+  ratio, no division, no `float`. `VacuousTestScore` is byte-unchanged (11 fields, frozen,
+  `extra="forbid"`), so no finding-borne schema change and `-92` passes. `RULE_AST` /
+  `RULE_HEURISTIC` and the Story 1.6 eligibility surface are byte-unchanged. Determinism:
+  the one new mutable structure, `next_occurrence`, is a `dict` read only via `.get()` and
+  never iterated into an output (NFR-D2). The scan stays PURE (AR8) — no I/O, clock, LLM,
+  `uuid4`/`random` or network; no new import.
+- **`-87`, `-88`, `-101`..`-110` and `-116` pass UNCHANGED**, and `-30`'s two-arm structure
+  is untouched. `-111`, `-112` and `-117` are new siblings, not modifications.
+- **Sizes.** `argus/detectors/provenance_scan.py` 541 → **610** (headroom **590**);
+  `argus/detectors/vacuous_test.py` **697, byte-unchanged**; `argus/pipeline.py`
+  **1111, untouched**. `tests/test_vacuous_detector.py` 872 → 1084;
+  `tests/test_default_path_blocking_verdict.py` 390 → 526.
+  `tests/test_module_size_ceiling.py` is green and was **not edited**.
+- **Nothing deferred.** The neighbouring shapes the brief named were probed and all belong
+  to this defect class; no separate class was found, so `deferred-work.md` was not touched
+  (it carries other work's uncommitted changes, which were left alone and unstaged).
+- **Nothing else outward-facing.** `git tag -l` empty at start and at hand-off. No
+  cartridge, golden key, `CartridgeSpec`, `tests/corpus/_manifest.py`,
+  `validation-corpus/**` file, `architecture.md` or governance artifact was touched, and
+  none of the working tree's pre-existing uncommitted changes was staged. `README.md` and
+  `CHANGELOG.md` needed no edit this round — `TC-ArgusAgent-DOCS-001-54` stays green
+  because no module was added or removed.
+
+#### AC7.1 — the three gates, iteration 3 (LOCAL; CI evidence is NOT ESTABLISHED)
+
+| Gate | §0.1 baseline | Iteration 2 | Iteration 3 | Δ vs §0.1 |
+|---|---|---|---|---|
+| `pytest` collected | 1597 | 1608 | **1611** | **+14** (`-111`, `-112`, `-117` added here; no test deleted) |
+| `pytest` | 1597 passed / 0 failed / 0 skipped | 1608 passed / 0 failed | **1611 passed / 0 failed / 0 skipped, exit 0** | **green** |
+| `mypy argus` | Success, 86 source files | Success, 87 | **Success, 87 source files** | +1 file (the iteration-2 module), 0 issues |
+| `bandit -r argus` | 19 Low / 0 Med / 0 High (0/0/6/13) | same | **19 Low / 0 Med / 0 High (0/0/6/13)** | 0 |
+
+**No skip appeared.** LOCAL Windows numbers; **CI evidence is NOT ESTABLISHED** for this
+delta. Mid-round the suite read 1,609 passed / **2 failed** — `test_dogfood_plan.py` and
+`test_dogfood_proof.py`, the same `AI-E12-11` artifact-currency bootstrap as iteration 1
+and **not** a detector-behaviour failure (the committed proof cites the pre-delta physical
+LOC; the live derivation reads the working tree). They were closed by running that item's
+own pre-authorised sequence — commit the code delta → `python
+scripts/regenerate_dogfood_artifacts.py` → commit the three regenerated artifacts as a
+SEPARATE commit. No artifact was hand-edited and no assertion was loosened, skipped,
+xfailed or narrowed (`DF-8-5-B`). `test_dogfood_artifact_currency.py` and
+`test_pipeline_signature_demo.py` — the FR32 demo the PRD calls *"the product"* — were
+green throughout.
+
+---
 
 ### Review Findings
 
@@ -1110,12 +1272,207 @@ No other High/Medium findings. Determinism (AR4/AR8/NFR-D2), `VacuousTestScore`
 byte-unchanged/frozen/`extra=forbid`, RULE_AST/RULE_HEURISTIC vocabulary, and CRLF/non-
 ASCII handling were all spot-checked and hold as claimed.
 
+### Review Findings — iteration 2
+
+_Code review (Sonnet), 2026-08-17, iteration 2. Scope: cumulative `git diff
+47b6dbe..a727a80` (`b315bcd` + `ae2fb28` + `92989a0` + `a727a80`), with focus on the
+fix round `git diff ae2fb28..a727a80`._
+
+**Claims re-verified BY EXECUTION, not read back:**
+
+- `pytest` — full suite run to a log file and dot-counted (no summary line reached
+  this terminal, but exit code was captured): **1608 passed, 0 failed, exit 0** —
+  matches the claim exactly.
+- `mypy argus` — **Success: no issues found in 87 source files.**
+- `bandit -r argus` — **19 Low / 0 Medium / 0 High**, confidence 0/0/6/13.
+- Cartridge recall — `pytest tests/test_cartridge_selfaudit.py -k "vacuous_basic or
+  holdout_vacuous or nonascii_unicode"` → **7 passed**, matching iteration 1's
+  independent figure.
+- The 31 adjudicated locators — an INDEPENDENT re-scoring script (not the dev's,
+  not read from the Dev Agent Record) staged every locator's file via `git show
+  <sha>:<path>` at the unchanged pinned shas (`minions@ec63b729`,
+  `agent-smith@9ab774d7`, both confirmed reachable at their recorded checkouts) and
+  ran it through the real `build_ast_index` + `VacuousTestDetector`. **All 31 rows
+  produce ONLY `vacuous_test_heuristic` findings — zero `vacuous_test_ast`
+  survivors** — confirming AC3's 0/31 claim, including that `test_ir_copilot.py:128`
+  (the DN-3 survivor case) is demoted along with the rest.
+- Extraction sizes — `wc -l` confirms `vacuous_test.py` **697**,
+  `provenance_scan.py` **541**, `argus/pipeline.py` **1111** (untouched), matching
+  the claim exactly. `git diff 47b6dbe..a727a80` on `_ASSERTION_CALLEES`,
+  `_MOCK_CALLEES`, `_count_statements`, `ASSERTION_DENSITY_FLOOR`,
+  `MOCK_RATIO_CEILING` shows only two new `+` lines and both are READS (passed as
+  keyword arguments) — AC6 boundary confirmed byte-unchanged.
+- README/CHANGELOG figures — `TC-ArgusAgent-DOCS-001-54` (read in full) genuinely
+  compares each published figure against a freshly built wheel/sdist measured at
+  test time (`live[key]`) and fails in EITHER direction; it is currently green, so
+  the 87/87 / 95 / 94 figures are DERIVED, not hand-typed, as claimed.
+- Departure (a) (`provenance_scan.py`, no leading underscore) — confirmed against
+  `architecture.md:897` (*"Modules: `snake_case.py`, ≤1200 lines (NFR-M1)"* — no
+  underscore requirement) and confirmed no module under `argus/detectors/` (or
+  `argus/`) carries a leading underscore. The departure is correctly justified.
+- Departure (b) (`_ASSERTION_CALLEES`/`_MOCK_CALLEES` passed as parameters rather
+  than moved) — accepted as genuinely structural, not just relocated coupling:
+  `provenance_scan.py` contains no import of either table and cannot acquire one
+  without a signature change, so Story 14.2 widening `_ASSERTION_CALLEES` in
+  `vacuous_test.py` cannot silently change fact (b)'s behaviour. This is a real
+  dependency-inversion improvement, correctly described.
+- The disputed backslash-vs-parenthesised point — the story's own
+  `> **CORRECTION**` block (above) is accurate: `_CONTINUATION_SHAPES` in
+  `tests/test_vacuous_detector.py` includes a `"backslash-continuation"` row
+  alongside `"parenthesised-continuation"`, both asserted advisory, and that test
+  passes today. Re-read against the task brief's framing, the record does not need
+  further correction.
+
+**New finding — a second, still-open false-accusation path, distinct from the one
+this round fixed:**
+
+- [x] [Review][Patch] `provenance_scan._locate_call` resolves a callee's location on
+  its line by unconditional `pattern.search()`, which always returns the FIRST
+  occurrence of `callee(` on that physical line. `CodeEdge` carries only
+  `(callee, line)` — no column — so when the SAME callee name is called MORE THAN
+  ONCE on the SAME physical line (e.g. a semicolon-separated compound statement),
+  every `CodeEdge` for that `(callee, line)` pair is located at the SAME (first)
+  position, regardless of which occurrence it actually represents. A later,
+  genuinely-bound occurrence borrows the first occurrence's "nothing precedes it"
+  classification and is scored **discarded** — violating AC1.3 ("A test whose
+  assertions constrain the real SUT result is NOT corroborated") and reaching
+  `vacuous_test_ast` / `AUDITED_SHALLOW` (verdict-eligible). This is the same lethal
+  failure class (a false 🔴) the story exists to close, reached through a distinct
+  mechanism from the continuation-syntax defect this round fixed — column-blindness
+  in occurrence resolution, not statement-boundary computation — and it is NOT
+  covered by `-101`..`-110`/`-116` (none of those cases repeat a callee name on one
+  physical line). [`argus/detectors/provenance_scan.py:287-305` (`_locate_call`),
+  exercised via `argus/detectors/provenance_scan.py:504-530`
+  (`provenance_evidence`'s discard/consumed loop)].
+
+  Reproduced end to end through the REAL tree-sitter index (not a hand-built edge
+  set) — `build_ast_index` genuinely emits two separate `CodeEdge(callee="sut",
+  line=13)` entries for the two calls below, confirming the shape is reachable, not
+  a hand-constructed artifact of a synthetic edge list:
+
+  ```python
+  def test_two_calls_same_line():
+      fake = Mock()
+      fake.other.return_value = 1
+      x1 = 1; x2 = 2; x3 = 3; x4 = 4; x5 = 5   # padding only, to clear the density floor
+      sut(1, 2); captured = sut(3, 4)           # <- two 'sut' calls, one line
+      assert captured == fake.other()           # <- constrains the REAL sut(3, 4) result
+  ```
+
+  `VacuousTestDetector().run(...)` on this fixture (built via the real
+  `build_ast_index`, not `AstIndexEntry` constructed by hand) emits
+  `rule_id="vacuous_test_ast"` — verdict-eligible — even though `captured` is bound
+  to the actual return value of `sut(3, 4)` and the assertion compares it against a
+  mock, which is exactly the pattern AC1.3 forbids promoting. Direct inspection of
+  `provenance_evidence(...)` on the same fixture shows the mechanism precisely:
+  `discarded_sut_calls=2, consumed_sut_calls=0` (both `sut` edges resolve to
+  `_locate_call`'s single first-match column 4, so BOTH register as "nothing
+  precedes it" even though the second one is textually preceded by
+  `"captured = "`).
+
+  Suggested fix: make occurrence resolution stateful across the `span_edges` loop
+  in `provenance_evidence` — track, per physical line, how many times each callee
+  has already been located, and have `_locate_call` (or a variant) search starting
+  just past the END of the previous match for that same `(line, callee)` pair
+  rather than always from column 0. Tree-sitter emits call edges in traversal
+  (left-to-right, source) order, so this recovers the correct occurrence without
+  needing a column on `CodeEdge` itself (no 1.4 index change, no new I/O — stays
+  PURE / AR8). Add a regression test exercising a semicolon-compound statement with
+  a repeated callee name (not currently present anywhere in `-101`..`-110`).
+  Severity: **High** — a proven, reproducible, currently-open violation of AC1.3 in
+  the exact risk direction (false 🔴) this story exists to eliminate, reached
+  through valid, if unusual, Python.
+
+  > **RESOLVED — 2026-08-17, dev-story iteration 3. The finding is upheld exactly as
+  > written; ONE of its supporting premises is not, and that is recorded rather than
+  > quietly worked around.**
+  >
+  > **(1) Reproduced independently before anything was changed**, at both altitudes,
+  > through the shipped detector over the REAL tree-sitter index and then through a
+  > default zero-token `run_audit_detailed`:
+  >
+  > ```
+  > semicolon-dup  (GENUINE)  NOT_READY_FOR_RELEASE  exit 2  RULE_AST=1  <<< FALSE 🔴
+  > two-lines      (control)  INSUFFICIENT_COVERAGE  exit 3  RULE_AST=0  ok
+  > true-vacuous   (recall)   NOT_READY_FOR_RELEASE  exit 2  RULE_AST=1  ok
+  > ```
+  >
+  > At predicate level the mechanism is precisely as the reviewer described:
+  > `discarded=2, consumed=0` for `sut(1, 2); captured = sut(3, 4)`, because both
+  > `CodeEdge(callee="sut", line=N)` entries resolved to the FIRST occurrence's column.
+  > A semicolon — and nothing else — turned a genuine test into a blocking finding.
+  >
+  > **(2) ⚠️ The suggested fix's stated premise is FALSE for this index, and the fix was
+  > NOT built on it.** The suggestion read: *"tree-sitter emits call edges in traversal
+  > (left-to-right, source) order, so this recovers the correct occurrence."* Measured:
+  > `ast_index._extract` walks with `stack.pop()` / `stack.extend(node.children)`, which
+  > visits siblings RIGHT TO LEFT, and the AR11 `(line, callee)` sort is stable — so two
+  > edges for one pair arrive in REVERSE source order (`alpha(1); beta(2); gamma(3)` →
+  > raw traversal `gamma, beta, alpha`).
+  >
+  > **No schema change was made in response, and none is needed** — the premise is not
+  > load-bearing. `ProvenanceEvidence` aggregates COUNTS, and each edge's classification
+  > is a pure function of the occurrence assigned to it, so any one-to-one assignment of
+  > the k edges to the k occurrences yields the same counts. The requirement is
+  > DISTINCTNESS, not order. That is now pinned by
+  > `TC-ArgusAgent-DETECT-001-112`, which asserts the evidence is identical under both
+  > permutations of the two indistinguishable edges *and* that the counts are the right
+  > pair `(discarded=1, consumed=1)` — an order-invariant-but-wrong fix fails it.
+  > `CodeEdge` is byte-unchanged; the 1.4 index (read by the orphan/dead-code detector
+  > too) was not touched.
+  >
+  > **(3) The fix, and the second half the reviewer's sketch did not cover.** Occurrence
+  > resolution is now stateful across the `span_edges` loop: `_locate_call` takes a
+  > `from_column` and each edge resumes past the END of the previous match for its
+  > `(line, callee)` pair. Resolving the occurrences correctly is necessary but not
+  > sufficient — with only that half, the genuinely-vacuous control `sut(1, 2); sut(3, 4)`
+  > would have been DEMOTED, because the second call's `preceding` text still contained
+  > the first statement. So the classification unit became the **SIMPLE statement**: the
+  > preceding/following text is trimmed at the depth-0 `;` bounding the call
+  > (`_simple_statement_breaks`). On source without a `;` this is provably identical to
+  > the previous behaviour, which is why the change is confined to the defect class.
+  > Fail-safe direction unchanged: a line holding fewer occurrences than edges resolves
+  > the surplus to `None` → CONSUMED. Nothing resolves ambiguity toward a finding.
+  >
+  > **(4) The neighbouring shapes were probed, as the brief required**, through the real
+  > index: comprehension (`xs = [sut(1), sut(2)]`), nested (`sut(sut(1, 2), 3)`, both
+  > bound and bare) and chained (`sut(1, 2).thing(); captured = sut(3, 4)`). All are
+  > advisory after the fix; each is a row in `-111`. Two behaviours moved and both are
+  > recorded rather than left implicit: the **bare nested** call is now advisory (the
+  > inner result IS consumed — by the outer call — so fact (b)'s clause genuinely
+  > fails), and `x = 1; sut(2, 3)` is now corroborated (that SUT result genuinely IS
+  > discarded; the old reading was conservative by accident). Both follow from judging
+  > the simple statement, and **no genuinely separate defect class was found**, so
+  > nothing was deferred and `deferred-work.md` is untouched.
+  >
+  > **The predicate was NOT weakened — re-measured, not assumed**, over both members
+  > re-staged at the unchanged pinned shas (`minions@ec63b729`, `agent-smith@9ab774d7`):
+  > cartridge recall **3/3**, the 31 adjudicated locators **0/31 verdict-eligible**,
+  > promotions **0** on both members, and the flag rate byte-identical at
+  > **1,848/3,551 (52.0%)** and **681/1,122**. Regression-locked at both altitudes, and
+  > all three guards were confirmed RED against the pre-fix predicate first:
+  > `TC-ArgusAgent-DETECT-001-111` (a nine-shape closure, both directions),
+  > `-112` (order invariance) and **`TC-ArgusAgent-VERDICT-001-117`** — the end-to-end
+  > arm on the default path, and the one that would have caught this.
+
+No other new High/Medium findings from this pass. The five shapes explicitly probed
+per the review brief — nested brackets, a call split across three lines, a
+dict/set literal, a comprehension, and a chained call — were all checked by direct
+execution against the real detector and found SAFE (conservative: each stays
+advisory rather than promoting, because the chained/nested case always leaves at
+least one edge unresolved by `_locate_call`, which correctly registers as
+"consumed" and blocks `sut_result_is_discarded` globally). Only the same-callee-
+twice-on-one-line shape above defeats that safety net, because it defeats
+`_locate_call` itself rather than relying on it correctly reporting "unresolvable."
+
 ---
 
 ## Change Log
 
 | Date | Version | Description | Author |
 |------|---------|-------------|--------|
+| 2026-08-17 | v1.3 | **Addressed code review findings — 1 of 1 items resolved (iteration 3, Sonnet).** **HIGH (false accusation) — FIXED, and one premise of the suggested fix was measured FALSE and reported rather than worked around.** `provenance_scan._locate_call` located a call with an unconditional `pattern.search()` — always the FIRST `callee(` on the physical line — and `CodeEdge` carries `(callee, line)` with no column, so k calls to one name on one line produced k edges that all read the FIRST occurrence's text. Reproduced independently before anything moved, at both altitudes through shipped code: at predicate level `sut(1, 2); captured = sut(3, 4)` scored `discarded=2, consumed=0` → `vacuous_test_ast`; end to end on a default zero-token `run_audit_detailed` it reached **`NOT_READY_FOR_RELEASE` exit 2 with one verdict-eligible finding**, while the byte-equivalent two-line spelling reached `INSUFFICIENT_COVERAGE` exit 3 — a genuine test (its `captured` bound to the real `sut(3, 4)` result and asserted against a mock) taken to 🔴 by a semicolon. A direct AC1.3 violation in the lethal direction. **The fix has two halves and only the first was in the suggestion:** (1) occurrence resolution is now stateful across the `span_edges` loop — `_locate_call` takes a `from_column` and each edge resumes past the END of the previous match for its `(line, callee)` pair, so every edge consumes a DISTINCT occurrence; (2) the classification unit narrowed from the logical statement to the `;`-delimited **SIMPLE** statement (`_simple_statement_breaks`), without which the genuinely-vacuous control `sut(1, 2); sut(3, 4)` would have been DEMOTED, since the second call's preceding text still carried the first statement. On source containing no `;` the new reading is provably identical to the old, which is what confines the change to the defect class. ⚠️ **The suggestion's premise — "tree-sitter emits call edges in left-to-right source order" — does NOT hold for this index and the fix does not use it:** `ast_index._extract` pops from a stack and extends with `node.children`, visiting siblings RIGHT to LEFT, and the AR11 `(line, callee)` sort is stable, so two edges for one pair arrive REVERSED (`alpha(1); beta(2); gamma(3)` → raw traversal `gamma, beta, alpha`). Per the brief this was reported, **not** converted into a schema change: every count is a pure function of the occurrence an edge is assigned, so any bijection of k edges to k occurrences yields the same counts — DISTINCTNESS is the requirement, ordering is free. `CodeEdge` and the whole 1.4 index (read by the orphan/dead-code detector too) are **byte-unchanged**. Fail-safe direction unchanged: a line holding fewer occurrences than edges resolves the surplus to `None` → CONSUMED. **The neighbouring shapes were probed as required** — comprehension (`xs = [sut(1), sut(2)]`), nested (`sut(sut(1, 2), 3)`, bound and bare) and chained — all advisory after the fix and each a row in `-111`; two behaviours moved and both are recorded: the bare nested call is now advisory (the inner result IS consumed, by the outer call) and `x = 1; sut(2, 3)` is now corroborated (that result genuinely IS discarded). **No genuinely separate defect class was found, so nothing was deferred and `deferred-work.md` was not touched.** **The predicate was NOT weakened, re-measured not assumed,** over both members re-staged at the unchanged pinned shas (`minions@ec63b729`, `agent-smith@9ab774d7`): cartridge recall **3/3**, the 31 adjudicated locators **0/31 verdict-eligible**, promotions **0/0**, flag rate byte-identical at **1,848/3,551 (52.0%)** and **681/1,122**, and the agreement with the bare `mock_sites >= 1` term still **0/36** on the sub-population where the two terms can differ. Regression-locked at both altitudes and all three guards confirmed RED against the pre-fix predicate first: **`TC-ArgusAgent-DETECT-001-111`** (nine-shape closure, both directions), **`-112`** (order invariance, with the correct `(1, 1)` counts so an order-invariant-but-wrong fix still fails) and **`TC-ArgusAgent-VERDICT-001-117`** — three arms on the default path, the one that would have caught this. **AC6 holds:** `argus/detectors/vacuous_test.py` is byte-unchanged this round, so `_count_statements`, `_ASSERTION_CALLEES`, `_MOCK_CALLEES` and both thresholds are untouched and fact (b) still receives neither `assertion_sites` nor `mock_sites` (DN-4). **AC5 holds:** no arithmetic added (no ratio, no division, no `float`), `VacuousTestScore` byte-unchanged and still frozen `extra="forbid"`, `RULE_AST`/`RULE_HEURISTIC` and the Story 1.6 surface unchanged, the scan still PURE with no new import, and the one new mutable structure (`next_occurrence`) is a `dict` read only via `.get()` and never iterated into an output. `-87`, `-88`, `-101`..`-110`, `-116` and `-30`'s two-arm structure all pass **unchanged**. `provenance_scan.py` 541 → **610** (headroom 590); `vacuous_test.py` 697 and `argus/pipeline.py` 1111 untouched; `tests/test_module_size_ceiling.py` green and not edited. **Gates (LOCAL; CI evidence NOT ESTABLISHED):** `pytest` **1611 collected / 1611 passed / 0 failed / 0 skipped, exit 0**; `mypy argus` **Success, 87 source files**; `bandit -r argus` **19 Low / 0 Med / 0 High** (0/0/6/13). Mid-round the two `AI-E12-11` dogfood artifact-currency guards fired (committed proof cites the pre-delta LOC) and were closed by running that item's own pre-authorised sequence — commit the code delta, `python scripts/regenerate_dogfood_artifacts.py`, commit the regenerated artifacts separately. No artifact hand-edited; no assertion loosened, skipped, xfailed or narrowed (`DF-8-5-B`); `architecture.md` untouched; `git tag -l` empty; none of the working tree's pre-existing uncommitted changes staged. | Dev Agent (dev-story, iteration 3) |
+| 2026-08-17 | v1.2 | **Code review, iteration 2 (Sonnet) — VERDICT: FAIL.** Re-verified BY EXECUTION (not read back): `pytest` 1608 passed/0 failed/exit 0, `mypy argus` Success 87 files, `bandit -r argus` 19L/0M/0H, cartridge recall (7/7 via `test_cartridge_selfaudit.py`), and an INDEPENDENT re-scoring of all 31 adjudicated locators at the unchanged pinned shas confirming **0/31** `vacuous_test_ast` survivors — all claims from iteration 2's Dev Agent Record hold. Extraction sizes, the AC6 byte-diff, both naming/parameter departures and the README/CHANGELOG figure provenance were each independently checked and confirmed as claimed. **A NEW, still-open High false-accusation finding was found**, distinct from the continuation-syntax defect this round fixed: `provenance_scan._locate_call` resolves a callee's position via unconditional `pattern.search()`, which always returns the FIRST occurrence of `callee(` on a physical line; since `CodeEdge` carries no column, when the SAME callee is called MORE THAN ONCE on the SAME line (e.g. a semicolon-compound statement), every edge for that `(callee, line)` pair borrows the first occurrence's classification. Reproduced end to end through the REAL tree-sitter index: `sut(1, 2); captured = sut(3, 4)` followed by `assert captured == fake.other()` scores `vacuous_test_ast` (verdict-eligible) even though `captured` is bound to the genuine `sut(3, 4)` result and the assertion constrains it against a mock — a direct AC1.3 violation, uncovered by any of `-101`..`-110`/`-116`. Severity High. See `### Review Findings — iteration 2` for the full reproduction and suggested fix. Status set to `in-progress` for a third dev-story pass. | Code Reviewer (Sonnet, iteration 2) |
 | 2026-08-17 | v1.1 | **Addressed code review findings — 2 of 2 items resolved (iteration 1, Sonnet).** **HIGH (false accusation) — FIXED AT THE ROOT, and the finding's scope was WIDER than recorded.** Fact (b) classified a SUT call's result as discarded by reading only the call's own PHYSICAL line, so every continuation syntax defeated it, not just the backslash the finding named: measured through the shipped detector, `result = \` / `sut(1, 2)` AND the parenthesised `result = (` / `sut(1, 2)` / `)` — the form PEP 8 explicitly PREFERS — both scored `vacuous_test_ast` / `AUDITED_SHALLOW` while the byte-equivalent single-line spelling stayed advisory. Reproduced **end to end** on the `-30` corpus shape through a default zero-token `run_audit_detailed`: `plain` → `INSUFFICIENT_COVERAGE` exit 3, `paren` and `backslash` → **`NOT_READY_FOR_RELEASE` exit 2 with one verdict-eligible finding** — a build taken to 🔴 by where the author pressed Enter, the lethal failure class and a direct AC1.3 violation. Two list/dict rows were advisory only BY ACCIDENT (their statement text did not end in `)`), which is why the suggested backslash special-case was rejected in favour of the root fix: the classification is now made about the whole **LOGICAL STATEMENT** containing the call, via `provenance_scan.logical_statement_starts` — the mirror of the `_logical_statement_end` the module already had — with ONE rule covering brackets and backslashes and no special case for either; an unresolvable statement follows the module's existing convention and counts CONSUMED (unresolvable is not evidence). ⚠️ **An orchestrator correction claiming backslash continuation was already handled and only the parenthesised form was broken does NOT reproduce**; re-measured twice, at predicate level and end to end, the backslash spelling was defective identically. The reviewer's mechanism needed widening, not replacing, and the incorrect claim was not implemented — recorded beside the finding so the record is not left misleading. **The predicate was NOT weakened to achieve it, re-measured not assumed:** cartridge recall **3/3** (`vacuous_basic`, the `holdout_vacuous` anti-overfitting control, the Cyrillic-pathed `nonascii_unicode`), the 31 adjudicated locators **0/31 verdict-eligible** at the unchanged pinned shas, promotions 0 on both members, flag rate byte-identical (1,848/3,551 = 52.0% minions, 681/1,122 agent-smith). Regression-locked at BOTH levels and both confirmed RED against the pre-fix predicate first: `TC-ArgusAgent-DETECT-001-109` (a five-shape closure asserting both directions, including a genuinely-discarded control that must STAY vacuous) and `-110` (recall is not traded for safety), plus **`TC-ArgusAgent-VERDICT-001-116`** — the end-to-end arm, at the same altitude as `-30`, asserting every wrapping of one test reaches the SAME verdict as the unwrapped one; it is the arm that would have caught this. **MEDIUM (cohesion / module size) — DONE THIS ROUND rather than deferred**, since the High fix adds lines to the same module: `argus/detectors/provenance_scan.py` now owns the line-oriented scan and `vacuous_test.py` goes **1072 → 697** (headroom **128 → 503**); `argus/pipeline.py` untouched at 1111 and `tests/test_module_size_ceiling.py` green with no exemption added. Two departures from the suggested shape, both recorded: the module is `provenance_scan.py`, not `_provenance_scan.py` (NFR-M1 says `snake_case.py` and no `argus/` module carries a leading underscore — the project standard wins over the suggestion), and `_ASSERTION_CALLEES` / `_MOCK_CALLEES` did NOT move — they are passed in as parameters, which makes DN-4 structural: the scan module cannot depend on the table Story 14.2 widens. Extraction proven behaviour-preserving by re-measuring recall, the 31 locators and both flag rates after the move. **AC6 re-proven by diff:** `_ASSERTION_CALLEES` (623 bytes), `_MOCK_CALLEES` (284 bytes) and `_count_statements` byte-identical to `HEAD`; both thresholds unchanged. **AC5 holds:** no arithmetic added (fact (b) returns a `bool` from integer counts — no ratio, no `float`), `VacuousTestScore` byte-unchanged and still frozen `extra="forbid"`, `RULE_AST`/`RULE_HEURISTIC` and the Story 1.6 surface unchanged, scorer still PURE. `-87`, `-88` (the false-accusation guard), `-101`..`-108` and `-30`'s two-arm structure all pass **unchanged**. `README.md` and `CHANGELOG.md` were edited ONLY because `TC-ArgusAgent-DOCS-001-54` went red on the new module and names that remedy in its own message (*"the artifact is the fact"*): 86/86 → 87/87 importable modules, 94 → 95 wheel entries, 93 → 94 sdist files. **Gates (LOCAL; CI evidence NOT ESTABLISHED):** `pytest` **1608 collected / 1608 passed / 0 failed / 0 skipped, exit 0**; `mypy argus` **Success, 87 source files** (the +1 is the new module, not a new error); `bandit -r argus` **19 Low / 0 Med / 0 High** (0/0/6/13), Δ0. Iteration 1's two dogfood-currency failures were closed by running `AI-E12-11`'s own pre-authorised sequence — commit the code delta, `python scripts/regenerate_dogfood_artifacts.py`, commit the three regenerated artifacts separately. No artifact hand-edited; no assertion loosened, skipped, xfailed or narrowed (`DF-8-5-B`); `deferred-work.md` and `architecture.md` untouched; `git tag -l` empty; none of the working tree's pre-existing uncommitted changes staged. | Dev Agent (dev-story, iteration 2) |
 | 2026-08-17 | v1.0 | **Implemented on HEAD `47b6dbe`.** Fact (b) REPLACED (DN-1): `assertion_sites >= 1 and mock_sites >= 1` — *"the test constructs a mock"* — becomes a provenance-shape statement over the same PURE inputs: at least one SUT call's result is DISCARDED, **no** SUT call's result is consumed, and at least one assertion references a mock-bound name. Fact (a) is unchanged. **AC1.2, re-measured on MY baseline over an identical population:** agreement with the bare `mock_sites >= 1` term went 2,527/2,529 → 2,493/2,529 overall and **34/36 → 0/36** on the only sub-population where the two terms can differ — the corroboration step no longer re-reads one of its own inputs. **AC2: recall 3/3** (`vacuous_basic`, the `holdout_vacuous` anti-overfitting control and the Cyrillic-pathed `nonascii_unicode` all still exit 2 with one verdict-eligible `vacuous_test_ast`); no cartridge, golden key or `CartridgeSpec` edited. **AC3: 0 of 31** adjudicated locators remain verdict-eligible at the unchanged pinned shas; minions-wide promotions 27 → 0 over 3,551 test functions. The §0.2 probe's single survivor, `agentsmith-core/tests/test_ir_copilot.py:128` (human disposition BORDERLINE), is demoted **by DN-3 specifically** — its SUT call sits inside `with pytest.raises(...)`, and raising IS the observation; that is the probe defect AC1.4 required to be designed in rather than inherited. **AC6: flag rate IDENTICAL** (1,848/3,551 = 52.0% minions, 681/1,122 agent-smith), and `_count_statements` / `_ASSERTION_CALLEES` / `_MOCK_CALLEES` / both thresholds proven **byte-identical by diff**, not asserted. **AC5: `VacuousTestScore` did not change shape** — no field added, still frozen `extra="forbid"`, so no finding-borne schema change and `-92` passes unchanged; the scorer stays PURE and `float`-free. `argus/pipeline.py` untouched. **§0.3 RESOLVED as option (A), HARDENED, on the operator's ruling after escalation:** `-30` asks whether the TOOL can block on a default zero-token no-sign-off run and the answer is still YES (3/3 cartridges), so option (B) would have committed a false claim to README / `action.yml` / Story 12.4; and the fixture is a constructed existence proof engineered against the old detector, not an adjudicated sample, so replacing it adjusts no gate. `-30` now measures **both arms on the same default path** — the new witness is promoted, and the OLD fixture (kept verbatim) is demoted to advisory — which regression-locks the discrimination and turns the fixture edit into a measurement of the intended change. `-86` and `-94` re-authored the same way, with the reason committed beside them; `-87` and `-88` (the false-accusation guard) pass **unchanged**. Eight new cases `-101`..`-108` reach every branch of fact (b), including CRLF-identity and non-ASCII identifiers (the Windows-local / ubuntu-CI exposure `AI-E13-1` names). **Gates (LOCAL; CI evidence NOT ESTABLISHED):** `pytest` 1605 collected / **1603 passed / 2 failed / 0 skipped**; `mypy argus` Success, 86 source files (Δ0); `bandit -r argus` 19 Low / 0 Med / 0 High, confidence 0/0/6/13 (Δ0). ⛔ **The two failures are `test_dogfood_plan.py` and `test_dogfood_proof.py`, and they are guards WORKING, not detector behaviour**: the committed proof records 28038 total LOC, the live derivation reads 28487, a delta of exactly this story's +449 lines under `argus/`. The named remedy refuses to run on a dirty `argus/` tree by design, so no green state exists while the delta is uncommitted; AC7.5 forbids committing, so this is routed to `AI-E12-11`'s recorded owner (the dev-loop orchestrator) with the pre-authorised commit → regenerate → commit sequence Stories 13.1/13.2/13.3 applied. `test_dogfood_artifact_currency.py` — the guard AC7.3 named — is GREEN, as is `test_pipeline_signature_demo.py`, the FR32 demo the PRD calls *"the product"*. No assertion was loosened, skipped, xfailed or narrowed. Nothing committed; `git tag -l` empty. `deferred-work.md` unmodified — `DF-14-1-A` is cited, not re-filed. **Divergence recorded, not inherited:** §0's corpus population figures (3,509 / 1,812 / 24 / 1,836) do not reproduce through the shipped detector at the pinned shas; the measured population is 3,551 / 1,848 / 27 / 2,529, it is not an intake-exclusion artefact, and the harness is validated by reproducing all 31 adjudicated findings as verdict-eligible before the change. | Dev Agent (dev-story) |
 | 2026-08-17 | v0.1 | Story contexted on HEAD `47b6dbe`. Source: `sprint-change-proposal-2026-08-17.md`, APPROVED by XAgent007 2026-08-17. **The defect was re-measured, not inherited:** fact (b) is `assertion_sites >= 1 and mock_sites >= 1`, and `ast_corroborated` is equivalent to `mock_sites >= 1` in **1,835 of 1,836** heuristically-flagged tests across both contributing corpus members — so the corroboration step adds no evidence the heuristic did not already have. The rule class emitted 31 blocking findings over the ratified corpus and the named human adjudicated **0** true (26 FP / 5 BORDERLINE). **This is a CONFORMANCE fix, not a new decision:** cross-cutting concern #6 has required `audited_deep` corroboration AND Prosecutor sign-off since the architecture was written, and the detector ships `AUDITED_SHALLOW` with no sign-off; the Epic-6 Prosecutor does not close it because `prosecutor.py:56-57` leaves an ALREADY-eligible finding UNCHANGED and `pipeline.py:535` passes no sign-offs. **Feasibility was MEASURED out of tree before this file was written** (§0.2): a predicate keyed on "SUT result discarded + assertion references a mock-bound value" kept **3/3** planted cartridges corroborated — including the `holdout_vacuous` anti-overfitting control and the Cyrillic-pathed `nonascii_unicode` — demoted **30/31** adjudicated findings, and took minions-wide promotions **24 → 0**; the single survivor is the one finding the human adjudicated BORDERLINE rather than FP. One probe defect is specified rather than inherited (DN-3: a `pytest.raises`-context SUT call is CONSUMED, because raising is the observation). ⛔ **A MEASURED ESCALATION is recorded at §0.3 and the dev must read it before coding:** `TC-ArgusAgent-VERDICT-001-30` — the test proving a zero-token, no-sign-off blocking path exists at all — plants a test whose SUT result is bound and asserted, so it does **not** survive the corrected predicate; its own message says *"Do NOT adjust a gate to make this pass — report it and escalate."* Two named options are recorded with arguments both ways and neither is the dev's to take silently. **Blast radius measured** (§0.5): 21 modules reference the rule id, **10 run the detector end to end**, and the classifier's one miss — `test_default_path_blocking_verdict.py` — is the highest-risk module of all; `test_pipeline_signature_demo.py` is the FR32 demo the PRD calls *"the product"*. Sizes measured so no 13-4-class deadlock is walked into: `vacuous_test.py` **623/1200**, but ⚠️ `argus/pipeline.py` is **1111/1200 with 89 lines of headroom** and is NOT exempt — do not add to it. `agent-smith`'s pinned sha confirmed **reachable** (§0.4), so both members can be re-scored against their true pinned trees. Baselines: `pytest` **1597 collected / 1597 passed / 0 failed / 0 skipped**, `mypy argus` **Success, 86 source files**, `bandit -r argus` **19 Low / 0 Med / 0 High**. `git tag -l` empty; nothing committed; nothing outward-facing. | Scrum Master (create-story) |

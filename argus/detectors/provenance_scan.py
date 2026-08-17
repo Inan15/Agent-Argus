@@ -284,25 +284,38 @@ def _statement_code(source_lines: list[str], start_line: int, end_line: int) -> 
     return " ".join(part for part in parts if part)
 
 
-def _locate_call(line: str, callee: str) -> tuple[str | None, int] | None:
-    """Locate ``callee(`` on *line*; return (receiver-chain root, chain start column).
+def _locate_call(line: str, callee: str, from_column: int = 0) -> tuple[str | None, int, int] | None:
+    """Locate ``callee(`` on *line* at or after *from_column*.
 
-    The root is ``None`` for an unqualified call (``add(1, 2)``) and the leading
-    identifier for a qualified one (``fake.calculate()`` → ``"fake"``). ``None`` is
-    returned when the callee cannot be found on that line at all — a call whose
-    function expression spans lines, or is computed. That is NOT treated as an
-    unqualified SUT call: unresolvable is not evidence, and the caller reads it as
-    CONSUMED so no corroboration can rest on it.
+    Returns ``(receiver-chain root, chain start column, match end column)``. The root is
+    ``None`` for an unqualified call (``add(1, 2)``) and the leading identifier for a
+    qualified one (``fake.calculate()`` → ``"fake"``).
+
+    *from_column* is what lets one callee be called MORE THAN ONCE on one line. The Story
+    1.4 ``CodeEdge`` carries a callee NAME and a line and **no column** (``DF-1-4-A``), so
+    the two edges emitted for ``sut(1, 2); captured = sut(3, 4)`` are indistinguishable;
+    searching from column 0 for each of them classified BOTH from the first occurrence,
+    and the second — genuinely bound to ``captured`` — inherited the first one's "nothing
+    precedes it" verdict. The caller therefore resumes each search past the END of the
+    previous match for the same ``(line, callee)`` pair, so every edge consumes a DISTINCT
+    occurrence. See :func:`provenance_evidence` for why distinctness is all that is needed
+    and the index's edge ORDER is not.
+
+    ``None`` is returned when the callee cannot be found at or after *from_column* — a call
+    whose function expression spans lines or is computed, or an edge for which the line
+    holds no further occurrence. That is NOT treated as an unqualified SUT call:
+    unresolvable is not evidence, and the caller reads it as CONSUMED so no corroboration
+    can rest on it.
     """
     pattern = re.compile(
         rf"(?<![\w.])(?P<prefix>(?:{_IDENT}\s*\.\s*)*){re.escape(callee)}\s*\("
     )
-    match = pattern.search(_blank_strings(_code_prefix(line)))
+    match = pattern.search(_blank_strings(_code_prefix(line)), from_column)
     if match is None:
         return None
     prefix = match.group("prefix")
     root_match = re.match(rf"\s*({_IDENT})", prefix) if prefix else None
-    return (root_match.group(1) if root_match else None), match.start()
+    return (root_match.group(1) if root_match else None), match.start(), match.end()
 
 
 def _leading_chain(expression: str) -> tuple[str, ...]:
@@ -334,6 +347,30 @@ def _is_mock_derived(
     if not chain:
         return False
     return chain[0] in mock_names or any(part in mock_callees for part in chain)
+
+
+def _simple_statement_breaks(code: str) -> tuple[int, ...]:
+    """Columns of *code*'s depth-0 ``;`` — where one SIMPLE statement ends and the next begins.
+
+    A ``;`` is the only thing in Python that puts two simple statements on one logical
+    line, and it is the unit fact (b) actually reasons about: ``sut(1, 2); result =
+    sut(3, 4)`` is *two* statements, one of which binds the SUT result. Depth- and
+    string-aware, so a ``;`` inside a call's arguments, a literal or a slice is not a
+    separator. On text that starts mid-statement the depth can only be understated, so
+    the count is clamped at zero — the same convention
+    :func:`_logical_statement_end` uses.
+    """
+    masked = _blank_strings(code)
+    depth = 0
+    breaks: list[int] = []
+    for column, char in enumerate(masked):
+        if char in _OPEN_BRACKETS:
+            depth += 1
+        elif char in _CLOSE_BRACKETS:
+            depth = max(depth - 1, 0)
+        elif char == ";" and depth == 0:
+            breaks.append(column)
+    return tuple(breaks)
 
 
 def _structural_colon(code: str) -> int:
@@ -478,11 +515,26 @@ def provenance_evidence(
     """Fact (b)'s evidence over the span: is the SUT result thrown away, and are the
     assertions looking at a mock instead? PURE — source text and the 1.4 edge set only.
 
-    The classification is made about the whole LOGICAL STATEMENT containing the call,
-    never about the call's own physical line: a SUT call is DISCARDED only when its
-    statement is that call and nothing else. Every other outcome — bound to a name on a
-    wrapped or backslash-continued line, nested in another expression, asserted on,
-    compared, chained, unreadable — is CONSUMED, which withholds corroboration.
+    The classification is made about the SIMPLE STATEMENT containing the call — the
+    ``;``-delimited unit, spanning however many physical lines it was wrapped over — never
+    about the call's own physical line: a SUT call is DISCARDED only when its statement is
+    that call and nothing else. Every other outcome — bound to a name on a wrapped or
+    backslash-continued line, nested in another expression, asserted on, compared, chained,
+    unreadable — is CONSUMED, which withholds corroboration.
+
+    Occurrence resolution, and why edge ORDER does not matter
+    ---------------------------------------------------------
+    An edge is ``(callee, line)`` with no column, so k calls to one name on one line emit k
+    indistinguishable edges. Each is given its OWN occurrence by resuming the search past
+    the previous match for that pair (``_locate_call``'s ``from_column``). It is worth being
+    precise about what that does and does not assume: the index does **not** emit these in
+    source order — ``ast_index._extract`` walks with ``stack.pop()``/``stack.extend``, which
+    visits siblings right to left, and the AR11 ``(line, callee)`` sort is stable. It does
+    not need to. Every count below is a pure function of the occurrence an edge is assigned,
+    so any one-to-one assignment of the k edges to the k occurrences produces the same
+    counts. What must hold is DISTINCTNESS, which the cursor guarantees; ordering is free.
+    And when a line holds fewer occurrences than edges, the surplus resolve to ``None`` and
+    count CONSUMED — the failure direction is always away from an accusation.
     """
     mock_names = _mock_bound_names(source_lines, start, end, mock_callees)
     observed_lines = _result_observing_lines(source_lines, start, end)
@@ -490,6 +542,7 @@ def provenance_evidence(
 
     discarded = 0
     consumed = 0
+    next_occurrence: dict[tuple[int, str], int] = {}
     for edge in span_edges:
         if (
             edge.callee in assertion_callees
@@ -501,11 +554,15 @@ def provenance_evidence(
         if index < 0 or index >= len(source_lines):
             consumed += 1  # off-span edge: cannot be read, so it cannot corroborate
             continue
-        located = _locate_call(source_lines[index], edge.callee)
+        occurrence_key = (edge.line, edge.callee)
+        located = _locate_call(
+            source_lines[index], edge.callee, next_occurrence.get(occurrence_key, 0)
+        )
         if located is None:
             consumed += 1  # unresolvable is not evidence (see _locate_call)
             continue
-        receiver_root, chain_start = located
+        receiver_root, chain_start, match_end = located
+        next_occurrence[occurrence_key] = match_end  # this edge has claimed this occurrence
         if receiver_root is not None and receiver_root in mock_names:
             continue  # a mock-derived call, not a SUT call
         if edge.line in observed_lines:
@@ -516,14 +573,26 @@ def provenance_evidence(
             consumed += 1  # the line opens no readable statement — not evidence
             continue
         statement_end = _logical_statement_end(source_lines, statement_start, end)
-        statement = _statement_code(source_lines, statement_start, statement_end)
+        line_code = _code_prefix(source_lines[index])
         # Everything of the LOGICAL statement that precedes the call, across however
-        # many physical lines it was wrapped over. Empty (or a bare ``await``) is what
-        # makes this an expression statement whose value nothing receives.
-        preceding = (
+        # many physical lines it was wrapped over, trimmed to the SIMPLE statement the
+        # call is in — text before a depth-0 ``;`` belongs to an earlier statement and
+        # says nothing about where THIS call's result goes. Empty (or a bare ``await``)
+        # is what makes this an expression statement whose value nothing receives.
+        before = (
             _statement_code(source_lines, statement_start, edge.line - 1)
-            + _code_prefix(source_lines[index])[:chain_start]
-        ).strip()
+            + line_code[:chain_start]
+        )
+        breaks_before = _simple_statement_breaks(before)
+        preceding = (before[breaks_before[-1] + 1 :] if breaks_before else before).strip()
+        # …and the same statement, forwards: from the call to the next depth-0 ``;`` or
+        # the end of the logical statement. Ending in ``)`` is what says the statement
+        # IS the call rather than the call plus something that reads its value.
+        after = line_code[chain_start:] + " " + _statement_code(
+            source_lines, edge.line + 1, statement_end
+        )
+        breaks_after = _simple_statement_breaks(after)
+        statement = (after[: breaks_after[0]] if breaks_after else after).strip()
         if preceding in ("", "await") and statement.endswith(")"):
             discarded += 1
         else:

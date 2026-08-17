@@ -19,7 +19,10 @@ from pathlib import Path
 
 import pytest
 
+from argus.detectors.provenance_scan import provenance_evidence
 from argus.detectors.vacuous_test import (
+    _ASSERTION_CALLEES,
+    _MOCK_CALLEES,
     RULE_AST,
     RULE_HEURISTIC,
     VacuousTestDetector,
@@ -870,3 +873,212 @@ def test_integration_vacuous_flagged_genuine_not(tmp_path: Path) -> None:
         ast_entry=by_path["test_genuine.py"],
     )
     assert gen.findings == ()  # genuine test NOT flagged
+
+
+# ── The SAME callee called more than once on ONE physical line (review iteration 3) ──
+
+#: A body prefix that is heuristically vacuous for a reason none of the rows below can
+#: change: four setup statements against one assertion puts the density at or under 1/5,
+#: beneath the 1/4 floor. Three mock constructions are deliberate — a two-mock fixture
+#: never clears the STRICT `> 1/2` mock ceiling against two SUT calls, which is what makes
+#: this shape family easy to probe for and conclude, wrongly, that it is already safe.
+_DUP_HEAD = (
+    "from unittest.mock import MagicMock\n"  # 1
+    "\n"  # 2
+    "\n"  # 3
+    "def test_shape():\n"  # 4
+    "    fake = MagicMock()\n"  # 5
+    "    second = MagicMock()\n"  # 6
+    "    third = MagicMock()\n"  # 7
+    "    fake.other.return_value = 7\n"  # 8
+)
+
+#: One callee, called TWICE, with the two calls placed relative to each other in every way
+#: that matters. The 1.4 index gives `(callee, line)` and NO column, so each of these emits
+#: two `CodeEdge`s that are INDISTINGUISHABLE — which is exactly why the classification has
+#: to consume a distinct textual occurrence per edge instead of re-reading the first one.
+#: Both directions are present: two rows must STAY corroborated, so a predicate that bought
+#: safety by demoting every repeated callee would fail here rather than pass.
+_REPEATED_CALLEE_SHAPES: tuple[tuple[str, bool, str], ...] = (
+    (
+        # THE DEFECT. `captured` is bound to the real `sut(3, 4)` result and the assertion
+        # constrains it against a mock — a genuine test, and a false 🔴 before the fix.
+        "semicolon-compound-bound",
+        False,
+        "    sut(1, 2); captured = sut(3, 4)\n    assert captured == fake.other()\n",
+    ),
+    (
+        # The same two statements in the other order, so the fix cannot be an artefact of
+        # which occurrence happens to come first.
+        "semicolon-compound-bound-first",
+        False,
+        "    captured = sut(3, 4); sut(1, 2)\n    assert captured == fake.other()\n",
+    ),
+    (
+        # The control: byte-identical semantics, one newline more. It was already advisory,
+        # and it is what makes the row above a LAYOUT-dependent verdict rather than a
+        # difference of opinion about the test.
+        "two-line-bound-control",
+        False,
+        "    sut(1, 2)\n    captured = sut(3, 4)\n    assert captured == fake.other()\n",
+    ),
+    (
+        # RECALL, on the same shape: both results really are thrown away, so the semicolon
+        # must not cost the detector the finding.
+        "semicolon-compound-discarded",
+        True,
+        "    sut(1, 2); sut(3, 4)\n    assert fake.other() == 7\n",
+    ),
+    (
+        "two-line-discarded-control",
+        True,
+        "    sut(1, 2)\n    sut(3, 4)\n    assert fake.other() == 7\n",
+    ),
+    (
+        # Neighbouring shapes that put the callee twice on one line by other means.
+        "comprehension-repeated-callee",
+        False,
+        "    xs = [sut(1), sut(2)]\n    assert xs[0] == fake.other()\n",
+    ),
+    (
+        "nested-call-bound",
+        False,
+        "    captured = sut(sut(1, 2), 3)\n    assert captured == fake.other()\n",
+    ),
+    (
+        # CONSERVATIVE BY CONSTRUCTION, and it moved with this fix: the inner call's result
+        # is consumed — by the outer call — so fact (b)'s "no SUT result is consumed"
+        # clause genuinely fails once the two occurrences are told apart. Before the fix
+        # both edges read the OUTER occurrence and this corroborated. Recorded as a row
+        # rather than left implicit, because it is a recall change and it is in the safe
+        # direction (a real vacuous test left advisory is tolerable; a false 🔴 is not).
+        "nested-call-discarded",
+        False,
+        "    sut(sut(1, 2), 3)\n    assert fake.other() == 7\n",
+    ),
+    (
+        "chained-then-bound",
+        False,
+        "    sut(1, 2).thing(); captured = sut(3, 4)\n    assert captured == fake.other()\n",
+    ),
+)
+
+
+def _corroborated_over_real_index(root: Path, source: str, name: str) -> bool:
+    """Score *source* through the REAL tree-sitter index — the edges are not hand-built.
+
+    This family cannot be honestly tested from a hand-written edge list: the whole claim
+    is about what the 1.4 index actually emits for two calls to one name on one line, and
+    a hand-built list is the tester asserting their own belief about that.
+    """
+    relative = f"test_{name.replace('-', '_')}.py"
+    (root / relative).write_text(source, encoding="utf-8")
+    index = build_ast_index(root, (relative,))
+    entry = {e.file_path: e for e in index.entries}[relative]
+    result = VacuousTestDetector().run(file_path=relative, source=source, ast_entry=entry)
+    assert len(result.findings) == 1, (
+        f"{name!r} was not flagged by the (unchanged) heuristic at all, so it cannot "
+        "measure anything about PROMOTION — repair the fixture, not the predicate"
+    )
+    return result.findings[0].rule_id == RULE_AST
+
+
+def test_a_repeated_callee_on_one_line_is_resolved_per_occurrence(tmp_path: Path) -> None:
+    """TC-ArgusAgent-DETECT-001-111 — AC1.3: a semicolon must not manufacture a 🔴.
+
+    THE DEFECT THIS PINS, reproduced before it was fixed (review iteration 3, 2026-08-17)
+    ---------------------------------------------------------------------------------
+    ``provenance_scan._locate_call`` found the call site with an unconditional
+    ``pattern.search()``, which always returns the FIRST ``callee(`` on the physical line.
+    ``CodeEdge`` carries ``(callee, line)`` and no column, so when one callee is called
+    twice on ONE line, BOTH edges were classified from the FIRST occurrence's text — and a
+    later, genuinely BOUND call inherited the first one's "nothing precedes it, so the
+    result was thrown away" verdict::
+
+        sut(1, 2); captured = sut(3, 4)
+        assert captured == fake.other()
+
+    Measured through the shipped detector over the REAL tree-sitter index, that scored
+    ``discarded=2, consumed=0`` → ``vacuous_test_ast`` / ``AUDITED_SHALLOW``, while the
+    byte-equivalent two-line spelling stayed advisory. A genuine test, taken to 🔴 by a
+    semicolon. This is the same lethal class as ``-109``'s continuation defect reached by a
+    different mechanism — column-blind OCCURRENCE resolution, not statement boundaries —
+    and none of ``-101``..``-110`` or ``-116`` repeated a callee name on one line.
+
+    The fix gives each edge for a ``(line, callee)`` pair its OWN occurrence, by resuming
+    the search past the end of the previous match for that pair, and judges the SIMPLE
+    statement (``;``-delimited) containing it. No column was added to the 1.4 ``CodeEdge``:
+    that index is read by the orphan/dead-code detector too, and this story does not own it.
+    """
+    promoted, demoted = [], []
+    for name, expect_corroborated, body in _REPEATED_CALLEE_SHAPES:
+        actual = _corroborated_over_real_index(tmp_path, _DUP_HEAD + body, name)
+        (promoted if actual else demoted).append(name)
+        assert actual is expect_corroborated, (
+            f"{name!r}: expected ast_corroborated={expect_corroborated}, got {actual}. "
+            "If a BOUND result was corroborated, every edge for a (line, callee) pair is "
+            "again reading the FIRST occurrence's text and a false 🔴 is reachable by "
+            "writing two calls on one line (AC1.3). If a DISCARDED row was demoted, the "
+            "predicate was weakened instead of corrected — cartridge recall is what pays."
+        )
+
+    # Non-vacuity: the table must have exercised both answers, not one.
+    assert len(promoted) == 2 and len(demoted) == 7, (
+        f"the shape table degenerated to one direction (promoted={promoted}, demoted={demoted})"
+    )
+
+
+def test_repeated_callee_evidence_does_not_depend_on_edge_order() -> None:
+    """TC-ArgusAgent-DETECT-001-112 — the fix must NOT rest on the index's edge order.
+
+    WHY THIS EXISTS AS ITS OWN GUARD
+    ---------------------------------
+    The suggested fix came with a premise: *"tree-sitter emits call edges in traversal
+    (left-to-right, source) order, so resuming the search past the previous match recovers
+    the correct occurrence."* **That premise is FALSE for this index, and was measured so
+    rather than assumed.** ``ast_index._extract`` walks with ``stack.pop()`` /
+    ``stack.extend(children)``, which visits siblings RIGHT to LEFT, and the AR11 sort key
+    ``(line, callee)`` is stable — so two edges for one ``(callee, line)`` pair arrive in
+    REVERSE source order::
+
+        alpha(1); beta(2); gamma(3)   ->  raw traversal: gamma, beta, alpha
+
+    The fix does not need the premise, and this pins WHY: ``ProvenanceEvidence`` aggregates
+    COUNTS, and each edge's classification is a pure function of the occurrence assigned to
+    it. Any one-to-one assignment of k edges to the k occurrences therefore yields the same
+    multiset of classifications and the same counts. What the fix must guarantee is that the
+    occurrences are DISTINCT — not that they are in order. Asserting the invariance directly
+    is the difference between a fix that works and a fix that happens to work.
+    """
+    source = _DUP_HEAD + "    sut(1, 2); captured = sut(3, 4)\n    assert captured == fake.other()\n"
+    lines = source.splitlines()
+    forward = [CodeEdge(callee="MagicMock", line=n) for n in (5, 6, 7)] + [
+        CodeEdge(callee="sut", line=9),
+        CodeEdge(callee="sut", line=9),
+        CodeEdge(callee="other", line=10),
+    ]
+    reverse = list(reversed(forward))
+
+    evidence = [
+        provenance_evidence(
+            lines,
+            edges,
+            4,
+            10,
+            assertion_callees=_ASSERTION_CALLEES,
+            mock_callees=_MOCK_CALLEES,
+        )
+        for edges in (forward, reverse)
+    ]
+
+    assert evidence[0] == evidence[1], (
+        f"the evidence changed with the order of two indistinguishable edges: "
+        f"{evidence[0]} vs {evidence[1]}. Occurrence resolution has become order-DEPENDENT, "
+        "and the index does not emit these in source order (see the docstring) — so this is "
+        "a real misclassification, not a theoretical one."
+    )
+    # …and it is the RIGHT pair of counts, not merely a stable one: one call's result is
+    # thrown away, the other's is bound. A fix that scored both the same way would be
+    # order-invariant too, and wrong.
+    assert (evidence[0].discarded_sut_calls, evidence[0].consumed_sut_calls) == (1, 1)
+    assert evidence[0].sut_result_is_discarded is False

@@ -163,6 +163,59 @@ def test_add_is_vacuous():
 """,
 }
 
+# `-117`'s corpus. One callee called TWICE on ONE physical line, in the three arrangements
+# that decide the answer: the SUT result bound by the second call (a GENUINE test), the same
+# two statements on two lines (the control), and both results genuinely thrown away (the
+# recall arm). Three mock constructions, not two, because two never clear the STRICT `> 1/2`
+# mock ceiling against two SUT calls — a two-mock fixture stays silent and would make this
+# shape look safe when it is not.
+_REPEATED_CALLEE_SOURCES = {
+    # GENUINE: `result` is bound to the real `add(3, 4)` and the assertion constrains it.
+    "semicolon-compound": ("""from unittest.mock import MagicMock
+
+from app.service import add
+
+
+def test_add_is_vacuous():
+    fake = MagicMock()
+    second = MagicMock()
+    fake.compute.return_value = 3
+    pretended = fake.compute()
+    add(1, 2); result = add(3, 4)
+    assert result == pretended
+""", False),
+    # The control — byte-identical semantics, one newline more.
+    "two-line-control": ("""from unittest.mock import MagicMock
+
+from app.service import add
+
+
+def test_add_is_vacuous():
+    fake = MagicMock()
+    second = MagicMock()
+    fake.compute.return_value = 3
+    pretended = fake.compute()
+    add(1, 2)
+    result = add(3, 4)
+    assert result == pretended
+""", False),
+    # The RECALL arm: both SUT results really are discarded, on one line. It must still
+    # block, or the fix bought its safety by going quiet on the shape family entirely.
+    "semicolon-compound-vacuous": ("""from unittest.mock import MagicMock
+
+from app.service import add
+
+
+def test_add_is_vacuous():
+    fake = MagicMock()
+    second = MagicMock()
+    fake.compute.return_value = 3
+    pretended = fake.compute()
+    add(1, 2); add(3, 4)
+    assert pretended == 3
+""", True),
+}
+
 _APP_SOURCE = '''"""A small application module with real definitions."""
 
 
@@ -357,6 +410,89 @@ def test_TC_ArgusAgent_VERDICT_001_116_line_wrapping_alone_cannot_reach_a_blocki
             f"the {label}-wrapped test emitted no advisory finding at all — the heuristic "
             "flag itself must not depend on line wrapping either"
         )
+
+
+def test_TC_ArgusAgent_VERDICT_001_117_a_semicolon_alone_cannot_reach_a_blocking_verdict(
+    tmp_path: Path,
+) -> None:
+    """TC-ArgusAgent-VERDICT-001-117 — Story 14.1 / AC1.3: a 🔴 must not depend on a semicolon.
+
+    WHAT WAS MEASURED
+    ------------------
+    ``CodeEdge`` carries ``(callee, line)`` and no column, and ``_locate_call`` resolved the
+    call site with an unconditional ``search()`` — the FIRST ``callee(`` on the line. So when
+    one callee is called twice on ONE line, both edges were classified from the first
+    occurrence, and a genuinely BOUND second call inherited "the result was thrown away".
+    On a default, zero-token, no-sign-off run over this very corpus::
+
+        add(1, 2)
+        result = add(3, 4)     -> INSUFFICIENT_COVERAGE   RULE_AST=0   (correct)
+
+        add(1, 2); result = add(3, 4)
+                               -> NOT_READY_FOR_RELEASE   RULE_AST=1   FALSE ACCUSATION
+
+    Two spellings of one test; one of them blocks a release. ``-116`` could not see it — it
+    plants only continuation syntaxes, and this defect is in occurrence resolution rather
+    than statement boundaries — and the predicate-level ``-111`` cannot prove the *product*
+    consequence. This arm sits at ``-30``'s altitude for the same reason ``-116`` does: the
+    claim being defended is about what an operator experiences.
+
+    THREE ARMS, because the cheap way to pass the first two is to stop promoting this shape
+    at all: the third plants a test whose SUT results ARE both discarded on one line, and
+    requires that it still blocks.
+    """
+    verdicts = {}
+    for label, (source, expect_blocking) in sorted(_REPEATED_CALLEE_SOURCES.items()):
+        verdict = run_audit_detailed(
+            AuditRequest(
+                repo_path=str(_corpus(tmp_path / label, test_source=source)),
+                commit="HEAD",
+                materiality_bar="",
+                budget=0,
+            )
+        ).verdict
+        verdicts[label] = verdict
+
+        eligible_ast = [
+            f
+            for f in verdict.ordered_findings
+            if f.rule_id == RULE_AST and f.depth_supported is not None
+        ]
+        if expect_blocking:
+            assert eligible_ast, (
+                f"the {label!r} arm plants a test whose SUT results are BOTH discarded — on "
+                "one line — and it is no longer verdict-eligible. The occurrence fix was "
+                "paid for with recall on the whole shape family rather than with precision "
+                "on it; re-read Story 14.1 / AC2 before relaxing this."
+            )
+            assert verdict.verdict is Verdict.NOT_READY_FOR_RELEASE
+            continue
+
+        assert not eligible_ast, (
+            f"a test that BINDS AND ASSERTS the real SUT result was promoted to "
+            f"verdict-eligible in the {label!r} arm. Every CodeEdge for a (callee, line) "
+            "pair is again being classified from the FIRST occurrence on that line, so a "
+            "🔴 is reachable by writing two calls on one line — a property of the layout, "
+            "not of the test. That is the lethal failure class (a false 🔴) and a violation "
+            "of AC1.3. Do NOT relax this; give each edge its own occurrence."
+        )
+        # …and it is DEMOTED, not made invisible: the heuristic is unchanged.
+        assert [f for f in verdict.ordered_findings if f.rule_id == RULE_HEURISTIC], (
+            f"the {label!r} arm emitted no advisory finding at all — the heuristic flag "
+            "itself must not depend on where the semicolons are either"
+        )
+
+    # The equivalence is the actual requirement: layout must not move the verdict.
+    assert (
+        verdicts["semicolon-compound"].verdict is verdicts["two-line-control"].verdict
+        and verdicts["semicolon-compound"].exit_code == verdicts["two-line-control"].exit_code
+    ), (
+        "writing the same two statements on one line changed the VERDICT: "
+        f"{verdicts['two-line-control'].verdict.value} "
+        f"(exit {verdicts['two-line-control'].exit_code}) -> "
+        f"{verdicts['semicolon-compound'].verdict.value} "
+        f"(exit {verdicts['semicolon-compound'].exit_code})"
+    )
 
 
 def test_TC_ArgusAgent_VERDICT_001_31_the_bare_cli_exits_2_on_that_corpus(
