@@ -321,7 +321,7 @@ has ever emitted**, and it is the one gap that gets worse rather than better on 
 Every surface that carries a verdict now carries this sentence, and it comes from one constant in
 `argus/verdict/negative_assurance.py` rather than from four hand-typed copies:
 
-> Instrument status: Argus's own finding precision has not been independently validated. Its findings rest on the Argus dogfood corpus, a self-audit of this repository with no human true-positive/false-positive adjudication behind it. This notice is removed only when Epic 13's human adjudication clears the >=80% precision gate; nothing else removes it.
+> Beta: Argus's finding precision has not been independently validated. Its findings rest on the Argus dogfood corpus, a self-audit of this repository. Treat findings as a prompt to look, not a verdict. This notice is removed only when the >=80% precision gate is met; nothing else removes it.
 
 **Where it appears.** On `stderr` after the ship-readiness block on every invocation that printed a
 `verdict=` line; in all four generated reports (`final-verdict.md`, `coverage-ledger.md`,

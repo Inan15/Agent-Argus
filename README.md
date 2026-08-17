@@ -9,7 +9,7 @@
 > **Integrating `argus audit` into a pipeline?** Every consumer-visible change to the exit codes, artifact schemas, defaults, rendered strings and public API — and what deliberately did *not* change — is recorded in **[CHANGELOG.md](CHANGELOG.md)**.
 
 > ⚠️ **Instrument status — read this before you weigh any verdict this tool gives you.**
-> Instrument status: Argus's own finding precision has not been independently validated. Its findings rest on the Argus dogfood corpus, a self-audit of this repository with no human true-positive/false-positive adjudication behind it. This notice is removed only when Epic 13's human adjudication clears the >=80% precision gate; nothing else removes it.
+> Beta: Argus's finding precision has not been independently validated. Its findings rest on the Argus dogfood corpus, a self-audit of this repository. Treat findings as a prompt to look, not a verdict. This notice is removed only when the >=80% precision gate is met; nothing else removes it.
 >
 > This is **distinct from** the scope disclaimer on each audit, and both apply: that one bounds
 > *this audit* — what was examined, sampled and not covered — while this one bounds *the tool*.

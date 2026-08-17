@@ -5,7 +5,7 @@ build-backend = "flit_core.buildapi"
 [project]
 name = "argus-agent"
 version = "0.1.0"
-description = "ArgusAgent: Agent-First Deterministic Repository Assurance & Audit Engine. Argus's own finding precision has not been independently validated."
+description = "ArgusAgent: Agent-First Deterministic Repository Assurance & Audit Engine. Argus's finding precision has not been independently validated."
 readme = "README.md"
 authors = [
     { name = "Minions & Argus Agent Team" }

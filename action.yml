@@ -1,5 +1,5 @@
 name: "ArgusAgent Code Audit & Release Gate"
-description: "Agent-first deterministic code audit, vacuous test detector, and secret scanner for student repositories. Argus's own finding precision has not been independently validated."
+description: "Agent-first deterministic code audit, vacuous test detector, and secret scanner for student repositories. Argus's finding precision has not been independently validated."
 author: "ArgusAgent Team"
 branding:
   icon: "shield"

@@ -181,11 +181,10 @@ class InstrumentStatus(str, enum.Enum):
 # adjudication, and nothing else) are untouched. Pinned by
 # `tests/test_built_distribution.py::…DOCS_001_58`.
 INSTRUMENT_DISCLOSURE_NOT_INDEPENDENTLY_VALIDATED = (
-    "Instrument status: Argus's own finding precision has not been independently "
-    "validated. Its findings rest on the Argus dogfood corpus, a self-audit of this "
-    "repository with no human true-positive/false-positive adjudication behind it. "
-    "This notice is removed only when Epic 13's human adjudication clears the >=80% "
-    "precision gate; nothing else removes it."
+    "Beta: Argus's finding precision has not been independently validated. Its "
+    "findings rest on the Argus dogfood corpus, a self-audit of this repository. "
+    "Treat findings as a prompt to look, not a verdict. This notice is removed only "
+    "when the >=80% precision gate is met; nothing else removes it."
 )
 
 INSTRUMENT_DISCLOSURE_VALIDATED = (
@@ -201,7 +200,7 @@ INSTRUMENT_DISCLOSURE_VALIDATED = (
 # than an independently authored sentence, and that relation is asserted — a second
 # sentence would be a second thing to keep true.
 INSTRUMENT_DISCLOSURE_SHORT_NOT_INDEPENDENTLY_VALIDATED = (
-    "Argus's own finding precision has not been independently validated."
+    "Argus's finding precision has not been independently validated."
 )
 
 INSTRUMENT_DISCLOSURE_SHORT_VALIDATED = (

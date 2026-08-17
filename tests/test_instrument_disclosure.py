@@ -251,9 +251,13 @@ _FORBIDDEN_STEMS: tuple[str, ...] = (
 
 # Anchor text (never a line number — `test_v1_commitment_closure.py::-31`'s standing rule)
 # that the current-state disclosure must carry so a reader learns what would END it.
+# AMENDED 2026-08-17: anchored on the CONDITION, not the internal reference "Epic 13",
+# which ships to end users in a published build. NOT weakened -- a removal condition must
+# still be named and "nothing else removes it" must still be present.
 _REMOVAL_CONDITION_ANCHORS: tuple[str, ...] = (
     ">=80% precision gate",
-    "Epic 13",
+    "removed only when",
+    "nothing else removes it",
 )
 
 # Test files that legitimately pass `protocol_cleared=True`, exempted BY NAME with their

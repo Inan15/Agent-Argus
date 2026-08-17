@@ -1,6 +1,6 @@
 # Argus — first run
 
-> Instrument status: Argus's own finding precision has not been independently validated. Its
+> Instrument status: Argus's finding precision has not been independently validated. Its
 > findings rest on the Argus dogfood corpus, a self-audit of this repository with no human
 > true-positive/false-positive adjudication behind it. This notice is removed only when Epic
 > 13's human adjudication clears the >=80% precision gate; nothing else removes it.

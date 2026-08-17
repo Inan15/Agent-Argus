@@ -1183,13 +1183,15 @@ def test_TC_ArgusAgent_DOCS_001_58_the_instrument_disclosure_names_the_corpus_it
         assert not _BARE_MINIONS.findall(text), f"false subject restored: {text}"
         assert "Argus dogfood corpus" in text
 
-    # The claim, unchanged: the negation still precedes the banned phrase, the self-audit
-    # framing survives, and Epic 13 is still the only thing that removes the notice.
+    # AMENDED 2026-08-17: by SUBSTANCE, not internal literals. Dropped "no human
+    # true-positive/false-positive adjudication" (FALSE since the named human adjudicated
+    # all 31 findings that day) and "Epic 13" (internal, ships to end users). FR34's three
+    # requirements -- validation state, corpus, removal condition -- all still asserted.
     current = INSTRUMENT_DISCLOSURE_NOT_INDEPENDENTLY_VALIDATED
     assert "has not been independently validated" in current
     assert "a self-audit of this repository" in current
-    assert "no human true-positive/false-positive adjudication" in current
-    assert "removed only when Epic 13's human adjudication" in current
+    assert "precision gate" in current, "the removal condition must be named (FR34.4)"
+    assert "removed only when" in current
     assert "nothing else removes it" in current
     assert INSTRUMENT_DISCLOSURE_SHORT_NOT_INDEPENDENTLY_VALIDATED in current
     assert [status.value for status in InstrumentStatus] == [
