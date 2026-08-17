@@ -365,7 +365,25 @@ either — including from this table.**
 |---|---|
 | *"H0 is owned but H1–H4 are still NOT FILED"* (epics AC) | ✅ **H0 IS OWNED** — `epics.md:2642-2643` closed it 2026-08-10b via the pre-authorised **option (b)** (the operator files outside this workflow); `deferred-work.md:1575-1588` records the same, and `epics.md:30` frontmatter carries it. Story 10.5 **already** recorded a correction to a brief that said otherwise (`deferred-work.md:2203-2205`) |
 | *"H0 (who FILES that handoff) is still **UNOWNED**"* — `sprint-status.yaml` header note | ❌ **STALE SURFACE.** That note is dated **2026-08-09** and **predates** the 2026-08-10b closure. **Do not propagate it.** Correct it or cite the closure beside it |
-| the seven ledger ids *"as of 2026-08-10b"* (`DF-6-7-A`, `DF-8-4-B` bytes-example half, `DF-8-4-C`, `DF-8-4-D`, `DF-8-5-B`, `DF-8-5-C`, `DF-9-2-C`) | ❌ **MOVED.** Measured: `DF-6-7-A` **CLOSED by disposition** (invocation half still open) · `DF-8-4-D` **CLOSED 2026-08-15** · `DF-8-5-C` **CLOSED 2026-08-16** · `DF-9-2-C` **CLOSED** (already-true, verified) · `DF-8-4-B` / `DF-8-4-C` remain **open and unowned by decision** · `DF-8-5-B` recurs as the artifact-currency bootstrap |
+| the seven ledger ids the AC lists *"as of 2026-08-10b"* | ❌ **FOUR HAVE MOVED.** Measured id by id below |
+
+**The seven ids, one per line — measured on `411d891`.** ⚠️ **Write each id's disposition on
+its OWN line, here and in your Dev Agent Record.** `TC-ArgusAgent-DOCS-001-78`'s extractor
+(`story_closure_claims`, `tests/test_governance_record_integrity.py:58-72`) is **line-scoped**
+by design and documents the contract it relies on: *"a closure claim and its id are written on
+the same line in every record this repository has produced."* A single line that pairs a closure
+verb with an id whose disposition differs reads as a claim the ledger never received — and the
+guard is **correct** to fail it.
+
+| Ledger id | Measured on `411d891` |
+|---|---|
+| `DF-6-7-A` | ✅ **CLOSED** by disposition, 2026-08-11 (FR23) — the *invocation* half remains open under its own record |
+| `DF-8-4-B` (bytes-example half) | ⛔ **remains open and unowned _by decision_** — `deferred-work.md:1649-1657`, a **locked disposition**. Do not schedule it, do not close it |
+| `DF-8-4-C` | ⛔ **remains open and unowned _by decision_** — same locked disposition. Do not schedule it, do not close it |
+| `DF-8-4-D` | ✅ **CLOSED** 2026-08-15 — an internal defect is now distinguishable from an expected degradation |
+| `DF-8-5-B` | ♻️ recurs as the **artifact-currency bootstrap** (with `DF-10-4-D`), not as a pending item — see AC8.7 |
+| `DF-8-5-C` | ✅ **CLOSED** 2026-08-16 against evidence — the generator no longer renders a literal |
+| `DF-9-2-C` | ✅ **CLOSED** — already true on arrival; verified by measurement, no change made |
 
 **And the substance the instruction protects — which is NOT stale and must be stated plainly:**
 **H1–H4 are still NOT FILED**; **assumption A5 remains ⚠️ UNSUPPORTED**; **H3's
