@@ -210,6 +210,50 @@ byte, no secret value, no absolute host path, no drive letter, no backslash** �
 precision function, or a second gate-status renderer. `precision_gate_status_for` is **extended,
 never forked** (the 6.5 marker convention, held since Story 6.5).
 
+### AC3b: The result DISCLOSES THE CONCENTRATION OF ITS OWN DENOMINATOR — in both branches
+
+> **Added 2026-08-17 by the INTERIM Epic-13 retrospective (`AI-E13-5`), deliberately BEFORE the
+> figure exists.** Recorded now because after adjudication any limitation attached to the result
+> reads as an excuse if it fails and as goalpost-moving if it passes. **This changes no
+> threshold.** §5's four conditions, the ≥80% `Fraction`, the `N ≥ 5` floor, the unit, the corpus
+> definition and every §7 invariant are **untouched**, and the protocol is **NOT amended** — the
+> change-log head stays **V1.3** so the committed adjudication record remains valid under
+> `TC-ArgusAgent-PRECISION-001-45` and **no re-adjudication is forced**. This binds what the
+> result must *say*, never what it must *reach*.
+
+**Given** the denominator is concentrated, measured over the ratified corpus at `be35c7f`:
+**24 of 31 blocking findings (77.4%) come from ONE member — `minions`**, which Story 13.1 itself
+labels *the least transferable evidence* under its overfitting caveat; **7 of 31** come from
+`agent-smith`; **ZERO** come from the remaining three ratified members, including the only real
+multi-language test; and **31 of 31 are a single rule class** (`vacuous_test_ast`).
+
+**Then** §5's `N ≥ 5` is satisfied by **member count** while the ratio is computed over **two
+members and one detector**, and a bare precision figure would therefore overstate the breadth of
+what was measured — the *N* that gates and the *N* that contributes are different numbers.
+
+**Then** the gate-decision record of AC3 and **every surface that publishes the figure** carry a
+**concentration statement** naming, at minimum: the **contributing member count vs. the ratified
+member count**, the **per-member finding counts**, and the **distinct rule-class count** of the
+adjudicated population. It is **DERIVED** — from the manifest and the adjudication record, through
+`argus.store.canonical` — and **never typed**: this is `DF-8-5-C`'s defect class and `AI-E9-7`
+applies with full force. The figures above are the state at authoring time and are **not** to be
+pinned as literals.
+
+**And it applies in BOTH branches.** If the gate CLEARS, the concentration rides with the cleared
+status wherever AC4 writes it — a cleared gate measured over two members and one detector is
+still measured over two members and one detector. If it does NOT clear, it rides with AC5's
+shortfall report.
+
+**And it is guarded in both directions** (the `-55b` convention): with the corpus as it stands the
+guard must go **RED** if the statement is absent or contradicts the derived counts; and driven
+over a synthetic well-distributed population the same predicate must **NOT** manufacture a
+concentration claim. A caveat that cannot be absent is not an observation.
+
+**And it is NOT a distribution requirement.** Do not amend §5 to require members to contribute, do
+not drop or re-weight a member, and do not narrow the corpus to improve the ratio. The
+concentration is **disclosed**, not corrected — correcting it by changing the population is the
+threshold change AC5 forbids, wearing a different hat.
+
 ### AC4: IF CLEARED — the flip, and the guard that MUST NOT go vacuous at the moment it fires
 
 Every clause below is conditional on AC1 returning **`CLEARED`**. If it returns `NOT_CLEARED` or
