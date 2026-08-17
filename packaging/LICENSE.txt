@@ -1,0 +1,100 @@
+ArgusAgent — Beta Evaluation Licence
+Version 0.1.0-beta
+
+Copyright (c) 2026 XAgents. All rights reserved.
+
+This is NOT open-source software. It is proprietary software, provided free of
+charge for evaluation only, on the terms below. Installing or running it means
+you accept them.
+
+
+1. WHAT YOU MAY DO
+
+   Install and run ArgusAgent to evaluate it, on source code you own or are
+   allowed to analyse. Personal, educational or internal use. No fee.
+
+   You may also SHARE IT ON. Pass the release package to colleagues, classmates,
+   teammates or anyone else you think should try it, provided that:
+
+     - you share the complete, unmodified package as you received it, including
+       this licence, THIRD-PARTY-NOTICES.txt and the other files in it;
+     - you do not charge for it; and
+     - you do not present it as your own work.
+
+   Sharing a link to the official download page is always fine and is usually
+   better, because it points people at the newest build.
+
+
+2. WHAT YOU MAY NOT DO
+
+   - Sell it, charge for it, or bundle it into anything you charge for.
+   - Break up the package. Do not redistribute the executable on its own or
+     without the licence and notices that came with it.
+   - Reverse engineer it. Do not decompile, disassemble or otherwise try to
+     recover the source code, except where the law expressly allows it despite
+     this term.
+   - Modify it, or build anything derived from it.
+   - Remove or alter the licence text, copyright notice, or the instrument-status
+     notice the software prints.
+   - Use it to build or improve a competing product.
+   - Rely on it in production, or present its output as assurance, certification,
+     or audit evidence.
+
+
+3. THIS IS A BETA, AND ITS ACCURACY IS STILL BEING VALIDATED
+
+   ArgusAgent's finding precision has not been independently validated. Accuracy
+   tuning is ongoing and the software prints a notice to that effect on every run.
+
+   Treat its output as a prompt to look, never as a verdict to act on. Do not rely
+   on it as assurance, certification or audit evidence.
+
+
+4. FEEDBACK
+
+   If you report a bug or a wrong finding, we may use that report to improve the
+   software, without owing you anything for it. Please do not send us code or
+   data you are not free to share. ArgusAgent does not transmit your source code
+   anywhere.
+
+
+5. HOW LONG IT LASTS
+
+   This licence ends if you break any term above, and in any case when a general
+   release of ArgusAgent becomes available. We may end it at any time. When it
+   ends, stop using the software and delete your copies.
+
+
+6. NO WARRANTY
+
+   THE SOFTWARE IS PROVIDED "AS IS", WITHOUT WARRANTY OF ANY KIND, EXPRESS OR
+   IMPLIED, INCLUDING BUT NOT LIMITED TO THE WARRANTIES OF MERCHANTABILITY,
+   FITNESS FOR A PARTICULAR PURPOSE, ACCURACY AND NON-INFRINGEMENT.
+
+
+7. NO LIABILITY
+
+   TO THE MAXIMUM EXTENT PERMITTED BY LAW, XAGENTS IS NOT LIABLE FOR ANY CLAIM,
+   DAMAGE OR OTHER LIABILITY ARISING FROM THE SOFTWARE OR ITS USE, INCLUDING ANY
+   DECISION TAKEN OR NOT TAKEN BECAUSE OF ITS OUTPUT.
+
+
+8. BUNDLED OPEN-SOURCE COMPONENTS
+
+   ArgusAgent includes third-party open-source components. Each one stays under
+   its own licence, and nothing in this licence changes that. They are listed in
+   THIRD-PARTY-NOTICES.txt, which ships alongside this file.
+
+
+9. OUR INTENTION TO OPEN-SOURCE THIS
+
+   We intend to release ArgusAgent as open source under the MIT Licence once the
+   precision validation described in section 3 is complete. This is a statement of
+   intent, not a binding commitment, and it does not grant you any MIT rights
+   today -- until that release happens, the terms above are the ones that apply.
+
+
+10. CONTACT
+
+   Questions, bug reports and wrong findings:
+   https://github.com/XAgents-ai/argus-agent-releases/issues

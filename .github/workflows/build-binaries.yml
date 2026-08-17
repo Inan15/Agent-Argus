@@ -1,0 +1,169 @@
+# Standalone binary builds — Windows, macOS and Linux.
+#
+# STATUS, STATED PLAINLY: this workflow builds and smoke-tests standalone executables. It
+# does NOT create a tag, does NOT create a GitHub Release in THIS repository, and does not
+# touch `release.yml`'s tag-triggered path. It is manually dispatched.
+#
+# WHY IT EXISTS: PyInstaller cannot cross-compile. A macOS binary needs a macOS runner and a
+# Linux binary needs a Linux one, so the only way to ship all three from one place is a
+# matrix. The 2026-08-17 Windows beta was built on a developer machine, which is exactly the
+# single-platform limitation this removes.
+#
+# WHERE THE ARTIFACTS GO: each job uploads a workflow artifact. If `release_tag` is supplied
+# AND the `RELEASES_REPO_TOKEN` secret is configured, the packages are additionally attached
+# to that tag in the public distribution repository. Without the secret the workflow still
+# builds and still smoke-tests — it simply does not publish, which is the safe default.
+
+name: Build standalone binaries
+
+on:
+  workflow_dispatch:
+    inputs:
+      release_tag:
+        description: "Tag in the public releases repo to attach the packages to (e.g. v0.1.0-beta). Leave empty to build artifacts only."
+        required: false
+        default: ""
+      releases_repo:
+        description: "Public distribution repository."
+        required: false
+        default: "XAgents-ai/argus-agent-releases"
+
+permissions:
+  contents: read
+
+jobs:
+  build:
+    name: ${{ matrix.label }}
+    runs-on: ${{ matrix.os }}
+    strategy:
+      fail-fast: false
+      matrix:
+        include:
+          - os: windows-latest
+            label: windows-x64
+            binary: argus.exe
+          - os: macos-latest
+            label: macos-arm64
+            binary: argus
+          - os: ubuntu-latest
+            label: linux-x64
+            binary: argus
+
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.11"
+
+      - name: Install the project and PyInstaller
+        run: |
+          python -m pip install --upgrade pip
+          python -m pip install .
+          python -m pip install pyinstaller
+
+      - name: Write the launcher
+        shell: bash
+        run: |
+          cat > argus_launcher.py <<'PY'
+          import sys
+          from argus.cli import main
+          if __name__ == "__main__":
+              sys.exit(main())
+          PY
+
+      - name: Build the executable
+        shell: bash
+        run: |
+          pyinstaller --onefile --name argus --clean --noconfirm --log-level WARN \
+            --collect-all tree_sitter \
+            --collect-all tree_sitter_python --collect-all tree_sitter_javascript \
+            --collect-all tree_sitter_typescript --collect-all tree_sitter_go \
+            --collect-all tree_sitter_rust --collect-all tree_sitter_java \
+            --collect-all tree_sitter_c --collect-all tree_sitter_cpp \
+            --collect-all tree_sitter_ruby --collect-all tree_sitter_php \
+            --collect-all argus --hidden-import argus.cli \
+            argus_launcher.py
+
+      # A build that produces a file nobody ran is not a build. Each platform proves the
+      # binary starts AND completes a real audit to a verdict before it is packaged.
+      - name: Smoke-test the binary
+        shell: bash
+        env:
+          BINARY: ${{ matrix.binary }}
+        run: |
+          BIN="dist/$BINARY"
+          test -f "$BIN" || { echo "::error::no binary at $BIN"; exit 1; }
+          "$BIN" --help > /dev/null || { echo "::error::--help failed"; exit 1; }
+
+          mkdir -p smoke/tests
+          cat > smoke/calculator.py <<'PY'
+          def add(a, b):
+              return a + b
+          PY
+          cat > smoke/tests/test_calculator.py <<'PY'
+          import unittest
+          from calculator import add
+
+          class T(unittest.TestCase):
+              def test_add(self):
+                  self.assertEqual(add(2, 3), 5)
+          PY
+          git -C smoke init -q .
+          git -C smoke add -A
+          git -C smoke -c user.email=ci@example.com -c user.name=ci commit -qm smoke
+
+          "$BIN" audit smoke | tee audit.txt
+          grep -q "verdict=" audit.txt || { echo "::error::no verdict emitted"; exit 1; }
+          grep -qi "precision" audit.txt || { echo "::error::instrument notice absent"; exit 1; }
+
+      - name: Assemble the package
+        shell: bash
+        env:
+          BINARY: ${{ matrix.binary }}
+          LABEL: ${{ matrix.label }}
+        run: |
+          NAME="argus-agent-0.1.0-beta-$LABEL"
+          mkdir -p "$NAME"
+          cp "dist/$BINARY" "$NAME/"
+          cp packaging/QUICKSTART.md packaging/FEEDBACK.md packaging/LICENSE.txt "$NAME/"
+          python packaging/generate_third_party_notices.py > "$NAME/THIRD-PARTY-NOTICES.txt"
+          cd "$NAME"
+          if command -v sha256sum > /dev/null; then
+            sha256sum "$BINARY" > SHA256SUMS.txt
+          else
+            shasum -a 256 "$BINARY" > SHA256SUMS.txt
+          fi
+          cat SHA256SUMS.txt
+          cd ..
+          python -c "
+          import shutil, sys
+          shutil.make_archive(sys.argv[1], 'zip', '.', sys.argv[1])
+          " "$NAME"
+
+      - uses: actions/upload-artifact@v4
+        with:
+          name: argus-agent-0.1.0-beta-${{ matrix.label }}
+          path: argus-agent-0.1.0-beta-${{ matrix.label }}.zip
+          if-no-files-found: error
+
+      # Publishing is OPT-IN and needs BOTH a tag and a token. Absent either, the workflow
+      # has still built and proven three binaries and simply stops short of going outward.
+      - name: Attach to the public release
+        if: ${{ inputs.release_tag != '' }}
+        shell: bash
+        # `release_tag` and `releases_repo` are OPERATOR-SUPPLIED. They are bound through
+        # `env:` and referenced as double-quoted shell variables so the runner never
+        # substitutes them into the script text — the `DF-9-2-D` defect, where an
+        # interpolated value is code rather than data. Same containment as `release.yml`.
+        env:
+          GH_TOKEN: ${{ secrets.RELEASES_REPO_TOKEN }}
+          RELEASE_TAG: ${{ inputs.release_tag }}
+          RELEASES_REPO: ${{ inputs.releases_repo }}
+          ASSET: argus-agent-0.1.0-beta-${{ matrix.label }}.zip
+        run: |
+          if [ -z "${GH_TOKEN}" ]; then
+            echo "::warning::RELEASES_REPO_TOKEN is not configured — built and verified, not published."
+            exit 0
+          fi
+          gh release upload "$RELEASE_TAG" "$ASSET" --repo "$RELEASES_REPO" --clobber
