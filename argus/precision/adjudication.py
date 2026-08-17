@@ -98,6 +98,7 @@ __all__ = [
     "PROTOCOL_ADJUDICATOR_ROLES",
     "PROTOCOL_PATH",
     "RECORD_PATH",
+    "LOCATOR_RE",
     "ROW_FIELDS",
     "AdjudicatedPrecision",
     "AdjudicationRecord",
@@ -213,7 +214,13 @@ _DATE_RE = re.compile(r"^\d{4}-\d{2}-\d{2}$")
 #: HOST path in any artifact, and the local gates here run on Windows only while CI runs
 #: an ubuntu matrix — a locator built by string concatenation on one platform is a
 #: cross-platform defect a green local suite would ship.
-_LOCATOR_RE = re.compile(r"^(?![A-Za-z]:)(?!/)[A-Za-z0-9._@+#$/-]+:\d+$")
+LOCATOR_RE = re.compile(r"^(?![A-Za-z]:)(?!/)[A-Za-z0-9._@+#$/-]+:\d+$")
+
+#: The pre-13.3 private name, preserved so no existing caller breaks. An ALIAS. PUBLIC
+#: since Story 13.3 (12.6 / DN-7: promote, never reach through): the gate-decision record
+#: republishes locators, and its NFR-S1 guard must check them against THIS pattern rather
+#: than a second one that could drift from it.
+_LOCATOR_RE = LOCATOR_RE
 
 #: The CLOSED row schema, mirroring 13.1's ``MANIFEST_FIELDS`` discipline. Checked in both
 #: directions on parse: an unknown key raises and a missing key raises. This is also how
@@ -891,6 +898,27 @@ def fold_adjudicated_precision(
         "threshold over the CARTRIDGE corpus, where compute_precision measures it and "
         "reports clean_repo_fp_applicable=True."
     )
+    # WHY the run is unevaluable, DERIVED from the precondition that actually failed
+    # (Story 13.3). Until 13.3 there was exactly one way to be unevaluable and the status
+    # sentence said so as a literal — "DENOMINATOR EMPTY". The moment a human recorded a
+    # BORDERLINE that stopped being true: this fold over 26 TP/FP dispositions and 5
+    # unterminated §4 ladders is unevaluable because it is NON-EXHAUSTIVE, and it rendered
+    # "DENOMINATOR EMPTY" beside a denominator of 26. A true status carrying a false reason
+    # is the DF-9-2-B false-subject class, on the surface that publishes the gate.
+    unevaluable_reason: str | None = None
+    if determinism is not None:
+        unevaluable_reason = (
+            "NOT BYTE-REPRODUCIBLE — protocol §4's determinism precondition does not hold "
+            "over this corpus, and it is evaluated before any pass/fail is recorded"
+        )
+    elif isinstance(exhaustive, AdjudicationUnevaluable):
+        unevaluable_reason = (
+            f"NOT EXHAUSTIVELY ADJUDICATED — {exhaustive.residual_count} of "
+            f"{exhaustive.residual_count + exhaustive.adjudicated_count} emitted "
+            f"finding(s) carry no live TP/FP disposition, so protocol §4's full-corpus "
+            f"requirement is unmet and a ratio over the {exhaustive.adjudicated_count} "
+            f"that do would be the sampled measurement §4 forbids"
+        )
     return AdjudicatedPrecision(
         total_tp=total_tp,
         total_fp=total_fp,
@@ -919,5 +947,6 @@ def fold_adjudicated_precision(
             floor_n=floor_n,
             population_label="eligible validation-set repositories",
             evaluable=precision is not None,
+            unevaluable_reason=unevaluable_reason,
         ),
     )

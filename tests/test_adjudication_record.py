@@ -26,6 +26,7 @@ from __future__ import annotations
 
 import re
 import subprocess
+from dataclasses import replace
 from fractions import Fraction
 from pathlib import Path
 
@@ -77,8 +78,9 @@ def _judged(row: AdjudicationRow, disposition: str, *, revision: int = 1) -> Adj
     """A HUMAN judgement over *row*'s finding — used only to exercise the instrument.
 
     Every row this helper produces lives inside a single test's local fixture and is never
-    written to the committed record. The record on disk holds **zero** judgements, which
-    ``-39`` asserts against the artifact itself.
+    written to the committed record. What ``-39`` asserts against the artifact itself is
+    the property that survives the adjudication: every judged row is attributed to a
+    protocol §2 role, and every unjudged row carries no attribution at all.
     """
     return AdjudicationRow(
         row_id=finding_row_id(
@@ -108,11 +110,22 @@ def _judged(row: AdjudicationRow, disposition: str, *, revision: int = 1) -> Adj
 
 
 def test_TC_ArgusAgent_PRECISION_001_39_the_committed_record_exists_and_is_non_vacuous() -> None:
-    """TC-ArgusAgent-PRECISION-001-39 — AC3/AC7: the record is committed, parsable and NOT empty.
+    """TC-ArgusAgent-PRECISION-001-39 — AC3/AC7: the record is committed, parsable and ATTRIBUTED.
 
-    **Observable:** the row count parsed off the committed artifact, and the tally of live
-    dispositions. **Why the non-vacuity assertion comes first:** every other guard in this
-    file walks these rows, and all of them would pass over an empty record.
+    **Observable:** the row count parsed off the committed artifact, and the attribution
+    on every live row. **Why the non-vacuity assertion comes first:** every other guard in
+    this file walks these rows, and all of them would pass over an empty record.
+
+    **RE-DERIVED 2026-08-17 (Story 13.3).** This guard used to assert
+    ``TP == FP == BORDERLINE == 0`` and ``UNADJUDICATED == len(rows)``. Story 13.2 encoded
+    *"nothing is adjudicated yet"* as a permanent invariant when it was a TRANSIENT state,
+    so the guard went red the moment the named human did the work it was waiting for — and
+    a guard that fails on the event it exists to enable is measuring the calendar, not the
+    property. What it was ACTUALLY protecting is intact and is what it now asserts, in a
+    form that cannot pass trivially: **a disposition may only enter the record attributed
+    to a human role protocol §2 registers, and an unjudged row may carry no attribution at
+    all.** That is the shape a machine filling in the human's judgements would break, in
+    BOTH directions, and it stays able to fail whatever the tally becomes.
     """
     record = _record()
     assert len(record.rows) > 0, (
@@ -125,18 +138,37 @@ def test_TC_ArgusAgent_PRECISION_001_39_the_committed_record_exists_and_is_non_v
         "counts() must report EVERY registered vocabulary member, so a consumer reading a "
         "member cannot get a KeyError that reads like a zero"
     )
-    # AC7 / DN-6, asserted against the artifact rather than trusted: nothing is judged.
-    assert tally["TP"] == 0 and tally["FP"] == 0 and tally["BORDERLINE"] == 0, (
-        f"the committed record carries {tally['TP']} TP / {tally['FP']} FP / "
-        f"{tally['BORDERLINE']} BORDERLINE row(s). No agent may adjudicate — a "
-        f"disposition enters only from the named human (protocol §2)."
-    )
-    assert tally["UNADJUDICATED"] == len(record.rows)
-    for row in record.rows:
+
+    # AC7 / DN-6, asserted against the artifact rather than trusted. A HUMAN disposition
+    # carries a §2-registered adjudicator and a date; an UNADJUDICATED row carries
+    # NEITHER. Both halves can fail, and the second is the one that catches an agent
+    # writing judgements: `AdjudicationRow.__post_init__` refuses an attributed
+    # UNADJUDICATED row, and this asserts the committed artifact against that rule rather
+    # than trusting that it was constructed through the type.
+    judged = [row for row in record.rows if row.is_human_judgement]
+    unjudged = [row for row in record.rows if not row.is_human_judgement]
+    assert len(judged) + len(unjudged) == len(record.rows)
+    assert judged or unjudged, "non-vacuity: the record partitioned into nothing"
+    for row in judged:
+        assert row.adjudicator is not None and row.adjudicated_on is not None, (
+            f"row {row.row_id!r} carries the human disposition {row.disposition!r} with "
+            f"no adjudicator or no date. An unattributed judgement is exactly what an "
+            f"agent filling in the human's work would leave behind (protocol §2)."
+        )
+        assert adjudicator_role(row.adjudicator) in PROTOCOL_ADJUDICATOR_ROLES, (
+            f"row {row.row_id!r} is attributed to {row.adjudicator!r}, whose role protocol "
+            f"§2 does not register. Only §2's roles adjudicate."
+        )
+    for row in unjudged:
+        assert row.disposition == "UNADJUDICATED", row.disposition
         assert row.adjudicator is None and row.adjudicated_on is None, (
             f"row {row.row_id!r} is UNADJUDICATED yet carries an attribution — that is "
             f"the exact shape a machine filling in the human's judgements would produce"
         )
+    # The tally is DERIVED from the same partition rather than pinned, so this cannot
+    # silently drift out of agreement with the rows it just walked.
+    assert sum(tally[name] for name in HUMAN_DISPOSITIONS) == len(judged)
+    assert tally["UNADJUDICATED"] == len(unjudged)
 
 
 def test_TC_ArgusAgent_PRECISION_001_40_the_record_is_tracked_in_git_and_not_under_dot_argus() -> None:
@@ -560,7 +592,15 @@ def test_TC_ArgusAgent_PRECISION_001_47_exhaustiveness_is_proven_and_a_residual_
     assert isinstance(verdict, Exhaustive), verdict
     assert verdict.adjudicated_count == len(expected)
 
-    partial = record.append([_judged(row, "TP") for row in record.rows[1:]])
+    # EXACTLY ONE finding the corpus emitted, carrying no row at all. Generated by
+    # dropping that finding's rows while leaving it in the expected population — which is
+    # the real seam now that every committed row carries a human disposition: a residual
+    # is a finding NOBODY ENTERED, and it can only be observed when the expected
+    # population comes from somewhere other than the record itself.
+    partial = replace(
+        record,
+        rows=record.rows[1:] + tuple(_judged(row, "TP") for row in record.rows[1:]),
+    )
     residual = partial.exhaustiveness(expected)
     assert isinstance(residual, AdjudicationUnevaluable), (
         "one undisposed finding must make the run UNEVALUABLE, never a pass over the rest"
@@ -582,10 +622,31 @@ def test_TC_ArgusAgent_PRECISION_001_47_exhaustiveness_is_proven_and_a_residual_
     assert isinstance(borderline, AdjudicationUnevaluable)
     assert borderline.residual_count == 1
 
-    # The live committed record: nothing is judged, so the whole population is residual.
+    # THE LIVE COMMITTED RECORD, re-derived 2026-08-17 (Story 13.3). This used to assert
+    # `residual == len(expected)` and `adjudicated == 0` — true while the record held 31
+    # UNADJUDICATED rows and false the moment the named human judged them. The PROPERTY
+    # being protected is not the count: it is that `exhaustiveness` and the disposition
+    # vocabulary agree about what a residual IS. Both sides are computed here
+    # independently and compared, so the guard tracks the record instead of a date, and it
+    # still fails if BORDERLINE ever stops making a run non-exhaustive.
+    live_residual = sorted(
+        finding_id
+        for finding_id, row in record.live_dispositions().items()
+        if row.disposition not in DENOMINATOR_DISPOSITIONS
+    )
     live = record.exhaustiveness(expected)
-    assert isinstance(live, AdjudicationUnevaluable)
-    assert live.residual_count == len(expected) and live.adjudicated_count == 0
+    if live_residual:
+        assert isinstance(live, AdjudicationUnevaluable), (
+            f"{len(live_residual)} committed finding(s) carry no live TP/FP disposition "
+            f"and the record still reports EXHAUSTIVE. A pass over the adjudicated subset "
+            f"is the sampled measurement §4 forbids."
+        )
+        assert live.residual_count == len(live_residual)
+        assert live.adjudicated_count == len(expected) - len(live_residual)
+        assert sorted(live.residual_finding_ids) == live_residual
+    else:
+        assert isinstance(live, Exhaustive)
+        assert live.adjudicated_count == len(expected)
 
 
 def test_TC_ArgusAgent_PRECISION_001_48_an_empty_population_is_unevaluable_not_exhaustive() -> None:
@@ -734,11 +795,20 @@ def test_TC_ArgusAgent_PRECISION_001_51_an_overrun_is_reported_and_never_fails()
 def test_TC_ArgusAgent_PRECISION_001_52_the_live_fold_is_unevaluable_and_the_gate_is_not_flipped() -> None:
     """TC-ArgusAgent-PRECISION-001-52 — AC7/DN-5/OI1: the real corpus reports UNEVALUABLE, recorded.
 
-    **Observable:** the fold over the COMMITTED record with the live derived N. AC7 is
-    HALTED awaiting the named adjudicator, and this guard is what makes that halt a
-    *recorded* state rather than a claim: the residual count is the real one, the gate is
-    not flipped, and the §5 clean-repo condition reports NOT APPLICABLE with its reason
-    rather than counting itself met.
+    **Observable:** the fold over the COMMITTED record with the live derived N. The claim
+    this guard protects is the one that must never weaken: **a caller that ASSERTS
+    ``protocol_cleared=True`` cannot flip the gate over a record protocol §4's
+    preconditions do not admit.** That is the whole reason ``protocol_cleared`` is passed
+    by the caller rather than derived inside the harness, and it is why the flag is
+    threaded into this fixture.
+
+    **RE-DERIVED 2026-08-17 (Story 13.3).** It used to assert
+    ``total_unadjudicated == residual_count == len(record.rows)`` — the state on the day
+    13.2 landed, encoded as though it were an invariant. The named human then adjudicated,
+    ``total_unadjudicated`` went to 0, and the guard failed on the event it existed to
+    wait for. The residual is now DERIVED from the record's own live dispositions and the
+    refusal is asserted against that, so the guard keeps its teeth as the adjudication
+    moves and goes red if the fold ever reports a ratio over a subset.
     """
     record = _record()
     folded = fold_adjudicated_precision(
@@ -746,23 +816,44 @@ def test_TC_ArgusAgent_PRECISION_001_52_the_live_fold_is_unevaluable_and_the_gat
         expected_finding_ids=[row.finding_id for row in record.rows],
         population_n=validation_set_population_n(),
         floor_n=registry_module().VALIDATION_SET_FLOOR_N,
-        protocol_cleared=True,  # even CLAIMED cleared, an unadjudicated corpus cannot flip
+        protocol_cleared=True,  # even CLAIMED cleared, a non-exhaustive corpus cannot flip
     )
     assert folded.n == validation_set_population_n() >= 5, (
         "the repository corpus floor is met — which is exactly why the remaining three §5 "
         "conditions must not be satisfiable by default"
     )
-    assert folded.total_unadjudicated == len(record.rows) > 0
+    residual = [
+        finding_id
+        for finding_id, row in record.live_dispositions().items()
+        if row.disposition not in DENOMINATOR_DISPOSITIONS
+    ]
+    assert len(record.rows) > 0, "non-vacuity: the committed record is EMPTY"
+    assert residual, (
+        "every committed finding now carries a live TP/FP disposition. This guard's "
+        "subject — the refusal to report a ratio over an incompletely adjudicated corpus "
+        "— is no longer observable on the live record. RE-DERIVE it (drive the refusal "
+        "over a generated variant) rather than deleting it: a guard that passes because "
+        "its subject vanished is worse than the red it replaced."
+    )
     assert folded.evaluable is False
     assert folded.precision is None and folded.precision_ratio == "NOT COMPUTED BY THIS RUN"
     assert folded.meets_threshold is False
     assert folded.provisional is True, (
-        "a corpus with zero adjudicated findings must never report a cleared gate, even "
-        "when the caller claims protocol_cleared=True"
+        "an incompletely adjudicated corpus must never report a cleared gate, even when "
+        "the caller claims protocol_cleared=True"
     )
     assert isinstance(folded.exhaustiveness, AdjudicationUnevaluable)
-    assert folded.exhaustiveness.residual_count == len(record.rows)
+    assert folded.exhaustiveness.residual_count == len(residual)
+    assert folded.exhaustiveness.adjudicated_count == len(record.rows) - len(residual)
+    assert folded.total_tp + folded.total_fp == folded.exhaustiveness.adjudicated_count, (
+        "the findings that carry a live TP/FP disposition and the findings the fold "
+        "counted into the denominator must be the same set, or the two halves of the "
+        "measurement are describing different populations"
+    )
     assert folded.clean_repo_fp_applicable is False
     assert "NOT APPLICABLE" in folded.clean_repo_fp_note
-    assert "NOT RECORDED" in folded.expert_hours_report
+    assert "NOT RECORDED" in folded.expert_hours_report, (
+        "expert_hours is null and stays null until the adjudicator states a figure; a "
+        "zero would claim the work took no time rather than that it was not reported"
+    )
     assert folded.gate_status.startswith("unevaluable")

@@ -150,8 +150,10 @@ __all__ = [
     "measure_validation_corpus",
     "precision_fraction",
     "precision_gate_status_for",
+    "ratio_string",
     "registry_module",
     "PRECISION_GATE_THRESHOLD",
+    "UNEVALUABLE_EMPTY_DENOMINATOR",
 ]
 
 # The shared 6.5 match key: (rule_id, verdict_eligible, advisory). ``verdict_eligible``
@@ -341,14 +343,37 @@ def _is_clean_repo(spec: CartridgeSpec) -> bool:
     return not spec.required_findings and spec.max_blocking == 0
 
 
-def _ratio_string(fraction: Fraction) -> str:
+def ratio_string(fraction: Fraction | None) -> str:
     """Render an exact ``Fraction`` as the committed ``"num/den"`` string (AR4, no float).
 
     Mirrors the LOCKED 1.1 canonical ``Fraction -> "num/den"`` encoding so the
     precision surface that crosses a byte boundary is fixed-precision + byte-stable
     (NFR-P1). ``Fraction`` is always normalized (denominator > 0, gcd-reduced).
+
+    PUBLIC since Story 13.3 (12.6 / DN-7: *"need a helper from a ``_``-prefixed API?
+    Promote it to public; never reach through"*). The gate-decision modules render the
+    same ratios onto the committed decision record, and a second ``f"{num}/{den}"`` there
+    is how two renderings of one number happen. ``None`` — *this run computed no number* —
+    renders the SAME sentence :func:`precision_gate_status_for` already uses, so "not
+    computed" and "measured zero" stay different claims on every surface.
     """
+    if fraction is None:
+        return "NOT COMPUTED BY THIS RUN"
     return f"{fraction.numerator}/{fraction.denominator}"
+
+
+#: The pre-13.3 private name, preserved so no existing caller breaks. An ALIAS, not a
+#: second implementation.
+_ratio_string = ratio_string
+
+#: The ONLY reason a run could be unevaluable when Story 13.2 wrote the sentence, kept as
+#: the default of :func:`precision_gate_status_for`'s ``unevaluable_reason`` so every
+#: pre-13.3 caller renders byte-identical output. It is a NAMED constant rather than an
+#: inline literal because it is now one reason among several and a reader has to be able
+#: to tell which one a surface is claiming.
+UNEVALUABLE_EMPTY_DENOMINATOR = (
+    "DENOMINATOR EMPTY — no finding entered TP+FP over this population"
+)
 
 
 def compute_precision(
@@ -711,6 +736,7 @@ def precision_gate_status_for(
     corpus_note: str | None = None,
     population_label: str = "labeled cartridges",
     evaluable: bool = True,
+    unevaluable_reason: str | None = None,
 ) -> str:
     """The 6.6 gate-status string — REUSES the 6.5 marker convention (no forked marker).
 
@@ -739,6 +765,19 @@ def precision_gate_status_for(
     there are two and they gate different things. It is supplied already-derived (see
     :meth:`ValidationCorpusMeasurement.corpus_note`) so that no caller can hand-write it.
 
+    **Story 13.3 — one additive change, in the honest direction, default byte-identical.**
+
+    ``unevaluable_reason`` names WHY a run was unevaluable. The sentence used to be fixed at
+    *"precision DENOMINATOR EMPTY — no finding entered TP+FP over this population"*, which was
+    the only way to be unevaluable when Story 13.2 wrote it. It stopped being the only way the
+    moment a human recorded a ``BORDERLINE``: the 13.3 fold over a record holding 26 TP/FP
+    dispositions and 5 unterminated ``BORDERLINE`` ladders is unevaluable because it is
+    **non-exhaustive**, and it rendered "DENOMINATOR EMPTY" beside a denominator of 26. That is
+    the ``DF-9-2-B`` FALSE-SUBJECT class — a true status sentence carrying a false reason — on
+    the surface that publishes the externalization gate. The parameter defaults to
+    :data:`UNEVALUABLE_EMPTY_DENOMINATOR`, the exact prior wording, so every existing caller
+    renders the bytes it always did (NFR-P1 byte-stability of the precision surface).
+
     ``population_label`` is the NOUN ``n`` counts. It defaults to ``"labeled cartridges"``, so
     :func:`compute_precision` — which genuinely folds the cartridge registry — renders exactly
     the bytes it always did (NFR-P1 byte-stability of the precision surface). The dogfood
@@ -760,12 +799,12 @@ def precision_gate_status_for(
             "cleared gate. An empty denominator is not an 80% result; it is no result "
             "(Story 13.2 / AC1b)."
         )
-    ratio = "NOT COMPUTED BY THIS RUN" if precision is None else _ratio_string(precision)
+    ratio = ratio_string(precision)
     note = "" if corpus_note is None else f" ({corpus_note})"
     if not evaluable:
         return (
             f"unevaluable (Story 6.6 precision harness, Story 13.2 / AC1b; precision "
-            f"DENOMINATOR EMPTY — no finding entered TP+FP over this population, so "
+            f"{unevaluable_reason or UNEVALUABLE_EMPTY_DENOMINATOR}, so "
             f"precision={ratio} is NOT a measurement; N={n} {population_label}, floor "
             f"N={floor_n}{note}; the >=80% externalization gate is NEITHER cleared NOR "
             f"met — it is UNEVALUABLE and is recorded as such; adjudication method: "

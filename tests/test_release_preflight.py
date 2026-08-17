@@ -308,10 +308,24 @@ _TEST_TREE_IMPORT = "_registry"
 # (DF-9-2-A). It resolves NO repository path at module level, which is the property that
 # actually decides whether a wheel can import, and which
 # TC-ArgusAgent-RELEASE-001-20 measures on a real built artifact.
+#
+# `argus/precision/gate_decision.py` and `argus/precision/gate_disclosure.py` joined the
+# set on 2026-08-17 (Story 13.3), and the addition is DELIBERATE on the same terms as
+# 13.2's. Both reach the set TRANSITIVELY — neither writes `_registry` anywhere; they
+# import `adjudication` / `replay_harness`, which already name it. Both resolve NO
+# repository path at module level: `DECISION_RECORD_PATH` is a repository-relative
+# forward-slash STRING the caller resolves against its own root (the same treatment
+# `adjudication.RECORD_PATH` gets, for the same DF-9-2-A reason), and every corpus lookup
+# goes through the declared lazy `corpus_manifest_module()` edge. The impure part — staging
+# and auditing the cartridge corpus to measure protocol §5's clean-repo condition — lives
+# in `scripts/build_gate_decision.py`, outside the shipped package, because a fold that
+# stages repositories is the test shell (§3.3) and has no business in `argus/**`.
 _MODULES_NAMING_THE_TEST_TREE_IMPORT: frozenset[str] = frozenset(
     {
         "argus/precision/__init__.py",
         "argus/precision/adjudication.py",
+        "argus/precision/gate_decision.py",
+        "argus/precision/gate_disclosure.py",
         "argus/precision/replay_harness.py",
         "argus/dogfood/proof_types.py",
         "argus/dogfood/proof_render.py",
