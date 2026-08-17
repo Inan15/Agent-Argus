@@ -113,7 +113,11 @@ jobs:
           git -C smoke add -A
           git -C smoke -c user.email=ci@example.com -c user.name=ci commit -qm smoke
 
-          "$BIN" audit smoke | tee audit.txt
+          # 2>&1 is load-bearing: the instrument notice is written to STDERR (the `argus:`
+          # prefixed lines), so capturing stdout alone silently drops the very thing this
+          # step exists to prove is present. Measured on the first CI dispatch, where all
+          # three platforms built and audited correctly and this check still failed.
+          "$BIN" audit smoke 2>&1 | tee audit.txt
           grep -q "verdict=" audit.txt || { echo "::error::no verdict emitted"; exit 1; }
           grep -qi "precision" audit.txt || { echo "::error::instrument notice absent"; exit 1; }
 
