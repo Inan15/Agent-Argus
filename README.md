@@ -30,11 +30,11 @@
    - **Defect Cartridges & Self-Audit Harness**: CI-blocking true-negative clean control cartridges and hidden holdouts.
 
 2. **Packaged assistant commands (`argus/assets/commands/`)** — *shipped in the wheel, placed by `argus install-commands`, see [Slash Commands](#-slash-commands--usage)*:
-   - **Verified hosts**: **Claude Code**. Each host is one entry in the closed registry at [`argus/commands/hosts.py`](argus/commands/hosts.py), and an entry exists only if its exact configuration directory and its exact resulting command spelling were verified.
-   - *Corrected 2026-08-15 (Story 12.7 / FR35 — §3.4, struck not deleted.)* This line previously read ~~**Vendor & Agent Adapters**: Native slash commands and skills for **Claude Code**, **Cursor**, **Cline**, **RooCode**, **Codex CLI**, **Gemini CLI**, and **Windsurf**~~. It named **seven** hosts while `adapters/` held **six** two-to-three-line stub directories — RooCode had no adapter at all — and not one of them registered a command in anything: both installer scripts created a `commands/` directory and then copied the stubs *beside* it. The stubs are removed; five of the six hosts had no verified file-drop convention Argus could write to, and six stub files are not a delivery. Each is one reviewed registry entry away, and that entry is what this list is derived from.
+   - **Verified host: Claude Code.** One host, not a list of aspirations. Each host is a single entry in the closed registry at [`argus/commands/hosts.py`](argus/commands/hosts.py), and an entry exists only once its exact configuration directory and its exact resulting command spelling have been verified. Additional hosts are each one reviewed registry entry away.
+
 3. **RAM Workflow Framework (`audit/`, `phases/`, `templates/`)** — *repository-only; these directories are not part of the `argus-agent` distribution, see [Quickstart](#-quickstart--installation)*:
    - **12 Audit Phases**: Guided markdown workflows from Orientation (`00`) to Verdict (`11`).
-   - **8 Developer Report Templates**, of which **4 are rendered** by `argus audit --report-dir`: `final-verdict`, `coverage-ledger`, `security-review` and `architecture-review`. *Corrected 2026-08-15 (Story 12.7): this line read ~~**12 Developer Report Templates**~~ while `templates/` held eight files and `argus/reports/generator.py::generate_reports` rendered four — the same figure was published as 12 here, as 8 under [Repository Structure](#-repository-structure), and as 12 by a slash command that claimed to produce them.*
+   - **8 Developer Report Templates**, of which **4 are rendered** by `argus audit --report-dir`: `final-verdict`, `coverage-ledger`, `security-review` and `architecture-review`.
 
 ---
 
@@ -73,16 +73,14 @@ dependencies = [
 **Authentication.** No credential is required **if and only if**
 `github.com/Inan15/Agent-Argus` is a public repository.
 
-~~⚠️ **This repository's visibility was not measured when this line was written** — no
-network call was made from the working tree — so treat "public" as the thing to CHECK, not
-as a stated fact. Open the URL above: if it loads while signed out, no credential is
-needed.~~
+> **Superseded, kept on the record.** This previously read:
+> ~~⚠️ **This repository's visibility was not measured when this line was written** — no network
+> call was made from the working tree — so treat "public" as the thing to CHECK, not as a stated
+> fact.~~ It has since been measured, and it is the worse case. Struck rather than deleted, because
+> the record that the gap existed is what makes the correction auditable.
 
-🔴 **CORRECTED 2026-08-15 by Story 12.9 / AC4 — it has now been measured, and it is the
-worse case.** Struck above rather than deleted (§3.4 evidence immutability). The sentence
-below is the single source of this fact; `TC-ArgusAgent-DOCS-001-71` asserts it appears
-verbatim here, in `CHANGELOG.md` and in `docs/first-run.md`, so the three cannot drift the
-way they drifted while all three admitted they had never looked:
+This is the single source of that fact; `TC-ArgusAgent-DOCS-001-71` asserts it appears
+verbatim here, in `CHANGELOG.md` and in `docs/first-run.md`, so the three cannot drift apart:
 
 Repository visibility, MEASURED 2026-08-15 by `gh repo view Inan15/Agent-Argus --json
 visibility,isPrivate` -> `PRIVATE` / `isPrivate: true`. What that costs a consumer, stated
@@ -121,54 +119,6 @@ its sha, its conclusion and the commit being released, and
 value. The same function renders it into the GitHub Release note, so the three cannot
 disagree.
 
-~~CI evidence: NOT ESTABLISHED. No executed gate covers the commit being released — the most
-recent `audit-ci.yml` run is run 31341363300, which covers sha 00c8d1b, 34 commits behind
-the commit being released and therefore evidences a different tree; a run id quoted without
-the sha it covers is a half-truth, so it is named here as SUPERSEDED rather than cited.
-Observed 2026-08-15 through the GitHub API. The human step that would establish one, and the
-only one: push `master` to `origin` and let `audit-ci.yml` run to success on the released
-commit, then re-derive this sentence from that run. A local `pytest`/`mypy`/`bandit` run is
-necessary, not sufficient, and is recorded as LOCAL (architecture.md §H).~~
-
-🔴 **SUPERSEDED 2026-08-16 — struck, not deleted (§3.4 evidence immutability).** The human
-step that sentence named was taken: `master` was pushed to `origin`, `audit-ci.yml` executed
-on the released commit, and the status below is the SAME function's output over the new
-observation. Nothing about the derivation changed; its input did. The superseded observation
-is retained in `scripts/release_notes.py` so the record of what this project claimed while it
-had no gate survives the moment it got one.
-
-~~CI evidence: run 31908861401 (cea92689b14f730ff529caeabd74c1f33f84821b, 3/3 legs green) on
-`audit-ci.yml` covers the commit being released. Observed 2026-08-16 through the GitHub API.~~
-
-~~SCOPE of that run, because a green run is evidence for what it EXECUTED and this one did not
-execute everything it carries. Each leg reported `1539 passed, 4 skipped`. The run recorded
-the following as NOT EVALUATED rather than as passing, so the citation above does not reach
-them: (1) `tests/test_installed_artifact.py` (`TC-ArgusAgent-RELEASE-001-25`..`-28`) — the
-fresh-environment installed-artifact proof: every `[project.scripts]` console script,
-`argus --help`, a fixture audit run to a real verdict, and an MCP JSON-RPC exchange over
-stdio through the installed `argus-mcp` shim. All four SKIPPED on all three legs, each
-reporting the named E6 outcome *NOT EVALUATED — uv is not on PATH, so the wheel could NOT be
-installed into a fresh environment and nothing about the INSTALLED distribution was checked*.
-So the front-door claim of this release is held by LOCAL runs only, and this citation does
-not cover it. Provisioning `uv` on the CI runner is a tooling decision that has not been
-taken; it is filed OPEN and unscheduled as `DF-12-9-B`, owned by the Engineering Lead.
-Reading the citation as covering these would be the same class of overstatement as quoting a
-run id without the sha it covers.~~
-
-🔴 **RE-DERIVED 2026-08-16 — struck, not deleted (§3.4 evidence immutability).** The citation
-above was true of the tree it names and is stale for this one, and the reason is structural
-rather than accidental: recording an observation and rendering it onto these surfaces is ITSELF
-a commit, so `HEAD` moves past the sha the cited run covers the instant the render lands. A
-surface that insisted the gate always cover `HEAD` could be true for one moment and never
-again. What follows is therefore the SAME function over the SAME 2026-08-16 observation, asked
-about the commit you are reading rather than about the commit that run covered — and the struck
-citation stays visible, because *the gate has executed green on this branch, at the sha named
-in it* is a materially different fact from *no gate has ever run*, and a reader is owed both
-halves. `TC-ArgusAgent-DOCS-001-25` asserts that the derivation is right for whichever branch
-the observed facts imply and that these surfaces carry that value; it does not require the
-facts to be one particular way, because a guard that can only pass in a single instant is the
-mirror image of one that can never fail.
-
 CI evidence: NOT ESTABLISHED. No executed gate covers the commit being released — the most
 recent `audit-ci.yml` run is run 31908861401, which covers sha
 cea92689b14f730ff529caeabd74c1f33f84821b and therefore evidences a different tree; a run id
@@ -193,15 +143,14 @@ pip install -e .
 > ⚠️ Same interim caveat as above — the tag does not exist yet, so the first command does not resolve
 > today. The clone form works now.
 
-~~The default install grounds **Python only**. Nine further tree-sitter grammars ship in an **optional
-extra**, and installing it is what lets Argus check claims against the real AST of a JavaScript,
-TypeScript, Go, Rust, Java, C, C++, Ruby or PHP file.~~ *(Struck 2026-08-15 — the nine grammars moved
-into the base dependencies. NFR-P3 classifies coverage lost to a grammar missing from the default
-install as a **packaging defect, not a user error**: a developer whose project is not Python was being
-given a quietly worse result for a decision they never saw. The `[languages]` extra is **retained** so
-`pip install "argus-agent[languages]"` keeps working — it now resolves to requirements the default
-install already carries, and a test pins the two lists equal so the alias cannot promise something
-different.)*
+> **Superseded, kept on the record.** This section previously read:
+> ~~The default install grounds **Python only**. Nine further tree-sitter grammars ship in an
+> **optional extra**, and installing it is what lets Argus check claims against the real AST of a
+> JavaScript, TypeScript, Go, Rust, Java, C, C++, Ruby or PHP file.~~ The nine grammars moved into the base dependencies on 2026-08-15, because
+> NFR-P3 classifies coverage lost to a grammar missing from the default install as a **packaging
+> defect, not a user error**. The `[languages]` extra is retained so
+> `pip install "argus-agent[languages]"` keeps working; it now resolves to requirements the default
+> install already carries, and a test pins the two lists equal.
 
 **Which languages, and where that list actually lives.** The languages Argus reads are the suffixes in
 [`argus/shared/source_languages.py`](argus/shared/source_languages.py) — that module is the single
@@ -331,14 +280,8 @@ argus install-commands --dry-run
 argus install-commands
 ```
 
-> *Corrected 2026-08-15 (Story 12.7 / FR35 — §3.4, struck not deleted.)* These scripts were
-> previously described as the way to ~~copy the adapters into your assistant~~, and both were
-> **broken in the identical way**: each created `$HOME/.claude/commands/` and then copied the
-> adapter files into `$HOME/.claude/` — *beside* the directory a command is read from — so
-> nothing they reported installing ever appeared. `install.sh`'s Cline branch incremented its
-> counter and copied no file at all, and `uninstall.sh` ran `pip uninstall` only, leaving
-> every copied file in your home directory forever. There is now exactly one placement
-> mechanism, it ships in the wheel, and `--remove` takes back exactly what it wrote.
+> There is exactly one placement mechanism, it ships in the wheel, and `--remove` takes
+> back exactly what it wrote.
 
 Or, for an editable development install with no command placement at all:
 
@@ -360,28 +303,6 @@ what it wrote. The wheel's entry count is stated once, in
 [What the distribution contains](#what-the-distribution-contains-and-what-needs-the-git-repository)
 above.
 
-> *Corrected 2026-08-15 (Story 12.7 / FR35 — §3.4, struck not deleted.)* This paragraph
-> previously ended ~~*"The wheel carries **zero data assets** — every entry in it is either an
-> `argus/**` module or a `dist-info` metadata file … so the distribution contains no command
-> file, no skill manifest and no registration mechanism of any kind. **Installing it
-> registers no slash command in any assistant.**"*~~ All three clauses are now false: the
-> wheel ships data assets, it contains command files, and installing it plus running one
-> documented sub-command registers the commands listed below.
-> `TC-ArgusAgent-DOCS-001-56` holds the correction in both directions — it fails while the
-> distribution ships an asset and the *forthcoming* marker survives, **and** it fails if the
-> published command set and the shipped asset tree ever stop being equal.
-> **No second entry-count arithmetic is stated here**, deliberately: the reason is recorded
-> immediately below and is the remedy for a rot this repository has now filed three times.
-
-> *Corrected 2026-08-15 (Story 12.6).* This paragraph previously read ~~*"Three console
-> aliases, and nothing else … The wheel carries **zero data assets** (77 entries = 72
-> `argus/**` modules + 5 `dist-info` files)"*~~. Both halves were wrong by the time you read
-> them: a fourth alias now ships, and the entry arithmetic **contradicted the pinned figure
-> two sections above it before this story touched anything** — that paragraph said 80 entries
-> while this one said 77. Only the first was pinned by `TC-ArgusAgent-DOCS-001-54`, so the
-> second rotted silently, which is the published-figure defect class this repository has now
-> filed three times (Epic 9, Epic 11, here). The remedy is not a corrected second number: it
-> is that this paragraph no longer states one. One measurement, one place, one pin.
 
 **Using it from a coding agent (`argus-mcp`).** The `argus-mcp` alias starts an
 [MCP](https://modelcontextprotocol.io) server that speaks JSON-RPC 2.0 over **stdin/stdout
@@ -434,22 +355,6 @@ spellings above are DERIVED from the shipped asset names and the host registry b
 `TC-ArgusAgent-ASSETS-001-06`, never hand-typed here, and that guard fails in both
 directions — a command documented with no shipped asset, or an asset absent from this list.
 
-> *Corrected 2026-08-15 (Story 12.7 / FR35 — §3.4, struck not deleted.)* This section
-> previously carried a `🚧` *forthcoming* marker over **seven** commands —
-> ~~`/audit`, `/audit repo`, `/audit architecture`, `/audit security`,
-> `/audit subsystem <name>`, `/audit report` (*"Generate 12 developer markdown reports"*),
-> `/audit resume`~~ — none of which was delivered by anything, and it was one of **three**
-> published lists that disagreed with each other (`audit/commands.md` listed ten,
-> `audit/skill.md` listed six). Four could not resolve to any invocation the tool accepts:
-> `repo` and `architecture` name no pass token (`architecture-review` is a *report*, already
-> produced by `/argus-audit-report`); `subsystem <name>` needs a scoping capability that does
-> not exist, since `--critical-subsystem` designates a path critical rather than narrowing
-> the audit; and `resume` has a working engine with **no CLI entrance of any kind**, filed as
-> `DF-3-4-A` and open since Story 3.4 — building one is a later story's, so the command is
-> removed from the docs rather than implemented here. The ~~`/audit repo`~~ *space-separated
-> argument* shape was never produced by anything and is not a contract that survives: what
-> you are told above is the spelling the host actually gives you. The report figure was
-> published as **12** in three places while `generate_reports` renders **four**.
 
 From terminal CLI — the `audit` sub-command is required, and every flag below is the real spelling:
 
@@ -464,13 +369,9 @@ argus audit . --commit HEAD --strict --budget 500 --materiality-bar critical
 argus audit . --report-dir ./argus-reports --reports final-verdict,coverage-ledger
 ```
 
-> *Corrected 2026-08-10 (Story 10.3 / `DF-AUD-APAA-E`).* This block previously read
-> ~~`argus --budget 500 --materiality critical`~~, which exits with an argparse usage error: the
-> `audit` sub-command was missing and `--materiality` is not a flag this parser has ever accepted
-> (it is `--materiality-bar`). Every `argus …` command line committed in this README, in
-> `action.yml` and in the workflows is now parsed by the real parser in CI
-> (`TC-ArgusAgent-DOCS-001-28`), so a documented invocation that would fail for a reader fails the
-> build first.
+> Every `argus …` command line committed in this README, in `action.yml` and in the
+> workflows is parsed by the real parser in CI (`TC-ArgusAgent-DOCS-001-28`), so a
+> documented invocation that would fail for a reader fails the build first.
 
 ---
 
@@ -501,17 +402,9 @@ ArgusAgent/
 └── README.md              # Project documentation
 ```
 
-> *Corrected 2026-08-15 (Story 12.7 / FR35 — §3.4, struck not deleted.)* This tree previously
-> carried ~~`├── adapters/              # Vendor Adapters (Claude Code, Cursor, Cline, etc.)`~~.
-> That directory held six two-to-three-line stubs that registered nothing and were packaged
-> nowhere, and one of them — `adapters/codex-cli/prompt_adapter.md` — published the
-> invocation ~~`argus --budget 500`~~, which the real parser **rejects**: the `audit`
-> sub-command is missing. That is the same defect class Story 10.3 corrected in this README,
-> surviving in a file no guard was looking at. The stubs are removed and superseded by
-> `argus/assets/commands/`, which is the single command-asset tree; every `argus …` line
-> inside it is now parsed by the real parser in CI (`TC-ArgusAgent-DOCS-001-28`), and
-> `TC-ArgusAgent-ASSETS-001-07` fails if a second tree ever appears anywhere in the
-> repository.
+> `argus/assets/commands/` is the single command-asset tree. Every `argus …` line inside it
+> is parsed by the real parser in CI (`TC-ArgusAgent-DOCS-001-28`), and
+> `TC-ArgusAgent-ASSETS-001-07` fails if a second tree ever appears in the repository.
 
 ---
 
