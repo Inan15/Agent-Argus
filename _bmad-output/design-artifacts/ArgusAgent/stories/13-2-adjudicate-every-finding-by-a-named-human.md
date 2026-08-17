@@ -1,6 +1,6 @@
 # Story 13.2: Adjudicate every finding, by a named human
 
-Status: review
+Status: done
 
 <!-- Created 2026-08-16 by create-story. Every premise below was re-measured by execution on
      HEAD bc55e36 before this file was written; see §0. Three defects in the gate-flip path were
@@ -870,9 +870,92 @@ makes the measurement possible and refuses to make it up.
 
 <!-- The reviewer writes findings HERE, in this file, not only into sprint-status.yaml (AI-E12-10). -->
 
+**Code review — 2026-08-17 (Sonnet), commits `e991a00`+`4c6c76d`+`411d891` (`1816524`..`HEAD`).
+VERDICT: PASS.** Ran the bmad-code-review workflow's three adversarial layers (Blind Hunter,
+Edge Case Hunter, Acceptance Auditor against this story's ACs) plus independent execution. No
+High or Medium finding. No unresolved `[Decision]` or `[Patch]` item. Status -> `done`.
+
+**The six claims this review was specifically directed to verify, and what was found:**
+
+1. **AC7 `Unevaluable`-by-design — RULED LEGITIMATE, not an unmet AC waved through.** The
+   story's own `## ⛔ ESCALATION` section (written by `create-story`, **before** `dev-story`
+   ran) explicitly designs this exact outcome and names the Story 12.9 / AC9 precedent. That
+   precedent was independently confirmed: `stories/12-9-release-is-published-and-cites-its-gate.md`
+   AC9's HALT (outward-facing acts requiring explicit human authorisation) was itself reviewed
+   and landed as a **CLEAN PASS** (`sprint-status.yaml`'s `12-9` history). AC7's case is if
+   anything *stronger* than 12.9's: DN-6 (`argus/precision/adjudication.py:20-27`, protocol §2)
+   makes the judgement **definitionally** a human act — `AdjudicationRow.__post_init__` raises if
+   an `UNADJUDICATED` row carries an adjudicator id, so no agent could supply the disposition even
+   if instructed to. `adjudication-record.json` independently parsed: **31/31 rows
+   `UNADJUDICATED`, `adjudicator: null` on every row** — matches the Debug Log §7 claim exactly.
+   This is a locked, pre-designed terminal state, not an absence to flag as a defect.
+2. **Protocol V1.3 amendment — checked adversarially for loosening, NONE found.**
+   `precision-validation-protocol.md` diff reviewed line-by-line: every change is
+   strike-in-place-never-erase, the §5 `N >= 5` and `>= 4/5` literals are byte-unchanged, the
+   clean-repo condition went from *falsely satisfiable* to *explicitly NOT APPLICABLE with a
+   reason* (a tightening, not a softening), and the finding-level unit (31 distinct rows) is
+   **more** granular than the rejected per-class alternative (which the amendment's own text
+   shows would have gated on a denominator of 1) — i.e. the road not taken was the easier one, and
+   it was rejected. §7's *"precision over FINDINGS"* is now independently enforced by
+   `TC-ArgusAgent-PRECISION-001-46`, not merely asserted. No goalpost movement.
+3. **The record — independently re-parsed with a fresh script**, not taken on the dev's word:
+   `python -c "json.load(...)"` over the committed `adjudication-record.json` confirms **31 rows**,
+   `{'UNADJUDICATED'}` as the only disposition set, `{None}` as the only adjudicator set. Confirmed.
+4. **DN-2b (fold shares arithmetic, not `compute_precision`) — RULED justified, not a DRY
+   violation.** `fold_adjudicated_precision` (`argus/precision/adjudication.py:839-923`) calls the
+   same shared objects `compute_precision` uses — `precision_fraction`, `gate_is_provisional`,
+   `PRECISION_GATE_THRESHOLD`, `precision_gate_status_for` — so the arithmetic genuinely is not
+   forked. What is *not* shared is `compute_precision`'s golden-key **membership diff**, which is a
+   structurally different algorithm from a direct per-row disposition tally and cannot express
+   "this class is 20 TP and 4 FP" (demonstrated in the module docstring, `:45-62`). Sharing the
+   quantities that must agree while not forcing an incompatible classification algorithm into one
+   function is correct separation of concerns, not duplication.
+5. **Windows-only-shipping-POSIX-bugs risk — scrutinized, no defect found.** `pathlib` used
+   throughout `adjudication.py`, `build_adjudication_record.py` and the new test modules;
+   `encoding="utf-8"` explicit on every read; `newline="\n"` explicit on the one write
+   (`build_adjudication_record.py:184`); the locator regex (`adjudication.py:216`) rejects a drive
+   letter, a leading `/`, a `..` segment and a backslash at **construction time**; every
+   path-to-string boundary uses `.as_posix()` (`tests/test_adjudication_record.py:60-73`,
+   `:151`). Independently measured on this Windows machine: the committed
+   `adjudication-record.json` is **0 CRLF bytes** (`git ls-files --eol` reports `i/lf w/lf`) — the
+   canonical serializer's single-line-JSON convention sidesteps the CRLF/LF class of defect this
+   project has been bitten by before. CI evidence remains **NOT ESTABLISHED** (noted per the
+   story's own §0, not a blocking finding — this is a pre-existing project-level gap, not
+   something this story could close).
+6. **DF-10-4-B correction and the 19 unbacked ledger claims — spot-checked, both accurate.**
+   `argus/reports/generator.py:420-422`'s own docstring (unmodified by this diff, pre-existing)
+   states in its own words that `DetectorResult.degraded` "records it and no production code reads
+   it back" — confirming `DF-10-4-B` is genuinely not delivered. Cross-checked against
+   `stories/12-4-every-outcome-names-its-next-action.md:126` which **does** check off `DF-10-4-B`
+   as `[x]` delivered — the correction is accurate, not overreach. The `AI-E12-6` guard
+   (`tests/test_governance_record_integrity.py`) and its `_UNBACKED_AT_LANDING` registry were read
+   in full; its regex fix (whole-and-greedy `DF-[A-Z0-9]+(?:-[A-Z0-9]+)*`, correcting an earlier
+   lazy pattern that matched `DF-12` inside `DF-12-3-A`) and its shrink-only assertion
+   (`test_TC_ArgusAgent_DOCS_001_78`) are sound and match 12.1's `_EXEMPT_BY_DESIGN` precedent.
+
+**Independently re-run, not read off the Dev Agent Record:**
+
+- `pytest` (full suite): **100% green** — every batch of dots, 0 `F`/`E`/`s` markers, exit code 0.
+  The four new/changed test modules run in isolation also pass cleanly:
+  `tests/test_adjudication_record.py` (14), `tests/test_gate_flip_path.py` (7),
+  `tests/test_governance_record_integrity.py` (3) — 24 new tests, matching the claimed `+24`.
+- `mypy argus`: **Success: no issues found in 84 source files.** Matches the claim exactly.
+- `bandit -r argus`: **19 Low / 0 Medium / 0 High.** Matches the claim exactly.
+- NFR-M1 line counts independently measured (`wc -l`) and match the Dev Agent Record exactly:
+  `adjudication.py` 923, `replay_harness.py` 786, `test_adjudication_record.py` 768,
+  `test_gate_flip_path.py` 354, `test_governance_record_integrity.py` 311,
+  `build_adjudication_record.py` 228, `test_instrument_disclosure.py` 1194.
+- `git tag -l` empty, `origin/master` unmoved, working tree carries only the six pre-existing
+  untracked non-source artifacts §0 already named (`AI-E12-12`, out of scope) — nothing
+  outward-facing performed.
+
+**No findings requiring action.** No `[Decision]`, `[Patch]`, or unresolved item is filed. Nothing
+was deferred to `deferred-work.md` by this review.
+
 ## Change Log
 
 | Date | Version | Description | Author |
 |------|---------|-------------|--------|
+| 2026-08-17 | v0.3 | **Code review: PASS. Status -> done.** Adversarial re-verification (Blind Hunter / Edge Case Hunter / Acceptance Auditor) of `e991a00`+`4c6c76d`+`411d891`. AC7's HALT independently ruled a legitimate designed terminal state (the story's own ESCALATION section + the verified 12.9/AC9 precedent), not an unmet AC. Protocol V1.3 checked adversarially and found NOT loosened. `adjudication-record.json` independently re-parsed: 31/31 UNADJUDICATED, no adjudicator anywhere. DN-2b ruled justified separation, not a DRY violation. Windows/POSIX handling scrutinized — no defect found. `DF-10-4-B` correction spot-checked and confirmed accurate. Independently re-ran: pytest full suite green, mypy clean 84 files, bandit 19/0/0, all NFR-M1 line counts match. No High/Medium findings. See Review Findings above. | Reviewer (code-review) |
 | 2026-08-16 | v0.2 | **AC1–AC6 and AC8 complete; AC7 HALTED by design; status -> review.** All three §0.1 flip-path defects **reproduced verbatim on `1816524`** and closed additively — a 2-member injected corpus reported `N=7`, a corpus emitting nothing reported `precision=1/1` / `provisional=False` / *"cleared"*, and §5's clean-repo condition was vacuous on the corpus that gates externalization. The 6.6/7.1 contract tests pass **byte-unedited**. Protocol **V1.3** amended **before** the record was generated and decides the unit is the **FINDING** (§7 upheld, not softened — on this corpus 31 blocking findings are **1** rule class, so a per-class fold would have gated on a denominator of one); the ordering is mechanical, not a promise. The adjudication record is committed in git with **31 `UNADJUDICATED` rows and zero judgements**: no agent may adjudicate, and an `UNADJUDICATED` row carrying an adjudicator id now **raises at construction**. AC7 is **HALTED — awaiting XAgent007** (Story 12.9 / AC9 precedent), recorded as `Unevaluable` with residual **31**, filed as `DF-13-2-A`. AC8: ledger `+186 / -0`; `AI-E12-6`'s guard **landed** and found **19** unbacked ledger claims on its first run, reproducing `AI-E12-3` independently; all four of `AI-E12-3`'s entries **ruled by execution** (`DF-10-4-B` is **not** delivered and two story records saying otherwise are corrected); the **GUARD-ADEQUACY CLAUSE** is registered in §Enforcement at the fourth request. Gates LOCAL: pytest **1585/0/0**, mypy clean **84** files, bandit **19 Low / 0 Med / 0 High**. `protocol_cleared` still `False` everywhere; nothing outward-facing. | Developer (dev-story) |
 | 2026-08-16 | v0.1 | Story contexted. Premises re-measured on `bc55e36`. **Three defects in the gate-flip path found by execution** — `n` ignores the injected population (reports 7 for a 2-member corpus), an empty precision denominator returns `1/1` and reads "cleared", and §5's clean-repo FP condition is vacuous on a repository corpus. Also recorded: the protocol's "precision over FINDINGS" and the harness's per-class arithmetic are different quantities; the 6.7 decision writer is unreusable as a class (wrong semantic, gitignored destination); and `AI-E12-6`, `AI-E12-3` and `AI-E12-5` are all unlanded and all named by the Epic-12 retrospective as Epic-13 preconditions. | Scrum Master (create-story) |
