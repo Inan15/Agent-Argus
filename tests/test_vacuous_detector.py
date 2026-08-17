@@ -561,6 +561,202 @@ def test_score_is_identical_on_CRLF_and_LF_source() -> None:
     assert lf_score.ast_corroborated is True  # …and it is the INTERESTING branch
 
 
+#: The five ways one semantically identical test can be written. Four of them BIND the SUT
+#: result (so a correct fact (b) must never corroborate them, however they are wrapped) and
+#: the fifth genuinely throws it away (so it must stay corroborated, or the guard below would
+#: pass by making everything advisory). Declared as data because the defect was a *shape*
+#: family, and a hand-picked pair would have missed the half the reviewer did not think of —
+#: the recorded finding named backslash continuation, and PEP 8's PREFERRED wrapping
+#: (parentheses) was broken in exactly the same way. AI-E10-5: the list is never the contract,
+#: so the closure below asserts both directions over every member.
+_CONTINUATION_SHAPES: tuple[tuple[str, bool, str, list[CodeEdge], int], ...] = (
+    (
+        "plain-assign",
+        False,
+        "def test_shape():\n"  # 1
+        "    fake = Mock()\n"  # 2
+        "    fake.other.return_value = 1\n"  # 3
+        "    fake.extra.return_value = 2\n"  # 4
+        "    result = sut(1, 2)\n"  # 5 — bound on ONE physical line
+        "    assert result == fake.other()\n",  # 6
+        [CodeEdge(callee="Mock", line=2), CodeEdge(callee="sut", line=5),
+         CodeEdge(callee="other", line=6)],
+        6,
+    ),
+    (
+        "backslash-continuation",
+        False,
+        "def test_shape():\n"  # 1
+        "    fake = Mock()\n"  # 2
+        "    fake.other.return_value = 1\n"  # 3
+        "    fake.extra.return_value = 2\n"  # 4
+        "    result = \\\n"  # 5 — the target and `=` are HERE…
+        "        sut(1, 2)\n"  # 6 — …and the 1.4 edge lands HERE
+        "    assert result == fake.other()\n",  # 7
+        [CodeEdge(callee="Mock", line=2), CodeEdge(callee="sut", line=6),
+         CodeEdge(callee="other", line=7)],
+        7,
+    ),
+    (
+        "parenthesised-continuation",
+        False,
+        "def test_shape():\n"  # 1
+        "    fake = Mock()\n"  # 2
+        "    fake.other.return_value = 1\n"  # 3
+        "    fake.extra.return_value = 2\n"  # 4
+        "    result = (\n"  # 5 — PEP 8 PREFERS this over the backslash above
+        "        sut(1, 2)\n"  # 6
+        "    )\n"  # 7
+        "    assert result == fake.other()\n",  # 8
+        [CodeEdge(callee="Mock", line=2), CodeEdge(callee="sut", line=6),
+         CodeEdge(callee="other", line=8)],
+        8,
+    ),
+    (
+        "bracket-continuation",
+        False,
+        "def test_shape():\n"  # 1
+        "    fake = Mock()\n"  # 2
+        "    fake.other.return_value = 1\n"  # 3
+        "    fake.extra.return_value = 2\n"  # 4
+        "    results = [\n"  # 5
+        "        sut(1, 2)\n"  # 6 — last element, so no trailing comma to give it away
+        "    ]\n"  # 7
+        "    assert results[0] == fake.other()\n",  # 8
+        [CodeEdge(callee="Mock", line=2), CodeEdge(callee="sut", line=6),
+         CodeEdge(callee="other", line=8)],
+        8,
+    ),
+    (
+        "genuinely-discarded-control",
+        True,
+        "def test_shape():\n"  # 1
+        "    fake = Mock()\n"  # 2
+        "    fake.other.return_value = 1\n"  # 3
+        "    fake.extra.return_value = 2\n"  # 4
+        "    sut(\n"  # 5 — the STATEMENT is the call and nothing else…
+        "        1, 2\n"  # 6
+        "    )\n"  # 7 — …merely wrapped over three lines
+        "    pretended = fake.other()\n"  # 8
+        "    assert pretended == 1\n",  # 9
+        [CodeEdge(callee="Mock", line=2), CodeEdge(callee="sut", line=5),
+         CodeEdge(callee="other", line=8)],
+        9,
+    ),
+)
+
+
+def test_a_bound_sut_result_is_consumed_however_the_line_is_wrapped() -> None:
+    """TC-ArgusAgent-DETECT-001-109 — AC1.3: line wrapping must not manufacture a 🔴.
+
+    THE DEFECT THIS PINS, reproduced before it was fixed (review iteration 2, 2026-08-17)
+    ---------------------------------------------------------------------------------
+    Fact (b) asked whether the SUT call's result is thrown away by reading the text that
+    precedes the call **on the call's own physical line**. That is not the unit Python
+    binds a result in. Both of Python's continuation syntaxes put the assignment target on
+    an EARLIER line::
+
+        result = (            result = \\
+            add(1, 2)             add(1, 2)
+        )
+
+    so nothing preceded the call on its own line, the call was scored "result discarded",
+    and a test that genuinely CONSTRAINS the real SUT result was promoted to
+    verdict-eligible. Measured through the shipped detector, both shapes emitted
+    ``vacuous_test_ast`` / ``AUDITED_SHALLOW`` while the byte-for-byte equivalent
+    single-line spelling emitted ``vacuous_test_heuristic`` — a build taken to 🔴 by where
+    the author pressed Enter. That is the lethal failure class (a false 🔴), it violates
+    AC1.3, and the shape is not exotic: PEP 8 explicitly prefers the parenthesised form.
+
+    The fix is the LOGICAL STATEMENT, computed the same way for both syntaxes rather than
+    special-casing either — see ``provenance_scan.logical_statement_starts``. This closure
+    asserts BOTH directions over ``_CONTINUATION_SHAPES``: the four bound spellings are
+    advisory, and the genuinely discarded control (also wrapped, so wrapping alone is not
+    what demotes) stays corroborated. Without that fifth row the guard would pass if fact
+    (b) were disabled altogether.
+    """
+    promoted, demoted = [], []
+    for name, expect_corroborated, source, edges, end_line in _CONTINUATION_SHAPES:
+        defs = [Definition(name="test_shape", kind="function", start_line=1, end_line=end_line)]
+        actual = _corroborated(source, defs, edges)
+        (promoted if actual else demoted).append(name)
+        assert actual is expect_corroborated, (
+            f"{name!r}: expected ast_corroborated={expect_corroborated}, got {actual}. "
+            "If a BOUND result was corroborated, fact (b) has gone back to reading the "
+            "call's own physical line and a false 🔴 is reachable by line-wrapping alone "
+            "(AC1.3). If the DISCARDED control was demoted, the predicate was weakened "
+            "instead of corrected — recall on the planted cartridges is next."
+        )
+
+    # Non-vacuity: the closure must have exercised both directions, not one.
+    assert len(demoted) == 4 and len(promoted) == 1, (
+        f"the shape table degenerated to one direction (promoted={promoted}, demoted={demoted})"
+    )
+
+
+def test_a_discarded_sut_call_stays_corroborated_across_its_own_wrapping() -> None:
+    """TC-ArgusAgent-DETECT-001-110 — the fix does not buy safety by giving up recall.
+
+    The cheap way to close ``-109`` is to score every multi-line statement as consumed.
+    That would keep the moat and silently cost the detector every genuinely vacuous test
+    whose SUT call happens to be wrapped — a real defect, just an invisible one. So the
+    same discarded call is asserted corroborated in three spellings, including one with a
+    comment and a blank line inside the call's own parentheses (both of which the scan has
+    to skip without losing the statement it is inside).
+    """
+    for label, source, edges, end_line in (
+        (
+            "one line",
+            "def test_shape():\n"  # 1
+            "    sut(1, 2)\n"  # 2
+            "    fake = Mock()\n"  # 3
+            "    fake.other.return_value = 1\n"  # 4
+            "    pretended = fake.other()\n"  # 5
+            "    assert pretended == 1\n",  # 6
+            [CodeEdge(callee="sut", line=2), CodeEdge(callee="Mock", line=3),
+             CodeEdge(callee="other", line=5)],
+            6,
+        ),
+        (
+            "wrapped arguments",
+            "def test_shape():\n"  # 1
+            "    sut(\n"  # 2
+            "        1,\n"  # 3
+            "        2,\n"  # 4
+            "    )\n"  # 5
+            "    fake = Mock()\n"  # 6
+            "    fake.other.return_value = 1\n"  # 7
+            "    pretended = fake.other()\n"  # 8
+            "    assert pretended == 1\n",  # 9
+            [CodeEdge(callee="sut", line=2), CodeEdge(callee="Mock", line=6),
+             CodeEdge(callee="other", line=8)],
+            9,
+        ),
+        (
+            "wrapped with a comment and a blank line inside the call",
+            "def test_shape():\n"  # 1
+            "    sut(\n"  # 2
+            "        1,  # the first operand\n"  # 3
+            "\n"  # 4
+            "        2,\n"  # 5
+            "    )\n"  # 6
+            "    fake = Mock()\n"  # 7
+            "    fake.other.return_value = 1\n"  # 8
+            "    pretended = fake.other()\n"  # 9
+            "    assert pretended == 1\n",  # 10
+            [CodeEdge(callee="sut", line=2), CodeEdge(callee="Mock", line=7),
+             CodeEdge(callee="other", line=9)],
+            10,
+        ),
+    ):
+        defs = [Definition(name="test_shape", kind="function", start_line=1, end_line=end_line)]
+        assert _corroborated(source, defs, edges) is True, (
+            f"a genuinely discarded SUT call stopped being corroborated when written as "
+            f"{label!r} — the predicate was weakened rather than corrected, and recall on "
+            "the planted cartridges is what pays for it"
+        )
+
+
 def test_non_ascii_identifiers_bind_and_corroborate() -> None:
     """TC-ArgusAgent-DETECT-001-108 — name matching is Unicode-safe (the ``nonascii_unicode`` class).
 

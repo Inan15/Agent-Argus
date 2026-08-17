@@ -127,6 +127,42 @@ def test_add_is_vacuous():
     assert result is not None
 """
 
+# `-116`'s corpus: the SAME test as `_SUT_RESULT_ASSERTED_SOURCE`, differing ONLY in
+# where the line breaks fall. Both continuation syntaxes are planted, because the review
+# that found this named one of them and the other — the one PEP 8 actually prefers — was
+# broken in exactly the same way. See `-116`'s docstring for the measurement.
+_WRAPPED_SOURCES = {
+    "parenthesised": """from unittest.mock import MagicMock
+
+from app.service import add
+
+
+def test_add_is_vacuous():
+    first = MagicMock()
+    second = MagicMock()
+    result = (
+        add(1, 2)
+    )
+    assert first is not None
+    assert second is not None
+    assert result is not None
+""",
+    "backslash": """from unittest.mock import MagicMock
+
+from app.service import add
+
+
+def test_add_is_vacuous():
+    first = MagicMock()
+    second = MagicMock()
+    result = \\
+        add(1, 2)
+    assert first is not None
+    assert second is not None
+    assert result is not None
+""",
+}
+
 _APP_SOURCE = '''"""A small application module with real definitions."""
 
 
@@ -235,6 +271,92 @@ def test_TC_ArgusAgent_VERDICT_001_30_a_blocking_verdict_is_reachable_with_no_ll
     advisory = [f for f in old.ordered_findings if f.rule_id == RULE_HEURISTIC]
     assert advisory, "the heuristic flag itself must be unchanged — only PROMOTION moved"
     assert all(f.depth_supported is None for f in advisory)
+
+
+def test_TC_ArgusAgent_VERDICT_001_116_line_wrapping_alone_cannot_reach_a_blocking_verdict(
+    tmp_path: Path,
+) -> None:
+    """TC-ArgusAgent-VERDICT-001-116 — Story 14.1 / AC1.3: a 🔴 must not depend on where Enter was pressed.
+
+    WHAT WAS MEASURED, AND WHY THIS ARM IS THE ONE THAT WOULD HAVE CAUGHT IT
+    -------------------------------------------------------------------------
+    Fact (b) decided whether a SUT call's result was thrown away by reading the text
+    preceding the call **on the call's own physical line**. Both of Python's continuation
+    syntaxes put the assignment target on an earlier line, so on a default, zero-token,
+    no-sign-off run over this very corpus::
+
+        result = add(1, 2)      -> INSUFFICIENT_COVERAGE   RULE_AST=0   (correct)
+        result = (
+            add(1, 2)           -> NOT_READY_FOR_RELEASE   RULE_AST=1   FALSE ACCUSATION
+        )
+        result = \\
+            add(1, 2)           -> NOT_READY_FOR_RELEASE   RULE_AST=1   FALSE ACCUSATION
+
+    Three spellings of one test, one of them blocking a release. ``-30``'s arm 2 could not
+    see it: it plants only the unwrapped spelling, and the predicate-level tests in
+    ``tests/test_vacuous_detector.py`` could not prove the *product* consequence. This arm
+    is deliberately at the same altitude as ``-30`` — the real ``run_audit_detailed``, no
+    flags, no LLM, no harness — because the claim being defended is about what an operator
+    experiences, not about a helper's return value.
+
+    The assertion is therefore an EQUIVALENCE, not a threshold: every wrapping of the same
+    test must reach the same verdict as the unwrapped one. Writing it that way means a
+    future predicate cannot satisfy this by being uniformly stricter or uniformly looser —
+    it has to be indifferent to layout, which is the actual requirement.
+    """
+    baseline = run_audit_detailed(
+        AuditRequest(
+            repo_path=str(_corpus(tmp_path / "unwrapped", test_source=_SUT_RESULT_ASSERTED_SOURCE)),
+            commit="HEAD",
+            budget=0,
+            materiality_bar="",
+        )
+    ).verdict
+    baseline_eligible = [
+        f for f in baseline.ordered_findings if f.rule_id == RULE_AST and f.depth_supported is not None
+    ]
+    assert not baseline_eligible, (
+        "the UNWRAPPED control is already verdict-eligible, so this test cannot measure "
+        "anything about wrapping — see -30 arm 2, which owns that regression"
+    )
+
+    for label, source in sorted(_WRAPPED_SOURCES.items()):
+        wrapped = run_audit_detailed(
+            AuditRequest(
+                repo_path=str(_corpus(tmp_path / label, test_source=source)),
+                commit="HEAD",
+                budget=0,
+                materiality_bar="",
+            )
+        ).verdict
+
+        eligible_ast = [
+            f
+            for f in wrapped.ordered_findings
+            if f.rule_id == RULE_AST and f.depth_supported is not None
+        ]
+        assert not eligible_ast, (
+            f"a test that ASSERTS THE REAL SUT RESULT was promoted to verdict-eligible "
+            f"purely because the assignment was wrapped with {label} continuation. The "
+            "unwrapped spelling of the SAME test is advisory, so this 🔴 is a property of "
+            "the source layout, not of the test — the lethal failure class (a false 🔴) "
+            "Story 14.1 exists to close, and a violation of AC1.3. Fact (b) must judge the "
+            "whole LOGICAL statement containing the call, never the call's physical line; "
+            "do NOT special-case one continuation syntax."
+        )
+        assert wrapped.verdict is baseline.verdict and wrapped.exit_code == baseline.exit_code, (
+            f"{label} wrapping changed the VERDICT of an otherwise identical test: "
+            f"{baseline.verdict.value} (exit {baseline.exit_code}) -> "
+            f"{wrapped.verdict.value} (exit {wrapped.exit_code})"
+        )
+
+        # …and it is still SEEN: the heuristic is layout-independent too, so the advisory
+        # finding must be present in both. A predicate that went quiet would pass the
+        # assertion above by no longer detecting anything at all.
+        assert [f for f in wrapped.ordered_findings if f.rule_id == RULE_HEURISTIC], (
+            f"the {label}-wrapped test emitted no advisory finding at all — the heuristic "
+            "flag itself must not depend on line wrapping either"
+        )
 
 
 def test_TC_ArgusAgent_VERDICT_001_31_the_bare_cli_exits_2_on_that_corpus(

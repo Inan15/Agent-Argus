@@ -1,0 +1,541 @@
+"""Line-oriented provenance scanning for the vacuous-test detector's fact (b) — PURE.
+
+Drivers: ArgusAgent-FR-7-subset (the Tier-A vacuous-path AST subset — assertion-target
+provenance), cross-cutting #6 (a heuristic finding is verdict-eligible only when the AST
+corroborates it — the false-accusation moat), AR4/AR8 (pure, deterministic, no ``float``,
+no clock/uuid/random/iteration-order in anything reaching a ``.argus/``-bound output),
+NFR-M1 (≤1200-line modules), AR7/§3.3 (one derivation, never a fork).
+
+Why this module exists (Story 14.1, review iteration 2)
+-------------------------------------------------------
+``argus/detectors/vacuous_test.py``'s job is *scoring a test function*: the heuristic
+ratios, the two-fact corroboration and the finding it emits. Answering fact (b) — *"do
+the asserted values derive from the SUT output?"* — needs something different in kind: a
+small, line-oriented reader of Python source text that knows about comments, string
+literals, brackets, line continuations and ``with``-block extents. That is a **separate
+concern** with its own failure modes (CRLF, non-ASCII identifiers, continuation syntax),
+and bolting ~15 of its functions onto the scorer took that module from 623 to 1072 lines
+— 128 from the NFR-M1 ceiling, with Stories 14.2 and 14.3 still to land in it. The split
+follows the ``argus/pipeline_stages.py`` / ``argus/pipeline_persist.py`` precedent:
+a cohesion boundary, no function split across it, and the scorer imports back.
+
+**The callee vocabularies are deliberately NOT here.** ``_ASSERTION_CALLEES`` and
+``_MOCK_CALLEES`` stay in ``vacuous_test.py`` and are PASSED IN, because Story 14.2 owns
+the assertion table and fact (b) must not move when it is widened (Story 14.1 / DN-4).
+Parameters make that structural rather than promised: nothing in this module can grow a
+dependency on a table it cannot see. ``RESULT_OBSERVING_CONTEXT_CALLEES`` is fact (b)'s
+OWN table (DN-3) and therefore does live here.
+
+What the scan can and cannot prove (honest scope)
+--------------------------------------------------
+The Story 1.4 index gives an UNRESOLVED edge set (``DF-1-4-A``): a callee NAME and a
+1-based line, with no scope binding. Everything below is therefore NAME-level structural
+evidence, not dataflow — real assertion provenance is Story 6.2's (``DF-14-1-A``). The
+asymmetry that governs every judgement call here is stated in ``vacuous_test.py``'s
+docstring: **a false 🔴 is the lethal failure; a real vacuous test left advisory is
+tolerable.** So wherever the source text cannot be read confidently, the answer is
+"consumed" — unresolvable is not evidence, and no corroboration can rest on it.
+
+Platform neutrality is a property of the inputs, not a hope
+------------------------------------------------------------
+Every function takes the ``source.splitlines()`` list the detector already receives, so no
+line terminator is ever observed: ``"a\\r\\nb".splitlines()`` and ``"a\\nb".splitlines()``
+are the same list. No pattern below is anchored with ``$`` or relies on ``\\s`` spanning a
+terminator, and every identifier pattern is Unicode-aware by construction. Local gates run
+on Windows and CI runs an ubuntu matrix; this module has to score both identically.
+"""
+
+from __future__ import annotations
+
+import re
+from typing import NamedTuple
+
+from argus.index.ast_index import CodeEdge
+
+__all__ = [
+    "RESULT_OBSERVING_CONTEXT_CALLEES",
+    "ProvenanceEvidence",
+    "logical_statement_starts",
+    "opens_bare_assert",
+    "provenance_evidence",
+]
+
+# Context managers whose BODY observes the SUT's behaviour, so a SUT call inside one
+# is CONSUMED rather than discarded (Story 14.1 / DN-3, AC1.4). ``with
+# pytest.raises(ValueError): parse(bad)`` constrains the SUT precisely — raising IS
+# the observation — and scoring it as "the result was thrown away" would re-create the
+# false-accusation class on every fail-closed test, a shape the validation corpus is
+# full of. This is fact (b)'s OWN table and not an addition to ``_ASSERTION_CALLEES``:
+# that one is Story 14.2's to widen, and fact (b) must not move when it does (DN-4).
+RESULT_OBSERVING_CONTEXT_CALLEES: frozenset[str] = frozenset(
+    {
+        "raises",
+        "warns",
+        "deprecated_call",
+        "assertRaises",
+        "assertRaisesRegex",
+        "assertWarns",
+        "assertWarnsRegex",
+        "assertLogs",
+        "assertNoLogs",
+    }
+)
+
+# A Python identifier, Unicode-aware by construction: ``\w`` and ``[^\W\d]`` are
+# Unicode classes on ``str`` patterns, so ``тесты``/``café`` names match exactly as
+# ASCII ones do (the ``nonascii_unicode`` cartridge depends on this).
+_IDENT = r"[^\W\d]\w*"
+
+#: ``name = ...`` / ``a, b = ...`` / ``name: T = ...``. The negative lookahead is what
+#: keeps ``==`` out; ``!=``/``+=``/``<=`` cannot reach the ``=`` at all because the
+#: target group admits only identifiers and dots.
+_ASSIGNMENT_RE = re.compile(
+    rf"^\s*(?P<targets>{_IDENT}(?:\s*\.\s*{_IDENT})*"
+    rf"(?:\s*,\s*{_IDENT}(?:\s*\.\s*{_IDENT})*)*)"
+    rf"\s*(?::[^=]*?)?=(?!=)\s*(?P<value>.+)$"
+)
+
+#: The leading attribute chain of an expression: ``fake.calculate(…)`` → ``fake``,
+#: ``calculate``.
+_LEADING_CHAIN_RE = re.compile(rf"^({_IDENT})((?:\s*\.\s*{_IDENT})*)")
+
+#: ``with cm() as name`` / ``… as a, … as b``.
+_AS_BINDING_RE = re.compile(rf"\bas\s+({_IDENT})")
+
+#: An identifier that ROOTS a chain — i.e. is not itself an attribute of something
+#: else. ``fake.tally`` yields ``fake`` and not ``tally``.
+_CHAIN_ROOT_RE = re.compile(rf"(?<![\w.]){_IDENT}")
+
+#: ``pytest.raises(``/``assertRaises(`` — any result-observing context call, however
+#: it is qualified. Built from the table (sorted, so the pattern is deterministic).
+_OBSERVING_CALL_RE = re.compile(
+    r"(?<!\w)(?:" + r"|".join(sorted(map(re.escape, RESULT_OBSERVING_CONTEXT_CALLEES))) + r")\s*\("
+)
+
+_OPEN_BRACKETS = "([{"
+_CLOSE_BRACKETS = ")]}"
+
+
+def opens_bare_assert(stripped: str) -> bool:
+    """Whether *stripped* (a left-stripped source line) opens a bare ``assert``.
+
+    Declared ONCE and read by both consumers — the heuristic's assertion count in
+    ``vacuous_test.py`` and the fact-(b) provenance scan below (AR7/§3.3: reuse, never
+    fork). Two spellings of "is this an assert line" is exactly the disagreement class
+    this detector keeps closing elsewhere.
+    """
+    return stripped == "assert" or stripped.startswith("assert ") or stripped.startswith("assert(")
+
+
+def _skip_string(text: str, index: int) -> int:
+    """Index just past the string literal opening at *index* (or end of *text*).
+
+    Single- and triple-quoted, backslash-aware. An unterminated literal (a
+    triple-quoted string continuing onto the next line) consumes the rest of the
+    line — a bounded, deterministic degradation, and one the conservative default
+    absorbs: an unreadable statement produces no corroboration.
+    """
+    quote = text[index]
+    delimiter = quote * 3 if text.startswith(quote * 3, index) else quote
+    cursor = index + len(delimiter)
+    while cursor < len(text):
+        if text[cursor] == "\\":
+            cursor += 2
+            continue
+        if text.startswith(delimiter, cursor):
+            return cursor + len(delimiter)
+        cursor += 1
+    return len(text)
+
+
+def _code_prefix(line: str) -> str:
+    """*line* with any trailing comment removed, string literals PRESERVED.
+
+    Column indices into the result are valid indices into *line*, which is what lets
+    a call site located by regex be split into "what precedes it" and "what follows".
+    """
+    cursor = 0
+    while cursor < len(line):
+        char = line[cursor]
+        if char == "#":
+            return line[:cursor]
+        if char in "\"'":
+            cursor = _skip_string(line, cursor)
+            continue
+        cursor += 1
+    return line
+
+
+def _blank_strings(code: str) -> str:
+    """*code* with every string literal's characters replaced by spaces (length-preserving).
+
+    Brackets, colons and identifiers inside a literal must not be read as syntax —
+    ``with pytest.raises(ValueError, match="a:b"):`` has exactly one structural colon
+    — and blanking rather than deleting keeps every column index aligned with *code*.
+    """
+    out: list[str] = []
+    cursor = 0
+    while cursor < len(code):
+        char = code[cursor]
+        if char in "\"'":
+            end = _skip_string(code, cursor)
+            out.append(" " * (end - cursor))
+            cursor = end
+            continue
+        out.append(char)
+        cursor += 1
+    return "".join(out)
+
+
+def _bracket_delta(code: str) -> int:
+    """Net bracket depth change across *code* (strings blanked, comment already gone)."""
+    masked = _blank_strings(code)
+    return sum(
+        1 if char in _OPEN_BRACKETS else -1
+        for char in masked
+        if char in _OPEN_BRACKETS or char in _CLOSE_BRACKETS
+    )
+
+
+def _continues_onto_next_line(code: str) -> bool:
+    """Whether *code* (comment-stripped) ends in an explicit backslash continuation.
+
+    Python requires the backslash to be the last character on the physical line, so
+    this is exact rather than heuristic — and it is checked on the COMMENT-STRIPPED,
+    string-preserving text, so a literal ending in an escaped backslash
+    (``path = "c:\\\\"``) is not mistaken for one.
+    """
+    return code.rstrip().endswith("\\")
+
+
+def _logical_statement_end(source_lines: list[str], start_line: int, span_end: int) -> int:
+    """Last 1-based line of the logical statement opening at *start_line*.
+
+    Bracket-balanced AND backslash-aware, so both of Python's continuation syntaxes end
+    the statement in the same place. Bounded by *span_end* so a malformed span can never
+    walk out of the test function.
+    """
+    depth = 0
+    for line_no in range(start_line, span_end + 1):
+        index = line_no - 1
+        if index < 0 or index >= len(source_lines):
+            return line_no
+        code = _code_prefix(source_lines[index])
+        depth = max(depth + _bracket_delta(code), 0)
+        if depth <= 0 and not _continues_onto_next_line(code):
+            return line_no
+    return span_end
+
+
+def logical_statement_starts(
+    source_lines: list[str], start: int, end: int
+) -> dict[int, int]:
+    """Map each 1-based line of the span to the FIRST line of its logical statement.
+
+    The mirror image of :func:`_logical_statement_end`, and the reason it exists: a call
+    site's own physical line is not the unit Python binds results in. Both continuation
+    syntaxes put the assignment target on an EARLIER line than the call::
+
+        result = (          # ← the statement starts here (PEP 8's preferred wrapping)
+            add(1, 2)       # ← but this is where the 1.4 edge lands
+        )
+
+        result = \\          # ← and here
+            add(1, 2)
+
+    Reading only the call's own line makes both look like a bare expression statement
+    whose result is thrown away, which promotes a test that genuinely constrains the SUT
+    result to verdict-eligible — the exact false-accusation class Story 14.1 exists to
+    close. Both syntaxes are handled by the SAME rule (a line is a continuation iff the
+    bracket depth before it is positive OR the previous code line ended in a backslash),
+    because special-casing one of them leaves the other broken.
+
+    A line that is blank or comment-only at depth 0 opens nothing and is absent from the
+    result. A caller that finds its line absent must treat the statement as unreadable —
+    unresolvable is not evidence.
+    """
+    starts: dict[int, int] = {}
+    current: int | None = None
+    depth = 0
+    continued = False
+    for line_no in range(start, end + 1):
+        index = line_no - 1
+        if index < 0 or index >= len(source_lines):
+            continue
+        code = _code_prefix(source_lines[index])
+        if depth <= 0 and not continued:
+            if not code.strip():
+                current = None  # a blank / comment-only line opens no statement
+                continue
+            current = line_no
+        starts[line_no] = current if current is not None else line_no
+        depth = max(depth + _bracket_delta(code), 0)
+        continued = _continues_onto_next_line(code)
+    return starts
+
+
+def _statement_code(source_lines: list[str], start_line: int, end_line: int) -> str:
+    """The comment-free code text of lines *start_line*..*end_line*, joined by a space."""
+    parts = [
+        _code_prefix(source_lines[line_no - 1]).strip()
+        for line_no in range(start_line, end_line + 1)
+        if 0 <= line_no - 1 < len(source_lines)
+    ]
+    return " ".join(part for part in parts if part)
+
+
+def _locate_call(line: str, callee: str) -> tuple[str | None, int] | None:
+    """Locate ``callee(`` on *line*; return (receiver-chain root, chain start column).
+
+    The root is ``None`` for an unqualified call (``add(1, 2)``) and the leading
+    identifier for a qualified one (``fake.calculate()`` → ``"fake"``). ``None`` is
+    returned when the callee cannot be found on that line at all — a call whose
+    function expression spans lines, or is computed. That is NOT treated as an
+    unqualified SUT call: unresolvable is not evidence, and the caller reads it as
+    CONSUMED so no corroboration can rest on it.
+    """
+    pattern = re.compile(
+        rf"(?<![\w.])(?P<prefix>(?:{_IDENT}\s*\.\s*)*){re.escape(callee)}\s*\("
+    )
+    match = pattern.search(_blank_strings(_code_prefix(line)))
+    if match is None:
+        return None
+    prefix = match.group("prefix")
+    root_match = re.match(rf"\s*({_IDENT})", prefix) if prefix else None
+    return (root_match.group(1) if root_match else None), match.start()
+
+
+def _leading_chain(expression: str) -> tuple[str, ...]:
+    """The leading attribute chain of *expression* — ``fake.calculate(…)`` → ``("fake", "calculate")``.
+
+    Empty when the expression does not begin with an identifier (a literal, a list
+    display, a parenthesised expression). Empty means "cannot establish", which the
+    caller reads as NOT mock-derived.
+    """
+    text = expression.strip()
+    if text.startswith("await "):
+        text = text[len("await ") :].lstrip()
+    match = _LEADING_CHAIN_RE.match(text)
+    if match is None:
+        return ()
+    return (match.group(1), *re.findall(_IDENT, match.group(2)))
+
+
+def _is_mock_derived(
+    expression: str, mock_names: frozenset[str], mock_callees: frozenset[str]
+) -> bool:
+    """Whether *expression*'s value plausibly comes from a mock rather than the SUT.
+
+    Two ways, both name-level: the chain is rooted at an already-mock-bound name
+    (``fake.calculate()``), or some component of the leading chain is a mock
+    construction primitive (``Mock()``, ``unittest.mock.patch(...)``).
+    """
+    chain = _leading_chain(expression)
+    if not chain:
+        return False
+    return chain[0] in mock_names or any(part in mock_callees for part in chain)
+
+
+def _structural_colon(code: str) -> int:
+    """Column of the statement-terminating ``:`` in *code*, or ``-1``.
+
+    Depth- and string-aware, so a dict display, a slice, an annotation inside a call
+    and a ``match=":"`` regex are all skipped.
+    """
+    masked = _blank_strings(code)
+    depth = 0
+    for column, char in enumerate(masked):
+        if char in _OPEN_BRACKETS:
+            depth += 1
+        elif char in _CLOSE_BRACKETS:
+            depth -= 1
+        elif char == ":" and depth == 0:
+            return column
+    return -1
+
+
+def _result_observing_lines(source_lines: list[str], start: int, end: int) -> frozenset[int]:
+    """1-based lines of the span that sit inside a result-observing context (DN-3).
+
+    Indentation-scoped, because that is what a ``with`` block actually is. The inline
+    single-line form (``with pytest.raises(X): parse(bad)``) is covered too — it is
+    the same statement, written on one line.
+    """
+    covered: set[int] = set()
+    open_indents: list[int] = []
+    for line_no in range(start, end + 1):
+        index = line_no - 1
+        if index < 0 or index >= len(source_lines):
+            continue
+        code = _code_prefix(source_lines[index])
+        stripped = code.strip()
+        if not stripped:
+            continue
+        indent = len(code) - len(code.lstrip())
+        while open_indents and indent <= open_indents[-1]:
+            open_indents.pop()
+        if open_indents:
+            covered.add(line_no)
+        if not (stripped.startswith("with ") or stripped.startswith("with(")):
+            continue
+        if not _OBSERVING_CALL_RE.search(_blank_strings(code)):
+            continue
+        colon = _structural_colon(code)
+        if colon >= 0 and code[colon + 1 :].strip():
+            covered.add(line_no)  # inline body — one statement, one line
+        else:
+            open_indents.append(indent)
+    return frozenset(covered)
+
+
+def _mock_bound_names(
+    source_lines: list[str], start: int, end: int, mock_callees: frozenset[str]
+) -> frozenset[str]:
+    """Names bound to mock-derived values within the span (forward pass, PURE).
+
+    One pass in source order, which is the order Python binds them in. A name bound
+    from an expression rooted at an earlier mock-bound name becomes mock-bound in
+    turn, so ``fake = Mock(); pretended = fake.calculate()`` binds both.
+    """
+    bound: set[str] = set()
+    for line_no in range(start, end + 1):
+        index = line_no - 1
+        if index < 0 or index >= len(source_lines):
+            continue
+        code = _code_prefix(source_lines[index])
+        stripped = code.strip()
+        if not stripped:
+            continue
+        if stripped.startswith("with ") or stripped.startswith("with("):
+            header = stripped[len("with") :].lstrip()
+            colon = _structural_colon(header)
+            if colon >= 0:
+                header = header[:colon]
+            if _is_mock_derived(header, frozenset(bound), mock_callees):
+                bound.update(_AS_BINDING_RE.findall(_blank_strings(header)))
+            continue
+        assignment = _ASSIGNMENT_RE.match(code)
+        if assignment is None:
+            continue
+        if not _is_mock_derived(assignment.group("value"), frozenset(bound), mock_callees):
+            continue
+        for target in assignment.group("targets").split(","):
+            name = target.strip()
+            if name and "." not in name:
+                bound.add(name)
+    return frozenset(bound)
+
+
+class ProvenanceEvidence(NamedTuple):
+    """What the span's source text says about where the asserted values came from.
+
+    Counts only — no set is ever rendered into a message, so nothing here can leak
+    iteration order into a ``.argus/``-bound output (NFR-D2 / AR4).
+    """
+
+    discarded_sut_calls: int
+    consumed_sut_calls: int
+    mock_referencing_assertions: int
+
+    @property
+    def sut_result_is_discarded(self) -> bool:
+        """The SUT was reached and NOTHING the test does looks at what it returned."""
+        return self.discarded_sut_calls >= 1 and self.consumed_sut_calls == 0
+
+
+def _assertion_statement_lines(
+    source_lines: list[str],
+    span_edges: list[CodeEdge],
+    start: int,
+    end: int,
+    assertion_callees: frozenset[str],
+) -> tuple[int, ...]:
+    """1-based first lines of the span's assertion statements, SORTED (AR11).
+
+    Both spellings the heuristic already counts: a bare ``assert`` (read from the
+    source, since it is not a call node) and a call to an assertion primitive.
+    """
+    lines: set[int] = set()
+    for line_no in range(start, end + 1):
+        index = line_no - 1
+        if 0 <= index < len(source_lines) and opens_bare_assert(
+            _code_prefix(source_lines[index]).lstrip()
+        ):
+            lines.add(line_no)
+    lines.update(edge.line for edge in span_edges if edge.callee in assertion_callees)
+    return tuple(sorted(lines))
+
+
+def provenance_evidence(
+    source_lines: list[str],
+    span_edges: list[CodeEdge],
+    start: int,
+    end: int,
+    *,
+    assertion_callees: frozenset[str],
+    mock_callees: frozenset[str],
+) -> ProvenanceEvidence:
+    """Fact (b)'s evidence over the span: is the SUT result thrown away, and are the
+    assertions looking at a mock instead? PURE — source text and the 1.4 edge set only.
+
+    The classification is made about the whole LOGICAL STATEMENT containing the call,
+    never about the call's own physical line: a SUT call is DISCARDED only when its
+    statement is that call and nothing else. Every other outcome — bound to a name on a
+    wrapped or backslash-continued line, nested in another expression, asserted on,
+    compared, chained, unreadable — is CONSUMED, which withholds corroboration.
+    """
+    mock_names = _mock_bound_names(source_lines, start, end, mock_callees)
+    observed_lines = _result_observing_lines(source_lines, start, end)
+    statement_starts = logical_statement_starts(source_lines, start, end)
+
+    discarded = 0
+    consumed = 0
+    for edge in span_edges:
+        if (
+            edge.callee in assertion_callees
+            or edge.callee in mock_callees
+            or edge.callee in RESULT_OBSERVING_CONTEXT_CALLEES
+        ):
+            continue
+        index = edge.line - 1
+        if index < 0 or index >= len(source_lines):
+            consumed += 1  # off-span edge: cannot be read, so it cannot corroborate
+            continue
+        located = _locate_call(source_lines[index], edge.callee)
+        if located is None:
+            consumed += 1  # unresolvable is not evidence (see _locate_call)
+            continue
+        receiver_root, chain_start = located
+        if receiver_root is not None and receiver_root in mock_names:
+            continue  # a mock-derived call, not a SUT call
+        if edge.line in observed_lines:
+            consumed += 1  # DN-3: raising IS the observation
+            continue
+        statement_start = statement_starts.get(edge.line)
+        if statement_start is None:
+            consumed += 1  # the line opens no readable statement — not evidence
+            continue
+        statement_end = _logical_statement_end(source_lines, statement_start, end)
+        statement = _statement_code(source_lines, statement_start, statement_end)
+        # Everything of the LOGICAL statement that precedes the call, across however
+        # many physical lines it was wrapped over. Empty (or a bare ``await``) is what
+        # makes this an expression statement whose value nothing receives.
+        preceding = (
+            _statement_code(source_lines, statement_start, edge.line - 1)
+            + _code_prefix(source_lines[index])[:chain_start]
+        ).strip()
+        if preceding in ("", "await") and statement.endswith(")"):
+            discarded += 1
+        else:
+            consumed += 1
+
+    mock_referencing = 0
+    for line_no in _assertion_statement_lines(
+        source_lines, span_edges, start, end, assertion_callees
+    ):
+        statement_end = _logical_statement_end(source_lines, line_no, end)
+        statement = _blank_strings(_statement_code(source_lines, line_no, statement_end))
+        if any(name in mock_names for name in _CHAIN_ROOT_RE.findall(statement)):
+            mock_referencing += 1
+
+    return ProvenanceEvidence(discarded, consumed, mock_referencing)

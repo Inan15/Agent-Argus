@@ -763,15 +763,182 @@ artifacts carrying the uncommitted correct-course change were touched. `deferred
 `architecture.md` were not modified — this story defers nothing new and re-derives no locked
 decision.
 
+---
+
+## Dev Agent Record — ITERATION 2 (review findings, 2026-08-17)
+
+Second `dev-story` pass, on HEAD `ae2fb28`, addressing the two findings recorded above.
+Both are checked off with their resolution written beside them; this section carries the
+numbers.
+
+### Debug Log — iteration 2
+
+#### The High finding: what was actually broken, measured twice
+
+The recorded finding said the discard/consumed classification reads only the call's own
+physical line. That is correct, and the consequence is wider than "backslash": **every**
+continuation syntax puts the assignment target on an earlier line. Measured through the
+shipped detector over the REAL tree-sitter index (not a hand-built edge set), five
+spellings of one semantically identical test:
+
+```
+case                   disc cons mockref   BEFORE                        AFTER
+plain-assign              0    1       1   advisory                      advisory
+backslash                 1    0       1   vacuous_test_ast  🔴          advisory
+backslash-tight           1    0       1   vacuous_test_ast  🔴          advisory
+paren-wrap                1    0       1   vacuous_test_ast  🔴          advisory
+list-wrap                 0    1       1   advisory (by ACCIDENT: `]`)   advisory
+dict-wrap                 0    1       1   advisory (by accident)        advisory
+call-arg-wrap             1    1       1   advisory (by accident)        advisory (cons=2)
+TRUE-discard              1    0       1   vacuous_test_ast              vacuous_test_ast
+TRUE-discard-wrapped      1    0       1   vacuous_test_ast              vacuous_test_ast
+```
+
+The three "by accident" rows are the reason this was fixed at the root rather than by the
+suggested backslash special-case: they were advisory only because their statement text
+happened not to end in `)`. A last-element list entry without a trailing comma
+(`bracket-continuation` in `-109`) has no such luck, and would have stayed broken.
+
+**And end to end, on the `-30` corpus shape, through a default `run_audit_detailed` —
+no flags, no LLM, no harness:**
+
+```
+                       BEFORE                                    AFTER
+plain      INSUFFICIENT_COVERAGE  exit 3  RULE_AST=0   ->  INSUFFICIENT_COVERAGE exit 3 RULE_AST=0
+paren      NOT_READY_FOR_RELEASE  exit 2  RULE_AST=1   ->  INSUFFICIENT_COVERAGE exit 3 RULE_AST=0
+backslash  NOT_READY_FOR_RELEASE  exit 2  RULE_AST=1   ->  INSUFFICIENT_COVERAGE exit 3 RULE_AST=0
+```
+
+Three spellings of one test; two of them took a build to 🔴 on where the author pressed
+Enter. That is the lethal failure class and a direct AC1.3 violation.
+
+⚠️ **A correction issued to this worker was itself wrong, and is recorded as such.** The
+orchestrator's brief asserted that backslash continuation was ALREADY handled correctly
+and that only the parenthesised form was defective. Re-measured here at both levels, the
+backslash spelling was defective in exactly the same way and to exactly the same degree.
+The reviewer's recorded mechanism needed WIDENING, not replacing. Nothing was implemented
+from the incorrect claim.
+
+#### The fix, and why it is the root cause rather than a patch
+
+`provenance_scan.logical_statement_starts` maps every line of the span to the first line
+of its LOGICAL statement — the mirror image of the `_logical_statement_end` the module
+already had, which is what made this the missing half rather than a new mechanism. One
+rule covers both syntaxes: *a line is a continuation iff the bracket depth before it is
+positive OR the previous code line ended in a backslash.* `_logical_statement_end` gained
+the same backslash awareness, so the two functions agree about what a statement is.
+Fact (b) then judges the whole statement: the SUT call is DISCARDED only when everything
+of the statement preceding it is empty (or a bare `await`) and the statement ends at the
+call. A line whose statement cannot be resolved is CONSUMED — the module's existing
+convention (`_locate_call` returning `None`), applied to the new branch: unresolvable is
+not evidence, and the failure direction is always away from a false accusation.
+
+#### The predicate was NOT weakened — re-measured, not assumed
+
+| Population | Requirement | Iteration 1 | Iteration 2 |
+|---|---|---|---|
+| 3 planted cartridges (incl. `holdout_vacuous`, `nonascii_unicode`) | keep corroboration | 3/3 | **3/3** |
+| 31 adjudicated locators at the unchanged pinned shas | not verdict-eligible | 0/31 eligible | **0/31 eligible** |
+| minions test functions / heuristically flagged | flag rate unchanged | 3,551 / 1,848 (52.0%) | **3,551 / 1,848 (52.0%)** |
+| agent-smith test functions / heuristically flagged | flag rate unchanged | 1,122 / 681 | **1,122 / 681** |
+| minions promotions | — | 0 | **0** |
+| agent-smith promotions | — | 0 | **0** |
+
+Both members re-staged from `git show <sha>:<path>` at `minions@ec63b729` /
+`agent-smith@9ab774d7` (Windows path form passed to `git -C`, per §0.4) and re-scored
+through the shipped index and the shipped detector. AC6.2 therefore still holds after the
+extraction as well as after the fix: nothing leaked into the flag path.
+
+#### RED-then-green, at BOTH levels
+
+Each new guard was confirmed RED against the pre-fix predicate before being made green —
+by reverting the classification to the physical-line spelling in place, running, and
+restoring it:
+
+```
+pre-fix: -109 FAILED  ("'backslash-continuation': expected ast_corroborated=False, got True")
+pre-fix: -116 FAILED  (default run_audit_detailed promoted the backslash-wrapped test)
+post-fix: -109, -110, -116 all pass
+```
+
+`-116` is the arm iteration 1 was missing: predicate-level tests could not have shown that
+a **verdict** moved.
+
+#### The Medium finding: the extraction, measured
+
+| File | Before | After |
+|---|---|---|
+| `argus/detectors/vacuous_test.py` | 1072 (headroom 128) | **697 (headroom 503)** |
+| `argus/detectors/provenance_scan.py` | — | **541** |
+| `argus/pipeline.py` | 1111 | **1111 (untouched)** |
+| `tests/test_vacuous_detector.py` | 676 | 872 |
+| `tests/test_default_path_blocking_verdict.py` | 268 | 390 |
+
+`tests/test_module_size_ceiling.py` is green and was **not edited** — no exemption was
+added, and the working tree's pre-existing modification to that file is not this story's.
+
+### Completion Notes — iteration 2
+
+- **AC6 still holds, proven by diff not by assertion.** `_ASSERTION_CALLEES` (623 bytes),
+  `_MOCK_CALLEES` (284 bytes) and `_count_statements` compared byte-for-byte against
+  `git show HEAD:argus/detectors/vacuous_test.py`: **identical**. Both thresholds present
+  and unchanged. Fact (b) still receives neither `assertion_sites` nor `mock_sites`
+  (DN-4) — and the extraction hardens that: the two tables are now **parameters** of
+  `provenance_evidence`, so the scan module cannot reference the table Story 14.2 widens.
+- **AC5 still holds.** No arithmetic was added (fact (b) returns a `bool` from integer
+  counts — no ratio, no `float`). `VacuousTestScore` is byte-unchanged: same 11 fields,
+  frozen `extra="forbid"`, no schema change to a finding-borne model, `-92` passes.
+  `RULE_AST`/`RULE_HEURISTIC` and the Story 1.6 eligibility surface are byte-unchanged.
+  Determinism: the new `logical_statement_starts` returns a `dict` keyed by line number
+  and is consumed only by `.get()`; nothing new is iterated into an output. The scorer
+  stays PURE — the new module performs no I/O, no clock, no LLM, no `uuid4`/`random`.
+- **`-87` and `-88` pass UNCHANGED**, as does the whole of `-101`..`-108`. `-30`'s two-arm
+  structure (the §0.3 ruling) is intact and untouched; `-116` is a NEW sibling beside it,
+  not a modification of it.
+- **`README.md` and `CHANGELOG.md` were edited, and only because a guard demanded it.**
+  `TC-ArgusAgent-DOCS-001-54` compares published distribution figures against a freshly
+  built wheel and went red on the new module: *"README.md publishes a stale figure for
+  'importable_modules': it says 86, the freshly built artifact measures 87. Fix the
+  document — the artifact is the fact."* Both documents now read 87/87 (and 95 wheel
+  entries / 94 sdist files), each carrying the dated note the surrounding rolling record
+  uses. This is a guard WORKING (the Story 13.4 lesson), and the remedy it names.
+  `mypy argus` moves 86 → **87 source files** for the same reason — that delta is the new
+  module, not a new error.
+- **Nothing else outward-facing.** `git tag -l` empty at start and at hand-off. No
+  cartridge, golden key, `CartridgeSpec`, `tests/corpus/_manifest.py`,
+  `validation-corpus/**` file, `deferred-work.md`, `architecture.md` or governance
+  artifact was touched, and none of the working tree's pre-existing uncommitted changes
+  (six governance artifacts, four test modules, the untracked directories) was staged.
+
+#### AC7.1 — the three gates, iteration 2 (LOCAL; CI evidence is NOT ESTABLISHED)
+
+| Gate | §0.1 baseline | Iteration 1 | Iteration 2 | Δ vs §0.1 |
+|---|---|---|---|---|
+| `pytest` collected | 1597 | 1605 | **1608** | **+11** (`-109`, `-110`, `-116` added here; no test deleted) |
+| `pytest` | 1597 passed / 0 failed / 0 skipped | 1603 passed / 2 failed | **1608 passed / 0 failed / 0 skipped, exit 0** | **green** |
+| `mypy argus` | Success, 86 source files | Success, 86 | **Success, 87 source files** | +1 file, 0 issues |
+| `bandit -r argus` | 19 Low / 0 Med / 0 High (0/0/6/13) | same | **19 Low / 0 Med / 0 High (0/0/6/13)** | 0 |
+
+**No skip appeared.** These are LOCAL Windows numbers and **CI evidence is NOT
+ESTABLISHED** for this delta. The two dogfood-currency failures iteration 1 handed off
+under `AI-E12-11` were closed by running that item's own pre-authorised sequence (commit
+the code delta → `python scripts/regenerate_dogfood_artifacts.py` → commit the three
+regenerated artifacts separately); no artifact was hand-edited and no assertion was
+loosened, skipped, xfailed or narrowed (`DF-8-5-B`).
+
 ### File List
 
 | Path | Action |
 |---|---|
-| `argus/detectors/vacuous_test.py` | **MODIFIED** — new fact (b): `_RESULT_OBSERVING_CONTEXT_CALLEES`, the source-text scanning primitives (`_skip_string`, `_code_prefix`, `_blank_strings`, `_bracket_delta`, `_logical_statement_end`, `_statement_code`, `_locate_call`, `_structural_colon`), `_leading_chain`, `_is_mock_derived`, `_mock_bound_names`, `_result_observing_lines`, `_assertion_statement_lines`, `_provenance_evidence`, `_ProvenanceEvidence`, `_opens_bare_assert` (extracted so the assert-line rule has ONE home), and a rewritten `_ast_corroborated` + module docstring. 623 → 1072 lines |
-| `tests/test_vacuous_detector.py` | **MODIFIED** — `-86` re-authored as a two-arm intended behaviour change; `-94` re-authored to a three-way discrimination over the real index; **new** `-101`..`-108` (raises context, consumed-SUT clause, no-mock-derived-assertion clause, mock-receiver exclusion, `patch(...) as` binding, unlocatable call, CRLF identity, non-ASCII identifiers). 324 → 676 lines |
-| `tests/test_default_path_blocking_verdict.py` | **MODIFIED** — §0.3 option (A) hardened: new witness + the old fixture kept verbatim as arm 2; module docstring records the 2026-08-17 re-authoring and the ruling. 180 → 268 lines |
-| `_bmad-output/design-artifacts/ArgusAgent/stories/14-1-a-verdict-eligible-vacuous-finding-proves-vacuity-not-mocking.md` | **MODIFIED** — Tasks, Dev Agent Record, Completion Notes, File List, Change Log, Status |
+| `argus/detectors/provenance_scan.py` | **ADDED** (iteration 2) — the line-oriented provenance scan extracted from the detector, carrying the logical-statement fix (`logical_statement_starts`, backslash-aware `_logical_statement_end`). 541 lines |
+| `argus/detectors/vacuous_test.py` | **MODIFIED** — iteration 1: new fact (b) (`_RESULT_OBSERVING_CONTEXT_CALLEES`, the source-text scanning primitives, `_provenance_evidence`, a rewritten `_ast_corroborated` + module docstring). Iteration 2: the scan moved to `provenance_scan.py` and is imported back, the callee tables passed in as parameters (DN-4 made structural), docstring re-stated around "logical statement, not physical line". 623 → 1072 → **697** lines (headroom 503) |
+| `tests/test_vacuous_detector.py` | **MODIFIED** — iteration 1: `-86` re-authored as a two-arm intended behaviour change, `-94` re-authored to a three-way discrimination over the real index, new `-101`..`-108`. Iteration 2: **new** `-109` (the five-shape continuation closure, both directions, driven from `_CONTINUATION_SHAPES`) and `-110` (a genuinely discarded call stays corroborated across three wrappings — the fix does not buy safety with recall). 324 → 676 → **872** lines |
+| `tests/test_default_path_blocking_verdict.py` | **MODIFIED** — iteration 1: §0.3 option (A) hardened (new witness + the old fixture verbatim as arm 2). Iteration 2: **new** `TC-ArgusAgent-VERDICT-001-116` — the same default `run_audit_detailed`, the same corpus, both continuation spellings, asserted EQUIVALENT to the unwrapped control. `-30` itself is untouched. 180 → 268 → **390** lines |
+| `README.md` | **MODIFIED** (iteration 2) — the published distribution figures, because `TC-ArgusAgent-DOCS-001-54` compares them against a freshly built wheel and the new module moved them: 86/86 → **87/87** importable modules, 94 → **95** wheel entries, 93 → **94** sdist files, with the dated provenance note the surrounding rolling record uses |
+| `CHANGELOG.md` | **MODIFIED** (iteration 2) — the same two figures in the packaging section, for the same guard and the same reason |
+| `_bmad-output/design-artifacts/ArgusAgent/stories/14-1-a-verdict-eligible-vacuous-finding-proves-vacuity-not-mocking.md` | **MODIFIED** — Tasks, Dev Agent Record (iterations 1 and 2), Completion Notes, Review Findings (both checked off, with a dated correction to the High finding's recorded mechanism), File List, Change Log, Status |
 | `_bmad-output/design-artifacts/ArgusAgent/sprint-status.yaml` | **MODIFIED** — `14-1` status only (`ready-for-dev` → `in-progress` → `review`), `last_updated` |
+| `_bmad-output/design-artifacts/ArgusAgent/minions-dogfood-{proof,partition-plan,budget-plan}.md` | **REGENERATED** through `scripts/regenerate_dogfood_artifacts.py` only, as a separate commit (`AI-E12-11`). Never hand-edited |
 
 **Not touched, deliberately:** `argus/pipeline.py`, `argus/verdict/prosecutor.py`,
 `argus/verdict/verdict_gate.py`, every file under `tests/cartridges/`, `tests/corpus/_manifest.py`,
@@ -782,7 +949,166 @@ and is not part of the delta.
 
 ### Review Findings
 
-_To be completed by the code-review agent._
+_Code review (Sonnet), 2026-08-17, iteration 1. Scope: `git diff 47b6dbe..ae2fb28`
+(`b315bcd` + `ae2fb28`). All claims below were RE-VERIFIED BY EXECUTION, not read back
+from the Dev Agent Record — full suite (1605 collected, exit 0), `mypy argus`
+(Success, 86 files), `bandit -r argus` (19 Low/0 Med/0 High, conf 0/0/6/13), cartridge
+recall (7 passed via `test_cartridge_selfaudit.py -k "vacuous_basic or holdout_vacuous
+or nonascii_unicode"`), and an INDEPENDENT re-scoring script run against both pinned
+shas (`minions@ec63b729`, `agent-smith@9ab774d7`) over all 31 adjudicated locators —
+confirms **0/31 verdict-eligible**, matching the story's claim exactly. The two-commit
+close was verified by re-running `scripts/regenerate_dogfood_artifacts.py` against the
+current clean tree and diffing output against the committed artifacts: the only delta
+is the (expected) `git rev-parse HEAD` descriptor line — content, LOC (28487) and
+partition figures are byte-identical, confirming the artifacts were genuinely
+script-generated, not hand-edited (AI-E12-11 verified). §0.3's hardening (both arms on
+`-30`) is present exactly as required: arm 2 asserts the OLD fixture yields **no**
+verdict-eligible `RULE_AST` finding and still emits an advisory `RULE_HEURISTIC`
+finding — confirmed by reading `tests/test_default_path_blocking_verdict.py:216-236`.
+AC6 boundary (`_count_statements`, `_ASSERTION_CALLEES`, `_MOCK_CALLEES`, both
+thresholds) confirmed byte-unchanged by diff — only new READS of those names appear.
+DN-3 (raises-context = CONSUMED) is implemented and tested (`-101`, plus the
+independent `test_ir_copilot.py:128` demotion). `-87`/`-88` are unchanged in the diff.
+
+- [x] [Review][Patch] Fact (b)'s discard/consumed classification can be fooled by a
+  backslash line continuation between an assignment's `=` and the SUT call, causing a
+  test that genuinely constrains the real SUT result to be misclassified as
+  "discarded" and promoted to verdict-eligible — violating AC1.3 ("A test whose
+  assertions constrain the real SUT result is NOT corroborated") and the moat's own
+  stated risk model ("a false 🔴 is the lethal failure"). [`argus/detectors/vacuous_test.py`,
+  `_provenance_evidence`'s discard/consumed branch, ~lines 940-965 (the `preceding`
+  check against only the call's own physical line)]. Root cause: `preceding =
+  _code_prefix(source_lines[index])[:chain_start].strip()` only looks at text on the
+  SAME physical line as the call; when the assignment's target and `=` sit on the
+  PREVIOUS physical line via `\` continuation (`result = \` / `    sut(1, 2)`), nothing
+  precedes the call on its own line, so it is scored "discarded" even though it is
+  bound to `result`. Reproduced and confirmed by direct execution against the shipped
+  detector:
+  ```python
+  def test_genuine_but_backslash():
+      fake = Mock()
+      fake.other.return_value = 1
+      result = \
+          sut(1, 2)
+      assert result == fake.other()
+  ```
+  scores `vacuous_test_ast` / `AUDITED_SHALLOW` (verdict-eligible) even though the
+  assertion genuinely constrains the real SUT result via `result`. This is the exact
+  false-accusation class Story 14.1 exists to close, reached through a narrow but valid
+  Python idiom (target repos audited by Argus are not bound by this repo's own lint
+  rules against backslash continuation). Suggested fix: before crediting a call as
+  discarded, check whether the physical line immediately preceding `edge.line`
+  (comment-stripped, right-stripped) ends with a bare `\`; if so, fall back to the
+  conservative default and count it as CONSUMED (mirroring the existing
+  "unresolvable is not evidence → consumed" rule for `_locate_call` returning `None`).
+  No test in `-101`..`-108` reaches this branch. Severity: High — a proven,
+  reproducible violation of a core, explicitly-tested AC in the exact risk direction
+  (false 🔴) the story is meant to eliminate.
+
+  > **CORRECTION — 2026-08-17, dev-story iteration 2, MEASURED not argued.** The
+  > finding's verdict is upheld and its mechanism is upheld, but it was **wider than
+  > recorded**, and one intermediate correction issued to this worker was itself wrong.
+  >
+  > **(1) The trigger is not backslash continuation. It is CONTINUATION.** The recorded
+  > root cause — `preceding = _code_prefix(source_lines[index])[:chain_start].strip()`
+  > reads only the call's own physical line — is exactly right, and every syntax that
+  > puts the assignment target on an earlier line hits it. Measured through the shipped
+  > detector over the real tree-sitter index, on five spellings of one test:
+  >
+  > | shape | before | after |
+  > |---|---|---|
+  > | `result = sut(1, 2)` | advisory | advisory |
+  > | `result = \` / `    sut(1, 2)` | **`vacuous_test_ast`** | advisory |
+  > | `result = (` / `    sut(1, 2)` / `)` | **`vacuous_test_ast`** | advisory |
+  > | `results = [` / `    sut(1, 2)` / `]` | advisory *(only because the `]` kept the statement from ending in `)`)* | advisory |
+  > | genuinely discarded, wrapped | `vacuous_test_ast` | `vacuous_test_ast` (kept) |
+  >
+  > The **parenthesised** form is the one that matters most in the wild, because PEP 8
+  > explicitly prefers it over the backslash: *"long lines can be broken over multiple
+  > lines by wrapping expressions in parentheses… these should be used in preference to
+  > using a backslash."* So the reachable-in-the-wild spelling was broken too, and the
+  > bracket row shows the survivor was surviving by accident rather than by the
+  > predicate.
+  >
+  > **(2) An orchestrator correction handed to this worker claimed backslash
+  > continuation was ALREADY handled correctly and only the parenthesised form was
+  > defective. That claim does not reproduce and was not acted on.** Re-measured here
+  > twice — once at predicate level through `provenance_evidence`, once end to end
+  > through a default `run_audit_detailed` over the `-30` corpus shape — the backslash
+  > spelling produced `discarded=1 / consumed=0` and `NOT_READY_FOR_RELEASE` with
+  > `RULE_AST=1`, identically to the parenthesised one. **The reviewer's mechanism was
+  > correct as written.** This is recorded because a wrong mechanism left in the record
+  > misleads the next reader, and that cuts both ways.
+  >
+  > **(3) It was reproduced END TO END, which is the part that makes it a product
+  > defect rather than a helper bug.** On the default zero-token, no-sign-off path over
+  > the `-30` corpus: `plain` → `INSUFFICIENT_COVERAGE`, `RULE_AST=0`; `paren-wrap` and
+  > `backslash` → `NOT_READY_FOR_RELEASE`, exit 2, one verdict-eligible finding. Three
+  > spellings of one test, one of them taking a build to 🔴 on layout alone.
+  >
+  > **Fix:** the classification is now made about the whole **logical statement**
+  > containing the call (`provenance_scan.logical_statement_starts`, the mirror of the
+  > existing `_logical_statement_end`), with both continuation syntaxes handled by one
+  > rule and no special case for either. A line whose statement cannot be resolved
+  > follows the module's existing convention — unresolvable is not evidence → CONSUMED.
+  > **The predicate was not weakened to achieve it:** cartridge recall re-measured
+  > **3/3** and the 31 adjudicated locators re-measured **0/31 verdict-eligible** at the
+  > unchanged pinned shas, with the flag rate byte-identical. Regression-locked at both
+  > levels: `TC-ArgusAgent-DETECT-001-109` (the five-shape closure, both directions) and
+  > `-110` (recall is not traded away), plus `TC-ArgusAgent-VERDICT-001-116` — the
+  > end-to-end arm, and the one that would have caught this. Both were confirmed RED
+  > against the pre-fix predicate before being made green.
+
+- [x] [Review][Patch] Cohesion/module-size: `argus/detectors/vacuous_test.py` grew
+  623 → 1072 lines (headroom to the 1200 ceiling dropped from 577 to 128), and the
+  growth is a self-contained ~15-function source-text micro-parser (`_skip_string`,
+  `_code_prefix`, `_blank_strings`, `_bracket_delta`, `_logical_statement_end`,
+  `_statement_code`, `_locate_call`, `_leading_chain`, `_is_mock_derived`,
+  `_structural_colon`, `_result_observing_lines`, `_mock_bound_names`,
+  `_ProvenanceEvidence`, `_assertion_statement_lines`, `_provenance_evidence`) bolted
+  onto a module whose stated job is "detect vacuous tests via the scorer +
+  corroboration." This is a real SRP/cohesion question, not a nit: the new code is a
+  distinct concern (line-oriented provenance scanning) from the detector's scoring
+  logic, and the Dev Agent Record itself flags that "Story 14.2, which must also edit
+  this module... the module has a natural split line" without acting on it. With only
+  128 lines of headroom left and both Story 14.2 and 14.3 still to land in this same
+  file, this risks a 13-4-class module-size deadlock. Suggested fix: extract the
+  provenance-scanning primitives (everything from `_skip_string` through
+  `_provenance_evidence`) into a dedicated module (e.g.
+  `argus/detectors/_provenance_scan.py`) before 14.2 lands, importing them back into
+  `vacuous_test.py`. Severity: Medium — not a correctness defect, but a forward-looking
+  architectural risk explicitly invited by the review brief and already anticipated
+  (but not resolved) by this story's own Dev Agent Record.
+
+  > **RESOLVED — 2026-08-17, dev-story iteration 2.** Done in this round rather than
+  > deferred, for the reason the finding gives: the High fix ADDS lines to the same
+  > module, and deferring the split into a file with 128 lines of headroom is how a
+  > 13-4-class deadlock is built. `argus/detectors/provenance_scan.py` now owns the
+  > line-oriented scan (`opens_bare_assert`, the string/comment/bracket primitives,
+  > `logical_statement_starts`, `_logical_statement_end`, `_locate_call`,
+  > `_leading_chain`, `_is_mock_derived`, `_structural_colon`, `_result_observing_lines`,
+  > `_mock_bound_names`, `_assertion_statement_lines`, `ProvenanceEvidence`,
+  > `provenance_evidence`, and fact (b)'s own `RESULT_OBSERVING_CONTEXT_CALLEES`).
+  > Measured: `vacuous_test.py` **1072 → 697** lines, headroom **128 → 503**;
+  > `provenance_scan.py` 541; `argus/pipeline.py` untouched at 1111.
+  >
+  > Two deliberate departures from the suggested shape, both recorded rather than
+  > silently taken. **(a) The module is `provenance_scan.py`, not `_provenance_scan.py`.**
+  > NFR-M1 states modules are `snake_case.py` and no module under `argus/` carries a
+  > leading underscore; `argus/detectors/secret_suppression.py` and
+  > `argus/dogfood/proof_types.py` are the precedent for an internal helper module.
+  > Where a suggestion and a project standard conflict, the project standard wins.
+  > **(b) `_ASSERTION_CALLEES` and `_MOCK_CALLEES` did NOT move** — they stay in
+  > `vacuous_test.py` and are passed in as parameters. Moving them would have put Story
+  > 14.2's table inside fact (b)'s own module, and DN-4 requires fact (b) not to move
+  > when 14.2 widens it. As parameters that is structural rather than promised: nothing
+  > in the scan module can grow a dependency on a table it cannot see. Extraction was
+  > behaviour-preserving — re-measured after the move: recall **3/3**, adjudicated
+  > locators **0/31**, flag rate **1,848/3,551** and **681/1,122**, all identical.
+
+No other High/Medium findings. Determinism (AR4/AR8/NFR-D2), `VacuousTestScore`
+byte-unchanged/frozen/`extra=forbid`, RULE_AST/RULE_HEURISTIC vocabulary, and CRLF/non-
+ASCII handling were all spot-checked and hold as claimed.
 
 ---
 
@@ -790,5 +1116,6 @@ _To be completed by the code-review agent._
 
 | Date | Version | Description | Author |
 |------|---------|-------------|--------|
+| 2026-08-17 | v1.1 | **Addressed code review findings — 2 of 2 items resolved (iteration 1, Sonnet).** **HIGH (false accusation) — FIXED AT THE ROOT, and the finding's scope was WIDER than recorded.** Fact (b) classified a SUT call's result as discarded by reading only the call's own PHYSICAL line, so every continuation syntax defeated it, not just the backslash the finding named: measured through the shipped detector, `result = \` / `sut(1, 2)` AND the parenthesised `result = (` / `sut(1, 2)` / `)` — the form PEP 8 explicitly PREFERS — both scored `vacuous_test_ast` / `AUDITED_SHALLOW` while the byte-equivalent single-line spelling stayed advisory. Reproduced **end to end** on the `-30` corpus shape through a default zero-token `run_audit_detailed`: `plain` → `INSUFFICIENT_COVERAGE` exit 3, `paren` and `backslash` → **`NOT_READY_FOR_RELEASE` exit 2 with one verdict-eligible finding** — a build taken to 🔴 by where the author pressed Enter, the lethal failure class and a direct AC1.3 violation. Two list/dict rows were advisory only BY ACCIDENT (their statement text did not end in `)`), which is why the suggested backslash special-case was rejected in favour of the root fix: the classification is now made about the whole **LOGICAL STATEMENT** containing the call, via `provenance_scan.logical_statement_starts` — the mirror of the `_logical_statement_end` the module already had — with ONE rule covering brackets and backslashes and no special case for either; an unresolvable statement follows the module's existing convention and counts CONSUMED (unresolvable is not evidence). ⚠️ **An orchestrator correction claiming backslash continuation was already handled and only the parenthesised form was broken does NOT reproduce**; re-measured twice, at predicate level and end to end, the backslash spelling was defective identically. The reviewer's mechanism needed widening, not replacing, and the incorrect claim was not implemented — recorded beside the finding so the record is not left misleading. **The predicate was NOT weakened to achieve it, re-measured not assumed:** cartridge recall **3/3** (`vacuous_basic`, the `holdout_vacuous` anti-overfitting control, the Cyrillic-pathed `nonascii_unicode`), the 31 adjudicated locators **0/31 verdict-eligible** at the unchanged pinned shas, promotions 0 on both members, flag rate byte-identical (1,848/3,551 = 52.0% minions, 681/1,122 agent-smith). Regression-locked at BOTH levels and both confirmed RED against the pre-fix predicate first: `TC-ArgusAgent-DETECT-001-109` (a five-shape closure asserting both directions, including a genuinely-discarded control that must STAY vacuous) and `-110` (recall is not traded for safety), plus **`TC-ArgusAgent-VERDICT-001-116`** — the end-to-end arm, at the same altitude as `-30`, asserting every wrapping of one test reaches the SAME verdict as the unwrapped one; it is the arm that would have caught this. **MEDIUM (cohesion / module size) — DONE THIS ROUND rather than deferred**, since the High fix adds lines to the same module: `argus/detectors/provenance_scan.py` now owns the line-oriented scan and `vacuous_test.py` goes **1072 → 697** (headroom **128 → 503**); `argus/pipeline.py` untouched at 1111 and `tests/test_module_size_ceiling.py` green with no exemption added. Two departures from the suggested shape, both recorded: the module is `provenance_scan.py`, not `_provenance_scan.py` (NFR-M1 says `snake_case.py` and no `argus/` module carries a leading underscore — the project standard wins over the suggestion), and `_ASSERTION_CALLEES` / `_MOCK_CALLEES` did NOT move — they are passed in as parameters, which makes DN-4 structural: the scan module cannot depend on the table Story 14.2 widens. Extraction proven behaviour-preserving by re-measuring recall, the 31 locators and both flag rates after the move. **AC6 re-proven by diff:** `_ASSERTION_CALLEES` (623 bytes), `_MOCK_CALLEES` (284 bytes) and `_count_statements` byte-identical to `HEAD`; both thresholds unchanged. **AC5 holds:** no arithmetic added (fact (b) returns a `bool` from integer counts — no ratio, no `float`), `VacuousTestScore` byte-unchanged and still frozen `extra="forbid"`, `RULE_AST`/`RULE_HEURISTIC` and the Story 1.6 surface unchanged, scorer still PURE. `-87`, `-88` (the false-accusation guard), `-101`..`-108` and `-30`'s two-arm structure all pass **unchanged**. `README.md` and `CHANGELOG.md` were edited ONLY because `TC-ArgusAgent-DOCS-001-54` went red on the new module and names that remedy in its own message (*"the artifact is the fact"*): 86/86 → 87/87 importable modules, 94 → 95 wheel entries, 93 → 94 sdist files. **Gates (LOCAL; CI evidence NOT ESTABLISHED):** `pytest` **1608 collected / 1608 passed / 0 failed / 0 skipped, exit 0**; `mypy argus` **Success, 87 source files** (the +1 is the new module, not a new error); `bandit -r argus` **19 Low / 0 Med / 0 High** (0/0/6/13), Δ0. Iteration 1's two dogfood-currency failures were closed by running `AI-E12-11`'s own pre-authorised sequence — commit the code delta, `python scripts/regenerate_dogfood_artifacts.py`, commit the three regenerated artifacts separately. No artifact hand-edited; no assertion loosened, skipped, xfailed or narrowed (`DF-8-5-B`); `deferred-work.md` and `architecture.md` untouched; `git tag -l` empty; none of the working tree's pre-existing uncommitted changes staged. | Dev Agent (dev-story, iteration 2) |
 | 2026-08-17 | v1.0 | **Implemented on HEAD `47b6dbe`.** Fact (b) REPLACED (DN-1): `assertion_sites >= 1 and mock_sites >= 1` — *"the test constructs a mock"* — becomes a provenance-shape statement over the same PURE inputs: at least one SUT call's result is DISCARDED, **no** SUT call's result is consumed, and at least one assertion references a mock-bound name. Fact (a) is unchanged. **AC1.2, re-measured on MY baseline over an identical population:** agreement with the bare `mock_sites >= 1` term went 2,527/2,529 → 2,493/2,529 overall and **34/36 → 0/36** on the only sub-population where the two terms can differ — the corroboration step no longer re-reads one of its own inputs. **AC2: recall 3/3** (`vacuous_basic`, the `holdout_vacuous` anti-overfitting control and the Cyrillic-pathed `nonascii_unicode` all still exit 2 with one verdict-eligible `vacuous_test_ast`); no cartridge, golden key or `CartridgeSpec` edited. **AC3: 0 of 31** adjudicated locators remain verdict-eligible at the unchanged pinned shas; minions-wide promotions 27 → 0 over 3,551 test functions. The §0.2 probe's single survivor, `agentsmith-core/tests/test_ir_copilot.py:128` (human disposition BORDERLINE), is demoted **by DN-3 specifically** — its SUT call sits inside `with pytest.raises(...)`, and raising IS the observation; that is the probe defect AC1.4 required to be designed in rather than inherited. **AC6: flag rate IDENTICAL** (1,848/3,551 = 52.0% minions, 681/1,122 agent-smith), and `_count_statements` / `_ASSERTION_CALLEES` / `_MOCK_CALLEES` / both thresholds proven **byte-identical by diff**, not asserted. **AC5: `VacuousTestScore` did not change shape** — no field added, still frozen `extra="forbid"`, so no finding-borne schema change and `-92` passes unchanged; the scorer stays PURE and `float`-free. `argus/pipeline.py` untouched. **§0.3 RESOLVED as option (A), HARDENED, on the operator's ruling after escalation:** `-30` asks whether the TOOL can block on a default zero-token no-sign-off run and the answer is still YES (3/3 cartridges), so option (B) would have committed a false claim to README / `action.yml` / Story 12.4; and the fixture is a constructed existence proof engineered against the old detector, not an adjudicated sample, so replacing it adjusts no gate. `-30` now measures **both arms on the same default path** — the new witness is promoted, and the OLD fixture (kept verbatim) is demoted to advisory — which regression-locks the discrimination and turns the fixture edit into a measurement of the intended change. `-86` and `-94` re-authored the same way, with the reason committed beside them; `-87` and `-88` (the false-accusation guard) pass **unchanged**. Eight new cases `-101`..`-108` reach every branch of fact (b), including CRLF-identity and non-ASCII identifiers (the Windows-local / ubuntu-CI exposure `AI-E13-1` names). **Gates (LOCAL; CI evidence NOT ESTABLISHED):** `pytest` 1605 collected / **1603 passed / 2 failed / 0 skipped**; `mypy argus` Success, 86 source files (Δ0); `bandit -r argus` 19 Low / 0 Med / 0 High, confidence 0/0/6/13 (Δ0). ⛔ **The two failures are `test_dogfood_plan.py` and `test_dogfood_proof.py`, and they are guards WORKING, not detector behaviour**: the committed proof records 28038 total LOC, the live derivation reads 28487, a delta of exactly this story's +449 lines under `argus/`. The named remedy refuses to run on a dirty `argus/` tree by design, so no green state exists while the delta is uncommitted; AC7.5 forbids committing, so this is routed to `AI-E12-11`'s recorded owner (the dev-loop orchestrator) with the pre-authorised commit → regenerate → commit sequence Stories 13.1/13.2/13.3 applied. `test_dogfood_artifact_currency.py` — the guard AC7.3 named — is GREEN, as is `test_pipeline_signature_demo.py`, the FR32 demo the PRD calls *"the product"*. No assertion was loosened, skipped, xfailed or narrowed. Nothing committed; `git tag -l` empty. `deferred-work.md` unmodified — `DF-14-1-A` is cited, not re-filed. **Divergence recorded, not inherited:** §0's corpus population figures (3,509 / 1,812 / 24 / 1,836) do not reproduce through the shipped detector at the pinned shas; the measured population is 3,551 / 1,848 / 27 / 2,529, it is not an intake-exclusion artefact, and the harness is validated by reproducing all 31 adjudicated findings as verdict-eligible before the change. | Dev Agent (dev-story) |
 | 2026-08-17 | v0.1 | Story contexted on HEAD `47b6dbe`. Source: `sprint-change-proposal-2026-08-17.md`, APPROVED by XAgent007 2026-08-17. **The defect was re-measured, not inherited:** fact (b) is `assertion_sites >= 1 and mock_sites >= 1`, and `ast_corroborated` is equivalent to `mock_sites >= 1` in **1,835 of 1,836** heuristically-flagged tests across both contributing corpus members — so the corroboration step adds no evidence the heuristic did not already have. The rule class emitted 31 blocking findings over the ratified corpus and the named human adjudicated **0** true (26 FP / 5 BORDERLINE). **This is a CONFORMANCE fix, not a new decision:** cross-cutting concern #6 has required `audited_deep` corroboration AND Prosecutor sign-off since the architecture was written, and the detector ships `AUDITED_SHALLOW` with no sign-off; the Epic-6 Prosecutor does not close it because `prosecutor.py:56-57` leaves an ALREADY-eligible finding UNCHANGED and `pipeline.py:535` passes no sign-offs. **Feasibility was MEASURED out of tree before this file was written** (§0.2): a predicate keyed on "SUT result discarded + assertion references a mock-bound value" kept **3/3** planted cartridges corroborated — including the `holdout_vacuous` anti-overfitting control and the Cyrillic-pathed `nonascii_unicode` — demoted **30/31** adjudicated findings, and took minions-wide promotions **24 → 0**; the single survivor is the one finding the human adjudicated BORDERLINE rather than FP. One probe defect is specified rather than inherited (DN-3: a `pytest.raises`-context SUT call is CONSUMED, because raising is the observation). ⛔ **A MEASURED ESCALATION is recorded at §0.3 and the dev must read it before coding:** `TC-ArgusAgent-VERDICT-001-30` — the test proving a zero-token, no-sign-off blocking path exists at all — plants a test whose SUT result is bound and asserted, so it does **not** survive the corrected predicate; its own message says *"Do NOT adjust a gate to make this pass — report it and escalate."* Two named options are recorded with arguments both ways and neither is the dev's to take silently. **Blast radius measured** (§0.5): 21 modules reference the rule id, **10 run the detector end to end**, and the classifier's one miss — `test_default_path_blocking_verdict.py` — is the highest-risk module of all; `test_pipeline_signature_demo.py` is the FR32 demo the PRD calls *"the product"*. Sizes measured so no 13-4-class deadlock is walked into: `vacuous_test.py` **623/1200**, but ⚠️ `argus/pipeline.py` is **1111/1200 with 89 lines of headroom** and is NOT exempt — do not add to it. `agent-smith`'s pinned sha confirmed **reachable** (§0.4), so both members can be re-scored against their true pinned trees. Baselines: `pytest` **1597 collected / 1597 passed / 0 failed / 0 skipped**, `mypy argus` **Success, 86 source files**, `bandit -r argus` **19 Low / 0 Med / 0 High**. `git tag -l` empty; nothing committed; nothing outward-facing. | Scrum Master (create-story) |

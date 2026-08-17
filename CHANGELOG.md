@@ -818,7 +818,7 @@ to block, and flipping the default here would pre-empt a policy decision that be
 ### Packaging: what the distribution contains
 
 `[tool.flit.module] name = "argus"` packages the `argus` Python package and nothing else. Measured on the
-built artifacts: the wheel holds 86 modules plus the packaged command assets and metadata; the sdist adds
+built artifacts: the wheel holds 87 modules plus the packaged command assets and metadata; the sdist adds
 `pyproject.toml`, `README.md`, `LICENSE` and `PKG-INFO`. The RAM workflow directories (`audit/`,
 `phases/`, `templates/`) and the installer scripts are **repository-only** — see README.md for the full
 capability split. *(Amended 2026-08-15 by Story 12.7: the module figure moved with the tree, ~~`adapters/`~~
@@ -827,9 +827,12 @@ zero data assets — `flit_core` ships every file under `argus/`, so the command
 with no build-backend change and reach the sdist because they are tracked.)*
 
 Measured on the built wheel with this repository removed from `sys.path`, one clean subprocess per module:
-**86 of the 86 shipped modules import.** None fail. (The figure read 73 of 73 when `0.1.0` was
+**87 of the 87 shipped modules import.** None fail. (The figure read 73 of 73 when `0.1.0` was
 written; it is DERIVED from the freshly built artifact by `TC-ArgusAgent-DOCS-001-54` — *the artifact
-is the fact* — and moved to 86 on 2026-08-17 when Story 13.3 added
+is the fact* — and moved to 87 on 2026-08-17 when Story 14.1 split
+`argus/detectors/provenance_scan.py` out of the vacuous-test detector — the line-oriented
+source-text scan behind AST corroboration fact (b), extracted so the detector keeps NFR-M1
+headroom for Stories 14.2 and 14.3 — then from 86 on 2026-08-17 when Story 13.3 added
 `argus/precision/gate_decision.py` and `argus/precision/gate_disclosure.py`, which compute
 protocol §5's four conditions over the committed adjudication record and disclose the concentration
 of the population they were computed over, then from 84 on 2026-08-16 when Story 13.2 added
