@@ -1,6 +1,6 @@
 # Story 13.3: Record the result, and let it decide
 
-Status: ready-for-dev
+Status: review
 
 <!-- Created 2026-08-17 by create-story. Every premise below was re-measured BY EXECUTION on
      HEAD 411d891 before this file was written; see §0. Two defects in the flip path and two
@@ -742,28 +742,30 @@ From 13.1, 13.2 and Epics 10–12:
 
 ## Tasks & Subtasks
 
-- [ ] **Task 0 — Confirm the precondition, by execution (AC: 1)**
-  - [ ] Load the committed record; report `counts()`, `len(rows)`, the adjudicator set, `expert_hours`
-  - [ ] Assert `protocol_version == change_log_head_version(protocol_text)`
-  - [ ] Run `fold_adjudicated_precision` and record `evaluable`, `exhaustiveness`, `determinism`
-  - [ ] **Decide the terminal state NOW and record it**: `CLEARED` / `NOT_CLEARED` / `BLOCKED`.
+- [x] **Task 0 — Confirm the precondition, by execution (AC: 1)**
+  - [x] Load the committed record; report `counts()`, `len(rows)`, the adjudicator set, `expert_hours`
+  - [x] Assert `protocol_version == change_log_head_version(protocol_text)`
+  - [x] Run `fold_adjudicated_precision` and record `evaluable`, `exhaustiveness`, `determinism`
+  - [x] **Decide the terminal state NOW and record it**: `CLEARED` / `NOT_CLEARED` / `BLOCKED`.
         If `BLOCKED`, AC4 and AC5 are not performed and the reason is recorded — **do not
         compute a decision anyway**
-- [ ] **Task 1 — Re-measure every §0 / §0.1 / §0.3 premise on YOUR baseline (AC: all)**
-  - [ ] Re-run the §0.1 reproductions; record actual output in Debug Log §1
-  - [ ] Re-measure every cited line number before citing it; record confirmations *and* divergences
-- [ ] **Task 2 — Build the decision instrument (AC1, AC2, AC3)**
-  - [ ] Closed three-outcome vocabulary that **raises** on an unregistered member
-  - [ ] The four §5 conditions computed individually, each with its measured value and verdict
-  - [ ] Clean-repo FP: fold the **cartridge** corpus explicitly, or record NOT APPLICABLE with its
+- [x] **Task 1 — Re-measure every §0 / §0.1 / §0.3 premise on YOUR baseline (AC: all)**
+  - [x] Re-run the §0.1 reproductions; record actual output in Debug Log §1
+  - [x] Re-measure every cited line number before citing it; record confirmations *and* divergences
+- [x] **Task 2 — Build the decision instrument (AC1, AC2, AC3)**
+  - [x] Closed three-outcome vocabulary that **raises** on an unregistered member
+  - [x] The four §5 conditions computed individually, each with its measured value and verdict
+  - [x] Clean-repo FP: fold the **cartridge** corpus explicitly, or record NOT APPLICABLE with its
         reason — **never count it met by default** (protocol §5 names 13.3 by name)
-  - [ ] Fold via `fold_adjudicated_precision`; arithmetic via the shared objects. **No second fold**
-  - [ ] Non-vacuity floor asserted **first**, before any other assertion
-- [ ] **Task 3 — Commit the gate-decision record (AC3)**
-  - [ ] Every field derived; nothing hand-typed; `argus.store.canonical` only
-  - [ ] In git (**not** `.argus/`); asserted with `git ls-files`, not a path check
-  - [ ] NFR-S1: locators + counts + rule-id provenance only; reuse the locator regex
-- [ ] **Task 4 — The CLEARED branch (AC4) — perform ONLY if Task 0 returned `CLEARED`**
+  - [x] Fold via `fold_adjudicated_precision`; arithmetic via the shared objects. **No second fold**
+  - [x] Non-vacuity floor asserted **first**, before any other assertion
+- [x] **Task 3 — Commit the gate-decision record (AC3)**
+  - [x] Every field derived; nothing hand-typed; `argus.store.canonical` only
+  - [x] In git (**not** `.argus/`); asserted with `git ls-files`, not a path check
+  - [x] NFR-S1: locators + counts + rule-id provenance only; reuse the locator regex
+- [ ] **Task 4 — NOT PERFORMED. The branch did not fire** — Task 0 returned **`BLOCKED`**, and AC4's
+      own first line makes every clause below conditional on `CLEARED`. Left unchecked deliberately:
+      checking it would claim work that must not have happened.
   - [ ] Pass `protocol_cleared` from a production `argus/**` site; expect `-46` RED
   - [ ] Flip `INSTRUMENT_STATUS`; edit the four static surfaces; **assert** the five render sites
         need no edit rather than assuming it
@@ -772,32 +774,38 @@ From 13.1, 13.2 and Epics 10–12:
   - [ ] **Prove `-46` is not vacuous** with the flip in place — the story's highest-risk clause
   - [ ] Update the PRD gate-status sites **found by content**; enumerate what you changed
   - [ ] Disposition `DF-12-7-B`; record that clearing authorises **attested externalization only**
-- [ ] **Task 5 — The NOT-CLEARED branch (AC5) — perform ONLY if Task 0 returned `NOT_CLEARED`**
+- [ ] **Task 5 — NOT PERFORMED. The branch did not fire** — Task 0 returned **`BLOCKED`**, not
+      `NOT_CLEARED`. ⚠️ Its three subtasks were nevertheless DISCHARGED where they apply to every
+      non-cleared branch, and the evidence is in the Debug Log: the failing/unevaluable conditions
+      are recorded with their measured values and their countable closure paths on the committed
+      decision record; `-46` is green and `protocol_cleared` is still never passed `True` from
+      `argus/**`; the four static disclosure surfaces are byte-unchanged; and `git diff` shows the
+      protocol document **untouched**, so the §5 literals are byte-unchanged by construction.
   - [ ] Record which conditions failed, their measured values, and what would close each
   - [ ] Prove the disclosure stayed: `-46` green, `protocol_cleared` still never `True`, the four
         static surfaces **byte-unchanged**
   - [ ] **Prove no threshold moved**: `git diff` on the protocol shows additions/strikes only and
         the §5 literals are byte-unchanged
-- [ ] **Task 6 — Correct the stale PRD corpus figures (AC6) — in EVERY branch**
-  - [ ] `prd.md:176` (*N=1*) and `:373` (*N=0*) corrected from the derived count; strike, never erase
-  - [ ] The NOT-CLEARED status text at those sites preserved verbatim unless Task 4 fired
-  - [ ] `TC-ArgusAgent-DOCS-001-75` stays **derived**; prove it still moves
-- [ ] **Task 7 — Emit the re-derived open-items list (AC7)**
-  - [ ] **Re-derive** H0/H1–H4, A5, H3 and every open `DF-*` from the tree — **do not copy** the
+- [x] **Task 6 — Correct the stale PRD corpus figures (AC6) — in EVERY branch**
+  - [x] `prd.md:176` (*N=1*) and `:373` (*N=0*) corrected from the derived count; strike, never erase
+  - [x] The NOT-CLEARED status text at those sites preserved verbatim unless Task 4 fired
+  - [x] `TC-ArgusAgent-DOCS-001-75` stays **derived**; prove it still moves
+- [x] **Task 7 — Emit the re-derived open-items list (AC7)**
+  - [x] **Re-derive** H0/H1–H4, A5, H3 and every open `DF-*` from the tree — **do not copy** the
         epic AC's list, the tracker header, or §0's table
-  - [ ] Record the two measured corrections: H0 **is owned**; four of the seven listed ids **moved**
-  - [ ] One sentence: a cleared gate authorises attested externalization and **is not plan closure**
-  - [ ] Do **not** write the retrospective
-- [ ] **Task 8 — Ledger and documents (AC8)**
-  - [ ] `deferred-work.md` `+n / -0`; every claimed closure backed **in the same commit**
-  - [ ] In `BLOCKED`: re-state `DF-13-2-A` / `DF-6-6-A`* / `DF-7-2-A` with what remains; file the
+  - [x] Record the two measured corrections: H0 **is owned**; four of the seven listed ids **moved**
+  - [x] One sentence: a cleared gate authorises attested externalization and **is not plan closure**
+  - [x] Do **not** write the retrospective
+- [x] **Task 8 — Ledger and documents (AC8)**
+  - [x] `deferred-work.md` `+n / -0`; every claimed closure backed **in the same commit**
+  - [x] In `BLOCKED`: re-state `DF-13-2-A` / `DF-6-6-A`* / `DF-7-2-A` with what remains; file the
         13.3 entry with a **named owner**
-  - [ ] Register any new invariant in architecture §Enforcement in the model form
-- [ ] **Task 9 — Gates and hand-off**
-  - [ ] `pytest` / `mypy` / `bandit` with **actual numbers**, labelled **LOCAL**; CI **NOT ESTABLISHED**
-  - [ ] NFR-M1 re-measured on every touched file (**three are effectively full**)
-  - [ ] If `argus/**` moved: commit → regenerate the three dogfood artifacts → commit separately
-  - [ ] Nothing outward-facing; re-assert by execution (`git tag -l`, remote unmoved). **Do not push**
+  - [x] Register any new invariant in architecture §Enforcement in the model form
+- [x] **Task 9 — Gates and hand-off**
+  - [x] `pytest` / `mypy` / `bandit` with **actual numbers**, labelled **LOCAL**; CI **NOT ESTABLISHED**
+  - [x] NFR-M1 re-measured on every touched file (**three are effectively full**)
+  - [x] If `argus/**` moved: commit → regenerate the three dogfood artifacts → commit separately
+  - [x] Nothing outward-facing; re-assert by execution (`git tag -l`, remote unmoved). **Do not push**
 
 ---
 
@@ -833,11 +841,321 @@ Then this story runs to completion and the arithmetic decides.
 
 ### Agent Model Used
 
+`claude-opus-5[1m]` (Opus 5, 1M context), via the BMAD `dev-story` workflow.
+
 ### Debug Log
+
+**§1 — Task 0/1: every §0 premise re-measured BY EXECUTION on this baseline (`6c59115`).**
+Confirmations *and* divergences, per `AI-E12-10`. **Six premises had moved since the story
+was contexted on `411d891`, and one of them changes the outcome.**
+
+| Premise, as the story file records it | Re-measured on `6c59115` | Consequence |
+|---|---|---|
+| The adjudication record contains **no** judgements (31 `UNADJUDICATED`) | ❌ **SUPERSEDED.** `counts() = {'TP': 0, 'FP': 26, 'BORDERLINE': 5, 'UNADJUDICATED': 0}`; adjudicator `XAgent007 (Engineering Lead)` on all 31 rows, `adjudicated_on: 2026-08-17` | ⛔ The BLOCKING PREREQUISITE is **discharged**. The judgement exists |
+| `expert_hours` is `null` | ✅ **HOLDS** — still `null`, and left null. §3 treats it as a report, never a gate | No figure was invented |
+| `protocol_version == change_log_head_version()` | ✅ **BOTH `V1.3`** | The record's pin holds; the protocol was not amended |
+| `reproducibility_verified` | ✅ **`True`**; `determinism_precondition()` → `None` | §4's first precondition passes |
+| `validation_set_population_n()` / floor | ✅ **5 / 5** | §5's floor condition MET |
+| The fold over the live record is **EVALUABLE** with denominator 26 *(asserted by the orchestrator's spawn brief, not by the story file)* | ❌ **FALSE, MEASURED.** `fold.evaluable is False`; `exhaustiveness` → `AdjudicationUnevaluable(residual_count=5, adjudicated_count=26)` | 🚨 **The outcome is `BLOCKED`, not `NOT_CLEARED`.** See §2 |
+| `protocol_cleared` never `True` from `argus/**` | ✅ **CONFIRMED.** Production scan empty, before and after this story | AC5 |
+| `TC-ArgusAgent-DOCS-001-46` will notice a derived flip | ❌ **CONFIRMED BLIND** — reproduced verbatim, §3 below | `DF-13-3-B` |
+| PRD `:176` *"N=1 … a self-audit"* and `:373` *"`N = 0`, measured"* | ❌ **BOTH STALE**, contradicting `:196`'s `N = 5` on the same tree | AC6, corrected |
+| *"H0 is STILL UNOWNED"* (`sprint-status.yaml` header, 2026-08-09) | ❌ **STALE**, superseded 2026-08-10b | AC7, corrected beside it |
+| **CI evidence NOT ESTABLISHED for any Epic-10/-11/-12/-13 sha** | ❌ **STALE.** `gh run list --workflow=audit-ci.yml`: **success** on `c027e16`, `be35c7f`, `b04dc1a`, `bc55e36`; **failure** on `ae54234` | ⚠️ Still NOT established for the adjudication commit or this delta — see §7 |
+| `origin/master` is `bc55e36`, 13 commits behind | ❌ **MOVED** — `origin/master` is now `c027e16`. Someone pushed between contexting and this run. **Not this story's business and not reverted**; `git tag -l` is still empty and this story pushed nothing | AC8.6 |
+| Baseline gates | ✅ `pytest` **1585 collected**, **3 FAILED** (`PRECISION-001-39` / `-47` / `-52`) · `mypy` clean **84** files · `bandit` **19 Low / 0 Med / 0 High** | The three reds are AC4/AC5 work, §4 |
+| Three test files effectively full | ✅ **CONFIRMED** — 1199 / 1198 / 1194 of 1200 | New guards went in a NEW module |
+
+---
+
+**§2 — Task 0: the terminal state, decided by execution and NOT by preference.**
+
+The fold over the committed record, run before anything was written:
+
+```
+counts()      {'TP': 0, 'FP': 26, 'BORDERLINE': 5, 'UNADJUDICATED': 0}
+determinism   None                              (§4 precondition 1: SATISFIED)
+exhaustiveness UNEVALUABLE — 5 of 31 emitted finding(s) carry no live TP/FP disposition
+evaluable     False
+precision     None      precision_ratio 'NOT COMPUTED BY THIS RUN'
+```
+
+⚠️ **The spawn brief directed `NOT_CLEARED` on the premise that "the denominator is 26
+(non-zero), so the fold is EVALUABLE". The premise is false as measured**, and the
+divergence is recorded rather than adopted. `AdjudicatedPrecision.evaluable` is the
+conjunction of **three** conditions — reproducible **AND** exhaustive **AND** non-empty
+denominator — and only the first and third hold. AC1's own table makes *"the record is not
+exhaustively adjudicated"* a **`BLOCKED`** condition **by name**, and protocol §4 says it
+in its own text: `BORDERLINE` *"makes the run non-exhaustive until it resolves"*. §4's
+ladder — locator re-examination → golden-key correction → **external tie-break** — has not
+terminated for 5 findings, and §2 records the QA-Lead and external-adjudicator seats as
+**unfilled**.
+
+Recording `NOT_CLEARED` would have published a **measured shortfall** over an adjudication
+nobody finished — §0.1(1)'s falsehood, in the direction the story did not anticipate. The
+outcome is **`BLOCKED`**, and Tasks 4 and 5 were therefore not performed.
+
+**What is recorded ANYWAY, because a reader is owed it, and recorded as a BOUND and not as
+a decision:** over **every** admissible completion of the 5 residual the threshold is
+unreachable — all five as TP gives **5/31**, below **4/5**. `ResidualCompletionBound`
+carries it, in exact `Fraction` arithmetic through the shared `precision_fraction`, and
+`TC-ArgusAgent-PRECISION-001-60` pins the one thing that must never follow from it: an
+unreachable threshold does **not** promote `BLOCKED` to `NOT_CLEARED`.
+
+---
+
+**§3 — RED-then-GREEN, at the real seam, per guard.**
+
+**(a) `§0.1 (2)` — the AC4(d) blind spot, reproduced verbatim on this tree:**
+
+```
+protocol_cleared_call_sites("f(x, protocol_cleared=True)")             -> (1,)   seen
+protocol_cleared_call_sites("f(x, protocol_cleared=decision.cleared)") -> ()     INVISIBLE
+protocol_cleared_call_sites("f(x, protocol_cleared=bool(1))")          -> ()     INVISIBLE
+protocol_cleared_call_sites("f(x, protocol_cleared=False)")            -> ()     (correctly)
+```
+
+**RED confirmed.** It is **not fixed here** — AC4(d) assigns the fix to the CLEARED branch,
+which did not fire, and extending `-46`'s closure without a live flip to prove it RED
+against would be a fix proven against a reconstruction, which the GUARD-ADEQUACY clause
+explicitly refuses. **What this story did instead is refuse to open the hole:**
+`decide_gate` computes `adjudication_run_recorded_cleared` from the committed record — as
+the architecture's Adjudication-record enforcement rule demands — and then passes the
+**literal `False`** into the fold. Filed as **`DF-13-3-B`**, owner XAgent007, target: the
+story that performs the flip, **in the same change**.
+
+**(b) `TC-ArgusAgent-PRECISION-001-58` — every outcome REACHED, variants GENERATED from the
+committed record.** RED first in every case; the first run failed on `missing_one`
+returning `CLEARED`, which was the guard finding a real defect in its own fixture:
+appending a superseding row to 30 of 31 rows no longer leaves a residual now that row 0
+carries a committed `FP`. Corrected to drop the finding's rows entirely while leaving it in
+the expected population — **which is the real seam**, and the reason the producer derives
+the expected population from `adjudication-set.json` rather than from the record. The same
+defect was present in `-47` and was corrected there too.
+
+**(c) `TC-ArgusAgent-PRECISION-001-57` — the `Fraction`-vs-float divergence, DEMONSTRATED
+not asserted.** The first attempt searched for a divergent `n/d >= 0.8` pair and found
+none in range — recorded as a RED, because a guard asserting a property it never observed
+is the defect this project files. The real divergences were then demonstrated, both of them
+exactly what AR4 bans: `Fraction(4, 5) >= 0.8` is **`False`** (the double nearest 0.8 is
+strictly greater than 4/5, so a float threshold **refuses a measured precision of exactly
+80%** — a false RED at the boundary); and `round(100 * 199 / 250) >= 80` is **`True`** while
+`Fraction(199, 250) < Fraction(4, 5)` — a false GREEN from a rounded percentage literal. The
+divergent pair is **searched for**, not hand-picked, so the guard survives a legitimate
+threshold move.
+
+**(d) `TC-ArgusAgent-PRECISION-001-59` — the concentration disclosure, guarded in BOTH
+directions** (the `-55b` convention). Over the live corpus the predicate fires and the
+derived counts are compared against an independent count taken in the test. Driven over a
+**synthetic well-distributed** population — every ratified member, three rule classes — it
+must **not** fire, and it does not. *A caveat that cannot be absent is not an observation.*
+Not one of the story's authoring-time figures (24 / 7 / 0 / single class) appears as a
+literal anywhere in the module or the guard (`DF-8-5-C` / `AI-E9-7`).
+
+**(e) `TC-ArgusAgent-PRECISION-001-64` — a true status carrying a FALSE reason, found by
+execution.** `precision_gate_status_for`'s unevaluable branch rendered *"precision
+DENOMINATOR EMPTY — no finding entered TP+FP over this population"* **beside a denominator
+of 26**. That was the only way to be unevaluable when 13.2 wrote it, and it stopped being
+true the moment a human recorded a `BORDERLINE`. `DF-9-2-B`'s false-subject class, on the
+surface that publishes the externalization gate. Fixed **additively**: `unevaluable_reason`
+defaults to the exact prior wording (asserted, so every pre-13.3 caller's bytes are
+unmoved — NFR-P1), and the fold now supplies the precondition that actually failed.
+
+**(f) `TC-ArgusAgent-PRECISION-001-39` / `-47` / `-52` — the three reds inherited from the
+adjudication commit.** All three asserted `total_unadjudicated == len(record.rows) == 31`.
+13.2 encoded *"nothing is adjudicated yet"* as a permanent invariant when it was a
+**transient state**, so all three failed on the exact event they existed to wait for. Each
+was **re-derived, not deleted and not trivially satisfied**, and each is still able to fail:
+`-39` now asserts the attribution partition in both directions (a human disposition carries
+a §2-registered adjudicator and a date; an `UNADJUDICATED` row carries neither); `-47`
+computes the expected residual set independently and requires `exhaustiveness` to agree with
+it, in both directions; `-52` derives the residual from the record's own live dispositions,
+keeps the load-bearing claim (`protocol_cleared=True` from a caller cannot flip a
+non-exhaustive record), adds a reconciliation between the denominator and the adjudicated
+count, and **fails loudly with a re-derivation instruction** if its subject ever vanishes.
+
+---
+
+**§4 — AC2, condition by condition, each with its own evidence.**
+
+1. **precision ≥ 80%** — **UNEVALUABLE.** No ratio was computed, because §4's exhaustiveness
+   precondition does not hold. The comparison, when it happens, is the exact `Fraction`
+   `precision >= PRECISION_GATE_THRESHOLD`; no float, no rounding, no percentage literal.
+2. **clean-repo blocking FP == 0** — **MET**, and **measured**, not assumed. Protocol §5 as
+   amended names Story 13.3 by name and forbids counting it met by default, so
+   `scripts/build_gate_decision.py` stages and audits **every** cartridge through the
+   unmodified pipeline and folds the result through `compute_precision`, which reports
+   `clean_repo_fp_applicable=True` and **names the clean members it folded**: `clean_control`
+   and `tool_breadth`, **0** blocking false positives. The repository corpus's NOT-APPLICABLE
+   reason is carried alongside on `CleanRepoEvidence.note`, so both populations are visible.
+3. **N ≥ 5** — **MET.** `validation_set_population_n()` → `eligible_member_count()` = **5**,
+   floor `VALIDATION_SET_FLOOR_N` = **5**. One floor, never forked.
+4. **the adjudication run is recorded cleared** — **FAILED**, derived from the committed
+   record and never from a caller: the record is git-tracked ✅, byte-reproducible ✅, every
+   live judgement attributed to a §2-registered role ✅, **exhaustive ❌**.
+
+`GateDecision.__post_init__` refuses to construct a `CLEARED` decision carrying any non-`MET`
+condition — §5's *"it may not count it as met by default"* made unexpressible.
+
+---
+
+**§5 — AC5's obligations, discharged where they apply to every non-cleared branch.**
+
+- **The disclosure STAYED, mechanically.** `git diff` over `argus/verdict/negative_assurance.py`,
+  `pyproject.toml` and `action.yml` is **empty**; `README.md`'s disclosure paragraph is
+  untouched (see §7); `INSTRUMENT_STATUS` is unchanged; the `argus/**` production scan for
+  `protocol_cleared=True` is **empty**; `TC-ArgusAgent-DOCS-001-46` is green.
+  `TC-ArgusAgent-PRECISION-001-62` now ties the declared status to the **committed decision**
+  and moves in both directions.
+- **No threshold moved, in either direction.** `git diff` over
+  `precision-validation-protocol.md` is **empty** — the document was not touched at all, so
+  §5's literals and §7's OI1 bullets are byte-unchanged by construction, and the change-log
+  head is still **V1.3**, so the record's `protocol_version` pin holds and no re-adjudication
+  was forced. `TC-ArgusAgent-PRECISION-001-63` asserts the document and the shipped constants
+  against each other so a future drift on either side goes red.
+- **The corpus was not narrowed, no member was dropped or re-weighted, no
+  `verdict_eligible` flag was re-classified, and the unit is still the FINDING.**
+
+---
+
+**§6 — Gates, LOCAL, with actual numbers.** ⚠️ `architecture.md` §H: a local run is
+necessary and **never sufficient**. These ran on **Windows only**; CI runs an ubuntu matrix.
+
+| Gate | Baseline (`6c59115`) | This delta | Δ |
+|---|---|---|---|
+| `pytest` | 1585 collected, **3 failed**, 0 skipped | **1597 collected, 1596 passed, 1 failed, 0 skipped** | +12 tests; the 3 inherited reds fixed; **1 remaining red, named in §7** |
+| `mypy argus` | clean, 84 source files | **clean, 86 source files** | +2 modules |
+| `bandit -r argus` | 19 Low / 0 Med / 0 High | **19 Low / 0 Med / 0 High** | unchanged |
+| NFR-M1 | 3 files at 1199 / 1198 / 1194 | `gate_decision` **851** · `gate_disclosure` **341** · `replay_harness` **825** · `adjudication` **952** · `test_gate_decision` **900** · `test_adjudication_record` **859** · `build_gate_decision` **318** | all under 1200; no file shaved |
+
+**No skip appeared** — the story names a skip as a regression signal, and there is none.
+
+---
+
+**§7 — ⚠️ ONE RED REMAINS, and it is NOT fixed, deliberately.**
+
+`TC-ArgusAgent-DOCS-001-54` (`tests/test_built_distribution.py`) fails:
+
+```
+README.md publishes a stale figure for 'wheel_entries': it says 92,
+the freshly built artifact measures 94. Fix the document — the artifact is the fact.
+```
+
+`README.md` also states `argus_agent-0.1.0.tar.gz`, **91 files**, which the artifact now
+measures at **93**. Both figures moved because this story added two modules to `argus/**`,
+so the staleness is **this story's doing**, not the operator's.
+
+**It was not fixed because `README.md` carries an UNCOMMITTED external edit made outside
+this workflow** — measured: **+122 / −404**, a substantial rewrite that removes several
+§3.4 struck-not-erased corrections. This session was instructed not to touch, stage, commit,
+revert or regenerate that file, and it did none of those. `README.md` is the **only** file in
+the working tree left unstaged and uncommitted, exactly as it was found.
+
+**The remedy is two tokens, in one paragraph, at `README.md:83`:**
+`…py3-none-any.whl\`, 92 entries)` → **94**, and `…tar.gz\`, 91 files)` → **93**. The
+paragraph is *"the one place this README states those two numbers"* by its own text, so
+nothing else needs to move, and the disclosure paragraph is not involved.
+
+**Owner: XAgent007 (Engineering Lead)** — it is one edit inside a file only the operator can
+safely reconcile, and it is FILED as `DF-13-3-C` so it is not carried only in this story's
+prose. Recorded rather than worked around, because silently editing an operator's unreviewed
+rewrite to make a gate green is the precise instinct this story exists to refuse — and it
+would have mixed an agent's change into a diff nobody has read yet.
+
+---
+
+**§8 — Not done, and why (recorded rather than silently skipped).**
+
+- **AC4 (a)–(g): NOT PERFORMED.** Every clause is conditional on `CLEARED`. `DF-12-7-B` is
+  therefore not dispositioned: nothing about an installed command asset went stale, and there
+  is nothing to rule against. `INSTRUMENT_DISCLOSURE_VALIDATED`'s wrong-corpus defect
+  (AC4(c)) is **real and confirmed on this tree** and is left standing with the constant
+  itself unpublished — correcting the text of an unused constant, and re-pinning
+  `TC-ArgusAgent-DOCS-001-58` to match, would land a change nobody can prove RED at the real
+  seam until the flip happens.
+- **The retrospective was NOT written** (DN-5). `epic-13-open-items.md` is its committed
+  **input**; `epic-13-retrospective` remains its own sprint-status item and still needs a
+  FINAL pass.
+- **`evidence_deviation` on the adjudication record: a measured divergence, recorded not
+  fixed.** All 7 `agent-smith` row reasons say *"see `evidence_deviation` on this record"* and
+  **the record's closed schema has no such field** — the reasons point at something that is
+  not there. The adjudication record is the named human's committed artifact and is
+  append-only; rewriting its header is not this story's act. Recorded on `DF-13-3-A`.
 
 ### Completion Notes
 
+**The gate decision is `BLOCKED`, it is committed, and it is derived.** The named human
+adjudicated all 31 emitted blocking findings on 2026-08-17 — the prerequisite Epic 13 was
+built around is discharged — but 5 came back `BORDERLINE`, protocol §4's ladder has not
+terminated for them, and §2's tie-break seats are unfilled. So the run is **not exhaustive**,
+`fold.evaluable` is **False**, and **no §5 outcome was taken**. `BLOCKED` is a third terminal
+state precisely so this cannot be written down as *"the gate did not clear"*: a shortfall and
+an incomplete measurement are different claims, and downstream nothing can tell them apart
+once the wording collapses them. **The orchestrator's brief directed `NOT_CLEARED` on a
+premise (`evaluable=True`, denominator 26) that measurement falsifies; the divergence is
+recorded in Debug Log §2 and was not adopted.**
+
+**Everything the outcome permits was still done in full.** The decision instrument exists as
+a closed three-outcome vocabulary that raises; §5's four conditions are computed
+**individually**, each with its measured value, its own verdict from a closed verdict
+vocabulary, and a countable *"what would close it"*; §5's clean-repo condition is **measured
+explicitly over the cartridge corpus** rather than counted met by default, naming the two
+clean members it folded; and the committed record carries the corpus with pinned shas, the
+adjudicators, the protocol version asserted against the change-log head, the expert-hours
+report, the residual, the closure path and the AC3b concentration disclosure — every field
+derived, none typed, through `argus.store.canonical`, tracked in git and asserted so with
+`git ls-files`.
+
+**The disclosure stayed and nothing was tuned.** `INSTRUMENT_STATUS` is unchanged,
+`protocol_cleared` is still never passed `True` from `argus/**`, the four static disclosure
+surfaces are byte-unchanged, and `precision-validation-protocol.md` was **not touched at
+all** — so §5's literals and §7's invariants are byte-unchanged by construction and the
+record's version pin still holds.
+
+**Two defects were found by execution and one was fixed.** The gate-status sentence published
+*"DENOMINATOR EMPTY"* beside a denominator of 26 — fixed additively, default byte-identical.
+The `-46` blind spot on a derived `protocol_cleared` was reproduced and **not opened**:
+`decide_gate` passes the literal `False`, and the fix is filed for whoever performs the flip.
+
+**One red remains and is named, not worked around** — `TC-ArgusAgent-DOCS-001-54`, because
+this story's two new modules moved `README.md`'s wheel/sdist figures and `README.md` carries
+an uncommitted operator rewrite this session was instructed not to touch. The exact two-token
+remedy is in Debug Log §7 with a named owner.
+
 ### File List
+
+**New**
+
+- `argus/precision/gate_decision.py`
+- `argus/precision/gate_disclosure.py`
+- `scripts/build_gate_decision.py`
+- `tests/test_gate_decision.py`
+- `_bmad-output/design-artifacts/ArgusAgent/validation-corpus/gate-decision-record.json`
+- `_bmad-output/design-artifacts/ArgusAgent/epic-13-open-items.md`
+
+**Modified**
+
+- `argus/precision/adjudication.py`
+- `argus/precision/replay_harness.py`
+- `tests/test_adjudication_record.py`
+- `tests/test_release_preflight.py`
+- `CHANGELOG.md`
+- `_bmad-output/design-artifacts/ArgusAgent/E-PRD/prd.md`
+- `_bmad-output/design-artifacts/ArgusAgent/architecture.md`
+- `_bmad-output/design-artifacts/ArgusAgent/deferred-work.md`
+- `_bmad-output/design-artifacts/ArgusAgent/sprint-status.yaml`
+- `_bmad-output/design-artifacts/ArgusAgent/stories/13-3-record-the-result-and-let-it-decide.md`
+- `_bmad-output/design-artifacts/ArgusAgent/minions-dogfood-proof.md` *(regenerated, separate commit)*
+- `_bmad-output/design-artifacts/ArgusAgent/minions-dogfood-partition-plan.md` *(regenerated, separate commit)*
+- `_bmad-output/design-artifacts/ArgusAgent/minions-dogfood-budget-plan.md` *(regenerated, separate commit)*
+
+**Deliberately NOT modified**
+
+- `README.md` — uncommitted external edit, operator-owned. See Debug Log §7.
+- `_bmad-output/design-artifacts/ArgusAgent/precision-validation-protocol.md` — untouched.
+- `argus/verdict/negative_assurance.py`, `pyproject.toml`, `action.yml` — byte-unchanged.
+- `_bmad-output/design-artifacts/ArgusAgent/validation-corpus/adjudication-record.json` — the
+  named human's committed, append-only artifact.
 
 ### Review Findings
 
@@ -847,4 +1165,5 @@ Then this story runs to completion and the arithmetic decides.
 
 | Date | Version | Description | Author |
 |------|---------|-------------|--------|
+| 2026-08-17 | v1.0 | **The decision is recorded, and the outcome is `BLOCKED` — not `NOT_CLEARED`, and the distinction is the entire point of AC1.** The BLOCKING PREREQUISITE is **discharged**: the named human (**XAgent007**, Engineering Lead) adjudicated **all 31** emitted blocking findings on 2026-08-17 — **0 TP / 26 FP / 5 BORDERLINE / 0 UNADJUDICATED**, `expert_hours` still `null` (a report, never a gate, and no agent may invent one). **But the run is NOT exhaustive.** Protocol §4 states in its own text that `BORDERLINE` — *"looked at, could not decide"* — *"makes the run non-exhaustive until it resolves"*; five ladders (locator re-examination → golden-key correction → **external tie-break**) have not terminated, and §2 records the QA-Lead and external-adjudicator seats as **unfilled**. Measured: `exhaustiveness` → `Unevaluable(residual=5, adjudicated=26)`, `fold.evaluable` → **`False`**. AC1's table makes *"not exhaustively adjudicated"* a **`BLOCKED`** condition by name, so **no §5 outcome was taken**, and `BLOCKED` is never rendered as *"the gate did not clear"*. ⚠️ **The orchestrator's spawn brief directed `NOT_CLEARED` on the premise that the fold was EVALUABLE with denominator 26; measurement falsifies the premise, the divergence is recorded in Debug Log §2, and it was NOT adopted** — recording a measured shortfall over an adjudication nobody finished is §0.1(1)'s falsehood in the direction the story did not anticipate. **Everything the outcome permits was done in full:** a closed-membership three-outcome vocabulary that RAISES (`argus/precision/gate_decision.py`); §5's four conditions computed **individually**, each with its measured value, its verdict from a closed verdict vocabulary and a countable closure path — precision **UNEVALUABLE**, clean-repo blocking-FP **MET** *(measured explicitly over the CARTRIDGE corpus through `compute_precision`, naming the two clean members it folded, because §5 as amended names 13.3 by name and forbids counting it met by default)*, N≥5 **MET** (derived, 5), adjudication-run-recorded-cleared **FAILED**; a committed, git-tracked, fully DERIVED `gate-decision-record.json` through `argus.store.canonical`; and **AC3b's concentration disclosure, derived and never typed** — 31 findings from **2 of 5** ratified members, **3 contributed zero**, **1** rule class — guarded in BOTH directions (`-59` fires on the live corpus and must NOT fire over a synthetic well-distributed one). A **derived completion bound** records that no resolution of the 5 residual reaches the threshold (all-TP gives **5/31** < **4/5**) — recorded as a **BOUND, not a decision**; `-60` pins that it may not promote `BLOCKED`. **The disclosure STAYED and nothing was tuned:** `INSTRUMENT_STATUS` unchanged, `protocol_cleared` still never `True` from `argus/**` (`decide_gate` passes the **literal `False`** so `DOCS-001-46` is not blinded), the four static surfaces byte-unchanged, and `precision-validation-protocol.md` **not touched at all** — §5's literals and §7's OI1 bullets byte-unchanged by construction, change-log head still **V1.3**, record pin intact, no re-adjudication forced. **Two defects found by execution:** the gate-status sentence published *"DENOMINATOR EMPTY"* beside a denominator of 26 (`DF-9-2-B`'s false-subject class) — fixed **additively**, default byte-identical for every pre-13.3 caller; and `-46`'s blind spot on a derived flag — **reproduced and deliberately not opened**, filed as `DF-13-3-B` for whoever performs the flip. **Three inherited RED guards re-derived, not deleted and not trivially satisfied** (`PRECISION-001-39`/`-47`/`-52`): 13.2 encoded *"nothing is adjudicated yet"* as a permanent invariant when it was transient, so all three failed on the event they existed to wait for; each now asserts the property it actually protected, derived from the record, and each can still fail. **Ledger `+165 / -0`:** `DF-13-3-A` filed (the `agent-smith` pinned sha `9ab774d7` is UNREACHABLE — its 7 findings were adjudicated against the `d9bb793` reconstruction, so `reproducibility_verified` is no longer re-verifiable for that member, and **all 5 residual `BORDERLINE` findings are that member's**) and `DF-13-3-B` filed; `DF-13-2-A` re-stated with residual **5** instead of 31; `DF-12-7-B` **not** dispositioned (AC4(f) is CLEARED-branch work). PRD's two stale corpus figures corrected against the **derived** count, struck not erased, NOT-CLEARED status preserved verbatim (AC6). **`epic-13-open-items.md` emitted** (AC7, re-derived by execution; the retrospective is **not** written here). ⚠️ **Story premise corrected: CI evidence is now PARTIALLY established** — `audit-ci.yml` succeeded on `c027e16`/`be35c7f`/`b04dc1a`/`bc55e36` and **failed** on `ae54234`; the newest verified sha is still **behind** the adjudication commit, so CI evidence remains **NOT ESTABLISHED** for the adjudication or this delta. **Gates LOCAL** (Windows-only; CI is an ubuntu matrix): `pytest` **1597 collected / 1596 passed / 1 failed / 0 skipped**, `mypy` **clean, 86 source files**, `bandit` **19 Low / 0 Medium / 0 High**. ⚠️ **The one red is named, not worked around:** `TC-ArgusAgent-DOCS-001-54` — this story's two new modules moved `README.md`'s wheel/sdist figures (92→94, 91→93), and `README.md` carries an **uncommitted operator rewrite** (+122/−404) this session was instructed not to touch, stage, commit or revert. Two-token remedy and named owner in Debug Log §7. Nothing outward-facing: `git tag -l` empty, no push, no tag, no release. | Developer (dev-story, Story 13.3) |
 | 2026-08-17 | v0.1 | Story contexted. Premises re-measured **by execution** on `411d891`. **The required input does not exist**: the committed adjudication record holds **31 rows, all `UNADJUDICATED`, zero judgements, no adjudicator** — and the ledger already locks the consequence (*"13.3 computes over an adjudicated record and cannot begin without one"*), so the story is written with a **three-outcome** terminal vocabulary (`CLEARED` / `NOT_CLEARED` / `BLOCKED`) that refuses to let a vacuous fold be recorded as a shortfall. **Two defects found by execution:** `INSTRUMENT_DISCLOSURE_VALIDATED` names *"the Argus dogfood corpus"* — the self-audit 13.1 excluded from N, i.e. the cleared statement would rest on the corpus that cannot clear it (`DF-9-2-B`'s class, and `DOCS-001-58` pins it); and `protocol_cleared_call_sites` matches **only a literal `True`**, so deriving the flag — the correct design, and what the architecture's adjudication-record rule demands — makes `TC-ArgusAgent-DOCS-001-46` **vacuous at the exact moment the gate flips**. **Four stale references corrected:** the tracker's PRD `L118/L130/L141/L302` were correct at `f677e90` and now point at unrelated headings (live sites enumerated by content); `prd.md:176` (*N=1*) and `:373` (*N=0*) contradict `:196` (*N=5*) on this tree; the tracker header's *"H0 is STILL UNOWNED"* was closed **2026-08-10b via option (b)** (the substance — H1–H4 NOT FILED, A5 UNSUPPORTED, H3 unmade — is unchanged and is the point); and four of the epic AC's seven `DF-*` ids have moved. Baseline: pytest **1585 collected, exit 0**; mypy **clean, 84 files**; bandit **19 Low / 0 Med / 0 High**. `protocol_cleared` still never `True`; `origin/master` 13 commits behind; nothing published. | Scrum Master (create-story) |

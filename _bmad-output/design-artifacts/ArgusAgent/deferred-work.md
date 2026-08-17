@@ -4352,3 +4352,193 @@ one is NOT delivered and its story record was wrong.**
 - **`DF-8-5-B` / `DF-10-4-D` bootstrap** — applied, because `argus/**` moved: the `argus/` delta
   was committed first, the three dogfood artifacts were regenerated through their own renderers,
   and the regeneration was committed separately (`AI-E12-11`).
+
+---
+
+## Story 13.3 dispositions — 2026-08-17 (`13-3-record-the-result-and-let-it-decide`)
+
+**Append-only.** Nothing above this line was edited; `git diff --numstat` on this file is `+n / -0`
+(13.3 / AC8.1). Every figure below was measured by execution on `6c59115`.
+
+### The gate decision itself — the outcome is `BLOCKED`, and that is not a shortfall
+
+- **The adjudication HAPPENED.** The named human (**XAgent007**, Engineering Lead, protocol §2)
+  judged all 31 emitted blocking findings on **2026-08-17**: **0 TP / 26 FP / 5 BORDERLINE / 0
+  UNADJUDICATED**. `expert_hours` is `null` and stays null — protocol §3 treats it as a **report,
+  never a gate**, and no agent may supply a figure the human did not state.
+- **The run is NOT exhaustive**, so no protocol §5 outcome was taken. Protocol §4 states in its own
+  text that `BORDERLINE` — *"looked at, could not decide"* — is a first-class outcome that
+  *"makes the run non-exhaustive until it resolves"*. Five findings sit there and §4's ladder
+  (locator re-examination → golden-key correction → **external tie-break**) has not terminated;
+  protocol §2 records the QA-Lead and external-adjudicator roles as **unfilled**, and filling them
+  is an operator act.
+- **Recorded as `BLOCKED`, never as *"the gate did not clear"*.** A shortfall and an incomplete
+  measurement are different claims, and downstream nothing can tell them apart once the wording
+  collapses them. The committed `validation-corpus/gate-decision-record.json` carries the outcome,
+  all four §5 conditions with their individual verdicts, the residual, the closure path and the
+  AC3b concentration disclosure.
+- **The derived completion bound, recorded as a BOUND and NOT as a decision:** over every
+  admissible completion of the 5 residual findings the threshold is unreachable — all five as TP
+  gives **5/31**, below **4/5**. It does **not** promote `BLOCKED` to `NOT_CLEARED`.
+- **No threshold, floor, unit, corpus definition or §7 invariant was amended, in either
+  direction.** `PRECISION_GATE_THRESHOLD` is still `Fraction(4, 5)`, `VALIDATION_SET_FLOOR_N` is
+  still `5`, the unit is still the FINDING, and the protocol change-log head is still **V1.3** —
+  so the committed record's `protocol_version` pin still holds and no re-adjudication was forced.
+  `TC-ArgusAgent-PRECISION-001-63` asserts the document and the constants against each other.
+- **The disclosure STAYED.** `INSTRUMENT_STATUS` is unchanged, `protocol_cleared` has still never
+  been passed `True` anywhere in `argus/**`, `TC-ArgusAgent-DOCS-001-46` is green, and the four
+  static disclosure surfaces are byte-unchanged. AC4 was **not performed**; the branch did not fire.
+
+### Filed by this story
+
+- **`DF-13-3-A` — the `agent-smith` pinned sha is UNREACHABLE, so 7 of the 31 findings were
+  adjudicated against a RECONSTRUCTION rather than against the audited tree.** Verified by
+  execution: `9ab774d7bf5d61da552c61094b2d478f72dfbb6d` is absent from
+  `https://github.com/Inan15/agent-smith.git` after fetching all four branches
+  (`upload-pack: not our ref`), and absent from every git repository found in a depth-4 scan of
+  the local drives. The 7 findings were adjudicated against `origin/development` `d9bb793`
+  (2026-08-06), the nearest reachable tree, where all 7 locators resolve exactly onto `def test_*`
+  lines; `origin/main` `b69280a3` was REJECTED as a surface because it does not contain
+  `test_trace_emitter.py` at all. **Consequence, recorded rather than smoothed over:** the
+  adjudication record's `reproducibility_verified: True` (measured 2026-08-16, over the pinned
+  shas) is **no longer re-verifiable for this member**, and byte-identity with the audited source
+  **cannot be established**. The deviation is already carried on all 7 `agent-smith` row reasons;
+  ⚠️ measured divergence — it is **NOT** carried as a header field on the record, contrary to what
+  those row reasons say (*"see `evidence_deviation` on this record"*): the record's closed schema
+  has no such field, so the reasons point at something that is not there. All **5 residual
+  `BORDERLINE` findings are `agent-smith` findings**, so the one member whose evidence surface is a
+  reconstruction is exactly the member whose ladder has not terminated. **Not worked around:**
+  re-pinning the member to `d9bb793` would silently redefine the corpus the adjudication was
+  performed over, which is the corpus change 13.3 / AC5 forbids.
+  - id: DF-13-3-A
+  - origin_story: 13-3-record-the-result-and-let-it-decide
+  - owner: **Engineering Lead (XAgent007)** — protocol §2 primary adjudicator and corpus ratifier
+  - target_story: **NONE — unscheduled with a named owner** (`AI-E9-8`). It cannot be re-homed to a
+    story: recovering the pinned tree, or re-ratifying the member at a reachable sha and
+    re-adjudicating its 7 findings, is an operator act.
+  - category: validation-corpus provenance (evidence reachability)
+  - severity: 🟠 — it does not move the gate (the gate is `BLOCKED` on exhaustiveness, not on this)
+    and nothing false is published, but it is an unrepairable gap in the audit trail of 7 of the 31
+    findings the gate will eventually rest on.
+
+- **`DF-13-3-B` — `TC-ArgusAgent-DOCS-001-46` goes VACUOUS the moment `protocol_cleared` is
+  derived, which is the correct design.** Reproduced by execution on this tree:
+  `protocol_cleared_call_sites("f(x, protocol_cleared=True)")` returns `(1,)`, while
+  `...=decision.cleared` and `...=bool(1)` both return `()`. The analyzer records a production call
+  site **only** when the keyword value is an `ast.Constant` that `is True`. So the one guard tying
+  the DECLARED instrument status to the harness stops seeing anything at the exact moment the gate
+  flips. **Deliberately not opened by this story:** `argus/precision/gate_decision.py` computes
+  `adjudication_run_recorded_cleared` from the committed record — as the architecture's
+  Adjudication-record enforcement rule demands — and then still passes the **literal `False`** into
+  the fold rather than threading the derivation back in, so the blind spot is not created here. It
+  is left open, because 13.3 / AC4(d) assigns the fix to the CLEARED branch, which did not fire.
+  - id: DF-13-3-B
+  - origin_story: 13-3-record-the-result-and-let-it-decide
+  - owner: **Engineering Lead (XAgent007)**
+  - target_story: **whichever story performs the flip — in the SAME change** (13.3 / AC4(d)). That
+    story must either pass the literal `True` from production and assert `-46`'s production scan
+    non-empty, or extend `-46`'s closure to see a derived flag, proven RED at the real seam by the
+    live flip and not against a reconstruction.
+  - category: guard adequacy (a guard that goes vacuous exactly when it matters)
+  - severity: 🔴 — the observable it protects is the externalization gate's own disclosure, and the
+    failure mode is silent and permanent.
+
+- **`DF-13-3-C` — `TC-ArgusAgent-DOCS-001-54` is RED at hand-off, and it was NOT fixed, on
+  purpose.** Measured: `README.md:83` publishes *"`argus_agent-0.1.0-py3-none-any.whl`, 92
+  entries"* and *"`argus_agent-0.1.0.tar.gz`, 91 files"*; the freshly built artifacts measure
+  **94** and **93**. The staleness is **this story's doing** — `argus/precision/gate_decision.py`
+  and `argus/precision/gate_disclosure.py` moved both counts — and the guard is right: *"Fix the
+  document, the artifact is the fact."* **Why it is open rather than fixed:** `README.md` carries
+  an **UNCOMMITTED external edit made outside this workflow** (measured `+122 / -404`, a
+  substantial rewrite that removes several §3.4 struck-not-erased corrections), and this session
+  was instructed not to touch, stage, commit, revert or regenerate that file. It did none of
+  those: `README.md` is the only file in the working tree left unstaged and uncommitted, exactly
+  as it was found. Silently editing an operator's unreviewed rewrite to turn a gate green is the
+  precise instinct Story 13.3 exists to refuse, and it would also have quietly mixed an agent's
+  change into a diff the operator has not yet read.
+  - id: DF-13-3-C
+  - origin_story: 13-3-record-the-result-and-let-it-decide
+  - owner: **Engineering Lead (XAgent007)** - the only party who can safely reconcile that file
+  - target_story: **NONE - unscheduled with a named owner** (`AI-E9-8`). The remedy is two tokens
+    in one paragraph at `README.md:83` (`92 entries` -> `94`, `91 files` -> `93`), which by that
+    paragraph's own text is *"the one place this README states those two numbers"*. The FR34
+    disclosure paragraph is not involved and must not move.
+  - category: published-figure currency (`DF-8-5-C`'s class, in a document an agent may not edit)
+  - severity: 🟠 - CI-visible and it will fail the ubuntu matrix exactly as it fails locally, but
+    it publishes an UNDER-count of a packaging figure and touches no disclosure, no threshold and
+    no gate.
+
+### Re-stated, NOT re-filed and NOT closed
+
+- **`DF-13-2-A` — the adjudication run HAS taken place; the entry stays OPEN with a SMALLER
+  residual.** What it was filed for is done: 31 `UNADJUDICATED` rows became 31 human judgements
+  attributed to XAgent007, and the residual fell from **31 to 5**. The entry stays open, because
+  what remains is a real and different thing — protocol §4's borderline ladder has not terminated
+  for those 5, so `AdjudicationRecord.exhaustiveness()` still returns `Unevaluable` and the gate
+  still has no §5 outcome. `expert_hours` is still `null` (**NOT RECORDED**, never zero). Owner
+  unchanged: **Engineering Lead (XAgent007)**; the outstanding acts are the §4 tie-break and,
+  because §2 registers both roles as *unfilled*, filling the QA-Lead and external-adjudicator seats.
+- **`DF-6-6-A` / `DF-6-6-A-P1` / `DF-6-6-A-P2` / `DF-7-2-A` — re-stated, unchanged, still open.**
+  The precision gate is still uncleared and the ledger's own clause still holds in its own words:
+  *"13.3 computes over an adjudicated record"* — it now has one, and that record is not yet
+  exhaustive. Owner unchanged.
+- **`DF-12-7-B` — NOT dispositioned, and that is a decision with a reason.** 13.3 / AC4(f) assigns
+  it to the CLEARED branch. `INSTRUMENT_STATUS` did not flip, so no installed command asset went
+  stale, and there is nothing to dispose against. Disposing of it here would be `AI-E12-3`'s defect
+  — ruling on an entry in prose rather than against evidence — inside the story whose whole subject
+  is refusing exactly that. Owner unchanged: **Engineering Lead (XAgent007)**.
+- **`DF-12-9-A` stays OPEN and untouched.** Story 13.3 published **nothing**: re-verified by
+  execution at hand-off — `git tag -l` empty, no push, no release, no visibility change.
+- **`DF-9-2-A`** — honoured, still open. `argus/precision/gate_decision.py` and
+  `argus/precision/gate_disclosure.py` resolve **no** repository-only path at module level:
+  `DECISION_RECORD_PATH` is a repository-relative forward-slash **string** the caller resolves, and
+  the corpus is reached only through the existing lazy `corpus_manifest_module()` edge. The impure
+  part — staging and auditing the cartridge corpus to measure §5's clean-repo condition — lives in
+  `scripts/build_gate_decision.py`, outside the shipped package. Both new modules are registered in
+  `_MODULES_NAMING_THE_TEST_TREE_IMPORT` with the reason.
+- **`DF-8-5-B` / `DF-10-4-D` bootstrap** — applied, because `argus/**` moved: the `argus/` delta is
+  committed first, the three dogfood artifacts are regenerated through their own renderers, and the
+  regeneration is committed separately (`AI-E12-11`).
+
+### Measured corrections to premises this story was handed
+
+- **CI evidence is PARTIALLY ESTABLISHED, contrary to the story file's §0.** Measured 2026-08-17 by
+  querying the workflow API: `audit-ci.yml` completed **successfully** on `c027e16`, `be35c7f`,
+  `b04dc1a` and `bc55e36`, and **failed** on `ae54234`. The §0 claim that its latest run covered
+  `00c8d1b` (2026-08-09) is stale. What remains open: the newest CI-verified sha is `c027e16`,
+  which is behind the adjudication commit `6c59115` and behind this story's delta, so **CI evidence
+  is still NOT ESTABLISHED for the adjudication or for the gate decision.**
+- **`sprint-status.yaml`'s header note *"H0 … is still UNOWNED"* is STALE** — dated 2026-08-09 and
+  superseded by the 2026-08-10b closure recorded at `epics.md:2642-2643` and above at
+  `deferred-work.md:1575-1588`. Corrected in place by this story rather than propagated. The
+  substance is unchanged and is the point: **H1–H4 are still NOT FILED**, assumption **A5 remains
+  ⚠️ UNSUPPORTED**, and **H3's blocking-vs-advisory policy decision is unmade**.
+- **`prd.md`'s two stale corpus figures are corrected** (13.3 / AC6) — *"N=1 … a self-audit"* and
+  *"the eligible corpus is `N = 0`, measured"* both contradicted `N = 5` on the same tree. Struck,
+  never erased, with the date and the reason, against the **derived** `eligible_member_count()`.
+  The **NOT CLEARED** status text at both sites is preserved verbatim: correcting a stale
+  measurement is not weakening a disclosure.
+- **A false SUBJECT was found and fixed in the gate-status sentence.**
+  `precision_gate_status_for`'s unevaluable branch said *"precision DENOMINATOR EMPTY"* as a
+  literal — the only way to be unevaluable when Story 13.2 wrote it. With 26 findings in the
+  denominator and 5 residual it rendered "DENOMINATOR EMPTY" beside a denominator of 26: the
+  `DF-9-2-B` false-subject class, on the surface that publishes the externalization gate. Fixed
+  **additively**, with the default preserving every pre-13.3 caller's bytes (NFR-P1).
+
+### Registered rules and guards
+
+- **A 13.3 rule is registered in `architecture.md` §Enforcement** in the established form (rule
+  text + enforcing module + test ids): *the gate decision is recorded in a CLOSED three-outcome
+  vocabulary, and `BLOCKED` may never be rendered as a shortfall.*
+- **New guards:** `tests/test_gate_decision.py`, `TC-ArgusAgent-PRECISION-001-53`..`-64`. A NEW
+  module (`AI-E8-6` / AC8.5): the three candidate host files measured **1199**, **1198** and
+  **1194** of 1200 lines, and shaving a load-bearing guard file to fit is the move this project
+  files as a defect. NFR-M1 re-measured on every touched file; all are under the ceiling.
+- **Three guards were RE-DERIVED rather than deleted or trivially satisfied**
+  (`TC-ArgusAgent-PRECISION-001-39`, `-47`, `-52`). Story 13.2 encoded *"nothing is adjudicated
+  yet"* as a permanent invariant when it was a transient state, so all three went red on the event
+  they existed to wait for. Each now asserts the property it was actually protecting — attribution
+  to a §2-registered role, exhaustiveness agreeing with the disposition vocabulary, and the refusal
+  to report a ratio over an incompletely adjudicated corpus even when the caller claims
+  `protocol_cleared=True` — derived from the record rather than pinned, and each is still able to
+  fail. `-52` fails loudly with a re-derivation instruction if its subject ever vanishes.
