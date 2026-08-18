@@ -4410,6 +4410,25 @@ one is NOT delivered and its story record was wrong.**
   reconstruction is exactly the member whose ladder has not terminated. **Not worked around:**
   re-pinning the member to `d9bb793` would silently redefine the corpus the adjudication was
   performed over, which is the corpus change 13.3 / AC5 forbids.
+
+  > ✅ **CORRECTED 2026-08-17 by [sprint-change-proposal-2026-08-17.md](sprint-change-proposal-2026-08-17.md)
+  > — THE PINNED SHA IS REACHABLE. The premise above is false, and it is corrected on evidence rather
+  > than argued.** The depth-4 scan that filed this entry stopped one level short: the repository is on
+  > this machine at `D:/ProjectX/XAgents/XAgents/XAgents/Agent-Smith` — note the tripled `XAgents`
+  > segment — which sits at depth **five**. Verified by execution:
+  > `git -C D:/ProjectX/XAgents/XAgents/XAgents/Agent-Smith cat-file -t 9ab774d7bf5d61da552c61094b2d478f72dfbb6d`
+  > returns `commit`; the sha is that checkout's `HEAD`; and `git remote -v` resolves `origin` to
+  > `https://github.com/Inan15/agent-smith.git` — the exact remote this entry names. **What this
+  > withdraws:** the consequence above. A commit sha is a content identity, so **byte-identity with the
+  > audited source IS establishable** for all 7 `agent-smith` findings, and `reproducibility_verified:
+  > True` **is** re-verifiable for this member. All 7 were re-measured at the true pinned tree on
+  > 2026-08-17 and their evidence is as strong as the `minions` rows, **not weaker**. **What this does
+  > NOT change:** the gate stays `BLOCKED` — it rests on the 5 undispositioned rows, not on this — and
+  > the corpus is **not** re-pinned, because there is nothing to re-pin: the pinned sha was always the
+  > right one and is now readable. The 7 row reasons still say the evidence was read at the `d9bb793`
+  > reconstruction; that remains true of *the adjudication act* and is left as written (§3.4).
+  > **Residual, and the only part still open:** the row reasons point at an `evidence_deviation` header
+  > field the record's closed schema does not have. That half of this entry stands.
   - id: DF-13-3-A
   - origin_story: 13-3-record-the-result-and-let-it-decide
   - owner: **Engineering Lead (XAgent007)** — protocol §2 primary adjudicator and corpus ratifier
@@ -4420,6 +4439,28 @@ one is NOT delivered and its story record was wrong.**
   - severity: 🟠 — it does not move the gate (the gate is `BLOCKED` on exhaustiveness, not on this)
     and nothing false is published, but it is an unrepairable gap in the audit trail of 7 of the 31
     findings the gate will eventually rest on.
+
+- **`DF-14-1-A` — the corrected fact (b) is a NAME-LEVEL proxy, not dataflow provenance.** FILED
+  2026-08-17 by [sprint-change-proposal-2026-08-17.md](sprint-change-proposal-2026-08-17.md), ahead of
+  the story that creates it, so the limit is on the record before the capability ships. Story 14.1
+  replaces `_ast_corroborated`'s fact (b) — measured equivalent to `mock_sites >= 1` in 1,835 of 1,836
+  flagged tests — with a signal derived from the UNRESOLVED 1.4 edge set (`DF-1-4-A`) plus source text:
+  mock-bound names, calls whose receiver is a mock-bound name, whether a candidate SUT call's result is
+  consumed, and whether an assertion references a mock-bound value. **What it therefore CANNOT prove:**
+  that an asserted value *actually* derives from a mock rather than the SUT. It approximates that with
+  binding and consumption shapes, so an aliased, dynamically dispatched, or helper-wrapped SUT call is
+  MISSED (a false negative — the finding stays advisory, which is the safe direction and the moat), and
+  a test whose mock and SUT interleave in an unusual shape may be misread. **Full dataflow / scope-
+  resolved assertion provenance remains Story 6.2's scope**, exactly as the 1.5 module docstring already
+  says; 14.1 delivers the conservative name-level version and does not claim otherwise.
+  - id: DF-14-1-A
+  - origin_story: (filed by correct-course 2026-08-17; created by) 14-1-a-verdict-eligible-vacuous-finding-proves-vacuity-not-mocking
+  - owner: **unassigned** — carried until Story 6.2's scope is scheduled
+  - target_story: **6-2** (full multi-construct AST grounding / dataflow provenance)
+  - category: detector precision (evidence strength)
+  - severity: 🟡 — it is a DISCLOSED limit of a conservative predicate, not a defect. The failure
+    direction is under-claiming corroboration, which leaves a real vacuous test advisory; the lethal
+    direction (a false 🔴) is the one it closes.
 
 - **`DF-13-3-B` — `TC-ArgusAgent-DOCS-001-46` goes VACUOUS the moment `protocol_cleared` is
   derived, which is the correct design.** Reproduced by execution on this tree:
@@ -4542,3 +4583,456 @@ one is NOT delivered and its story record was wrong.**
   to report a ratio over an incompletely adjudicated corpus even when the caller claims
   `protocol_cleared=True` — derived from the record rather than pinned, and each is still able to
   fail. `-52` fails loudly with a re-derivation instruction if its subject ever vanishes.
+
+
+---
+
+## Story 13.4 dispositions — 2026-08-17
+
+**APPEND-ONLY, in the form Story 13.1 used for `DF-13-1-A`.** Story 13.4 split
+`tests/test_evidence_citation.py` along a cohesion boundary, relocating `TC-ArgusAgent-DOCS-001-21`
+and `-22` (with `_STATUS_DOCUMENTS`, `_STATUS_DOCUMENT_PATTERNS`, `_EXCLUDED_BY_DESIGN` and
+`_registered_paths`) into a new module. **No entry above this line was edited**, including the
+`DF-AUD-APAA-C` closure note, the `-20`..`-23` citations and the full pytest node id this change
+relocates — those are records, and a record that is corrected in place stops being one (§3.4).
+This section states the new coordinates so the old ones remain readable as history.
+
+**Relocated node ids** — the left-hand form is what earlier entries in this ledger cite, and it is
+left standing where it appears above:
+
+| Cited as (still readable above) | Now resolves at |
+|---|---|
+| `tests/test_evidence_citation.py::test_TC_ArgusAgent_DOCS_001_21_every_status_claim_cites_an_executed_gate` | `tests/test_status_document_registry.py::test_TC_ArgusAgent_DOCS_001_21_every_status_claim_cites_an_executed_gate` |
+| `tests/test_evidence_citation.py::test_TC_ArgusAgent_DOCS_001_22_the_status_document_set_is_closed` | `tests/test_status_document_registry.py::test_TC_ArgusAgent_DOCS_001_22_the_status_document_set_is_closed` |
+
+`-20`, `-21b`, `-23`, `-24`, `-25` and `-25b` did **not** move. **No test id was renamed,
+renumbered, added or removed** — measured by comparing the `test_TC_ArgusAgent_*` name set at
+`HEAD` against the union of the two modules afterwards: 8 before, 8 after, empty symmetric
+difference. Collected count identical at **1597** before and after.
+
+**Measured after the split:** `tests/test_evidence_citation.py` **1076** lines (headroom 124),
+`tests/test_status_document_registry.py` **259** lines (headroom 941 — that is headroom for far
+more than the two further registrations `AI-E13-2`'s DoD asks for). The retained module measured
+**below** the 1100 threshold at which AC4.6 would have required the *next* cohesion boundary to be
+named here, so that note is deliberately not filed; the Story 12.9 release-surface half
+(`_STATUS_STATEMENT_REQUIRED`, `_STATUS_STATEMENT_NOT_REQUIRED`, `_head_sha`, `-24`, `-25`, `-25b`)
+remains the recorded candidate should it ever be needed.
+
+- **`DF-13-4-A` — `TC-ArgusAgent-DOCS-001-24` and `-25` are each defined TWICE, in two modules, by
+  two stories.** RECORD ONLY — found by measurement during Story 13.4 and deliberately **not fixed
+  there**, because fixing it means renumbering ids and Story 13.4 / AC2 forbids that absolutely.
+  `tests/test_evidence_citation.py` defines `-24` and `-25` (Story 12.9); `tests/test_spec_claim_scope.py`
+  also defines `-24` and `-25` (Story 10.2, whose docstring allocates `-24`..`-27` to itself). Two
+  distinct pytest node ids, one ambiguous verification id. It predates Story 13.4 by three epics and
+  nothing in that story creates or worsens it; the split neither touched nor moved either pair.
+  **Why it matters:** a verification id that resolves to two different assertions cannot be cited
+  unambiguously in a story record, an architecture reference or this ledger — which is the whole
+  purpose of the id.
+  - id: DF-13-4-A
+  - origin_story: 13-4-split-the-status-document-registry
+  - owner: **XAgent007 (Engineering Lead)**
+  - target_story: **the next story that renumbers a DOCS id** — a renumbering is a breaking change
+    to every citation of the id, so it is scheduled deliberately or not at all.
+  - category: verification-index integrity
+  - severity: 🟡 — nothing is unenforced and no assertion is weakened; the defect is in the INDEX,
+    not the coverage. Both node ids run and both pass.
+
+## Deferred from: code review of 13-4-split-the-status-document-registry (2026-08-17)
+
+- **Docstring overclaim in the new registry module.** `tests/test_status_document_registry.py:49-51`
+  states *"so this runs identically on all three CI legs"* — a confidence claim CI has not actually
+  verified, since this same story's own Debug Log records CI evidence as **NOT ESTABLISHED** (all
+  three gates were run Windows-only). The underlying reasoning (pure functions, no
+  network/subprocess/LLM, explicit `encoding="utf-8"` on every read) is sound as a *basis for
+  expectation*, but the sentence is phrased more confidently than the "NOT ESTABLISHED" wording
+  used elsewhere in the same story for the identical caveat. Cosmetic — not a functional or
+  correctness issue; no assertion or guard is affected. Owner: unassigned. No target story — pick up
+  opportunistically alongside the next edit to that module's docstring.
+
+## Correct-course 2026-08-17 — the §2.5 operator decision, filed ahead of Story 13.5
+
+- **`DF-13-5-A` — the path to a CLEARED gate after an `UNEVALUABLE` re-measurement is named, owned,
+  and UNFILED.** FILED 2026-08-17 against
+  [sprint-change-proposal-2026-08-17.md](sprint-change-proposal-2026-08-17.md) §2.5, ahead of the
+  story whose outcome creates it (the `DF-14-1-A` precedent), so the question is on the record before
+  the epic that would otherwise bury it closes. §2.5 records that correcting the detector will
+  probably make the precision gate **`UNEVALUABLE` rather than `CLEARED`** — measured: corroborated
+  findings across the whole `minions` test tree go **24 → 0** under the candidate predicate, and an
+  empty precision denominator is `UNEVALUABLE` by construction (`architecture.md`,
+  *Adjudication-record enforcement*). It names the consequent decision — **is the path to a cleared
+  gate a corpus that contains the defect class, or does the FR34 disclosure stand indefinitely?** —
+  assigns it to the operator, and deliberately does not take it. **The gap is that nothing carries it
+  forward.** It exists as §2.5 prose and one row of that proposal's sign-off table. Epic 14 closes,
+  Story 13.5 records whatever the gate says (including `UNEVALUABLE`), Epic 13 closes on that — and
+  the question then has no remaining hook in `sprint-status.yaml`, in `epics.md`, or in this ledger.
+  **This is the `H0` shape** (`epics.md`, Minions-Repo Handoff: *"a handoff nobody files is a handoff
+  that does not exist"*), which was closed **there** on 2026-08-10b via option (b) — an explicit
+  operator record that filing was their own step, taken outside the workflow. That closure was never
+  applied to §2.5.
+  > **What this entry does NOT do**, stated because the failure mode is adjacent: it does not move the
+  > ≥80% threshold, the corpus membership, or FR34; it does not schedule a clearing attempt; and it
+  > does not endorse assembling a population *because* it would make the number pass. Protocol §5 and
+  > Story 13.3 / AC5 forbid amending any of those in response to a failed measurement, and the 13.1
+  > amendment already rejected *"an externalization gate clearable by a corpus the team authored,
+  > planted, and wrote the answers for."* **This records the question, not an answer.**
+  >
+  > **State of protocol §5's four conditions at filing** (CLEARED iff ALL four hold): `N >= 5`
+  > **MET** — five members ratified 2026-08-16 under Story 13.1 / AC3b; **precision — no §5 outcome
+  > taken**, Story 13.3 returned `BLOCKED` with 26 of 31 rows dispositioned and **5 `BORDERLINE`** on
+  > an unterminated §4 ladder; **clean-repo blocking-FP — NOT APPLICABLE** over the repository corpus,
+  > since no member has an empty golden key AND `max_blocking == 0`; **`protocol_cleared` — never
+  > passed `True` anywhere in the tree** (`argus/precision/replay_harness.py` defaults it `False`).
+  >
+  > **Closing this defer = exactly ONE of:** **(a)** the operator ratifies, under a fresh protocol §6
+  > **R2** act, corpus members that contain the defect class, after which R3 (exhaustive human
+  > adjudication) and R4 (mechanical computation) run to a recorded outcome; or **(b)** it is
+  > explicitly recorded that the FR34 disclosure stands for this phase and attested externalization is
+  > not pursued, with the residual stated — no commercial, enterprise, regulated or operated-service
+  > use. **Silence is not one of them**; silence is how this becomes a decision nobody takes.
+  - id: DF-13-5-A
+  - origin_story: (filed by correct-course 2026-08-17; created by the outcome of)
+    13-5-re-measure-the-gate-against-the-corrected-instrument
+  - owner: **XAgent007 (Engineering Lead)** — protocol §2 primary adjudicator and §6 R2 corpus ratifier
+  - target_story: **NONE — unscheduled with a named owner.** It cannot be re-homed to a story:
+    choosing which repositories are legitimate corpus members, and fetching third-party source, are
+    explicitly operator acts (protocol §6, R2), and a story chartered to *make the gate clear* is the
+    corpus-shopping failure mode itself.
+  - category: validation-gate closure path (strategic, non-build)
+  - severity: 🟠 — nothing false is published and the free release is unaffected (FR34's disclosure is
+    mechanically enforced and holds), but this is the ONLY route to attested externalization, and
+    everything commercial waits behind it (PRD §Success Criteria, *"without exception"*).
+  - **✅ ANSWERED 2026-08-17 by XAgent007 — as a PRE-REGISTERED RULE, not as a verdict.** (Append-only
+    note; the entry above is not rewritten, §3.4.) The decision was taken **before Story 13.5 ran,
+    before Epic 15's bench was chosen, and before any number existed** — which is the entire point.
+    Deciding what to do about a result while looking at that result is when judgement goes soft
+    (*"73% is nearly 80%"*, *"maybe that member shouldn't count"*), and it is the same failure the
+    bench's own pick-before-you-look rule exists to prevent. The discipline is applied one level up:
+    > **PRE-REGISTERED, 2026-08-17.** If Story 13.5 returns `UNEVALUABLE`, we pursue option **(a)**:
+    > **ONE** bench-expansion round of 12–20 independently selected repositories (Epic 15 / Story
+    > 15.1). If that round produces adjudicable findings and precision lands **≥80%**, the gate
+    > clears. If it produces **ZERO** blocking findings, **or** precision lands **below 80%**, we take
+    > option **(b)**: the FR34 disclosure **stands for V1.5**, attested externalization is **not
+    > pursued in this phase**, and the next attempt requires a **materially better detector — NOT a
+    > bigger bench.**
+    >
+    > **ONE round is the load-bearing word.** Without a stopping rule, *"expand the bench"* becomes
+    > *"keep expanding until it passes"*, which is corpus-shopping with extra steps. A pre-committed
+    > single round cannot drift into it.
+    >
+    > **What a zero-finding round MEANS, named in advance so it cannot be re-read later:** not *"we
+    > need 40 repositories"* — it means the detector is too conservative to be a product, and the
+    > answer moves to promoting a more reliably detectable rule to verdict-eligible, or to the
+    > coverage ledger as the product. Neither is scheduled here.
+    **This does NOT close the entry.** The rule is committed; the branch is not yet taken, because
+    13.5 has not run. `DF-13-5-A` closes when 13.5 records its outcome and the pre-registered branch
+    is executed — and it closes by EXECUTION of the rule, never by re-opening it.
+
+## Correct-course 2026-08-17b — the three multi-language gaps Story 14.3 does NOT fix
+
+> **All three were found by EXECUTION**, not by reading: an out-of-tree probe imported the shipped
+> `argus.index.ast_index.build_ast_index` and `argus.detectors.vacuous_test.VacuousTestDetector._score`
+> read-only over six fixture files, one per idiom. The measurements are reproduced in
+> [sprint-change-proposal-2026-08-17b.md](sprint-change-proposal-2026-08-17b.md) §1.3. They are filed
+> as a set because **they are not independently fixable** — see the ⛔ coupling on `DF-14-3-A`.
+
+- **`DF-14-3-A` — the test-function predicate is Python-shaped, so Go and Java tests are NEVER
+  scored.** `argus/detectors/vacuous_test.py:409` is
+  `definition.kind == "function" and definition.name.startswith("test")` — case-**SENSITIVE**.
+  Measured: Go's `TestParseReturnsTokens` misses on the capital `T`; JUnit marks tests by the
+  `@Test` **annotation** and its method names carry no prefix at all (`sumsTwoNumbers` in the
+  fixture). Both files are correctly identified as test FILES by `is_test_file` and both extract
+  their function as a definition — the predicate is the only thing that rejects them.
+  ⛔ **THIS MUST NOT BE FIXED ALONE, and the one-character fix is the trap.** Go tests are silent
+  TODAY BECAUSE OF THIS DEFECT. Lowering the predicate's case-sensitivity while `DF-14-3-B` stands
+  would score every Go test, find `assertion_sites=0` (because B hides the assertions), and FLAG it —
+  converting harmless silence into a **fresh false accusation across an entire language**, in the
+  epic opened to stop false accusations. **A and B move together or not at all.**
+  - id: DF-14-3-A
+  - origin_story: (filed by correct-course 2026-08-17b; NOT created by) 14-3-the-assertion-vocabulary-crosses-the-languages-the-installer-ships
+  - owner: **unassigned** — carried until a multi-language capability decision is scheduled
+  - target_story: **NONE — coupled to `DF-14-3-B`.** Neither may be scheduled without the other.
+  - category: detector coverage (language reach)
+  - severity: 🟡 — the failure direction is SILENCE, not a false accusation. Go and Java users get no
+    vacuity signal at all; nothing false is said about their code. Fixing it wrongly (alone) is the
+    🟠 risk, which is why the coupling is recorded on the entry rather than in someone's memory.
+
+- **`DF-14-3-B` — Go selector-expression calls never reach the edge set, so a Go test's assertions
+  are invisible.** Measured in `argus/index/ast_index.py`: in the fixture `parser_test.go`, `NewParser`
+  and `len` appear as edges while `t.Fatalf` and `t.Errorf` **do not**; in `testify_test.go`, `Compute`
+  appears while `assert.Equal` and `require.NoError` do not. **This is Go-specific extraction, not a
+  general receiver-call limit** — Python's `self.assertEqual` IS captured, and TypeScript's
+  `expect(r).toBe(5)` yields BOTH `expect` and `toBe`. Consequence: even with `DF-14-3-A` and Story
+  14.3's vocabulary both landed, **every Go test would still score `assertion_sites=0`.**
+  - id: DF-14-3-B
+  - origin_story: (filed by correct-course 2026-08-17b) — defect is in `argus/index/ast_index.py`
+  - owner: **unassigned**
+  - target_story: **NONE — coupled to `DF-14-3-A`.**
+  - category: index extraction (grammar vocabulary)
+  - severity: 🟡 — silence, as above. It becomes 🟠 the moment `DF-14-3-A` is fixed without it.
+
+- **`DF-14-3-C` — callback test blocks yield no definitions, so idiomatic JS/TS suites are
+  invisible.** Measured: `describe('add', () => { it('sums', () => { … }) })` extracts **ZERO**
+  definitions, while the same assertions in a plain `function testAddsNumbers() { … }` extract
+  correctly and score. The extractor's definition vocabulary (`_DEF_KIND_BY_NODE`) has no entry for a
+  test declared as an arrow function passed to a call. **Consequence: nearly every real Jest / Mocha /
+  Vitest suite in existence is invisible to the vacuous-test detector.** Note the interaction with
+  Story 14.3: 14.3 repairs the false flag on JS/TS tests that ARE scored, and this entry is why that
+  population is smaller than it looks.
+  - id: DF-14-3-C
+  - origin_story: (filed by correct-course 2026-08-17b) — defect is in `argus/index/ast_index.py`
+  - owner: **unassigned**
+  - target_story: **NONE** — pending a multi-language capability decision
+  - category: index extraction (definition vocabulary)
+  - severity: 🟡 — silence. ⚠️ It also **bounds Epic 15**: a TypeScript bench member written in the
+    `describe`/`it` style contributes far fewer scored tests than its suite size suggests, so Story
+    15.1's size floor must be read against THIS entry rather than against a raw test count.
+
+## Story 14.2 (2026-08-18) — one observation, filed rather than fixed in passing
+
+- **`DF-14-2-A` — `tests/test_vacuous_detector.py` gates on `pytest.importorskip`, which cannot be
+  converted into a failure by `ARGUS_REQUIRE_LANGUAGE_GRAMMARS=1`.** Found while discharging Story
+  14.2 / AC8.5. `tree-sitter` and `tree-sitter-python` were PROMOTED out of the optional
+  `[languages]` extra into the BASE dependencies (`pyproject.toml:60`), so their absence is a broken
+  environment rather than a supported configuration — and `audit-ci.yml:100` sets
+  `ARGUS_REQUIRE_LANGUAGE_GRAMMARS=1` precisely so a missing grammar cannot be answered with a skip.
+  `importorskip` ignores that variable, so if either package ever went missing in CI, roughly forty
+  fact-(b) corroboration guards — including the moat's own `-88` — would report as SKIPPED and the
+  run would read green. **Not a live false green today**: the full suite reports 0 skipped, both
+  packages install by default, and `tests/test_multilanguage_audit.py` already models the
+  env-var-gated pattern for the genuinely optional grammars. Story 14.2's own new module
+  (`tests/test_vacuous_density.py`) uses the named `UNEVALUABLE` failure instead, which is the
+  pattern to copy. Left unfixed here because converting it is a change to the pass/fail behaviour of
+  guards Story 14.2 was told not to disturb, and it belongs with the next planned edit to that file.
+  - id: DF-14-2-A
+  - origin_story: 14-2-the-density-scorer-counts-statements-and-knows-the-assertions
+  - owner: **Story 14.3 dev** — 14.3 adds cases to this same module and to the same frozenset, so it
+    is the next hand that opens the file
+  - target_story: 14-3-the-assertion-vocabulary-crosses-the-languages-the-installer-ships
+  - category: test-harness honesty (false-green vector)
+  - severity: 🟢 — latent. It says nothing false about anyone's code; it could only hide a
+    regression in an environment that does not currently occur.
+
+## Deferred from: code review of story 14-2-the-density-scorer-counts-statements-and-knows-the-assertions (2026-08-18)
+
+- `_ASSIGNMENT_RE` (`argus/detectors/provenance_scan.py:116-120`) is `$`-anchored, contradicting the
+  module's own "Platform neutrality" docstring claim that "no pattern below is anchored with `$`"
+  (`provenance_scan.py:65`). Pre-existing from Story 14.1 (byte-identical at `966ceba`), not touched
+  by Story 14.2. Not practically exploitable today — `_ASSIGNMENT_RE.match(code)` is always invoked
+  on a single `splitlines()`-derived line with no embedded terminator, so `$` behaves like `\Z` in
+  practice — but the docstring's blanket claim is not quite true and should be corrected or the
+  pattern re-anchored the next time that module is opened.
+  - id: DF-14-2-B
+  - origin_story: 14-2-the-density-scorer-counts-statements-and-knows-the-assertions (found in
+    review; the defect itself originates in Story 14.1)
+  - owner: next dev to open `argus/detectors/provenance_scan.py` (naturally Story 14.3's, since it
+    is on that module's blast radius already)
+  - target_story: 14-3-the-assertion-vocabulary-crosses-the-languages-the-installer-ships
+  - category: documentation accuracy / platform-neutrality claim
+  - severity: 🟢 — latent, not exploitable under current call sites.
+
+## Story 14.3 dispositions — 2026-08-18
+
+Appended by Story 14.3 (`14-3-the-assertion-vocabulary-crosses-the-languages-the-installer-ships`)
+on `e2e278c`. **Append-only: nothing above this line was rewritten.** Two inherited entries are
+disposed and three new ones are filed, one of which bounds Epic 15.
+
+### The two entries that named Story 14.3 as their target
+
+- **`DF-14-2-A` — CLOSED 2026-08-18 against evidence.** `tests/test_vacuous_detector.py`'s two
+  `pytest.importorskip` calls are replaced by a named `_grammars_or_unevaluable()` that raises
+  `pytest.fail` with an `UNEVALUABLE:` message naming the missing package and naming the moat guard
+  (`TC-ArgusAgent-DETECT-001-88`) that would otherwise have gone unwatched. It fails COLLECTION,
+  which reads RED, where a skip read green. The same pattern is used by this story's new module.
+  **Evidence:** full suite passes with **0 skipped**, exit 0 — the "no new skip" clause holds and
+  the skip count was already 0, so this removes a latent vector rather than a live false green,
+  exactly as the entry described it.
+  - id: DF-14-2-A
+  - origin_story: 14-2-the-density-scorer-counts-statements-and-knows-the-assertions
+  - owner: **XAgent007 (Engineering Lead)** — discharged by Story 14.3 dev as the entry directed
+  - target_story: 14-3-the-assertion-vocabulary-crosses-the-languages-the-installer-ships
+  - category: test-harness honesty (false-green vector)
+  - status: **CLOSED 2026-08-18** — verified by execution, not by inspection.
+
+- **`DF-14-2-B` — CLOSED 2026-08-18 against evidence.** `_ASSIGNMENT_RE` is re-anchored from
+  `^`/`$` to `\A`/`\Z`, and `argus/detectors/provenance_scan.py`'s platform-neutrality docstring is
+  corrected to say the claim was FALSE when written rather than quietly re-worded.
+  **The equivalence is DEMONSTRATED, not asserted**, as the entry required: both patterns were run
+  over every line of every staged test file of all three pinned members — **218,017 lines, 25,649
+  assignment matches, 0 disagreements** on the match verdict or on either named group — and the
+  flagged set of all three members is byte-identical afterwards (0 gained, 0 lost).
+  ⚠️ **The entry named only ONE offender and there were TWO.** `TC-ArgusAgent-DETECT-001-130`, the
+  new sweep that makes the docstring claim checkable instead of merely written, immediately found
+  `_LEADING_CHAIN_RE` also `^`-anchored. That one is provably behaviour-neutral (`^` without
+  `re.MULTILINE` is exactly `\A`), which is precisely why discharging the entry by reading it would
+  have left it in place. Both are re-anchored.
+  - id: DF-14-2-B
+  - origin_story: 14-2-the-density-scorer-counts-statements-and-knows-the-assertions (defect
+    originates in Story 14.1)
+  - owner: **XAgent007 (Engineering Lead)** — discharged by Story 14.3 dev
+  - target_story: 14-3-the-assertion-vocabulary-crosses-the-languages-the-installer-ships
+  - category: documentation accuracy / platform-neutrality claim
+  - status: **CLOSED 2026-08-18** — plus one offender the entry did not name.
+
+### New — the limitation that BOUNDS EPIC 15
+
+- **`DF-14-3-D` — no non-Python test can reach verdict-eligibility, and it is NOT caused by the
+  split vocabulary.** Story 14.2's review asked whether `DN-14-2-1` (the frozen corroboration
+  vocabulary) had laid a trap for Story 14.3 by making JS/TS permanently advisory. **Measured, and
+  the answer is no.** The *most favourable* JavaScript shape that could exist — Allman braces so the
+  denominator is non-zero, an explicit `Mock()` by its Python name, a discarded SUT call, and a JS
+  assertion referencing the mock — was put through `provenance_evidence` under **both** vocabularies:
+
+  ```
+  ⚠️ AS FILED 2026-08-18 (iteration 1) — the second row's `sut=3` DOES NOT REPRODUCE, and the
+     field it names was never stated. Kept visible rather than erased; corrected below.
+  FROZEN 23 (shipped)                      sut=4  discarded=False  mock_ref_asserts=0  CORROBORATED=False
+  ONE-TABLE hypothetical (full 14.3 vocab) sut=3  discarded=False  mock_ref_asserts=0  CORROBORATED=False
+  ```
+
+  **CORRECTED 2026-08-18 (review iteration 2), and the correction is named to a FIXTURE so it
+  cannot drift again.** `sut=` was never defined; it is `ProvenanceEvidence.consumed_sut_calls`.
+  Re-derived by execution against the fixture `TC-ArgusAgent-DETECT-001-131` **actually
+  pins** — which iteration 2 also had to reshape, because the one it shipped never reached
+  `provenance_evidence` at all (see the disposition note at the end of this entry):
+
+  ```
+  fixture: -131 as re-authored (Allman JS; compute() + four Mock() bindings + expect/toHaveBeenCalled)
+  FROZEN 23 (shipped)                      consumed_sut=3  discarded=False  mock_ref_asserts=0  CORROBORATED=False
+  ONE-TABLE hypothetical (full 14.3 vocab) consumed_sut=1  discarded=False  mock_ref_asserts=0  CORROBORATED=False
+  heuristically_vacuous=True (mock_ratio 4/7 > 1/2), fact (a) holds, so fact (b) IS asked.
+  ```
+
+  For the record, the figures the ITERATION-1 fixture really produced were `consumed_sut=4`
+  (frozen) and `consumed_sut=2` (one-table) — so `sut=4` was right and `sut=3` was wrong by one.
+  The conclusion is unchanged under every fixture measured; only the arithmetic was wrong, and a
+  number nobody can reproduce is how a record stops being evidence.
+
+  Both fact-(b) clauses measure False on JS input **even under a hypothetical one-table design
+  carrying this story's complete vocabulary**. The real barriers are structural and lie elsewhere:
+  `_MOCK_CALLEES` carries **no** non-Python mock constructor (`fn`, `spyOn`, `stub`, `vi`, `sinon`
+  are all absent; only `Mock` overlaps by coincidence of spelling), and fact (b)'s
+  assignment/statement machinery is Python-syntax-shaped. So the split vocabulary is the OUTER of
+  **two independent** barriers, not the cause — `DN-14-2-1` is exonerated, by measurement rather
+  than by argument. Pinned by `TC-ArgusAgent-DETECT-001-131`.
+
+  **⚠️ CONSEQUENCE FOR EPIC 15, which is why this is filed rather than left in a story record:** a
+  TypeScript bench member can contribute **ADVISORY findings only** — never a verdict-eligible one,
+  therefore **never a data point for the ≥80% precision gate**. Story 15.1's member selection and
+  its precision denominator must both be read against this entry. Combined with `DF-14-3-C` (which
+  already bounds how many TS tests are scored at all), a TypeScript member contributes far less
+  gate-relevant evidence than its suite size suggests.
+
+  **Acceptable for Story 14.3's own scope** on the locked asymmetry — *a false 🔴 is the lethal
+  failure; a real vacuous test left advisory is tolerable* — because a blocking rule that cannot
+  fire on JS/TS cannot make a false claim about JS/TS. It is a bound on REACH, never a false
+  accusation. Nothing in the ledger stated this before: the source proposal noted `_MOCK_CALLEES`
+  is Python-only in passing and it was never filed. `DF-14-3-A`, `DF-14-3-B` and `DF-14-3-C` are
+  **cited** here and none of them states this property.
+  - id: DF-14-3-D
+  - origin_story: 14-3-the-assertion-vocabulary-crosses-the-languages-the-installer-ships
+  - owner: **XAgent007 (Engineering Lead)** (`AI-E9-8` — no deferred entry without a named owner)
+  - target_story: **15-1-a-bench-with-the-defect-class-in-it-chosen-before-anyone-looks** — Epic 15
+    must consume this bound when it sizes and selects bench members
+  - category: detector reach / verdict-eligibility (cross-language)
+  - severity: 🟡 — a bound on REACH, not a false accusation. It cannot mis-state anything about
+    anyone's code; it can only make a TypeScript member contribute less gate evidence than expected,
+    which is dangerous exactly once — when Epic 15 counts on it and has not read this.
+  - amended: **2026-08-18 (Story 14.3, review iteration 2)** — figures corrected and named to a
+    fixture; the guard that pins the entry was re-authored because it did not exercise the
+    mechanism it cited. The entry's CONCLUSION is unchanged and was independently reproduced.
+
+### New — filed, not fixed, and deliberately not drifted into
+
+- **`DF-14-3-E` — the `importorskip` false-green vector persists in roughly 24 other test modules.**
+  Found while discharging `DF-14-2-A`, by sweeping for the pattern rather than by trusting that
+  entry's scope. `pytest.importorskip("tree_sitter")` / `("tree_sitter_python")` still gates
+  `tests/test_cartridge_selfaudit.py`, `test_dogfood_plan.py`, `test_dogfood_proof.py`,
+  `test_precision_replay.py`, `test_evidence_bundle.py`, `test_pipeline_signature_demo.py`,
+  `test_secret_containment.py`, `test_critical_eligibility_pipeline.py`,
+  `test_verdict_schema_bump.py` and roughly fifteen more. The reasoning of `DF-14-2-A` applies
+  verbatim to every one: these are BASE dependencies, `audit-ci.yml` sets
+  `ARGUS_REQUIRE_LANGUAGE_GRAMMARS=1` so a missing grammar cannot be answered with a skip, and
+  `importorskip` ignores it. **Not a live false green** — the suite reports 0 skipped and both
+  packages install by default. **Deliberately NOT fixed here:** Story 14.3's scope fence lists those
+  files under "do not touch", and converting them changes the pass/fail behaviour of guards this
+  story was told not to disturb — the same reason `DF-14-2-A` gave for deferring the single case
+  this story has now closed.
+  - id: DF-14-3-E
+  - origin_story: 14-3-the-assertion-vocabulary-crosses-the-languages-the-installer-ships
+  - owner: **XAgent007 (Engineering Lead)** (`AI-E9-8`)
+  - target_story: **NONE** — needs a scope decision; it is a sweep across roughly 24 modules rather
+    than a story-sized edit, and it should land as one deliberate change, not as drive-by fixes
+  - category: test-harness honesty (false-green vector)
+  - severity: 🟢 — latent, identical in kind to `DF-14-2-A`. It could only hide a regression in an
+    environment that does not currently occur.
+
+- **`DF-14-3-F` — Story 14.3's own clone path for `xagents-webapp` is stale.** The story records
+  `D:/ProjectX/XAgents/XAgents-WebApp`; `git -C` there fails **exit 128** (not a repository). The
+  real clone is `D:/ProjectX/XAgents/XAgents/XAgents-WebApp`, one level deeper — the same extra
+  nesting the ledger already records for `agent-smith`. **The pinned sha is reachable and
+  unchanged** (`git cat-file -t 33a86525` returns `commit`), so every corpus figure stands and was
+  reproduced exactly: 73 scored, 17 flagged, 410 TypeScript function definitions, 1 matching
+  `_is_test_function`. Recorded because it is the second corpus-member path in this repository to be
+  written one level too shallow, and the next story to build a corpus harness will pay for it a
+  third time.
+  - id: DF-14-3-F
+  - origin_story: 14-3-the-assertion-vocabulary-crosses-the-languages-the-installer-ships
+  - owner: **XAgent007 (Engineering Lead)** (`AI-E9-8`)
+  - target_story: **NONE** — a documentation correction, to fold into the next story that stages the
+    ratified corpus
+  - category: documentation accuracy (corpus harness paths)
+  - severity: 🟢 — cosmetic. It costs one failed command and is self-announcing (exit 128).
+
+### New — filed by Story 14.3's REVIEW ITERATION 2
+
+- **`DF-14-3-G` — nothing forces a FUTURE name through `DN-14-3-5`'s collision rule.** Story 14.3's
+  review found that `DN-14-3-2`'s collision test had been applied to `match`/`doesNotMatch` and to
+  none of the thirty-six names shipped beside them; six of those were ordinary non-assertion
+  identifiers in the other language. Iteration 2 answered it with `DN-14-3-5` — admit a name when
+  its measured Python collision is materially below its measured JS/TS benefit — dropped `Error`
+  (164 measured Python call sites against a benefit of zero) and pinned the outcome with
+  `TC-ArgusAgent-DETECT-001-133`. **What is NOT closed is the general case.** `-133` enumerates
+  today's decided names; it cannot see the thirty-seventh name a later story adds, and the rule
+  lives in a comment block plus a test rather than in an executable predicate. The measurement
+  itself is a scratch harness (stdlib `ast` over 4,046 Python files: three pinned corpus members,
+  Argus, this environment's `site-packages`, the CPython 3.11 standard library) which is **not
+  tracked and not part of the suite** — so re-deriving the table for a new name means rebuilding
+  it. The honest shape of the fix is a small tracked tool plus a guard that fails on any name in
+  `_ASSERTION_CALLEES` that has no recorded decision, which is a story, not a fix-round edit.
+  Related in kind to `DF-14-3-E`: a principle stated in prose that nothing mechanises.
+  - id: DF-14-3-G
+  - origin_story: 14-3-the-assertion-vocabulary-crosses-the-languages-the-installer-ships
+    (raised by review iteration 1)
+  - owner: **XAgent007 (Engineering Lead)** (`AI-E9-8`)
+  - target_story: **NONE** — needs a scope decision; it is a tool plus a population guard, and it
+    should land deliberately rather than as a drive-by
+  - category: detector vocabulary governance / unmechanised principle
+  - severity: 🟡 — the error direction is flag-REDUCING and cannot reach a verdict
+    (`_CORROBORATION_ASSERTION_CALLEES` is byte-unchanged at 23, so no 🔴 is possible from this
+    table), but silent recall loss on Python is exactly the failure that took two review
+    iterations to see once, and the next name added will be added by someone who did not read this.
+
+- **`DF-14-3-H` — `tests/test_vacuous_detector.py` ends Epic 14 with 39 lines of headroom.**
+  Measured 2026-08-18 with the ceiling guard's own method: **1,161 of NFR-M1's 1,200**. It is the
+  tightest tracked module in the repository, it is where roughly thirty-five of this detector's
+  guards live (`-87`, `-88`, `-89`..`-93`, `-101`..`-112`), and Story 13.5 and Epic 15 both land on
+  this detector next. `tests/test_vacuous_cross_language.py`, the cohesion module Story 14.3
+  opened precisely so cases would stop going into it, is itself now at **1,027** after iteration 2.
+  **The judgement, stated rather than left implicit: 39 lines is NOT an acceptable steady state to
+  hand an epic off in.** It is nonetheless deliberately NOT split inside a review fix round —
+  splitting a module that holds the moat's own false-accusation guard is a change with its own
+  regression surface and its own risk of silently dropping a case (`AI-E3-1`), and it must not be
+  done in the same pass as two High findings under a three-round budget. Iteration 2 added **zero**
+  lines to that file. ⛔ The next story that needs a case there must split FIRST — by cohesion, on
+  the `provenance_scan.py` / `test_vacuous_density.py` precedent, with no function split across the
+  boundary — and **must not** add a size exemption: the registry may only shrink (`-04`), and
+  narrowing a population until it goes green is a defect this repository has named.
+  - id: DF-14-3-H
+  - origin_story: 14-3-the-assertion-vocabulary-crosses-the-languages-the-installer-ships
+  - owner: **XAgent007 (Engineering Lead)** (`AI-E9-8`)
+  - target_story: **13-5** — the next story on this detector; the split is its precondition, not
+    its afterthought
+  - category: maintainability / NFR-M1 headroom
+  - severity: 🟡 — not a breach and the ceiling guard is green today, so nothing is failing. It
+    becomes a forced choice the moment the next case is written, and the tempting answer at that
+    moment is the exemption this entry forbids.
