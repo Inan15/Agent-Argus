@@ -557,7 +557,25 @@ def test_the_frozen_corroboration_vocabulary_is_pinned_and_separate() -> None:
        frozen half gains nothing;
     3. neither is derived from the other at runtime, which is checked the only way it can be
        from outside: the names Story 14.2 added are absent from the frozen table, and the
-       ones Story 14.3 will add (cross-language) are absent from BOTH today (AC7.3).
+       cross-language names Story 14.3 added are in the WIDENED table and in NEITHER the
+       frozen one.
+
+    ⚠️ **RE-AUTHORED 2026-08-18 (Story 14.3), and it is an INTENDED BEHAVIOUR CHANGE — the
+    ``-86`` treatment Story 14.1 established, not a nudge to match new output.** Arm 3 was
+    written by Story 14.2 as ``assert not (cross_language & _ASSERTION_CALLEES)``: a
+    deliberate, dated assertion that *"Story 14.3 has not happened yet"*, whose stated purpose
+    was to go RED on the day it did, so that widening the density table could not be done
+    absent-mindedly. **Story 14.3 is that day, and this guard going red is the guard
+    WORKING.** The assertion is therefore INVERTED rather than deleted or weakened: the same
+    twelve names, the same table, the opposite expectation — the density half must now
+    recognise every one of them, and the frozen half must still recognise none.
+
+    The direction matters as much as the fact. Inverting it keeps a live claim on both tables
+    from a single literal, so a later story that "tidies" the two vocabularies together, or
+    that reverts the cross-language vocabulary, still trips exactly this case. Deleting the
+    arm — the tempting move, since it had "served its purpose" — would have left the moat
+    unwatched from this direction and is the ``AI-E3-1`` shape. The other three arms are
+    UNCHANGED and still assert.
     """
     assert len(_CORROBORATION_ASSERTION_CALLEES) == 23, (
         f"the FROZEN fact-(a)/(b) vocabulary now holds "
@@ -577,13 +595,22 @@ def test_the_frozen_corroboration_vocabulary_is_pinned_and_separate() -> None:
     )
     assert not (widened_only & _CORROBORATION_ASSERTION_CALLEES)
 
-    # AC7.3 — this story adds NO cross-language vocabulary. That is Story 14.3's, measured
-    # against its own corpus members, and pre-empting it here would spend its evidence.
+    # Story 14.3 / AC5.2 — the INVERSION. This literal is byte-for-byte the set Story 14.2
+    # asserted was ABSENT; only the expectation moved, and it moved because the work happened.
     cross_language = {"expect", "toBe", "toEqual", "toThrow", "deepStrictEqual", "assertEquals",
                       "assertThat", "Fatal", "Fatalf", "Errorf", "NoError", "ok"}
-    assert not (cross_language & _ASSERTION_CALLEES), (
-        f"cross-language assertion names reached Story 14.2's table: "
-        f"{sorted(cross_language & _ASSERTION_CALLEES)}. That vocabulary is Story 14.3's."
+    assert cross_language <= _ASSERTION_CALLEES, (
+        f"the cross-language assertion vocabulary Story 14.3 shipped has been REMOVED from the "
+        f"density table: {sorted(cross_language - _ASSERTION_CALLEES)}. Every one of these is a "
+        f"real assertion in a language the default install parses, and a test whose only "
+        f"assertion is one of them scores `assertion_sites=0`, falls below the 1/4 floor and is "
+        f"FALSELY FLAGGED — the exact accusation Epic 14 exists to close, reproduced RED in "
+        f"tests/test_vacuous_cross_language.py before it was closed."
+    )
+    assert not (cross_language & _CORROBORATION_ASSERTION_CALLEES), (
+        f"cross-language names reached the FROZEN table: "
+        f"{sorted(cross_language & _CORROBORATION_ASSERTION_CALLEES)}. Story 14.3 widens the "
+        f"DENSITY numerator only; the moat stays at Story 14.1's 23 names (DN-14-2-1)."
     )
 
     # AC7.1 — FLAT and language-agnostic. No language field, sub-table or grouping key enters

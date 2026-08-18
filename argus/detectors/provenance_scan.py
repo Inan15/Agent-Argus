@@ -62,9 +62,19 @@ Platform neutrality is a property of the inputs, not a hope
 ------------------------------------------------------------
 Every function takes the ``source.splitlines()`` list the detector already receives, so no
 line terminator is ever observed: ``"a\\r\\nb".splitlines()`` and ``"a\\nb".splitlines()``
-are the same list. No pattern below is anchored with ``$`` or relies on ``\\s`` spanning a
-terminator, and every identifier pattern is Unicode-aware by construction. Local gates run
+are the same list. No pattern below is anchored with ``^`` or ``$`` — every one uses ``\\A``
+and ``\\Z``, which cannot be satisfied by a line terminator — none relies on ``\\s`` spanning
+a terminator, and every identifier pattern is Unicode-aware by construction. Local gates run
 on Windows and CI runs an ubuntu matrix; this module has to score both identically.
+
+⚠️ **That sentence was FALSE when it was first written, and it is corrected here rather than
+quietly re-worded.** ``_ASSIGNMENT_RE`` was ``^``/``$``-anchored from the day the claim was
+made (``DF-14-2-B``, filed by Story 14.2 against its own module and discharged by Story
+14.3). It was never exploitable — every call site passes a ``splitlines()``-derived line —
+but an unexploitable false claim in a docstring is still a false claim, and this module's
+whole contract is that platform neutrality is a property of the inputs rather than a hope.
+``tests/test_vacuous_cross_language.py`` now enforces the claim by SWEEPING the module's own
+source for ``^``/``$`` anchors, so it cannot silently become false a second time.
 """
 
 from __future__ import annotations
@@ -113,15 +123,34 @@ _IDENT = r"[^\W\d]\w*"
 #: ``name = ...`` / ``a, b = ...`` / ``name: T = ...``. The negative lookahead is what
 #: keeps ``==`` out; ``!=``/``+=``/``<=`` cannot reach the ``=`` at all because the
 #: target group admits only identifiers and dots.
+#:
+#: ⚠️ RE-ANCHORED ``\A``/``\Z`` 2026-08-18 (Story 14.3, ``DF-14-2-B``). It was ``^``/``$``,
+#: which contradicted this module's own platform-neutrality claim above — a claim that was
+#: not true as written. ``$`` also matches immediately BEFORE a trailing ``\n``, so on an
+#: input that ever carried its terminator the ``value`` group would silently differ between
+#: a CRLF and an LF source. Not exploitable at any current call site (every one of them
+#: passes a ``splitlines()``-derived line, which cannot carry a terminator), and the
+#: **equivalence was DEMONSTRATED rather than asserted**: both patterns were run over every
+#: line of every staged test file of all three pinned corpus members — **218,017 lines, of
+#: which 25,649 matched as assignments — with 0 disagreements** on the match/no-match verdict
+#: and on both named groups, and the flagged set of all three members byte-identical
+#: afterwards. The anchors are now correct by construction rather than by the call sites'
+#: continued good behaviour.
 _ASSIGNMENT_RE = re.compile(
-    rf"^\s*(?P<targets>{_IDENT}(?:\s*\.\s*{_IDENT})*"
+    rf"\A\s*(?P<targets>{_IDENT}(?:\s*\.\s*{_IDENT})*"
     rf"(?:\s*,\s*{_IDENT}(?:\s*\.\s*{_IDENT})*)*)"
-    rf"\s*(?::[^=]*?)?=(?!=)\s*(?P<value>.+)$"
+    rf"\s*(?::[^=]*?)?=(?!=)\s*(?P<value>.+)\Z"
 )
 
 #: The leading attribute chain of an expression: ``fake.calculate(…)`` → ``fake``,
 #: ``calculate``.
-_LEADING_CHAIN_RE = re.compile(rf"^({_IDENT})((?:\s*\.\s*{_IDENT})*)")
+#: ⚠️ Also re-anchored ``\A`` 2026-08-18 (Story 14.3). ``DF-14-2-B`` named only
+#: ``_ASSIGNMENT_RE``; this SECOND ``^`` was found by the sweep ``-130`` now runs over this
+#: module, not by reading the ledger entry. ``^`` without ``re.MULTILINE`` is exactly ``\A``,
+#: so the behaviour delta is provably nil — but the docstring's claim is about the ANCHORS,
+#: and one that is true only because a flag happens not to be set is the kind of claim this
+#: module exists to stop making.
+_LEADING_CHAIN_RE = re.compile(rf"\A({_IDENT})((?:\s*\.\s*{_IDENT})*)")
 
 #: ``with cm() as name`` / ``… as a, … as b``.
 _AS_BINDING_RE = re.compile(rf"\bas\s+({_IDENT})")

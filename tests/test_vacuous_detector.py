@@ -7,13 +7,17 @@ is NOT flagged; a clean/non-test file is NOT flagged), and honest degradation
 (un-parseable / no-test-functions → recorded, no flag, no crash).
 
 The pure-logic cases construct an ``AstIndexEntry`` directly; the integration
-cases build it from a real tiny fixture via ``build_ast_index`` and so
-``importorskip`` tree-sitter (mirrors the 1.4 strategy). The pure heuristic logic
-over given counts stays UNCONDITIONALLY tested.
+cases build it from a real tiny fixture via ``build_ast_index``, which needs the
+tree-sitter Python grammar. That requirement is now a NAMED ``UNEVALUABLE`` failure
+(:func:`_grammars_or_unevaluable`) and no longer an ``importorskip``, because a skip
+here read as green over forty guards including the moat's own — ``DF-14-2-A``,
+discharged by Story 14.3. The pure heuristic logic over given counts stays
+UNCONDITIONALLY tested.
 """
 
 from __future__ import annotations
 
+import importlib.util
 from fractions import Fraction
 from pathlib import Path
 
@@ -833,8 +837,37 @@ def test_non_ascii_identifiers_bind_and_corroborate() -> None:
 
 # ── Integration cases over the real 1.4 AST substrate (tree-sitter) ──
 
-pytest.importorskip("tree_sitter")
-pytest.importorskip("tree_sitter_python")
+
+def _grammars_or_unevaluable() -> None:
+    """Assert the Python grammar is present as a NAMED outcome, never a skip (`DF-14-2-B`'s twin).
+
+    ⛔ These two lines were ``pytest.importorskip``, and that was a FALSE GREEN
+    (``DF-14-2-A``, filed by Story 14.2 against this module, discharged by Story 14.3).
+    ``audit-ci.yml`` sets ``ARGUS_REQUIRE_LANGUAGE_GRAMMARS=1`` so a missing grammar cannot be
+    answered with a skip — and ``importorskip`` **ignores that variable**. Had either package
+    gone missing in CI, roughly forty fact-(b) guards **including the moat's own ``-88``
+    false-accusation guard** would have reported SKIPPED and the run would have read green.
+
+    These are **BASE** dependencies (``pyproject.toml`` promoted them out of the optional
+    ``[languages]`` extra), so "absent" is a broken environment, not a supported one. Raised
+    at import time on purpose: it fails COLLECTION, which reads RED where a skip reads green.
+    """
+    missing = [
+        name
+        for name in ("tree_sitter", "tree_sitter_python")
+        if importlib.util.find_spec(name) is None
+    ]
+    if missing:
+        pytest.fail(
+            f"UNEVALUABLE: {', '.join(missing)} is not importable, so none of the "
+            "integration cases below — including the false-accusation moat guard "
+            "TC-ArgusAgent-DETECT-001-88 — measured anything. These are BASE dependencies, "
+            "not the optional `[languages]` extra. Reported as a FAILURE and never a skip "
+            "(Story 14.3 / AC7.6): a skip here would read as green."
+        )
+
+
+_grammars_or_unevaluable()
 
 from argus.index.ast_index import build_ast_index  # noqa: E402
 

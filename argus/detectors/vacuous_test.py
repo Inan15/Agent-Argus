@@ -228,8 +228,39 @@ MOCK_RATIO_CEILING = Fraction(1, 2)
 # rather than by an entry smuggled in here (AC7.2).
 #
 # Story 14.2 widened this from 23 names, all ``unittest``, after measuring that an assertion
-# the table could not see is present in 13 of the 31 adjudicated spans. Story 14.3 owns the
-# cross-language half (``expect``/``toBe``/``assertEquals``/``Fatalf``); NONE of it is here.
+# the table could not see is present in 13 of the 31 adjudicated spans. Story 14.3 then added
+# the cross-language half, and the reason it is HERE and nowhere else is DN-14-2-1: this table
+# answers the density question, and the corroboration table below does not track it.
+#
+# ── STORY 14.3, THE CROSS-LANGUAGE HALF: what it closed, and what it did NOT ───────────────
+#
+# THE FALSE ACCUSATION, reproduced through the real tree-sitter index and the real scorer
+# before it was closed (14.3 / AC1, ``tests/test_vacuous_cross_language.py``)::
+#
+#     function testAllman()          // brace on its OWN line
+#     {
+#         const r = add(2, 3);
+#         expect(r).toBe(5);         // a REAL assertion, in the edge set the whole time
+#     }
+#
+#     53-name table : asserts=0 stmts=1 density=0 FLAGGED  <- a real test, falsely accused
+#     widened table : asserts=2 stmts=1 density=2 clean    <- and its assertion-free twin
+#                                                             STAYS flagged (the control)
+#
+# ⚠️ **BRACE STYLE IS THE VARIABLE, and it is why the story's original fixture proves
+# nothing.** With the brace on the ``function`` line (K&R), 14.2's logical-statement scanner
+# reads the header as one unclosed continued statement, the body counts **0**, and
+# ``heuristically_vacuous`` requires ``> 0`` — so that shape is unflagged for a reason that
+# has nothing to do with this table. The ALLMAN shape is where the accusation actually lived.
+#
+# ⛔ **MEASURED INCIDENCE ON THE RATIFIED CORPUS: ZERO, and that is recorded rather than
+# smoothed.** Over all three pinned members this widening moves 0 flags gained and 0 lost:
+# agent-smith scores **0** TypeScript test functions out of 169 extracted and xagents-webapp
+# exactly **1** of 410, because ``_is_test_function``'s case-sensitive ``startswith("test")``
+# and the invisibility of ``describe``/``it`` callback bodies keep essentially every real
+# TypeScript test out of the scorer (``DF-14-3-A`` / ``DF-14-3-C``, cited and NOT fixed here).
+# The justification for this table is therefore the MECHANISM and the FIXTURE, never a corpus
+# benefit — and the same measurement is what makes it zero-risk.
 _ASSERTION_CALLEES: frozenset[str] = frozenset(
     {
         # ── unittest.TestCase, the original 23 ──
@@ -297,6 +328,87 @@ _ASSERTION_CALLEES: frozenset[str] = frozenset(
         "assert_any_await",
         "assert_has_awaits",
         "assert_not_awaited",
+        # ══ Story 14.3 — the cross-language vocabulary ══════════════════════════════════
+        # Counts below are MEASURED call-edge frequencies over the TS/JS test files of the
+        # two ratified TypeScript members at their pinned shas (agent-smith @ 9ab774d7,
+        # xagents-webapp @ 33a86525), not tastes. Names with no count are named by
+        # `epics.md`'s minimum or complete a family whose other members ARE measured; each
+        # says which. The groupings are COMMENTS — see the flat/language-agnostic contract
+        # above (NFR-P2 / AC2.5).
+        #
+        # ── JavaScript / TypeScript: Jest + Vitest matchers ──
+        "expect",  # measured 6876 — the dominant idiom of xagents-webapp
+        "toBe",  # measured 2560
+        "toHaveBeenCalledWith",  # measured 696
+        "toHaveBeenCalled",  # measured 569
+        "toEqual",  # measured 344
+        "toHaveBeenCalledTimes",  # measured 306
+        "toBeVisible",  # measured 298 — Playwright's async matcher, an assertion
+        "toContain",  # measured 278
+        "toThrow",  # measured 277
+        "toMatchObject",  # measured 226
+        # …completing the two families above. `epics.md` names `toEqual`/`toThrow`; these
+        # are their documented siblings in the same matcher API, added so the table does not
+        # recognise half of one family (Jest `expect` API reference).
+        "toStrictEqual",
+        "toHaveBeenLastCalledWith",
+        "toHaveBeenNthCalledWith",
+        # ── JavaScript / TypeScript: the `node:assert` core ──
+        # agent-smith's whole harness. `deepStrictEqual` is `epics.md`'s; the rest are the
+        # documented members of the same module, and the top three are measured.
+        "equal",  # measured 1548
+        "ok",  # measured 758
+        "deepEqual",  # measured 506
+        "notEqual",  # measured 50
+        "strictEqual",
+        "notStrictEqual",
+        "deepStrictEqual",
+        "notDeepEqual",
+        "notDeepStrictEqual",
+        "throws",
+        "rejects",
+        "doesNotThrow",
+        "doesNotReject",
+        "ifError",
+        "assert",  # `node:assert`'s callable default export
+        #
+        # ⛔ `match` (469) and `doesNotMatch` (76) are DELIBERATELY EXCLUDED despite being
+        # measured, and this is a DECISION rather than an omission (14.3 / DN-14-3-2).
+        # `re.match` in Python and `String.prototype.match` in JavaScript are pervasive
+        # NON-assertions. The error direction is flag-REDUCING, so they could not accuse
+        # anyone falsely — but they would silently suppress REAL flags on Python code, which
+        # is a recall regression wearing a precision fix's clothes. The accepted-collision
+        # argument that carries `expect` does not carry these: `expect` has no common
+        # non-assertion meaning and `match` has one in BOTH languages that matter.
+        #
+        # ⛔ `objectContaining` (376) is likewise excluded: it builds an ARGUMENT to a
+        # matcher (`expect(x).toEqual(expect.objectContaining({…}))`), so it is never itself
+        # the assertion, and admitting it would count one assertion twice.
+        #
+        # ── Java / JUnit ──
+        # ⚠️ ZERO BEHAVIOUR DELTA, and it is stated as zero rather than claimed as a fix:
+        # both already match `_ASSERTION_NAMING_CONVENTION` below and were therefore already
+        # admitted by `is_assertion_callee`. They are enumerated for the same reason 14.2
+        # enumerated the `unittest.mock` methods that also match it — the convention is a
+        # fallback for names this project cannot know, and an ecosystem's own vocabulary
+        # should be readable in one place. (`assertTrue` and `fail`, the other two names in
+        # `epics.md`'s Java minimum, were ALREADY here and are not added twice.)
+        "assertEquals",
+        "assertThat",
+        # ── Go: `testing.T` + `testify` ──
+        # ⚠️ MEASURABLY INERT TODAY, and recorded as inert so no future reader believes Go
+        # was made to work here (14.3 / DN-14-3-3): NO Go test is scored at all, because
+        # `_is_test_function` requires a lowercase `test` prefix (`func TestX` fails it) and
+        # Go selector-expression calls never reach the edge set — `DF-14-3-A` / `DF-14-3-B`,
+        # which are COUPLED and must move together or not at all. They ship because
+        # `epics.md` names them, they cost nothing, and having them present removes one
+        # reason to re-open this table on the day A and B do move.
+        "Fatal",
+        "Fatalf",
+        "Error",
+        "Errorf",
+        "NoError",
+        "Equal",
     }
 )
 
