@@ -403,14 +403,86 @@ _ASSERTION_CALLEES: frozenset[str] = frozenset(
         # which are COUPLED and must move together or not at all. They ship because
         # `epics.md` names them, they cost nothing, and having them present removes one
         # reason to re-open this table on the day A and B do move.
+        #
+        # ⛔ `Error` IS NOT HERE, and its absence is the one asymmetry inside this family.
+        # It is a DECISION under DN-14-3-5 below, not an oversight, and it must not be
+        # "tidied" back in for symmetry. `TC-ArgusAgent-DETECT-001-133` holds it out.
         "Fatal",
         "Fatalf",
-        "Error",
         "Errorf",
         "NoError",
         "Equal",
     }
 )
+
+# ── DN-14-3-5 — THE COLLISION RULE, stated once and applied to EVERY name ─────────────────
+#
+# ⚠️ FILED BY REVIEW ITERATION 1 OF STORY 14.3, WHICH FOUND THE REAL DEFECT: DN-14-3-2's
+# collision test was applied to `match`/`doesNotMatch` and to nothing else. Six of the names
+# above were shipped without it — `ok`, `equal`, `Error`, `Equal`, `throws`, `rejects` — and
+# an exclusion principle applied to one name and not to its neighbours is not a principle.
+# This block is that principle, MADE EXPLICIT AND MADE UNIFORM.
+#
+# THE RULE. A name is admitted when its MEASURED non-assertion collision as a Python callee
+# is materially smaller than its MEASURED assertion benefit as a JS/TS call edge; it is
+# excluded when the collision is comparable to or greater than the benefit.
+#
+# WHY THAT RULE AND NOT "EXCLUDE ANYTHING THAT COULD COLLIDE". Every error here is
+# flag-REDUCING — a colliding name raises `assertion_sites`, and the floor fires from below —
+# so nothing in this table can manufacture a false 🔴 (the corroboration path reads the FROZEN
+# table by name, DN-14-2-1). Both failure directions are therefore ADVISORY-level, and the
+# project's locked asymmetry does not settle it. What settles it is magnitude, because the
+# realized populations are wildly unequal: of the 4,746 test functions scored across the three
+# ratified corpus members, 4,745 are PYTHON and 1 is TypeScript (§0.4). A Python collision is
+# paid against the whole corpus; a JS/TS benefit is, today, prospective.
+#
+# THE MEASUREMENT. Python collisions are call sites counted with the STDLIB `ast` module —
+# deliberately NOT with Argus's own index, because deriving a collision argument from the
+# thing under test would be circular — over 4,046 independent Python files: the three pinned
+# corpus members, Argus itself, this environment's `site-packages`, and the CPython 3.11
+# standard library. JS/TS benefits are call edges emitted by the SHIPPED index over the staged
+# test files of the two ratified TypeScript members at their pinned shas.
+#
+#     name        py collisions   js/ts benefit   benefit/cost   decision
+#     ---------   -------------   -------------   ------------   -------------------------
+#     match                 706             476   0.7x           ⛔ EXCLUDED (was DN-14-3-2)
+#     Error                 164               0   0x             ⛔ EXCLUDED (new, iter. 1)
+#     equal                  34           1,548   45x            ✅ admitted, cost recorded
+#     expect                 29           6,876   237x           ✅ admitted (was AC2.6)
+#     ok                     10             764   76x            ✅ admitted, cost recorded
+#     throws                  0              19   —              ✅ admitted, no collision
+#     rejects                 0               1   —              ✅ admitted, no collision
+#     Equal                   0               0   —              ✅ admitted, inert (DN-14-3-3)
+#
+# ⛔ THE RULE REPRODUCES THE TWO DECISIONS THAT WERE ALREADY RATIFIED, which is the only
+# reason to trust it: `match` is excluded and `expect` is admitted by the SAME arithmetic that
+# decides the six, so it is not a rationalisation fitted to a conclusion.
+#
+# ⚠️ AND IT DISAGREES WITH THE PROJECT ON EXACTLY ONE NAME, WHICH IS RECORDED RATHER THAN
+# HIDDEN. `doesNotMatch` measures 0 Python collisions against 76 JS/TS edges, so the rule
+# would ADMIT it; Story 14.3's AC2.3 excludes it by name and permits its inclusion only with a
+# measured argument. The project standard wins and it stays out — it is `match`'s negation and
+# would be read as `match` being half-admitted — and the tradeoff is written here so the next
+# reader sees a conflict resolved rather than a rule quietly bent.
+#
+# `Error` IS DROPPED, and it is the clearest case in the table: 164 measured Python call sites
+# — CPython's own `wave`/`aifc`/`sunau` each define `class Error(Exception)` and call it, and
+# mypy's `stubtest` yields `Error(...)` records — against a benefit measured at exactly ZERO.
+# Its intended source is Go's `t.Error`, which is unreachable by TWO independent barriers
+# (`DF-14-3-A` never scores a Go test; `DF-14-3-B` never emits a selector-expression call), and
+# in JS/TS `throw new Error(...)` is the standard NON-assertion idiom. It costs the most of any
+# candidate and buys nothing.
+#
+# `ok` AND `equal` ARE KEPT WITH THEIR COST RECORDED AND MADE EXECUTABLE (AC2.6). The cost is
+# real and is not hand-waved: `env.ok(...)` is a result constructor in agent-smith's production
+# surface (9 sites) and `jsonschema._utils.equal(a, b)` is a BOOLEAN-RETURNING comparison
+# predicate (33 sites) — and a Python test whose body is `equal(compute(x), 5)` with no
+# `assert` is exactly the vacuous shape this detector exists to flag, so admitting the name
+# un-flags it. It is accepted anyway because they carry `node:assert`, the ENTIRE harness of a
+# ratified corpus member (2,312 measured edges), and dropping them would knowingly re-open the
+# false accusation this story exists to close for that member's dominant idiom. ⛔ Recording it
+# in prose was the previous round's mistake: `-133` asserts the cost BY EXECUTION, so removing
+# `ok`/`equal` later cannot happen silently and re-adding `Error` cannot happen at all.
 
 #: The PROJECT-HELPER naming convention (Story 14.2 / DN-14-2-3, AC7.2). A separate, named,
 #: documented PREDICATE rather than entries hidden in the frozenset, so Story 14.3 adds names
