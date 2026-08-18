@@ -59,9 +59,11 @@ __all__ = [
     "PinnedFile",
     "PinnedSnapshotError",
     "PinnedTree",
+    "PorcelainEntry",
     "blob_sha1",
     "dirty_in_scope_paths",
     "materialize_pinned_bytes",
+    "parse_porcelain_z",
     "pin_is_reachable",
     "pinned_tree",
     "verify_pinned_bytes",
@@ -353,6 +355,79 @@ def verify_pinned_bytes(root: Path, tree: PinnedTree) -> PinVerification:
     )
 
 
+#: Porcelain-v1 status letters whose entry is followed by a SECOND, BARE record carrying the
+#: ORIGIN path. ``R`` (rename) is emitted by default; ``C`` (copy) wherever a checkout sets
+#: ``status.renames=copies``. Both are ordinary configurations of an ordinary repository, and
+#: both break any parser that assumes every record starts with ``XY ``.
+_ORIGIN_FOLLOWS = frozenset({"C", "R"})
+
+
+@dataclass(frozen=True)
+class PorcelainEntry:
+    """One ``git status --porcelain -z`` entry: its ``XY`` status and the path(s) it names."""
+
+    status: str
+    path: str
+    origin_path: str | None = None
+
+    @property
+    def paths(self) -> tuple[str, ...]:
+        """Every path this entry names — two of them for a rename or a copy."""
+        if self.origin_path is None:
+            return (self.path,)
+        return (self.path, self.origin_path)
+
+
+def parse_porcelain_z(stream: str) -> tuple[PorcelainEntry, ...]:
+    """Parse a decoded ``git status --porcelain -z`` *stream*. Pure (AR8): no I/O, no clock.
+
+    **The record boundary is not uniform, and assuming it is corrupts paths.** An ordinary
+    entry is ``XY <path>`` — two status letters, a space, then the path, NUL-terminated. A
+    RENAME or COPY is **two** records: ``XY <new-path>`` and then the origin path **bare,
+    with no ``XY `` prefix at all**. Slicing every record at ``[3:]`` therefore removes the
+    first three characters of every origin path, rendering ``pkg/alpha.py`` as ``/alpha.py``.
+
+    Splitting on NUL is what makes the rest safe: ``-z`` suppresses ``core.quotepath``
+    escaping, so a path containing spaces, quotes or non-ASCII bytes is emitted literally and
+    needs no unquoting — but only because the separator can never occur inside a path.
+
+    A record that is neither a well-formed entry nor an expected origin is a REFUSAL
+    (:class:`PinnedSnapshotError`), never a silent slice: this function's failure mode was a
+    quietly wrong path, and a wrong recorded fact is worse than a loud one.
+    """
+    records = stream.split("\0")
+    entries: list[PorcelainEntry] = []
+    index = 0
+    while index < len(records):
+        record = records[index]
+        index += 1
+        if not record:
+            continue  # the trailing field after the final NUL terminator
+        if len(record) < 4 or record[2] != " ":
+            raise PinnedSnapshotError(
+                f"`git status --porcelain -z` emitted a record this parser cannot read: "
+                f"{record!r}. A porcelain-v1 entry is `XY <path>`; the only record without "
+                f"that prefix is the origin half of a rename or a copy, and this one does "
+                f"not follow an R/C entry."
+            )
+        status, path = record[:2], record[3:]
+        origin: str | None = None
+        if status[0] in _ORIGIN_FOLLOWS or status[1] in _ORIGIN_FOLLOWS:
+            # An EMPTY next field is the truncated case too, not a nameless origin: the
+            # split leaves one empty trailing field after the final NUL, so a stream cut
+            # short after the rename entry lands here rather than at the end of `records`.
+            origin = records[index] if index < len(records) else ""
+            index += 1
+            if not origin:
+                raise PinnedSnapshotError(
+                    f"`git status --porcelain -z` ended after the rename/copy entry "
+                    f"{record!r} without the origin-path record that must follow it. The "
+                    f"stream is truncated, and a partial parse would under-report."
+                )
+        entries.append(PorcelainEntry(status=status, path=path, origin_path=origin))
+    return tuple(entries)
+
+
 def dirty_in_scope_paths(checkout: Path, *, keep: Callable[[str], bool]) -> tuple[str, ...]:
     """In-scope source paths that are dirty in *checkout* — recorded as EVIDENCE, not a gate.
 
@@ -368,11 +443,6 @@ def dirty_in_scope_paths(checkout: Path, *, keep: Callable[[str], bool]) -> tupl
             f"{checkout}: `git status --porcelain` failed "
             f"({done.stderr.decode('utf-8', 'replace').strip()!r})"
         )
-    paths: set[str] = set()
-    for record in done.stdout.decode("utf-8", errors="replace").split("\0"):
-        if len(record) < 4:
-            continue
-        path = record[3:]
-        if keep(path):
-            paths.add(path)
+    entries = parse_porcelain_z(done.stdout.decode("utf-8", errors="replace"))
+    paths = {path for entry in entries for path in entry.paths if keep(path)}
     return tuple(sorted(paths))

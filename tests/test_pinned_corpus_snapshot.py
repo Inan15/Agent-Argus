@@ -43,10 +43,12 @@ if str(_REPO_ROOT / "scripts") not in sys.path:  # pragma: no cover - test boots
 from pinned_corpus_snapshot import (  # noqa: E402
     MAX_ABSOLUTE_PATH_CHARS,
     PinnedBytesRefusal,
+    PinnedSnapshotError,
     PinUnreachable,
     blob_sha1,
     dirty_in_scope_paths,
     materialize_pinned_bytes,
+    parse_porcelain_z,
     pin_is_reachable,
     pinned_tree,
     verify_pinned_bytes,
@@ -368,3 +370,190 @@ def test_TC_ArgusAgent_PRECISION_001_68_the_committed_corpus_read_proof_is_a_mea
                 "its pin, and the bytes were NOT proved against the pin. That is the "
                 "silent-deviation defect, restored."
             )
+
+
+def _repo_with_a_rename(root: Path) -> None:
+    """A REAL repository carrying a REAL rename, plus the awkward names around it.
+
+    ``git status --porcelain -z`` emits a rename as **two** NUL-terminated records: the
+    ``XY <new-path>`` record, and then the ORIGIN path as a record of its own **with no
+    ``XY `` prefix at all**. Nothing but a real rename produces that shape, so it is built
+    here rather than described.
+    """
+    (root / "pkg").mkdir(parents=True)
+    _git(root, "init")
+    _git(root, "config", "core.autocrlf", "false")
+    _git(root, "config", "user.email", "pin@argus.test")
+    _git(root, "config", "user.name", "Pinned Snapshot Fixture")
+    # `status.renames=copies` is what makes git emit a `C` record. It is a real, supported
+    # setting on a real checkout, so the copy half is measured at the same seam as the
+    # rename half rather than hand-built.
+    _git(root, "config", "status.renames", "copies")
+    (root / "pkg" / "alpha.py").write_text("ALPHA = 1\n" * 40, encoding="utf-8")
+    (root / "pkg" / "beta.py").write_text("BETA = 2\n", encoding="utf-8")
+    (root / "pkg" / "has space.py").write_text("SPACED = 3\n", encoding="utf-8")
+    (root / "notes.md").write_text("not a source file\n", encoding="utf-8")
+    _git(root, "add", "-A")
+    _git(root, "commit", "-m", "the pinned commit")
+
+    _git(root, "mv", "pkg/alpha.py", "pkg/renamed.py")  # the rename
+    _git(root, "mv", "pkg/has space.py", "pkg/still spaced.py")  # ...with spaces in it
+    (root / "pkg" / "copied.py").write_bytes((root / "pkg" / "renamed.py").read_bytes())
+    _git(root, "add", "pkg/copied.py")  # the copy
+    (root / "pkg" / "beta.py").write_text("BETA = 99\n", encoding="utf-8")  # a plain edit
+    (root / "pkg" / "caf\u00e9 nouveau.py").write_text("U = 1\n", encoding="utf-8")  # untracked
+
+
+def _porcelain_z_records(root: Path) -> list[str]:
+    """The RAW ``-z`` stream, split exactly as the parser splits it. The seam itself."""
+    done = subprocess.run(
+        ["git", "-C", str(root), "status", "--porcelain", "-z", "--untracked-files=all"],
+        capture_output=True,
+        check=False,
+    )
+    assert done.returncode == 0, done.stderr
+    return done.stdout.decode("utf-8").split("\0")
+
+
+def test_TC_ArgusAgent_PRECISION_001_72_a_rename_reports_both_paths_and_corrupts_neither() -> None:
+    """TC-ArgusAgent-PRECISION-001-72 — Story 13.5 / AC1 + AC7: the ``-z`` record boundary.
+
+    **Observable:** :func:`dirty_in_scope_paths` over a repository carrying a real rename, a
+    real copy, paths with spaces and a non-ASCII untracked path.
+
+    **The defect this closes.** ``git status --porcelain -z`` emits an ordinary entry as
+    ``XY <path>`` but a rename or copy as **two** records — ``XY <new>`` followed by the
+    origin path **bare, with no prefix**. Slicing every record at ``[3:]`` therefore eats the
+    first three characters of every origin path: ``pkg/alpha.py`` was reported as
+    ``/alpha.py``. The field is evidence only (:func:`verify_pinned_bytes` proves the audited
+    bytes independently and never reads it), so it could not move a gate — but it is a
+    *wrong recorded fact* in a story whose entire deliverable is a governance record, and it
+    was untested because no fixture here had ever renamed anything.
+    """
+    import tempfile
+
+    with tempfile.TemporaryDirectory(prefix="argus-pin-rn-") as scratch:
+        root = Path(scratch) / "src"
+        _repo_with_a_rename(root)
+
+        # ── NON-VACUITY FLOOR, asserted FIRST, off the RAW stream ────────────────────
+        # If git did not actually detect the rename, every assertion below would pass over
+        # a stream that never contained the shape they are about. So the shape is measured:
+        # a record whose status letter is R or C, immediately followed by a record that is a
+        # BARE path — no `XY ` prefix, i.e. its third character is not a space.
+        records = _porcelain_z_records(root)
+        origin_records = [
+            records[i + 1]
+            for i, rec in enumerate(records[:-1])
+            if len(rec) >= 4 and (rec[0] in "RC" or rec[1] in "RC")
+        ]
+        assert origin_records, (
+            "the fixture produced NO rename/copy record, so this guard would prove nothing. "
+            f"Records were: {records!r}. git must detect the rename for the parser to be "
+            "exercised at all."
+        )
+        assert "pkg/alpha.py" in origin_records, origin_records
+        assert all(len(rec) < 3 or rec[2] != " " for rec in origin_records), (
+            f"the origin records {origin_records!r} carry an `XY ` prefix after all — the "
+            "premise of this guard (and of the parser's rename branch) is wrong"
+        )
+
+        reported = dirty_in_scope_paths(root, keep=_keep)
+        assert reported, "the parser returned nothing over a demonstrably dirty tree"
+
+        # ── the corruption is ABSENT ─────────────────────────────────────────────────
+        assert "/alpha.py" not in reported, (
+            f"the origin path was sliced as though it carried an `XY ` prefix: {reported!r}. "
+            "That is the uniform `record[3:]` defect."
+        )
+        assert not [p for p in reported if p.startswith("/")], reported
+
+        # ── and BOTH halves of the rename are PRESENT, by name ───────────────────────
+        assert "pkg/alpha.py" in reported, (
+            f"the rename's ORIGIN path is missing from {reported!r}. It is dirty evidence "
+            "exactly as much as the new path is: at the pin that path held bytes, and in "
+            "the working tree it does not."
+        )
+        assert "pkg/renamed.py" in reported, reported
+        assert "pkg/copied.py" in reported, reported  # the copy's new half
+        assert "pkg/beta.py" in reported, reported  # the ordinary modification
+        assert "pkg/has space.py" in reported, reported  # spaces, on both halves
+        assert "pkg/still spaced.py" in reported, reported
+        assert "pkg/caf\u00e9 nouveau.py" in reported, (
+            f"the non-ASCII untracked path did not survive decoding: {reported!r}. `-z` "
+            "suppresses git's `core.quotepath` escaping and emits the raw UTF-8 bytes."
+        )
+        assert "notes.md" not in reported  # `keep` still narrows the population
+
+        # ── the GENERATED adversarial variant, at the real seam ─────────────────────
+        # Not a hand-written expectation: the OLD rule is applied to THIS SAME real stream,
+        # and the corruption it produces is derived rather than asserted. This proves the
+        # fixture DISCRIMINATES — that it can tell the two parsers apart — which is the one
+        # thing a regression test for a parsing bug has to establish about itself.
+        old_rule = {rec[3:] for rec in records if len(rec) >= 4 and _keep(rec[3:])}
+        assert old_rule != set(reported), (
+            "the uniform-slice rule and the record-aware rule produce the SAME answer over "
+            "this fixture, so the fixture does not reach the defect and would have stayed "
+            "green against the broken parser"
+        )
+        assert "/alpha.py" in old_rule, (
+            f"the old rule did not corrupt anything over this fixture ({old_rule!r}), so "
+            "the regression it is standing in for is not reproduced here"
+        )
+
+
+def test_TC_ArgusAgent_PRECISION_001_73_an_unreadable_status_record_is_a_refusal_not_a_slice() -> None:
+    """TC-ArgusAgent-PRECISION-001-73 — Story 13.5 / AC7: the parser refuses what it cannot read.
+
+    **Observable:** :func:`parse_porcelain_z`, the pure (AR8) half of the ``-z`` reader, over
+    a REAL stream first and then over two streams no git emits.
+
+    The rename defect was silent: an unreadable record was sliced into a plausible-looking
+    path and recorded as evidence. The remedy is not only to parse renames correctly but to
+    stop guessing — an entry that does not carry the ``XY `` prefix and does not follow an
+    ``R``/``C`` entry is a :class:`PinnedSnapshotError` by name.
+
+    **Non-vacuity floor, asserted FIRST:** a guard that only shows a function raising proves
+    nothing unless the function also ACCEPTS. So the real stream from the real fixture
+    repository is parsed here and its rename entry is asserted to carry both halves, before
+    any refusal is asked for. A parser that raised unconditionally would fail that floor.
+    """
+    import tempfile
+
+    with tempfile.TemporaryDirectory(prefix="argus-pin-pz-") as scratch:
+        root = Path(scratch) / "src"
+        _repo_with_a_rename(root)
+        real = "\0".join(_porcelain_z_records(root))
+
+        # ── the floor: the REAL stream parses, and the rename is modelled as ONE entry
+        # naming TWO paths rather than two entries naming one corrupted path each.
+        entries = parse_porcelain_z(real)
+        assert entries, "the parser returned nothing for a demonstrably dirty repository"
+        renames = [e for e in entries if e.origin_path is not None]
+        assert renames, f"no rename/copy entry was modelled: {entries!r}"
+        assert ("pkg/renamed.py", "pkg/alpha.py") in [
+            (e.path, e.origin_path) for e in renames
+        ], renames
+        assert all(e.status[0] in "RC" or e.status[1] in "RC" for e in renames), renames
+        assert all(len(e.status) == 2 for e in entries), entries
+        # Purity (AR8): same input, same output, and no dependence on the checkout.
+        assert parse_porcelain_z(real) == entries
+
+    # ── and only now the refusals. Neither stream below is producible by git; that is the
+    # point of a defensive refusal, and it is why they are asked of the PURE function over a
+    # constructed stream rather than of a repository. The claim is bounded accordingly: this
+    # asserts what the parser does with an unreadable record, not what git emits.
+    with pytest.raises(PinnedSnapshotError) as bare:
+        parse_porcelain_z("pkg/orphan.py\0")
+    assert "cannot read" in str(bare.value)
+    assert "pkg/orphan.py" in str(bare.value), "the refusal must NAME the record it refused"
+
+    with pytest.raises(PinnedSnapshotError) as truncated:
+        parse_porcelain_z("R  pkg/renamed.py\0")
+    assert "truncated" in str(truncated.value)
+
+    # A record too short to be an entry is refused too — it is not silently dropped, which
+    # is how the old `len(record) < 4: continue` branch hid the origin half of a rename of a
+    # short path.
+    with pytest.raises(PinnedSnapshotError):
+        parse_porcelain_z("M\0")
