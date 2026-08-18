@@ -170,6 +170,17 @@ def test_TC_ArgusAgent_DOCS_001_77_story_13_2_rules_are_registered_in_the_archit
         "argus/precision/adjudication.py",
         "tests/test_adjudication_record.py",
         "TC-ArgusAgent-PRECISION-001-39",
+        # Story 13.5 / AC1 — the corpus-pin provenance rule, and its measured driver.
+        "Corpus-pin provenance enforcement",
+        "Reproducibility is not provenance",
+        "scripts/pinned_corpus_snapshot.py",
+        "TC-ArgusAgent-PRECISION-001-65",
+        # Story 13.5 / AC5 — the vacuity floor was NARROWED, and the amendment is by STRIKE
+        # rather than by deletion (§3.4). The struck text must stay readable: a registration
+        # that erases what it replaced cannot be audited against the world it was written for.
+        "AMENDED 2026-08-18 by Story 13.5 / AC5",
+        "The floor is narrowed, never removed",
+        "TC-ArgusAgent-PRECISION-001-69",
         # AC8.2 — the ledger-claim cross-check rule (AI-E12-6).
         "Ledger-claim cross-check enforcement",
         "a claimed closure `deferred-work.md` never received fails CI",

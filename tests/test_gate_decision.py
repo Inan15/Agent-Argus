@@ -63,6 +63,7 @@ from argus.precision.gate_decision import (
     SECTION_5_CONDITIONS,
     CleanRepoEvidence,
     ConditionResult,
+    CorpusReadProof,
     GateDecision,
     UnregisteredConditionVerdict,
     UnregisteredGateOutcome,
@@ -165,15 +166,40 @@ def _clean_evidence(*, clean_repo_fp: int = 0) -> CleanRepoEvidence:
     )
 
 
+def _read_proof(**overrides: object) -> CorpusReadProof:
+    """A POSITIVE corpus-read proof, shaped exactly as the producer supplies it (13.5).
+
+    The defaults are the ORDER OF MAGNITUDE of the real 2026-08-18 run, so a fixture that
+    accidentally proves something about an empty corpus is visible as a fixture. Every
+    conjunct is overridable by keyword, which is how ``-69`` GENERATES its adversarial
+    variants rather than hand-writing them.
+    """
+    fields: dict[str, object] = {
+        "statement": "synthetic fixture standing in for a measured corpus-read proof",
+        "members_audited": 5,
+        "source_file_count": 1960,
+        "scored_population_count": 5129,
+        "flagged_file_count": 1249,
+        "advisory_finding_count": 4284,
+        "blocking_finding_count": 0,
+        "every_member_pin_verified": True,
+        "every_member_byte_reproducible": True,
+    }
+    fields.update(overrides)
+    return CorpusReadProof(**fields)  # type: ignore[arg-type]
+
+
 def _decide(
     record: AdjudicationRecord,
     *,
     expected: list[str] | None = None,
     clean_repo_fp: int = 0,
+    corpus_read_proof: CorpusReadProof | None = None,
 ) -> GateDecision:
     """Drive :func:`decide_gate` at the REAL seam with the live derived corpus figures."""
     return decide_gate(
         record,
+        corpus_read_proof=corpus_read_proof,
         expected_finding_ids=(
             [row.finding_id for row in record.rows] if expected is None else expected
         ),
@@ -327,8 +353,29 @@ def test_TC_ArgusAgent_PRECISION_001_55_the_live_outcome_is_derived_not_chosen()
         # "blocked" is barely better than a skip, and it is the shape that reads
         # downstream as a shortfall.
         assert payload["closure_path"], "a BLOCKED decision recorded no closure path"
-        assert payload["residual_completion_bound"]["residual_count"] > 0 or (
-            payload["precision"]["total_tp"] + payload["precision"]["total_fp"] == 0
+        # AMENDED 2026-08-18 (Story 13.5 / AC5). There is now a THIRD way to be BLOCKED and
+        # it carries different evidence: the emitted blocking population is EMPTY while the
+        # record still holds historical dispositions, so there is no residual to publish and
+        # the denominator is not zero either. That leg is admitted only against a POSITIVE
+        # corpus-read proof — strictly MORE evidence than the two legs above it, not less.
+        # Without one, an empty population is still the unread-corpus case and decide_gate
+        # raises before reaching here.
+        proof = payload.get("corpus_read_proof")
+        measured_empty_population = bool(
+            proof
+            and proof["proves_corpus_was_read"]
+            and proof["blocking_finding_count"] == 0
+            and proof["source_file_count"] > 0
+            and proof["scored_population_count"] > 0
+        )
+        assert (
+            payload["residual_completion_bound"]["residual_count"] > 0
+            or (payload["precision"]["total_tp"] + payload["precision"]["total_fp"] == 0)
+            or measured_empty_population
+        ), (
+            "a BLOCKED decision published neither a residual, nor an empty denominator, nor "
+            "a positive corpus-read proof. One of the three is what makes BLOCKED a "
+            "statement rather than a shrug."
         )
         # THE SENTENCE THAT MUST NOT APPEAR, in any casing, anywhere on the artifact —
         # except inside the vocabulary entry that forbids it.
@@ -756,10 +803,26 @@ def test_TC_ArgusAgent_PRECISION_001_61_the_artifact_carries_locators_and_counts
         checked += 1
     assert checked == len(residual)
     if payload["outcome"] == "BLOCKED":
-        assert checked > 0, (
-            "non-vacuity: a BLOCKED decision published no residual finding id, so this "
-            "locator scan observed nothing"
-        )
+        # AMENDED 2026-08-18 (Story 13.5 / AC5). A BLOCKED-on-an-EMPTY-EMITTED-POPULATION
+        # decision has no residual finding id to publish — there is nothing residual about a
+        # population that is empty. The non-vacuity floor does not disappear with it: it
+        # MOVES to the corpus-read proof, and the proof's own counts are asserted here so
+        # this leg cannot be satisfied by a decision that simply omitted both.
+        proof = payload.get("corpus_read_proof")
+        if checked == 0:
+            assert proof and proof["proves_corpus_was_read"], (
+                "non-vacuity: a BLOCKED decision published no residual finding id AND no "
+                "positive corpus-read proof, so this locator scan observed nothing and "
+                "nothing else vouches for the population either"
+            )
+            assert proof["source_file_count"] > 0 and proof["scored_population_count"] > 0, (
+                "non-vacuity: the corpus-read proof standing in for the residual list is "
+                "itself empty — that is the unread corpus it exists to rule out"
+            )
+            assert proof["members_audited"] > 0 and proof["every_member_pin_verified"], (
+                "non-vacuity: the corpus-read proof names no audited member, or its bytes "
+                "were never proved against the pin. Reproducibility is not provenance."
+            )
 
 
 def test_TC_ArgusAgent_PRECISION_001_62_the_disclosure_stays_while_the_gate_is_not_cleared() -> None:
@@ -898,3 +961,138 @@ def test_TC_ArgusAgent_PRECISION_001_64_the_unevaluable_sentence_names_its_real_
                 f"{denominator}. A true status carrying a false reason is DF-9-2-B's class."
             )
             assert "NOT EXHAUSTIVELY ADJUDICATED" in fold.gate_status
+
+
+# ─────────────────────────────────────────────────────────────────────────────
+# Story 13.5 / AC5 — the vacuity floor NARROWED, proved in BOTH directions
+# ─────────────────────────────────────────────────────────────────────────────
+
+
+def test_TC_ArgusAgent_PRECISION_001_69_the_empty_population_floor_discriminates() -> None:
+    """TC-ArgusAgent-PRECISION-001-69 — Story 13.5 / AC5: narrowed, never removed.
+
+    **Observable:** :func:`decide_gate` at the real seam, over the COMMITTED record, with an
+    empty ``expected_finding_ids`` and a :class:`CorpusReadProof` that is varied one conjunct
+    at a time.
+
+    Until Story 13.5 an empty emitted population raised unconditionally, and the message
+    named the confusion it could not resolve: *"the corpus could not be read, not that
+    everything in it was judged"*. Epic 14 made the second case real — a corpus that WAS
+    read and promoted nothing. Narrowing a floor is how a guard quietly becomes a hole, so
+    both directions are proved here and the adversarial variants are GENERATED from the
+    positive fixture by flipping each conjunct in turn, not hand-listed.
+    """
+    record = _record()
+    assert len(record.rows) > 0, "non-vacuity: the committed record is EMPTY"
+
+    # ── direction 1: NO evidence. The refusal is byte-unchanged in substance. ──────────
+    with pytest.raises(VacuousDecisionError) as bare:
+        _decide(record, expected=[])
+    assert "the corpus could not be read" in str(bare.value)
+
+    # ── direction 2: evidence, and it holds. The outcome becomes EXPRESSIBLE. ──────────
+    decided = _decide(record, expected=[], corpus_read_proof=_read_proof())
+    assert decided.outcome == "BLOCKED", decided.outcome
+    assert decided.outcome in GATE_OUTCOMES, (
+        "the narrowing invented a terminal state. GATE_OUTCOMES is closed at three and "
+        "BLOCKED already means 'no §5 decision was taken'; a fourth member would give two "
+        "names to one state."
+    )
+    assert len(GATE_OUTCOMES) == 3
+    precision = next(
+        c for c in decided.conditions if c.condition_id == "precision-at-least-80-percent"
+    )
+    assert precision.verdict == "UNEVALUABLE", precision.verdict
+    assert precision.verdict in CONDITION_VERDICTS
+    assert decided.closure_path, "a BLOCKED decision with no closure path is a shrug"
+    assert any("DF-13-5-A" in step for step in decided.closure_path), (
+        "the closure path must name the PRE-REGISTERED stopping rule. Without it the "
+        "recorded reading is 'expand the bench until it passes', which is corpus-shopping "
+        "with extra steps."
+    )
+    assert "was read" in decided.outcome_reason.lower()
+
+    # ── the GENERATED adversarial variants: one conjunct at a time, each must REFUSE ───
+    breaking: tuple[dict[str, object], ...] = (
+        {"members_audited": 0},
+        {"source_file_count": 0},
+        {"scored_population_count": 0},
+        {"every_member_pin_verified": False},
+        {"every_member_byte_reproducible": False},
+    )
+    for override in breaking:
+        proof = _read_proof(**override)
+        assert not proof.proves_corpus_was_read, override
+        with pytest.raises(VacuousDecisionError) as refusal:
+            _decide(record, expected=[], corpus_read_proof=proof)
+        assert "positive corpus-read proof" in str(refusal.value), override
+    # ...and the positive control for the generator itself: with NO override it passes, so
+    # the loop above is proving the conjunct and not the fixture.
+    assert _read_proof().proves_corpus_was_read
+
+    # A proof with no statement is not a proof — it is a flag, and a flag is what this type
+    # replaces. Construction refuses it.
+    with pytest.raises(VacuousDisclosureError):
+        _read_proof(statement="   ")
+
+    # A NON-EMPTY population ignores the proof entirely: the narrowing must not become a way
+    # to bypass exhaustiveness when there IS something to be exhaustive over.
+    with_rows = _decide(record, corpus_read_proof=_read_proof())
+    assert with_rows.outcome == "BLOCKED"
+    assert "NOT exhaustively adjudicated" in with_rows.outcome_reason, (
+        "supplying a corpus-read proof changed the reason for a NON-empty population. The "
+        "proof answers one question only: whether an EMPTY population was read."
+    )
+
+
+def test_TC_ArgusAgent_PRECISION_001_70_the_committed_decision_says_which_blocked_it_is() -> None:
+    """TC-ArgusAgent-PRECISION-001-70 — Story 13.5 / AC4: same outcome member, different claim.
+
+    **Observable:** the committed ``gate-decision-record.json``. Story 13.3 recorded
+    ``BLOCKED`` on EXHAUSTIVENESS — five residual §4 ladders. Story 13.5 records ``BLOCKED``
+    on the DENOMINATOR — the corpus was read and nothing was promoted. Same registered
+    outcome member, two different facts, and a reader who cannot tell them apart will
+    conclude nothing changed.
+
+    The non-vacuity floor comes first: the artifact must carry the population it measured
+    before its zero is read as a result.
+    """
+    payload = _decision_payload()
+    assert payload["outcome"] == "BLOCKED"
+
+    proof = payload.get("corpus_read_proof")
+    assert proof is not None, (
+        "the committed decision records BLOCKED over an empty emitted population with NO "
+        "corpus-read proof. That combination is the unread-corpus case and decide_gate "
+        "refuses it — an artifact carrying it means the artifact is stale."
+    )
+    assert proof["proves_corpus_was_read"] is True
+    assert proof["source_file_count"] > 1000
+    assert proof["scored_population_count"] > 1000
+    assert proof["advisory_finding_count"] > 1000
+    assert proof["blocking_finding_count"] == 0
+
+    reason = payload["outcome_reason"]
+    assert "READ" in reason and "promoted" in reason, reason
+    assert "NOT an unread corpus" in reason
+    assert "not a shortfall" in reason.lower(), (
+        "the recorded reason must say what this outcome is NOT. A gate that did not clear "
+        "because findings were judged and enough were false is a MEASUREMENT; a gate whose "
+        "denominator is empty is an ABSENCE."
+    )
+    # The architecture's Gate-decision enforcement rule, verbatim, on the live artifact.
+    assert "the gate did not clear" not in reason.lower()
+
+    # AC9 — the provenance of the revision that did the reading is RECORDED either way, and
+    # where it cannot be established the marker is the mechanically-recognised one.
+    provenance = payload["commit_sha_provenance"]
+    assert provenance.startswith(("ESTABLISHED", "NOT ESTABLISHED")), provenance
+
+    # §5's precision condition carries the CONDITION verdict, not a fourth gate outcome.
+    verdicts = {c["condition_id"]: c["verdict"] for c in payload["section_5_conditions"]}
+    assert verdicts["precision-at-least-80-percent"] == "UNEVALUABLE"
+    assert "UNEVALUABLE" not in payload["outcome_vocabulary"], (
+        "UNEVALUABLE reached the OUTCOME vocabulary. It is a CONDITION verdict; recording "
+        "it as a fourth outcome invents a terminal state 13.3 deliberately closed."
+    )
+    assert payload["outcome_vocabulary"] == sorted(GATE_OUTCOMES)

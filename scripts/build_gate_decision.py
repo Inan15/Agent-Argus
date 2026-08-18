@@ -58,6 +58,7 @@ from argus.precision.adjudication import (  # noqa: E402
 from argus.precision.gate_decision import (  # noqa: E402
     DECISION_RECORD_PATH,
     CleanRepoEvidence,
+    CorpusReadProof,
     GateDecision,
     decide_gate,
 )
@@ -72,6 +73,11 @@ from argus.store.canonical import loads  # noqa: E402
 _ARTIFACTS = _REPO_ROOT / "_bmad-output" / "design-artifacts" / "ArgusAgent"
 _CORPUS_DIR = _ARTIFACTS / "validation-corpus"
 _ADJUDICATION_SET = _CORPUS_DIR / "adjudication-set.json"
+#: Story 13.5's SUPERSEDING corpus run: the same five members at the same pins, read from
+#: the PINNED GIT OBJECT rather than the working tree and proved byte-for-byte against it.
+#: It does not overwrite 13.1's set — §3.4 evidence immutability, a correction supersedes
+#: and never erases — so the two sit side by side and the newer one wins by NAME.
+_SUPERSEDING_SET = _CORPUS_DIR / "adjudication-set-13-5.json"
 _RECORD = _CORPUS_DIR / "adjudication-record.json"
 _PROTOCOL = _ARTIFACTS / "precision-validation-protocol.md"
 _DECISION = _REPO_ROOT / DECISION_RECORD_PATH
@@ -164,6 +170,45 @@ def measure_clean_repo_condition() -> CleanRepoEvidence:
     )
 
 
+def active_adjudication_set() -> Path:
+    """The corpus run this decision is computed over — the SUPERSEDING one when it exists.
+
+    §3.4: a correction supersedes, it never erases. Story 13.5 re-ran the same five members
+    at the same pins through a corrected detector and a corrected instrument, and wrote its
+    result under its OWN name. 13.1's set stays on disk byte-unchanged and stays the
+    provenance of the 31 adjudicated rows; the newer measurement wins by name, and the
+    artifact records which one it read so a reader never has to guess.
+    """
+    return _SUPERSEDING_SET if _SUPERSEDING_SET.is_file() else _ADJUDICATION_SET
+
+
+def corpus_read_proof() -> CorpusReadProof | None:
+    """The corpus-read proof carried BY the active adjudication set, or ``None`` (13.5 / AC1).
+
+    Read off the artifact rather than recomputed: the proof is a property of the RUN that
+    produced the finding population, and re-deriving it here — a day later, over whatever
+    the checkouts look like now — would be a second measurement wearing the first one's
+    name. ``None`` for a pre-13.5 set is correct and is not a degradation: those runs had a
+    non-empty population, so they never needed one, and ``decide_gate``'s floor is unchanged
+    for them.
+    """
+    payload = loads(active_adjudication_set().read_text(encoding="utf-8"))
+    block = payload.get("corpus_read_proof")
+    if not isinstance(block, dict):
+        return None
+    return CorpusReadProof(
+        statement=str(block["statement"]),
+        members_audited=int(block["members_audited"]),
+        source_file_count=int(block["source_file_count"]),
+        scored_population_count=int(block["scored_test_function_count"]),
+        flagged_file_count=int(block["flagged_file_count"]),
+        advisory_finding_count=int(block["advisory_finding_count"]),
+        blocking_finding_count=int(block["blocking_finding_count"]),
+        every_member_pin_verified=bool(block["every_member_pin_verified"]),
+        every_member_byte_reproducible=bool(block["every_member_byte_reproducible"]),
+    )
+
+
 def expected_finding_ids() -> tuple[str, ...]:
     """The EMITTED blocking-finding population, read off Story 13.1's adjudication set.
 
@@ -178,14 +223,15 @@ def expected_finding_ids() -> tuple[str, ...]:
     The identity is :attr:`~argus.precision.adjudication.AdjudicationRow.finding_id`'s,
     rebuilt from the set's own fields — the same coordinates, never a second scheme.
     """
-    if not _ADJUDICATION_SET.is_file():
+    active = active_adjudication_set()
+    if not active.is_file():
         raise Refused(
-            f"the Story 13.1 adjudication set is absent at "
-            f"{_ADJUDICATION_SET.relative_to(_REPO_ROOT).as_posix()}; without it the "
+            f"the adjudication set is absent at "
+            f"{active.relative_to(_REPO_ROOT).as_posix()}; without it the "
             f"emitted population is unknown and exhaustiveness would be measured against "
             f"the record itself, which cannot fail."
         )
-    payload = loads(_ADJUDICATION_SET.read_text(encoding="utf-8"))
+    payload = loads(active.read_text(encoding="utf-8"))
     ids: list[str] = []
     for member in payload["members"]:
         for finding in member["findings"]:
@@ -197,14 +243,70 @@ def expected_finding_ids() -> tuple[str, ...]:
                     f"{finding['verdict_eligible']!r}::{finding['advisory']!r}::{locator}"
                 )
     if not ids:
-        raise Refused(
-            "the adjudication set holds ZERO blocking findings, so the emitted population "
-            "is empty and exhaustiveness over it would pass forever (AI-E11-1)."
+        # Story 13.5 / AC5 — the SAME narrowing decide_gate's floor received, at the
+        # producer end, and for the same reason. Zero blocking findings means one of two
+        # opposite things and this refusal could not tell them apart: a corpus that was
+        # never read, or a corpus that was read and promoted nothing. The corpus-read proof
+        # carried ON the artifact decides it. Without one the refusal is byte-unchanged.
+        proof = corpus_read_proof()
+        if proof is None or not proof.proves_corpus_was_read:
+            raise Refused(
+                "the adjudication set holds ZERO blocking findings, so the emitted "
+                "population is empty and exhaustiveness over it would pass forever "
+                "(AI-E11-1). An empty population is admissible ONLY when the artifact "
+                "carries a positive corpus-read proof, and "
+                + (
+                    "it carries none."
+                    if proof is None
+                    else "its proof does NOT hold: pin_verified="
+                    f"{proof.every_member_pin_verified}, reproducible="
+                    f"{proof.every_member_byte_reproducible}, members="
+                    f"{proof.members_audited}, files={proof.source_file_count}, "
+                    f"scored={proof.scored_population_count}."
+                )
+            )
+        print(
+            "NOTE — the emitted blocking population is EMPTY and the artifact carries a "
+            "positive corpus-read proof, so the empty population is passed through to "
+            "decide_gate as a MEASURED absence rather than refused as an unread corpus: "
+            + proof.statement
         )
     return tuple(ids)
 
 
-def build_decision(*, commit_sha: str, decided_on: str) -> GateDecision:
+def working_tree_provenance() -> str:
+    """Whether ``commit_sha`` describes the tree the measurement ran over (13.5 / AC9).
+
+    ``build_gate_decision.py`` recorded ``git rev-parse HEAD`` with NO dirty check, so on a
+    dirty tree the sha named a tree that was not the one measured. This story's entire
+    deliverable is a governance record, and a governance record whose provenance field is
+    wrong is worse than none — so the state is MEASURED and written onto the artifact, with
+    the mechanically-recognised ``NOT ESTABLISHED`` marker where it cannot be established
+    (TC-ArgusAgent-DOCS-001-21). It is recorded rather than refused deliberately: refusing
+    would make the honest artifact unwritable on a tree that legitimately carries unrelated
+    uncommitted work, and an unwritten record states nothing at all.
+    """
+    dirty = tuple(line for line in _git("status", "--porcelain").splitlines() if line.strip())
+    if not dirty:
+        return (
+            "ESTABLISHED — the working tree was CLEAN when this decision was written, so "
+            "commit_sha names exactly the tree the measurement ran over."
+        )
+    return (
+        f"NOT ESTABLISHED — the working tree carried {len(dirty)} uncommitted entr(y/ies) "
+        f"when this decision was written, so commit_sha names a commit whose tree is NOT "
+        f"byte-identical to the one measured. The measurement itself is pinned "
+        f"independently of this: every corpus member was read from its PINNED GIT OBJECT "
+        f"and every staged file was proved against the pin by blob hash (see "
+        f"corpus_read_proof.every_member_pin_verified), so what is unestablished here is "
+        f"the provenance of the ARGUS revision that did the reading, not of the bytes it "
+        f"read. Entries: " + ", ".join(sorted(entry[3:] for entry in dirty)[:12])
+    )
+
+
+def build_decision(
+    *, commit_sha: str, decided_on: str, commit_sha_provenance: str
+) -> GateDecision:
     """Load every input, measure what must be measured, and let :func:`decide_gate` decide."""
     if not _RECORD.is_file():
         raise Refused(
@@ -242,10 +344,12 @@ def build_decision(*, commit_sha: str, decided_on: str) -> GateDecision:
         decided_on=decided_on,
         record_path=relative,
         protocol_path=_PROTOCOL.relative_to(_REPO_ROOT).as_posix(),
+        corpus_read_proof=corpus_read_proof(),
+        commit_sha_provenance=commit_sha_provenance,
     )
 
 
-def _provenance(check_only: bool) -> tuple[str, str]:
+def _provenance(check_only: bool) -> tuple[str, str, str]:
     """``(commit_sha, decided_on)`` — carried over from the committed artifact on ``--check``.
 
     ``--check`` must be able to answer *"has the MEASUREMENT moved?"* and nothing else. The
@@ -255,13 +359,26 @@ def _provenance(check_only: bool) -> tuple[str, str]:
     """
     if check_only and _DECISION.is_file():
         payload = loads(_DECISION.read_text(encoding="utf-8"))
-        return str(payload["commit_sha"]), str(payload["decided_on"])
-    return _git("rev-parse", "HEAD") or "NO_VCS", date.today().isoformat()
+        return (
+            str(payload["commit_sha"]),
+            str(payload["decided_on"]),
+            # Carried for the same reason the sha is: the working-tree state at the moment
+            # somebody runs --check is provenance of THAT moment, not of the measurement,
+            # and re-deriving it would make the artifact stale on the next edit anybody makes.
+            str(payload.get("commit_sha_provenance", "NOT RECORDED BY THIS RUN")),
+        )
+    return (
+        _git("rev-parse", "HEAD") or "NO_VCS",
+        date.today().isoformat(),
+        working_tree_provenance(),
+    )
 
 
 def build(*, check_only: bool) -> int:
-    commit_sha, decided_on = _provenance(check_only)
-    decision = build_decision(commit_sha=commit_sha, decided_on=decided_on)
+    commit_sha, decided_on, provenance = _provenance(check_only)
+    decision = build_decision(
+        commit_sha=commit_sha, decided_on=decided_on, commit_sha_provenance=provenance
+    )
     text = decision.to_text()
     if check_only:
         if not _DECISION.is_file():

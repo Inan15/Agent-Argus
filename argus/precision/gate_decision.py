@@ -38,13 +38,31 @@ ABSENCE.* One boolean cannot tell a reader which happened, and every downstream 
 would inherit the ambiguity — so ``BLOCKED`` is never rendered, serialized or summarised
 as *"the gate did not clear"*, in any artifact, in any wording.
 
-Non-vacuity is a floor, not a nicety
-------------------------------------
+Non-vacuity is a floor, not a nicety — and Story 13.5 NARROWED it, never removed it
+-----------------------------------------------------------------------------------
 :func:`decide_gate` RAISES :class:`VacuousDecisionError` before it asserts anything when
-the record holds zero rows or the emitted population is empty (the ``-39``
-argparse-internals precedent, ``AI-E11-1``). A decision function that silently folds an
-empty record returns a confident answer forever, and here that answer is the
-externalization gate.
+the record holds zero rows (the ``-39`` argparse-internals precedent, ``AI-E11-1``). A
+decision function that silently folds an empty record returns a confident answer forever,
+and here that answer is the externalization gate.
+
+The EMPTY-EMITTED-POPULATION half of that floor used to raise unconditionally too, and its
+message named the exact confusion it could not resolve: *"That means the corpus could not
+be read, not that everything in it was judged."* Correct for the world 13.3 was written in
+— it had no evidence with which to tell the two apart, and chose the safe refusal. Epic 14
+corrected ``vacuous_test_ast`` and created a third world: a corpus that **was** read, was
+scanned file by file, had 5,129 test functions scored, emitted 4,284 advisory findings and
+promoted **none** of them. That outcome was inexpressible by the instrument meant to record
+it. So the floor now DISCRIMINATES on measured evidence:
+
+* an empty population with **no** :class:`CorpusReadProof`, or one that does not prove a
+  read, still raises :class:`VacuousDecisionError`, with the same claim it always made;
+* an empty population with a **positive** proof — members audited at their pinned shas with
+  the staged bytes proved byte-for-byte against the pin, source files scanned, test
+  functions scored, two runs byte-identical — returns ``BLOCKED`` with the precision
+  condition ``UNEVALUABLE``, which is what the architecture already registers for an empty
+  denominator.
+
+**Both directions are guarded**, because a narrowing proven in one direction is a hole.
 
 ``protocol_cleared`` is passed ``False`` as a LITERAL, deliberately
 -------------------------------------------------------------------
@@ -97,6 +115,7 @@ __all__ = [
     "SECTION_5_CONDITIONS",
     "CleanRepoEvidence",
     "ConditionResult",
+    "CorpusReadProof",
     "GateDecision",
     "UnregisteredConditionVerdict",
     "UnregisteredGateOutcome",
@@ -365,6 +384,84 @@ class CleanRepoEvidence:
 
 
 @dataclass(frozen=True)
+class CorpusReadProof:
+    """PROOF that the corpus was READ — the evidence an EMPTY finding population needs (13.5).
+
+    **Why this type exists.** :func:`decide_gate`'s non-vacuity floor refused an empty emitted
+    population outright, with the message *"That means the corpus could not be read, not that
+    everything in it was judged"*. That was correct for the world it was written in: Story
+    13.3 could not distinguish the two cases, so it chose the safe refusal. Epic 14 corrected
+    ``vacuous_test_ast`` and created a third world — a corpus that **was** read, was scanned
+    file by file, had its test functions scored, emitted thousands of advisory findings, and
+    promoted **none** of them to verdict-eligible. As shipped, that outcome was
+    **inexpressible by the instrument that is supposed to record it**.
+
+    The floor is therefore NARROWED, never removed. This object is the evidence that
+    discriminates, and every field on it is measured by
+    ``scripts/audit_validation_corpus.py`` on the run being decided:
+
+    * ``members_audited`` / ``source_file_count`` — something was enumerated;
+    * ``scored_population_count`` — the DETECTOR's own scored population was non-empty. This
+      is the field that separates *"read and clean"* from *"unparsed"*: an unparsed file and
+      a well-asserted file both emit nothing, and only a scored count tells them apart;
+    * ``every_member_pin_verified`` — each staged file was proved, by git's own blob hash, to
+      be the byte the manifest pins. Reproducibility is not provenance: two runs over the
+      same WRONG bytes are reproducible;
+    * ``every_member_byte_reproducible`` — protocol §4's determinism precondition.
+
+    ``flagged_file_count`` and ``advisory_finding_count`` are RECORDED but deliberately NOT
+    part of :attr:`proves_corpus_was_read`: requiring a flag would make a genuinely clean
+    corpus unprovable, which is the opposite failure and would reward a noisier detector.
+
+    PURE (AR8): a frozen value object with no I/O and no clock. The producer measures; this
+    only says what the measurement has to contain before an absence may be called a result.
+    """
+
+    statement: str
+    members_audited: int
+    source_file_count: int
+    scored_population_count: int
+    flagged_file_count: int
+    advisory_finding_count: int
+    blocking_finding_count: int
+    every_member_pin_verified: bool
+    every_member_byte_reproducible: bool
+
+    def __post_init__(self) -> None:
+        if not self.statement.strip():
+            raise VacuousDisclosureError(
+                "a corpus-read proof carries no statement. The statement is what a stranger "
+                "reads to tell a measured absence from an unread corpus; a proof nobody can "
+                "read is a flag, and a flag is what this type exists to replace."
+            )
+
+    @property
+    def proves_corpus_was_read(self) -> bool:
+        """Every conjunct, measured — never a caller's assertion, never a default."""
+        return (
+            self.members_audited > 0
+            and self.source_file_count > 0
+            and self.scored_population_count > 0
+            and self.every_member_pin_verified
+            and self.every_member_byte_reproducible
+        )
+
+    def to_payload(self) -> dict[str, Any]:
+        return {
+            "statement": self.statement,
+            "members_audited": self.members_audited,
+            "source_file_count": self.source_file_count,
+            "scored_population_count": self.scored_population_count,
+            "flagged_file_count": self.flagged_file_count,
+            "advisory_finding_count": self.advisory_finding_count,
+            "blocking_finding_count": self.blocking_finding_count,
+            "every_member_pin_verified": self.every_member_pin_verified,
+            "every_member_byte_reproducible": self.every_member_byte_reproducible,
+            "proves_corpus_was_read": self.proves_corpus_was_read,
+        }
+
+
+@dataclass(frozen=True)
 class GateDecision:
     """The committed, DERIVED, machine-readable gate decision (AC3).
 
@@ -395,6 +492,16 @@ class GateDecision:
     closure_path: tuple[str, ...]
     commit_sha: str
     decided_on: str
+    #: Story 13.5. Present when the run carried a positive corpus-read proof; ``None`` is the
+    #: pre-13.5 shape and stays valid, because a decision over a NON-empty emitted population
+    #: never needed one. Defaulted last so every existing construction site is unchanged.
+    corpus_read_proof: CorpusReadProof | None = None
+    #: Story 13.5 / AC9. Whether ``commit_sha`` describes the tree the measurement ran over.
+    #: ``build_gate_decision.py`` stamped ``git rev-parse HEAD`` with NO dirty check, so on a
+    #: dirty tree the recorded sha named a tree that was not the one measured. The state is
+    #: now RECORDED — with the mechanically-recognised ``NOT ESTABLISHED`` marker when it
+    #: cannot be established — rather than left to the reader to assume.
+    commit_sha_provenance: str = "NOT RECORDED BY THIS RUN"
 
     def __post_init__(self) -> None:
         gate_outcome_meaning(self.outcome)
@@ -445,6 +552,10 @@ class GateDecision:
             "story": _STORY,
             "decided_on": self.decided_on,
             "commit_sha": self.commit_sha,
+            "commit_sha_provenance": self.commit_sha_provenance,
+            "corpus_read_proof": (
+                None if self.corpus_read_proof is None else self.corpus_read_proof.to_payload()
+            ),
             "outcome": self.outcome,
             "outcome_meaning": gate_outcome_meaning(self.outcome),
             "outcome_reason": self.outcome_reason,
@@ -671,6 +782,8 @@ def decide_gate(
     decided_on: str,
     record_path: str = RECORD_PATH,
     protocol_path: str = PROTOCOL_PATH,
+    corpus_read_proof: CorpusReadProof | None = None,
+    commit_sha_provenance: str = "NOT RECORDED BY THIS RUN",
 ) -> GateDecision:
     """THE decision. Calls the existing fold; authors no second one (AC1, AC2, AC3).
 
@@ -694,11 +807,22 @@ def decide_gate(
             "here that decision is the externalization gate (AI-E11-1)."
         )
     expected = tuple(expected_finding_ids)
-    if not expected:
+    # ── the floor, NARROWED (Story 13.5 / AC5) and deliberately not removed ────────────
+    # Before: an empty emitted population raised, unconditionally. The message named the
+    # exact confusion — "the corpus could not be read, not that everything in it was
+    # judged" — and could not resolve it, because 13.3 had no evidence with which to.
+    # Now the two cases are separated by MEASURED evidence, and only the second is
+    # admitted. Without a positive corpus-read proof the refusal is byte-unchanged, which
+    # is what keeps TC-ArgusAgent-PRECISION-001-58 green at the same seam.
+    corpus_was_read = corpus_read_proof is not None and corpus_read_proof.proves_corpus_was_read
+    if not expected and not corpus_was_read:
         raise VacuousDecisionError(
             "the emitted-finding population is EMPTY. That means the corpus could not be "
             "read, not that everything in it was judged; exhaustiveness over nothing is "
-            "the guard that passes forever (AI-E11-1)."
+            "the guard that passes forever (AI-E11-1). An empty population is admissible "
+            "ONLY with a positive corpus-read proof (members audited at their pinned shas "
+            "with the staged bytes proved against the pin, source files scanned, test "
+            "functions scored, two runs byte-identical) — and none was supplied."
         )
     if record.protocol_version != protocol_change_log_head:
         raise ValueError(
@@ -766,6 +890,44 @@ def decide_gate(
             "sha and establish byte-reproducibility across two runs",
             "re-build the adjudication record so it carries the re-measured result",
             "re-run this decision",
+        )
+    elif not expected:
+        # Story 13.5. Reachable ONLY with a positive corpus-read proof — the floor above
+        # raises otherwise. This is the branch that makes "we read 1,960 files, scored
+        # 5,129 test functions, emitted 4,284 advisory findings and promoted NONE of them"
+        # expressible, and distinguishable from "we read nothing". It sits BEFORE the
+        # exhaustiveness branch because exhaustiveness over an empty population is
+        # unobservable rather than incomplete, and reporting it as incomplete would tell a
+        # reader a judgement had not finished when there is nothing to judge.
+        #
+        # The outcome is BLOCKED — the SAME registered member 13.3 recorded, and NOT a
+        # fourth one. GATE_OUTCOMES is closed at three and BLOCKED already means exactly
+        # "no §5 decision was taken". What differs is the REASON, and the reason is the
+        # whole content of this story: 13.3 was BLOCKED on EXHAUSTIVENESS (five residual
+        # ladders); this is BLOCKED on the DENOMINATOR. Same outcome member, different
+        # claims, and the record must let a stranger tell which happened.
+        proof = corpus_read_proof
+        assert proof is not None  # noqa: S101 - unreachable otherwise; the floor above raised
+        outcome = "BLOCKED"
+        reason = (
+            f"the corpus WAS READ and NOTHING was promoted to a verdict-eligible finding, "
+            f"so the emitted blocking population is empty and the precision denominator "
+            f"with it. This is NOT an unread corpus and it is NOT a shortfall: "
+            f"{proof.statement} An empty denominator is not an 80% result and it is not a "
+            f"failed measurement; it is no result, recorded as such with the evidence that "
+            f"the measurement ran."
+        )
+        closure = (
+            "the detector emits at least one verdict-eligible finding over this corpus, or "
+            "over a corpus chosen BEFORE anyone looks at what it contains — a corpus "
+            "chosen to make the gate clear is the corpus-shopping failure mode itself",
+            "the named human (protocol §2) adjudicates that population TP or FP",
+            "re-run this decision, and let the arithmetic decide",
+            "the pre-registered stopping rule governs which of those is attempted and how "
+            "many times: DF-13-5-A, ANSWERED 2026-08-17 BEFORE any number existed, allows "
+            "exactly ONE bench-expansion round and names the fallback if it returns zero. "
+            "Executing that rule is the OWNER'S act after this outcome is recorded, and is "
+            "not taken here",
         )
     elif not isinstance(fold.exhaustiveness, Exhaustive):
         outcome = "BLOCKED"
@@ -848,4 +1010,6 @@ def decide_gate(
         closure_path=closure,
         commit_sha=commit_sha,
         decided_on=decided_on,
+        corpus_read_proof=corpus_read_proof,
+        commit_sha_provenance=commit_sha_provenance,
     )

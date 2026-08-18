@@ -55,6 +55,7 @@ from argus.precision.adjudication import (
     validation_set_population_n,
 )
 from argus.precision.replay_harness import registry_module
+from argus.store.canonical import dumps
 
 _REPO_ROOT = Path(__file__).resolve().parents[1]
 _ARTIFACTS = _REPO_ROOT / "_bmad-output" / "design-artifacts" / "ArgusAgent"
@@ -857,3 +858,75 @@ def test_TC_ArgusAgent_PRECISION_001_52_the_live_fold_is_unevaluable_and_the_gat
         "zero would claim the work took no time rather than that it was not reported"
     )
     assert folded.gate_status.startswith("unevaluable")
+
+
+# ─────────────────────────────────────────────────────────────────────────────────────
+# Story 13.5 / AC3 + AC7 — the 13.1–13.3 rows are BYTE-UNCHANGED, verified by execution
+# ─────────────────────────────────────────────────────────────────────────────────────
+
+
+def test_TC_ArgusAgent_PRECISION_001_71_the_prior_rows_survive_an_append_byte_for_byte() -> None:
+    """TC-ArgusAgent-PRECISION-001-71 — Story 13.5 / AC3: append-only, PROVED not intended.
+
+    **Observable:** the canonical bytes of the committed record's rows, extracted before and
+    after a real :meth:`AdjudicationRecord.append`, compared as bytes.
+
+    §3.4 evidence immutability says a correction SUPERSEDES and never erases. *"A diff of the
+    file is not sufficient — it cannot distinguish a reordering from an edit"*, so this
+    compares the canonical serialization of each row OBJECT, keyed by ``row_id``, which is
+    invariant under reordering and sensitive to a single character.
+
+    **Why this is the guard Story 13.5 needed.** 13.5 re-measured the same five members at
+    the same pins through a corrected detector and a corrected instrument, and the corrected
+    run promoted NOTHING — so there was no new finding to adjudicate and no superseding row
+    to write. That is a measured fact, not a decision, and it makes the append-only property
+    easy to satisfy by doing nothing. A guard that only asserted *"the rows are still there"*
+    would be green for the wrong reason forever. This one drives a real append at the real
+    seam and proves the prior rows come through it untouched.
+
+    **The adversarial variant is GENERATED**: one byte of one committed row is perturbed and
+    the comparison is proved to go RED. Without it, "the bytes match" is a claim about a
+    comparison nobody has seen fail.
+    """
+    record = _record()
+    assert len(record.rows) > 0, "non-vacuity: the committed record holds ZERO rows"
+
+    def _canonical(rows: tuple[AdjudicationRow, ...]) -> dict[str, bytes]:
+        return {
+            row.row_id: dumps(row.to_payload()).encode("utf-8") for row in rows
+        }
+
+    before = _canonical(record.rows)
+    original_ids = frozenset(before)
+    assert len(before) == len(record.rows), "row ids are not unique — the key is not a key"
+
+    # A REAL append through the shipped instrument, of a REAL superseding judgement shape.
+    # It is never written to disk: the record on disk is the evidence, and this fixture
+    # exists to prove the evidence survives the operation, not to perform it.
+    appended = record.append([_judged(record.rows[0], "TP", revision=7)])
+    assert len(appended.rows) == len(record.rows) + 1, "the append did not append"
+
+    after = _canonical(tuple(row for row in appended.rows if row.row_id in original_ids))
+    assert set(after) == original_ids, (
+        f"row ids vanished across the append: {sorted(original_ids - set(after))}. "
+        "Append-only means the prior rows are still THERE, under the same identity."
+    )
+    for row_id in sorted(original_ids):
+        assert after[row_id] == before[row_id], (
+            f"row {row_id!r} changed across an append. §3.4: a correction supersedes, it "
+            f"never erases, and it never rewrites the row it supersedes."
+        )
+
+    # The disposition tally of the ORIGINAL rows is unchanged too — a row can keep its bytes
+    # and still be re-read if the fold started counting superseded rows.
+    live_before = {row.row_id for row in record.live_rows()}
+    assert live_before, "non-vacuity: the committed record has no live rows"
+
+    # ── the GENERATED adversarial variant: ONE byte, and the comparison must go RED ────
+    victim = record.rows[0]
+    perturbed = replace(victim, locator=victim.locator[:-1] + ("9" if not victim.locator.endswith("9") else "8"))
+    tampered = _canonical((perturbed,))
+    assert tampered[perturbed.row_id] != before.get(victim.row_id, b""), (
+        "a one-character change to a committed row produced identical canonical bytes. The "
+        "comparison above would then be blind to an edit, which is the only thing it is for."
+    )

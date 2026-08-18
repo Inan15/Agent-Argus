@@ -179,7 +179,21 @@ class InstrumentStatus(str, enum.Enum):
 # What changed is the NAME OF THE CORPUS and nothing else: the claim, the negation, the
 # two-member `InstrumentStatus` vocabulary and the removal condition (Epic 13's human
 # adjudication, and nothing else) are untouched. Pinned by
-# `tests/test_built_distribution.py::…DOCS_001_58`.
+# `tests/test_minions_claim_classification.py::…DOCS_001_58`.
+#
+# CORPUS NAME CORRECTED AGAIN 2026-08-18, on the VALIDATED member ONLY (Story 13.5 / AC6).
+# The 11.5 pass fixed the SUBJECT on both sentences and left one of them naming the wrong
+# CORPUS: the `VALIDATED` text said the >=80% gate was measured "over the Argus dogfood
+# corpus", and it was not — the Epic 13 human adjudication ran over the ratified
+# five-repository validation corpus (`tests/corpus/_manifest.py`), which is exactly the
+# population Story 13.1 EXCLUDED the dogfood self-audit from. The sentence is reachable only
+# in the `VALIDATED` branch, which no production call site can reach, so nobody had ever read
+# it in anger; the Epic-13 interim retrospective §11.3(a) recorded it as a live latent
+# falsehood and Story 13.5 corrected it. Again ONLY the corpus name moved: the claim, the
+# negation, the vocabulary and the removal condition are untouched, `INSTRUMENT_STATUS`
+# stays `NOT_INDEPENDENTLY_VALIDATED`, and every RENDERED surface is byte-unchanged —
+# asserted in the same guard, because correcting an unreachable string must not be able to
+# flip a gate.
 INSTRUMENT_DISCLOSURE_NOT_INDEPENDENTLY_VALIDATED = (
     "Beta: Argus's finding precision has not been independently validated. Its "
     "findings rest on the Argus dogfood corpus, a self-audit of this repository. "
@@ -190,8 +204,8 @@ INSTRUMENT_DISCLOSURE_NOT_INDEPENDENTLY_VALIDATED = (
 INSTRUMENT_DISCLOSURE_VALIDATED = (
     "Instrument status: Argus's own finding precision meets the >=80% precision gate, "
     "measured by the Epic 13 human true-positive/false-positive adjudication over the "
-    "Argus dogfood corpus. The corpus and the adjudication that established it are "
-    "recorded with this release."
+    "ratified five-repository validation corpus. The corpus and the adjudication that "
+    "established it are recorded with this release."
 )
 
 # The SHORTENED form for the two one-line summary fields a stranger reads in an index

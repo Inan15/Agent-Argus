@@ -5036,3 +5036,35 @@ disposed and three new ones are filed, one of which bounds Epic 15.
   - severity: 🟡 — not a breach and the ceiling guard is green today, so nothing is failing. It
     becomes a forced choice the moment the next case is written, and the tempting answer at that
     moment is the exemption this entry forbids.
+
+- **`DF-13-5-B` — Epic 13's ORIGINAL 0 TP / 26 FP baseline was measured through the
+  working-tree-reading instrument, so WHICH BYTES it read is not established.**
+  Story 13.5 changed corpus materialization to read from the **pinned git object** and to prove
+  every staged file against the pin by git's own blob hash (`scripts/pinned_corpus_snapshot.py`,
+  registered in `architecture.md` §Enforcement as *Corpus-pin provenance enforcement*). The
+  instrument it replaced compared `git rev-parse HEAD` to the manifest sha and then staged
+  **working-tree** bytes. Those are different claims, and on 2026-08-18 they came apart on the
+  live corpus: `agent-smith` sat exactly on its pin with **six dirty in-scope source files**, and
+  `minions`' in-scope population is **583 files at its pin versus 479 in its current index**.
+  **The 31 rows of `validation-corpus/adjudication-record.json` were produced by the old path**,
+  so the tree they describe cannot now be reconstructed from the object database. One measured
+  symptom, recorded rather than explained away: 13.1 recorded `source_file_count = 591` for
+  `minions`, the pinned tree holds **583**, and today's index holds **479** — the recorded figure
+  matches neither, and no combination of the pinned objects reproduces it.
+  **This is recorded uncertainty, NOT a re-measurement request.** Re-running Epic 13's original
+  measurement was explicitly declined: it would re-open a closed adjudication over a population
+  the corrected detector no longer emits, and the 31 rows stay **byte-unchanged** because
+  append-only is structural (`TC-ArgusAgent-PRECISION-001-71` proves they survive an append
+  byte-for-byte). Story 13.5's rows supersede them **with pin-verified provenance**; what this
+  entry preserves is that the superseded figures carry an unestablished provenance, so nobody
+  later reads *"0 TP / 26 FP"* as a pin-anchored measurement.
+  - id: DF-13-5-B
+  - origin_story: 13-5-re-measure-the-gate-against-the-corrected-instrument
+  - owner: **XAgent007 (Engineering Lead)**
+  - target_story: **NONE** — deliberately. It is closed by the NEXT gate measurement being
+    pin-verified (which 13.5 made structural), not by re-deriving a superseded one
+  - category: evidence provenance / measurement uncertainty
+  - severity: 🟡 — nothing downstream rests on the superseded figures: the gate outcome is
+    `BLOCKED`, the precision condition is `UNEVALUABLE`, `protocol_cleared` is still the literal
+    `False` and the FR34 disclosure is untouched. It would become 🔴 the moment somebody cited
+    those 31 dispositions as a measured precision figure at a named commit.

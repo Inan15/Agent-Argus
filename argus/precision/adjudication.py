@@ -912,13 +912,34 @@ def fold_adjudicated_precision(
             "over this corpus, and it is evaluated before any pass/fail is recorded"
         )
     elif isinstance(exhaustive, AdjudicationUnevaluable):
-        unevaluable_reason = (
-            f"NOT EXHAUSTIVELY ADJUDICATED — {exhaustive.residual_count} of "
-            f"{exhaustive.residual_count + exhaustive.adjudicated_count} emitted "
-            f"finding(s) carry no live TP/FP disposition, so protocol §4's full-corpus "
-            f"requirement is unmet and a ratio over the {exhaustive.adjudicated_count} "
-            f"that do would be the sampled measurement §4 forbids"
-        )
+        if exhaustive.residual_count == 0 and exhaustive.adjudicated_count == 0:
+            # Story 13.5. The SAME correction shape as the one above it, applied one level
+            # in: an EMPTY emitted population is unevaluable for a different reason than a
+            # partially-judged one, and the generic sentence rendered "NOT EXHAUSTIVELY
+            # ADJUDICATED — 0 of 0", which reads as a judgement that has not finished when
+            # in fact there is nothing to judge. A true status carrying a false reason is
+            # the DF-9-2-B false-subject class, and this is the surface that publishes the
+            # gate. The sentence deliberately does NOT decide between "read and promoted
+            # nothing" and "not read at all": the record alone cannot tell, and
+            # ``decide_gate`` requires a positive corpus-read proof before admitting the
+            # first reading.
+            unevaluable_reason = (
+                "EMPTY EMITTED POPULATION — the run emitted NO blocking finding at all, so "
+                "exhaustiveness is unobservable rather than satisfied and there is no "
+                "denominator to compare against the threshold. Whether the corpus was READ "
+                "and promoted nothing, or was never read, is NOT decidable from this record: "
+                "it takes a positive corpus-read proof (members audited at their pins, "
+                "source files scanned, test functions scored, two runs byte-identical), "
+                "which decide_gate requires before it will treat this as a measurement"
+            )
+        else:
+            unevaluable_reason = (
+                f"NOT EXHAUSTIVELY ADJUDICATED — {exhaustive.residual_count} of "
+                f"{exhaustive.residual_count + exhaustive.adjudicated_count} emitted "
+                f"finding(s) carry no live TP/FP disposition, so protocol §4's full-corpus "
+                f"requirement is unmet and a ratio over the {exhaustive.adjudicated_count} "
+                f"that do would be the sampled measurement §4 forbids"
+            )
     return AdjudicatedPrecision(
         total_tp=total_tp,
         total_fp=total_fp,
