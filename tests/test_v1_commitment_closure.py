@@ -1,7 +1,10 @@
 """Story 10.5 / AC5 — a V1 commitment is delivered, or it is explicitly not V1.
 
 Verification area ArgusAgent-DOCS (``TC-ArgusAgent-DOCS-001-30``..``-41``, CONTINUING the index
-locked by Story 8.4; ``-20``..``-23`` belong to ``tests/test_evidence_citation.py``, ``-24``..``-27``
+locked by Story 8.4; ``-20``..``-23`` belong to ``tests/test_evidence_citation.py`` **and**
+``tests/test_status_document_registry.py`` — *(amended 2026-08-17 by Story 13.4: that range has TWO
+hosts since the cohesion split; the derivation stayed, ``-21``/``-22`` and the governed population
+moved, and no id was renumbered)* — ``-24``..``-27``
 to ``tests/test_spec_claim_scope.py``, ``-28`` to ``tests/test_invocation_contract.py`` and ``-29``
 to ``tests/test_grammar_diagnosis.py``).
 

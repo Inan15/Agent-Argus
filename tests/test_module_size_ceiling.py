@@ -31,7 +31,15 @@ this repository's most load-bearing guard files inside a story whose defining cr
 *behaviour untouched* is a different story with a different risk profile, so they are deferred
 **visibly**: each is a named entry with a reason, a date, an owner and a ``deferred-work.md``
 id, following the ``_PRESERVED_RECORD`` / ``_EXCLUDED_BY_DESIGN`` precedent
-(``tests/test_release_surface_honesty.py:178``, ``tests/test_evidence_citation.py:91``).
+(``tests/test_release_surface_honesty.py:178``,
+``tests/test_status_document_registry.py::_EXCLUDED_BY_DESIGN``).
+*(Re-pointed 2026-08-17 by Story 13.4, BY SYMBOL rather than by line number, for a reason the
+change itself demonstrated: the previous cite read ``tests/test_evidence_citation.py:91`` and had
+ALREADY drifted before this story touched anything — the symbol was at ``:138``, and ``:91`` landed
+inside the registry comment block. Story 13.4 then moved the symbol to another module entirely. A
+line number is a coordinate into a file that is still being edited; a symbol is a name that travels
+with the thing it names. This is this repository's most-repeated defect class and an argument
+against line-number citations generally.)*
 Narrowing the population to ``argus/**`` until the sweep went green — the obvious alternative —
 is the exact move this repository files as a defect. ``-04`` makes the registry a **shrinking**
 allow-list: an entry naming a file that no longer exists, or that is no longer over the cap,

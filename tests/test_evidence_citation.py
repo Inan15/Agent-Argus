@@ -1,8 +1,30 @@
-"""Story 10.1 / AC2-AC4 — a release status cites an executed gate, or it is NOT ESTABLISHED.
+"""WHAT a status claim is, WHAT an executed-gate citation is, and do the records carry them?
 
-Verification area ArgusAgent-DOCS (``TC-ArgusAgent-DOCS-001-20``..``-23``, CONTINUING the index
-locked by Story 8.4; ``-01``..``-19`` are taken by ``tests/test_release_note.py`` and
-``tests/test_release_surface_honesty.py``).
+Story 10.1 / AC2-AC4 — a release status cites an executed gate, or it is NOT ESTABLISHED.
+
+Verification area ArgusAgent-DOCS (``TC-ArgusAgent-DOCS-001-20``, ``-21b``, ``-23``, ``-24``,
+``-25``, ``-25b``, CONTINUING the index locked by Story 8.4; ``-01``..``-19`` are taken by
+``tests/test_release_note.py`` and ``tests/test_release_surface_honesty.py``).
+
+**Where the other half went (Story 13.4, 2026-08-17).** ``-21`` and ``-22`` — and with them
+``_STATUS_DOCUMENTS``, ``_STATUS_DOCUMENT_PATTERNS``, ``_EXCLUDED_BY_DESIGN`` and
+``_registered_paths`` — now live in ``tests/test_status_document_registry.py``. **No id was
+renamed, renumbered, added or removed**; the split was the cohesion remedy
+``test_module_size_ceiling.py::_REMEDY`` locks for a guard file at the NFR-M1 ceiling, taken
+because this module reached exactly 1200/1200 and the next status document could not be
+registered at all. The boundary is **DERIVATION here, POPULATION there**: this module answers
+*what* a status claim and a citation are; that one answers *which* records are governed and
+whether the set is closed. The dependency runs one way only — that module imports
+``_NOT_ESTABLISHED_MARKER``, ``_executed_gate_citations``, ``_split_sentences`` and
+``_status_assertions`` from here, and **this module must never import it back** (a cycle between
+two test modules fails at collection), which is why ``_REGISTRY_GUARD_FILE`` below is a literal.
+
+**``-21``'s positive control stayed here, deliberately (DN-2).** ``-21b`` drives
+``_status_assertions`` and ``_executed_gate_citations`` over synthetic and quoted strings and
+never reads ``_STATUS_DOCUMENTS``; its subject is the derivation, so it belongs beside the
+derivation rather than beside the assertion that shares its number. Moving it would have split
+the derivation's two controls (``-21b`` and ``-25b``) across two modules for no reason other
+than the digits in an id.
 
 **Why this is a NEW file and not an extension of ``test_release_surface_honesty.py``.**
 That file is bound by its own docstring to Story 9.2/AC12 and its registry is release
@@ -32,10 +54,14 @@ this file.
 1. *It names the files that existed when it was written* (AI-E8-6: all five Epic-8 stories shipped
    a guard narrower than its own AC). Stopped by ``-22``: the registry is resolved by **glob**, and
    any matching file that is not registered fails. A new proposal cannot escape by being new.
+   **That closure now lives in ``tests/test_status_document_registry.py``** (Story 13.4) — the
+   defence is unchanged and unweakened, it is simply enforced from the module that owns the
+   population it closes over.
 2. *Its exemption swallows what it looks for* (the ``-17b`` trailing-negation escape, found by code
    review and not by the author). Stopped by ``-21b``, a positive control in **both** directions
    that plants the verbatim historical defect line and asserts each real honest sentence now on
-   disk is not flagged.
+   disk is not flagged. **``-21b`` remains in this module**, beside the derivation it controls,
+   even though ``-21`` itself moved — see DN-2 above.
 3. *It is only ever run after the fix* (AI-E3-1: Story 3.4's keystone test was green over its own
    keystone bug). Every assertion here was demonstrated RED against the uncorrected documents
    before the corrections landed; the run is recorded in the story's Dev Agent Record.
@@ -64,7 +90,8 @@ import release_notes as rn  # noqa: E402
 # re-listed here (Story 12.9 / AC2). This is the decision the AC demanded be recorded:
 # `-24`/`-25` are NEW ASSERTIONS IN THIS FILE that reuse this file's derivation
 # (`_status_assertions` / `_executed_gate_citations`) over an IMPORTED population — rather
-# than widening `_STATUS_DOCUMENTS`, which is the planning-record population with its own
+# than widening `_STATUS_DOCUMENTS` (which since Story 13.4 lives in
+# `tests/test_status_document_registry.py`), the planning-record population with its own
 # glob closure, or copying the regexes into the surface-honesty file.
 #
 # Why this shape and not the other two:
@@ -87,83 +114,12 @@ _CORRECTED_PROPOSAL = _ARTIFACT_DIR / "sprint-change-proposal-2026-07-28.md"
 
 _GUARD_FILE = "tests/test_evidence_citation.py"
 
-# Every status-asserting planning record under the artifact directory, as of Story 10.1.
-# The registry is the enumerated space; `-22` resolves the globs below against the tree and
-# fails on anything found here that nobody registered.
-_STATUS_DOCUMENTS: tuple[str, ...] = (
-    "sprint-change-proposal-2026-07-28.md",
-    "sprint-change-proposal-2026-08-03.md",
-    "sprint-change-proposal-2026-08-09.md",
-    "sprint-change-proposal-2026-08-10.md",
-    "sprint-change-proposal-2026-08-10b.md",
-    "epic-1-retro-2026-06-21.md",
-    "epic-2-retro-2026-06-24.md",
-    "epic-3-retro-2026-06-27.md",
-    "epic-4-retro-2026-06-28.md",
-    "epic-5-retro-2026-06-29.md",
-    "epic-6-retro-2026-07-02.md",
-    "epic-7-retro-2026-07-04.md",
-    "epic-8-retro-2026-08-08.md",
-    "epic-9-retro-2026-08-09.md",
-    # Registered by Story 12.1 (2026-08-12), closing DF-11-1-A. `-22` had been carved out by node
-    # id by five consecutive stories because these two retrospectives existed on disk but were
-    # unregistered. Registration is INERT against every other assertion in this file:
-    # `_status_assertions()` returns 0 status assertions for each (verified by execution), so the
-    # per-document loop in `-21` short-circuits. No retrospective was edited and no citation minted.
-    "epic-10-retro-2026-08-11.md",
-    "epic-11-retro-2026-08-12.md",
-    # Registered on 2026-08-15 (AI-E12-1), the same one-line edit for the same reason: `-22`'s
-    # glob closure sees `epic-*-retro-*.md` the moment the file lands, which is the closure
-    # working as designed — the Epic-12 retrospective predicted this red about itself (§6 SD-3)
-    # and was written to go green on registration alone. Verified by execution before
-    # registering, exactly as the entry above records: `_status_assertions()` returns 0 for it
-    # (no phrase in `_STATUS_CLAIMS` occurs in the document at all, denied or otherwise), so
-    # `-21`'s per-document loop short-circuits, and `_executed_gate_citations()` returns 0, so
-    # it mints no excuse for anything. Its release-status statements are all NOT ESTABLISHED
-    # and name the superseded run with the `_CITATION_DENIAL_MARKERS`. No retrospective was
-    # edited and no citation minted.
-    "epic-12-retro-2026-08-15.md",
-    "epic-13-retro-INTERIM-2026-08-17.md",  # Registered 2026-08-17 by the Epic-13 INTERIM retrospective, discharging AI-E12-1's SECOND half ("make the registration part of the retrospective step's own DoD") for the first time. Same one-line edit, same reason, same verification-before-registration as the two entries above: `-22` was observed RED against this document and GREEN after, and `_status_assertions()` returns 0 for it (no phrase in `_STATUS_CLAIMS` occurs in it at all), so `-21`'s per-document loop short-circuits and the registration is inert. It DOES carry 2 well-formed run+sha citations, which mint an excuse for nothing because there is no claim to excuse. No retrospective was edited. ⚠️ THIS LINE PUTS THIS FILE AT EXACTLY 1200/1200 (NFR-M1; `MAINT-001-03` pins 1201 as the failure). The NEXT status document cannot be registered until this module is split — filed as AI-E13-2, and it blocks the FINAL Epic-13 retrospective.
-)
-
-# Exactly the set the epic's AC names — "any future change proposal or retrospective".
-_STATUS_DOCUMENT_PATTERNS: tuple[str, ...] = (
-    "sprint-change-proposal-*.md",
-    "epic-*-retro-*.md",
-)
-
-# Exclusions are BY NAME WITH A REASON, never by silence (the `_PRESERVED_RECORD` precedent in
-# tests/test_release_surface_honesty.py:89-96). `-22` asserts every entry carries a reason, so an
-# exclusion cannot be added as a bare path by someone trying to make this guard quiet.
-_EXCLUDED_BY_DESIGN: dict[str, str] = {
-    "stories/": (
-        "Story files record TEST-RUN evidence for one unit of work, not a release status for "
-        "the project; a story's status lives in sprint-status.yaml, which is the tracker. "
-        "Excluded deliberately (story 10.1, DN-5) rather than omitted silently. They do not "
-        "match the patterns above either, and this entry states WHY that is correct."
-    ),
-    "prd.md / architecture.md / epics.md / deferred-work.md": (
-        "Specification and ledger documents, not status records. They describe what the system "
-        "must do and what is deferred; where they mention a release status they are quoting or "
-        "governing one. architecture.md is instead asserted POSITIVELY by -23, which requires "
-        "the rule prose to be present, so the (a)-half of AC2 cannot be silently deleted."
-    ),
-    # Added 2026-08-15 by Story 12.9 / AC2, closing a MEASURED hole rather than describing a
-    # decision: README.md, CHANGELOG.md, .github/workflows/release.yml and the GitHub Release
-    # notes were never excluded from this rule with a reason — they were simply OUTSIDE it,
-    # because `_STATUS_DOCUMENTS` above is change-proposals and retrospectives only. The
-    # release note is the single most read status-asserting document this project will ever
-    # publish and nothing checked it. They are no longer outside: `-24` scans every registered
-    # release surface with this file's own derivation, and `-25` pins the derived statement.
-    "README.md / CHANGELOG.md / release.yml / the release-note body": (
-        "NOT excluded — moved INSIDE the rule by Story 12.9. They are governed by -24 and -25 "
-        "over the `_RELEASE_SURFACES` registry imported above rather than by `_STATUS_DOCUMENTS`, "
-        "because they are consumer surfaces rather than planning records and they are enumerated "
-        "and closed by `TC-ArgusAgent-DOCS-001-18` in the file that owns them. This entry exists "
-        "so a reader of this table finds where the rule reaches them instead of concluding they "
-        "escaped it."
-    ),
-}
+# The other half of this pair, as a LITERAL and deliberately NOT an import (Story 13.4 / DN-3).
+# `tests/test_status_document_registry.py` imports four derivation symbols from THIS module; an
+# import back would be a cycle between two test modules, which fails at collection. A two-word
+# path string is not a policy table, so single-sourcing it buys nothing and costs collection.
+# `-23` asserts this path appears in architecture.md, so the second guard cannot become an orphan.
+_REGISTRY_GUARD_FILE = "tests/test_status_document_registry.py"
 
 # Two reasons that apply to a whole class of surface, named once because the class is the
 # reason: repeating them per path would invite them to drift into three different reasons for
@@ -446,10 +402,6 @@ def _flatten(text: str) -> str:
     return " ".join(text.split())
 
 
-def _registered_paths() -> list[Path]:
-    return [_ARTIFACT_DIR / name for name in _STATUS_DOCUMENTS]
-
-
 def _section(text: str, heading: str, stop_prefixes: tuple[str, ...]) -> str:
     """The slice of *text* from *heading* up to the next heading at or above its level."""
     start = text.find(heading)
@@ -538,49 +490,6 @@ def test_TC_ArgusAgent_DOCS_001_20_the_record_is_corrected_by_striking_and_appen
         "deferred-work.md: DF-AUD-APAA-C must be closed by an append-only note that records run "
         "31322881580 contradicting the entry's own repair claim (AC4.2)."
     )
-
-
-def test_TC_ArgusAgent_DOCS_001_21_every_status_claim_cites_an_executed_gate() -> None:
-    """TC-ArgusAgent-DOCS-001-21 — Story 10.1/AC2b: the rule, enforced over the registered set.
-
-    For every registered status document: a live release-status claim is allowed only if the
-    document cites an executed gate (a run id together with the sha it covers) or the claim's own
-    sentence records the status as NOT ESTABLISHED.
-
-    Non-vacuity is asserted directly. A registry of unreadable or empty files would satisfy every
-    assertion below without reading a word, so each document must exist, be non-empty and parse to
-    real sentences before the scan is allowed to mean anything.
-    """
-    assert _STATUS_DOCUMENTS, "the status-document registry is empty — the guard scans nothing"
-
-    for path in _registered_paths():
-        rel = path.relative_to(_REPO_ROOT).as_posix()
-        assert path.is_file(), f"registered status document is missing: {rel}"
-
-        text = path.read_text(encoding="utf-8")
-        sentences = _split_sentences(text)
-        assert len(sentences) > 10, (
-            f"{rel} parsed to {len(sentences)} sentences — the document is empty or the sentence "
-            "splitter is broken, and either way this guard is not reading it."
-        )
-
-        assertions = _status_assertions(text)
-        if not assertions:
-            continue
-
-        citations = _executed_gate_citations(text)
-        for claim, sentence in assertions:
-            if _NOT_ESTABLISHED_MARKER in sentence:
-                continue
-            assert citations, (
-                f"{rel} ASSERTS a release status without citing an executed gate.\n"
-                f"  claim   : {claim!r}\n"
-                f"  sentence: {sentence[:300]!r}\n"
-                "  fix     : cite the audit-ci.yml run that covers this tree, as "
-                "'run <id> (<sha>, N/N legs)', or record the status as NOT ESTABLISHED. "
-                "A local pytest/mypy/bandit run is necessary but NOT sufficient "
-                "(architecture.md §H, DF-AUD-APAA-C)."
-            )
 
 
 def test_TC_ArgusAgent_DOCS_001_21b_the_claim_detector_actually_bites() -> None:
@@ -703,58 +612,6 @@ def test_TC_ArgusAgent_DOCS_001_21b_the_claim_detector_actually_bites() -> None:
     assert _executed_gate_citations(struck_citation)
 
 
-def test_TC_ArgusAgent_DOCS_001_22_the_status_document_set_is_closed() -> None:
-    """TC-ArgusAgent-DOCS-001-22 — Story 10.1/AC3.2+3.3: a new proposal cannot escape by being new.
-
-    The failure shape is always the same and this project has shipped it five times in one epic
-    (AI-E8-6): the guard names the files that existed when it was written, and the next file added
-    is outside it. The globs are resolved against the tree and anything unregistered fails.
-
-    A pattern that matches nothing passes every assertion inside it, so non-vacuity is asserted
-    twice: the globs must resolve to a non-empty set, and every registered name must be found by
-    them (a registry entry the globs cannot see is dead weight that proves nothing).
-    """
-    found: set[str] = set()
-    for pattern in _STATUS_DOCUMENT_PATTERNS:
-        for path in _ARTIFACT_DIR.glob(pattern):
-            if path.is_file():
-                found.add(path.name)
-
-    assert found, (
-        f"the status-document patterns {_STATUS_DOCUMENT_PATTERNS} resolved to NOTHING under "
-        f"{_ARTIFACT_DIR} — the globs are broken and every other assertion in this file is vacuous"
-    )
-
-    unregistered = sorted(found - set(_STATUS_DOCUMENTS))
-    assert not unregistered, (
-        f"status-asserting document(s) exist but are not registered: {unregistered}. Add them to "
-        "_STATUS_DOCUMENTS so the citation rule covers them — a change proposal or retrospective "
-        "is exactly the kind of document that states a release status."
-    )
-
-    missing = sorted(set(_STATUS_DOCUMENTS) - found)
-    assert not missing, (
-        f"registered document(s) are no longer found by the globs: {missing}. Either they were "
-        "deleted (§3.4: records are superseded, never erased) or the patterns drifted."
-    )
-
-    # Exclusions are decisions, not silence: each one carries a written reason.
-    assert _EXCLUDED_BY_DESIGN, "the exclusion table is empty — record exclusions, do not omit"
-    for excluded, reason in _EXCLUDED_BY_DESIGN.items():
-        assert len(reason.split()) >= 12, (
-            f"exclusion {excluded!r} has no substantive reason recorded. An exclusion without a "
-            "reason is an oversight wearing a decision's clothes (_PRESERVED_RECORD precedent)."
-        )
-
-    # The story-file exclusion is real: story files must not be reachable by the patterns.
-    stories = _ARTIFACT_DIR / "stories"
-    if stories.is_dir():
-        assert not (found & {p.name for p in stories.glob("*.md")}), (
-            "a story file was matched by the status-document patterns; stories are excluded by "
-            f"design — {_EXCLUDED_BY_DESIGN['stories/']}"
-        )
-
-
 def test_TC_ArgusAgent_DOCS_001_23_the_rule_exists_in_prose_and_names_its_guard() -> None:
     """TC-ArgusAgent-DOCS-001-23 — Story 10.1/AC2a: a rule that lives only in a test is not a rule.
 
@@ -777,6 +634,10 @@ def test_TC_ArgusAgent_DOCS_001_23_the_rule_exists_in_prose_and_names_its_guard(
         ("action.yml:33-48", "where that principle is published"),
         ("necessary, not sufficient", "a local run does not discharge the rule"),
         (_GUARD_FILE, "the guard that enforces it"),
+        # Added by Story 13.4. `-21`/`-22` and the registry moved to a second module; a guard the
+        # architecture does not name is exactly the orphan this assertion exists to prevent, and
+        # §H is where AI-E9-7 says the rule and its enforcement belong.
+        (_REGISTRY_GUARD_FILE, "the second half of the guard, which owns the governed population"),
     ):
         assert required in section_h, (
             f"architecture.md §H is missing part of the Story 10.1 evidence-citation rule: "
@@ -789,9 +650,24 @@ def test_TC_ArgusAgent_DOCS_001_23_the_rule_exists_in_prose_and_names_its_guard(
         f"architecture.md §Enforcement must name {_GUARD_FILE} alongside the existing gates, so "
         "the guard is discoverable from the place guards are listed (AC2a)."
     )
+    # Added by Story 13.4 — the same requirement, for the module that now owns `-21`/`-22`.
+    assert _REGISTRY_GUARD_FILE in enforcement, (
+        f"architecture.md §Enforcement must name {_REGISTRY_GUARD_FILE} alongside "
+        f"{_GUARD_FILE}: since Story 13.4 the evidence-citation rule is enforced by TWO cohesive "
+        "halves, and a guard the architecture does not name is an orphan nobody can find (AC2a)."
+    )
     assert "NOT ESTABLISHED" in enforcement, (
         "architecture.md §Enforcement must state what the guard actually fails on — a status "
         "claim carrying neither a citation nor a NOT ESTABLISHED marker."
+    )
+    # Added by Story 13.4 / AC6.3 — AI-E12-1's second half, written down as a rule so it has a
+    # reader inside this repository. One anchor phrase, so the paragraph cannot be deleted silently.
+    assert "in the same change that creates it" in enforcement, (
+        "architecture.md §Enforcement must carry the status-document REGISTRATION rule (Story "
+        "13.4 / AC6.3): a matching document is registered in `_STATUS_DOCUMENTS` in the same "
+        "change that creates it. Three times now a retrospective or proposal has landed "
+        "unregistered and taken the tree red in someone else's session; a rule that lives only in "
+        "a story is not a rule."
     )
 
 

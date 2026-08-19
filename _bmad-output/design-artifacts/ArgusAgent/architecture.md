@@ -645,7 +645,12 @@ these terms; this is a specification, not a security review of Argus at large.
     tool refuses to dress a non-result as an assessment, and the project's own record is held to the
     identical rule — one principle, applied to the tool's output and to its governance alike.
 
-  Enforced by `tests/test_evidence_citation.py` (`TC-ArgusAgent-DOCS-001-20`..`-23`); see §Enforcement.
+  Enforced by `tests/test_evidence_citation.py` and `tests/test_status_document_registry.py`
+  (`TC-ArgusAgent-DOCS-001-20`..`-23`) — *(amended 2026-08-17 by Story 13.4)*: the first holds the
+  DERIVATION (`-20`, `-21b`, `-23`, and Story 12.9's `-24`/`-25`/`-25b`) — what a status claim and an
+  executed-gate citation are; the second holds the POPULATION (`-21`, `-22`) — which planning records
+  are governed and whether that set is closed. One rule, two cohesive halves, no id renumbered. See
+  §Enforcement.
 
 ### I. Packaging & Deployment
 - ~~**`minions[apaa]` optional extra**: `["pydantic>=2","jsonschema","radon","httpx","tree-sitter",
@@ -960,13 +965,38 @@ repo-wide file-size sweep registered below — all committed under `tests/`.
 > every local run too. **CI evidence for the correction: NOT ESTABLISHED** (no CI run covers any Epic
 > 10, 11 or 12 sha).
 
-**Governance enforcement** *(added 2026-08-10 by Story 10.1)*: the §H **evidence-citation rule for status
-claims** is enforced by **`tests/test_evidence_citation.py`** (`TC-ArgusAgent-DOCS-001-20`..`-23`). It
+**Governance enforcement** *(added 2026-08-10 by Story 10.1; amended 2026-08-17 by Story 13.4)*: the §H
+**evidence-citation rule for status claims** is enforced by **`tests/test_evidence_citation.py`** and
+**`tests/test_status_document_registry.py`** (`TC-ArgusAgent-DOCS-001-20`..`-23`). It
 resolves `sprint-change-proposal-*.md` and `epic-*-retro-*.md` by **glob** under the artifact directory —
 so a proposal cannot escape the rule by being new — and fails any status claim carrying neither an
 executed-gate citation (run id **plus** the sha it covers) nor a **NOT ESTABLISHED** marker. A rule that
 lives only in a test is not a rule and a rule that lives only in prose is not enforced, so `-23` asserts
-this section and the §H rule text are both still present.
+this section and the §H rule text are both still present. **The two hosts split along a COHESION
+boundary, not a line-count one** (Story 13.4 / DN-1): `tests/test_evidence_citation.py` owns the
+DERIVATION — what a status claim is, what a citation is, and whether the records and consumer surfaces
+carry them (`-20`, `-21b`, `-23`, `-24`, `-25`, `-25b`) — and
+`tests/test_status_document_registry.py` owns the POPULATION and its glob closure (`-21`, `-22`,
+`_STATUS_DOCUMENTS`, `_STATUS_DOCUMENT_PATTERNS`, `_EXCLUDED_BY_DESIGN`). The split was forced, and is
+recorded here rather than only in a story, because the derivation module reached **exactly 1200/1200**
+against NFR-M1 and **no further status document could be registered at all** — the deadlock `AI-E13-2`
+filed. It was taken as the sanctioned cohesion split (`test_module_size_ceiling.py::_REMEDY`), **never
+as a line-shave and never as an `_EXEMPT_BY_DESIGN` entry**, both of which `AI-E13-2` forbids by name;
+no id was renumbered, no assertion was weakened, and the globs were not narrowed.
+
+**Status-document registration enforcement** *(added 2026-08-17 by Story 13.4 / AC6.3, writing down
+`AI-E12-1`'s second half)*. **The rule: any document matching `sprint-change-proposal-*.md` or
+`epic-*-retro-*.md` under the artifact directory is registered in `_STATUS_DOCUMENTS` in the same change
+that creates it; the retrospective and change-proposal steps do not hand off until their own output is
+registered and the guard is green.** This is not a style preference — it is the observed failure mode,
+three times over: a retrospective or proposal lands, `-22`'s glob closure sees it immediately (which is
+the closure working as designed), and the tree goes red in someone else's session. Registration is
+ordinarily INERT — for most retrospectives `_status_assertions()` returns 0, so `-21`'s per-document loop
+short-circuits — so the cost of doing it in the creating change is one line, while the cost of deferring
+it is a red master. `-23` asserts one anchor phrase from this paragraph, so the rule cannot be deleted
+silently. **Scope note:** the orchestrator-side half of `AI-E12-1` — editing the dev-loop retrospective
+skill's own definition-of-done — is not discharged here and stays with its named owner; what this
+paragraph does is give the rule a reader inside this repository, which is what `AI-E9-8` demands.
 
 **Validation-set enforcement** *(added 2026-08-16 by Story 13.1 / AC2)*: the **VALIDATION-SET
 RESOLUTION** above — *the ≥80%-precision externalization gate is measured over a corpus of real
@@ -1110,6 +1140,8 @@ silently green. `-29` asserts the rule text above and this registration are both
 **Ledger-claim cross-check enforcement** *(added 2026-08-16 by Story 13.2 / AC8.2, closing `AI-E12-6`)*. **The rule: a story record that claims a `DF-*` ledger closure is checked against the ledger — a claimed closure `deferred-work.md` never received fails CI, and the check is over the EXISTENCE of the disposition, not over the `+n / -0` shape of a write.** It is enforced by **`tests/test_governance_record_integrity.py`** (`TC-ArgusAgent-DOCS-001-78`), which extracts every `DF-*` a story file claims to close and requires `deferred-work.md` to carry a matching dated disposition, with a non-vacuity floor (`> 0` claims extracted) so a broken extractor goes red rather than silently green. **Why this rule and not a reviewer instruction:** Epic 12 produced **four** instances — Stories 12.4 and 12.5 recorded closures of `DF-8-3-A`, `DF-10-4-A`, `DF-10-4-B` and `DF-12-3-A` that the ledger never received — and **every review passed them**; the reviews that did check the ledger checked the shape of a write, never its existence. The Epic-12 retrospective asked for this guard *"before 13.2 files its adjudication record"*, and the reason is exact: 13.2's entire deliverable is a recorded governance claim of precisely this shape, so a story that filed one while its own ledger claims went unchecked would be demonstrating the defect inside the fix for it. `TC-ArgusAgent-DOCS-001-77` asserts this registration is still present.
 
 **Disposition-reason refutation enforcement** *(added 2026-08-13 by Story 12.3 / `DF-12-1-B`, extending the §Delivery-closure rule above)*. **The rule: a disposition's REASON is as binding as its LABEL — where a reason makes a claim about reachability, that claim must be REFUTABLE, and a disposition whose stated reason the import graph falsifies fails CI.** It is enforced by **`tests/test_v1_commitment_closure.py`** (`delivered_differently_refutations`, driven by `TC-ArgusAgent-DOCS-001-34` over the live registry and by `TC-ArgusAgent-DOCS-001-37c` over a synthetic graph), and it closes a hole that was **measured by executing the guard's own code, not by reading it**. `reachability_refutations` refutes exactly two shapes — `wired`-over-unreachable and `library-seam`-over-reachable — and Story 12.2 added a third for `not-built`. `delivered-differently` was left unrefutable **by design and correctly**, since the label makes no reachability claim and a walk that assigned it one would manufacture false accusations. **But the label was never the only thing making claims.** FR27's reason asserted *"the memoization MECHANISM is unwired (`DF-AUD-APAA-A`) … Mechanism deferred to Story 12.3"*, and executed on `58c8f6b` with `argus.cache.memo_store` forced REACHABLE, `reachability_refutations` returned `()` while the identical tuple disposed `library-seam` fired immediately. So wiring the store — the thing that sentence was *about* — would have turned **nothing** red, and this repository would have gone on asserting that its memoization mechanism was unbuilt, behind a fully green suite. **That also makes `DF-12-1-B`'s stated trigger measurably FALSE as written**: it predicted this wiring would *"flip a `library-seam` disposition red"*, and FR27 was never disposed `library-seam`; the substance the entry was pointing at is real, but the mechanism it named would never have fired. The new direction is deliberately **as narrow as Story 12.2's**: it fires only when the reason contains a registered unwiredness/deferral marker AND the module that reason is about is reachable, so the disposition's legitimate use — *"delivered by another mechanism, divergence named"* — is untouched. The remedy when it fires is to **re-derive the disposition**, never to soften the sentence until it stops matching. Because a refutation nobody has watched fire is a refutation nobody knows is reachable, `-37c` drives all three outcomes over a synthetic graph (refuted / silent-because-unreachable / silent-because-no-claim), and the fix was proven **RED-first with the final committed code** against the real pre-fix registry state. `TC-ArgusAgent-DOCS-001-41` asserts this registration is still present.
+
+**Vacuity-corroboration enforcement** *(added 2026-08-17 by [sprint-change-proposal-2026-08-17.md](sprint-change-proposal-2026-08-17.md), implemented by Story 14.1)*. **The rule: a `vacuous_test_ast` finding is verdict-eligible ONLY on evidence that the asserted values do not derive from the SUT — NEVER on the mere presence of a mock.** Cross-cutting concern #6 has required *"`audited_deep` AST corroboration AND Prosecutor sign-off"* since this architecture was written; the Story 1.5 detector shipped **`AUDITED_SHALLOW` with no sign-off**, and its fact (b) reduced to `assertion_sites >= 1 and mock_sites >= 1` — which is *"the test constructs a mock"*, a fact the heuristic already had. **Measured on the day it was found, which is why this is a rule and not a preference:** over the ratified 5-repository corpus the rule class emitted **31** blocking findings and the named human adjudicated **0** of them true (26 FP / 5 BORDERLINE); across **1,836** heuristically-flagged tests in the two contributing members `ast_corroborated` was equivalent to `mock_sites >= 1` in **1,835** cases, so the corroboration step **added no evidence the heuristic did not already have** — it re-read one input and treated the agreement as confirmation. **The Epic-6 Prosecutor does not close this, and relying on it was the error:** `argus/verdict/prosecutor.py:56-57` leaves an ALREADY-verdict-eligible finding **UNCHANGED**, so sign-off gates only the *promotion* path (advisory → eligible), and the V1 call site at `pipeline.py:535` passes **no `sign_offs`** by design (the deterministic zero-token default). *"AST corroboration AND Prosecutor sign-off"* is therefore an `AND` only for the findings that do not need it, and an `OR` for the one class that does. **The moat is consequently enforced AT THE DETECTOR**, and the conservative default is restored: where the unresolved 1.4 edge set (DF-1-4-A) cannot establish fact (b), corroboration is **NOT granted** and the finding stays `vacuous_test_heuristic` / advisory. The V1 signal is **name-level and a proxy** — full dataflow-grounded assertion provenance remains **Story 6.2**'s scope (`DF-14-1-A`) — and it is measured against three populations, never argued: the planted-vacuous cartridges (recall, incl. the `holdout_vacuous` anti-overfitting control), the 31 adjudicated locators (precision), and the whole flagged population (promotion rate).
 
 ## Project Structure & Boundaries
 

@@ -2,7 +2,10 @@
 
 Verification area ArgusAgent-DOCS (``TC-ArgusAgent-DOCS-001-24``..``-27``, CONTINUING the index
 locked by Story 8.4; ``-01``..``-19`` belong to ``tests/test_release_note.py`` and
-``tests/test_release_surface_honesty.py``, ``-20``..``-23`` to ``tests/test_evidence_citation.py``).
+``tests/test_release_surface_honesty.py``, ``-20``..``-23`` to ``tests/test_evidence_citation.py``
+and ``tests/test_status_document_registry.py`` — *(amended 2026-08-17 by Story 13.4: that range now
+has TWO hosts, split along a cohesion boundary — the derivation stays in the first, and ``-21``/
+``-22`` plus the governed population moved to the second. No id was renumbered.)*).
 
 **The defect under repair (``DF-AUD-APAA-D``).** Multi-language AST grounding entered the product
 through ``sprint-change-proposal-2026-07-28.md:18`` with no story and no specification amendment.

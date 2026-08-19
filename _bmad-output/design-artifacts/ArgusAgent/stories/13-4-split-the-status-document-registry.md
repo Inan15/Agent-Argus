@@ -1,6 +1,22 @@
+---
+baseline_commit: 47b6dbe07846701eb2ef33ea570c8583564bf080
+baseline_note: >-
+  `HEAD` = `47b6dbe` and `origin/master` = `47b6dbe` (0 ahead, 0 behind), `git tag -l` **EMPTY** —
+  all re-measured 2026-08-17 at the start of dev-story. **DIVERGENCE FROM §0, recorded rather than
+  smoothed over:** the story was contexted on `867a3bd`; master has since moved to `47b6dbe`. Every
+  §0 baseline was therefore re-measured on `47b6dbe` rather than inherited, and all three came back
+  IDENTICAL — `pytest` **1597 collected**, `mypy argus` **Success, 86 source files**, `bandit -r
+  argus` **19 Low / 0 Medium / 0 High** (confidence 0 / 0 / 6 / 13). `tests/test_evidence_citation.py`
+  still measured **exactly 1200** lines. **A SECOND divergence, and it is the reason this story ran
+  now:** the deadlock is no longer hypothetical. An APPROVED correct-course run wrote
+  `sprint-change-proposal-2026-08-17.md` into the artifact directory earlier in this same session,
+  which took `TC-ArgusAgent-DOCS-001-22` **RED on the live tree** — one failing test, the whole suite
+  otherwise green. §0.1's deadlock was reproduced against that real document rather than a probe.
+---
+
 # Story 13.4: Split the status-document registry
 
-Status: ready-for-dev
+Status: done
 
 <!-- Created 2026-08-17 by create-story on HEAD 867a3bd. Every premise below was re-measured BY
      EXECUTION before this file was written; see §0. THE DEADLOCK WAS REPRODUCED, not assumed —
@@ -480,61 +496,61 @@ irrelevant to this story. **Do not restore, apply, reference or mention it**, an
 
 ## Tasks & Subtasks
 
-- [ ] **Task 0 — Re-measure the premise on your own baseline (AC: 4.1)**
-  - [ ] Record your HEAD sha. Measure `len(text.splitlines())` for
+- [x] **Task 0 — Re-measure the premise on your own baseline (AC: 4.1)**
+  - [x] Record your HEAD sha. Measure `len(text.splitlines())` for
         `tests/test_evidence_citation.py` — expect **1200**.
-  - [ ] **Reproduce §0.1 yourself**: probe document → `-22` RED; register it → `-22` GREEN and
+  - [x] **Reproduce §0.1 yourself**: probe document → `-22` RED; register it → `-22` GREEN and
         `MAINT-001-02` RED. Capture both. **Revert completely and prove it with
         `git status --porcelain`.**
-  - [ ] Capture the three baseline gate numbers. Report any divergence from §0 as a finding.
-- [ ] **Task 1 — Create the new module (AC: 1, 5)**
-  - [ ] Locate the four blocks **by anchor text** (§0.2) and relocate them **verbatim** —
+  - [x] Capture the three baseline gate numbers. Report any divergence from §0 as a finding.
+- [x] **Task 1 — Create the new module (AC: 1, 5)**
+  - [x] Locate the four blocks **by anchor text** (§0.2) and relocate them **verbatim** —
         comments, messages and blank-line structure intact.
-  - [ ] Write the module docstring: cohesion statement, the id range it holds, **that it opens no
+  - [x] Write the module docstring: cohesion statement, the id range it holds, **that it opens no
         new ids**, why the boundary is where it is (DN-1), why `-21b` stayed (DN-2), and the one
         import edge (DN-3, AC1.5).
-  - [ ] Add the four imports and the two derived path constants (AC1.6).
-- [ ] **Task 2 — Edit the retained module, and only in the four permitted ways (AC: 1, 5.7)**
-  - [ ] Remove the moved blocks.
-  - [ ] Amend the module docstring: the new cohesion statement, where the registry went, and the
+  - [x] Add the four imports and the two derived path constants (AC1.6).
+- [x] **Task 2 — Edit the retained module, and only in the four permitted ways (AC: 1, 5.7)**
+  - [x] Remove the moved blocks.
+  - [x] Amend the module docstring: the new cohesion statement, where the registry went, and the
         two bullets at `:32-38` whose subjects now straddle the boundary.
-  - [ ] Re-point the `:63-81` Story 12.9 comment's `_STATUS_DOCUMENTS` reference, **preserving the
+  - [x] Re-point the `:63-81` Story 12.9 comment's `_STATUS_DOCUMENTS` reference, **preserving the
         decision it records**.
-  - [ ] Add the new module's path constant beside `_GUARD_FILE`, with the DN-3 cycle comment.
-  - [ ] Strike-and-correct the `epic-13-retro-INTERIM` registration comment's now-false last
+  - [x] Add the new module's path constant beside `_GUARD_FILE`, with the DN-3 cycle comment.
+  - [x] Strike-and-correct the `epic-13-retro-INTERIM` registration comment's now-false last
         sentence, in its new home (AC5.4).
-- [ ] **Task 3 — Register the new guard where guards are registered (AC: 6.1, 6.2, 6.3)**
-  - [ ] Amend `architecture.md` §H `:648` and §Enforcement `:963-969`, dated and attributed.
-  - [ ] Add the `AI-E12-1` registration rule to §Enforcement.
-  - [ ] Extend `-23`'s anchor enumeration: the new module's path in **both** sections, plus one
+- [x] **Task 3 — Register the new guard where guards are registered (AC: 6.1, 6.2, 6.3)**
+  - [x] Amend `architecture.md` §H `:648` and §Enforcement `:963-969`, dated and attributed.
+  - [x] Add the `AI-E12-1` registration rule to §Enforcement.
+  - [x] Extend `-23`'s anchor enumeration: the new module's path in **both** sections, plus one
         phrase from the registration rule. **Add only.**
-- [ ] **Task 4 — Re-point the three live docstring citations (AC: 6.4, 6.5)**
-  - [ ] `test_module_size_ceiling.py:34` — by **symbol**, and record the drift you found.
-  - [ ] `test_spec_claim_scope.py:5` and `test_v1_commitment_closure.py:4` — name both hosts.
-  - [ ] **Verify you changed no assertion in any of the three** (`git diff` them and say so).
-- [ ] **Task 5 — Prove every moved assertion still bites (AC: 3)**
-  - [ ] `-21` RED at the real seam from its new home, then restored and proven restored.
-  - [ ] `-22` RED → registered → GREEN → removed → GREEN.
-  - [ ] `-21b` run from its retained home; confirm untouched.
-  - [ ] Paste every command and its output into the Debug Log.
-- [ ] **Task 6 — Prove the deadlock is broken (AC: 4)**
-  - [ ] Plant **two** probe status documents, one per pattern, >10 sentences each, LF, utf-8.
-  - [ ] Register both. **Full suite** — green, 1597 collected.
-  - [ ] Remove both probes and both registrations. **Full suite** — green, 1597 collected.
-  - [ ] `git status --porcelain` shows no residue anywhere. **Nothing probe-related is committed.**
-  - [ ] Record both modules' final line counts and headroom; if the retained module is above 1100,
+- [x] **Task 4 — Re-point the three live docstring citations (AC: 6.4, 6.5)**
+  - [x] `test_module_size_ceiling.py:34` — by **symbol**, and record the drift you found.
+  - [x] `test_spec_claim_scope.py:5` and `test_v1_commitment_closure.py:4` — name both hosts.
+  - [x] **Verify you changed no assertion in any of the three** (`git diff` them and say so).
+- [x] **Task 5 — Prove every moved assertion still bites (AC: 3)**
+  - [x] `-21` RED at the real seam from its new home, then restored and proven restored.
+  - [x] `-22` RED → registered → GREEN → removed → GREEN.
+  - [x] `-21b` run from its retained home; confirm untouched.
+  - [x] Paste every command and its output into the Debug Log.
+- [x] **Task 6 — Prove the deadlock is broken (AC: 4)**
+  - [x] Plant **two** probe status documents, one per pattern, >10 sentences each, LF, utf-8.
+  - [x] Register both. **Full suite** — green, 1597 collected.
+  - [x] Remove both probes and both registrations. **Full suite** — green, 1597 collected.
+  - [x] `git status --porcelain` shows no residue anywhere. **Nothing probe-related is committed.**
+  - [x] Record both modules' final line counts and headroom; if the retained module is above 1100,
         do AC4.6.
-- [ ] **Task 7 — Verify the invariants (AC: 2, 5)**
-  - [ ] Compare `test_TC_ArgusAgent_*` name sets before (`git show HEAD:...`) and after. Equal.
-  - [ ] Collected count identical: **1597**.
-  - [ ] `assert` counts before/after. Enumerate the four permitted edits and state that there is
+- [x] **Task 7 — Verify the invariants (AC: 2, 5)**
+  - [x] Compare `test_TC_ArgusAgent_*` name sets before (`git show HEAD:...`) and after. Equal.
+  - [x] Collected count identical: **1597**.
+  - [x] `assert` counts before/after. Enumerate the four permitted edits and state that there is
         no fifth.
-- [ ] **Task 8 — Ledger, gates, hand-off (AC: 7)**
-  - [ ] Append the dated Story 13.4 section to `deferred-work.md`, including `DF-13-4-A`
+- [x] **Task 8 — Ledger, gates, hand-off (AC: 7)**
+  - [x] Append the dated Story 13.4 section to `deferred-work.md`, including `DF-13-4-A`
         (record-only) and the relocated node ids. **Append only — edit nothing above it.**
-  - [ ] Run all three gates. Report actual numbers as deltas against §0's baselines.
-  - [ ] **Run the full suite after the last prose edit** (`AI-E13-1`).
-  - [ ] Fill in the Dev Agent Record, File List and Change Log. Confirm `git tag -l` is still
+  - [x] Run all three gates. Report actual numbers as deltas against §0's baselines.
+  - [x] **Run the full suite after the last prose edit** (`AI-E13-1`).
+  - [x] Fill in the Dev Agent Record, File List and Change Log. Confirm `git tag -l` is still
         empty and nothing outward-facing was performed.
 
 ---
@@ -543,27 +559,307 @@ irrelevant to this story. **Do not restore, apply, reference or mention it**, an
 
 ### Agent Model Used
 
-_To be completed by the dev agent._
+`claude-opus-5[1m]` (dev-story), 2026-08-17.
 
 ### Debug Log
 
-_To be completed by the dev agent. Required: the Task 0 reproduction, every RED/GREEN transcript
-from Tasks 5 and 6, the two full-suite runs with probes in and out, the id-set comparison, the
-assert counts, and the final line counts of both modules with headroom._
+**Task 0 — premise re-measured on my own baseline `47b6dbe` (NOT `867a3bd`; see `baseline_note`).**
+
+```
+HEAD                          : 47b6dbe07846701eb2ef33ea570c8583564bf080
+origin/master                 : 47b6dbe07846701eb2ef33ea570c8583564bf080   (0 ahead / 0 behind)
+git tag -l                    : []                                        (empty, unchanged)
+tests/test_evidence_citation.py : 1200 lines                              (§0 premise HOLDS)
+pytest --collect-only         : 1597 tests collected                      (== §0 baseline)
+mypy argus                    : Success: no issues found in 86 source files
+bandit -r argus               : 19 Low / 0 Medium / 0 High; confidence 0 / 0 / 6 / 13
+```
+
+All three gate baselines came back **identical to §0** despite the different sha. Recorded as a
+confirmation per `AI-E12-10`, not assumed.
+
+**Task 0 — the deadlock, reproduced against a REAL document rather than a probe.**
+
+```
+STEP 1: sprint-change-proposal-2026-08-17.md on disk, unregistered  (the LIVE state)
+  tests/test_evidence_citation.py = 1200 lines
+  TC-ArgusAgent-DOCS-001-22   -> FAILED  (exit 1)
+     "status-asserting document(s) exist but are not registered:
+      ['sprint-change-proposal-2026-08-17.md']"
+  TC-ArgusAgent-MAINT-001-02  -> passed  (exit 0)
+
+STEP 2: that document REGISTERED — the only sanctioned fix for step 1's red
+  tests/test_evidence_citation.py = 1201 lines
+  TC-ArgusAgent-DOCS-001-22   -> passed  (exit 0)
+  TC-ArgusAgent-DOCS-001-21   -> passed  (exit 0)
+  TC-ArgusAgent-MAINT-001-02  -> FAILED  (exit 1)
+     "NFR-M1 breach — file(s) over the 1200-line ceiling:
+      tests/test_evidence_citation.py (1201 lines, 1 over)"
+
+REVERT: git checkout -- tests/test_evidence_citation.py
+  git status --porcelain -- tests/  ->  (empty)
+  line count                        ->  1200
+```
+
+**There is no third state**, exactly as §0.1 records. Step 1 is red because the set is not closed;
+step 2 closes the set and is red because the file is full.
+
+**Task 5 / AC3.1 — `-21` proven RED at the REAL seam, from its new home.**
+
+```
+$ (append "The tool is ready for release and we are shipping it today." to
+   _bmad-output/design-artifacts/ArgusAgent/epic-9-retro-2026-08-09.md — a REGISTERED document)
+$ pytest tests/test_status_document_registry.py::test_TC_ArgusAgent_DOCS_001_21_... 
+FAILED — "epic-9-retro-2026-08-09.md ASSERTS a release status without citing an executed gate.
+          sentence: 'the tool is ready for release and we are shipping it today.'"
+  assert []                       <- _executed_gate_citations() empty, as designed
+$ git checkout -- .../epic-9-retro-2026-08-09.md
+$ git status --porcelain -- .../epic-9-retro-2026-08-09.md   ->  (empty)
+$ pytest ...::_21_...  ->  passed
+```
+
+**Task 5 / AC3.2 — `-22` proven RED → registered → GREEN → removed → GREEN, from its new home.**
+
+```
+$ (write sprint-change-proposal-2026-08-17-PROBEC.md, unregistered)
+$ pytest tests/test_status_document_registry.py::...DOCS_001_22...
+FAILED — "status-asserting document(s) exist but are not registered:
+          ['sprint-change-proposal-2026-08-17-PROBEC.md']"
+$ (register it)          -> passed
+$ (rm probe + registration) -> passed
+```
+
+**Task 5 / AC3.3 — `-21b` from its RETAINED home, untouched.**
+
+```
+$ pytest tests/test_evidence_citation.py::test_TC_ArgusAgent_DOCS_001_21b_the_claim_detector_actually_bites
+passed
+```
+
+**Task 6 / AC4.2-4.4 — the deadlock is BROKEN, measured with two further registrations.**
+
+```
+$ (plant sprint-change-proposal-2026-08-17-PROBE-A.md and epic-99-retro-PROBE-B-2026-08-17.md,
+   15 sentences each, encoding=utf-8, newline="\n"; register BOTH)
+   tests/test_status_document_registry.py = 261 lines
+$ pytest                    ->  ALL PASSED, 0 failed, 0 skipped
+$ pytest --collect-only     ->  1597 tests collected
+$ (rm both probes; remove both registration lines)
+   tests/test_status_document_registry.py = 259 lines
+$ pytest                    ->  ALL PASSED, 0 failed, 0 skipped
+$ pytest --collect-only     ->  1597 tests collected
+$ git status --porcelain    ->  no probe residue anywhere (see File List for the intended set)
+```
+
+Two further registrations fit **with the whole suite green**, which is the DoD `AI-E13-2` asked
+for. Nothing else in the tree fires on a new status document — that was the point of running the
+FULL suite rather than just `-21`/`-22`/`MAINT-001-*`.
+
+**Task 6 / AC4.5 — final line counts and headroom.**
+
+| Module | Lines | Headroom to 1200 |
+|---|---|---|
+| `tests/test_evidence_citation.py` | **1076** | 124 |
+| `tests/test_status_document_registry.py` | **259** | **941 ≈ 941 further registrations** |
+
+**AC4.6 did not trigger** and the note it would have required is deliberately not filed: the
+retained module measured **1076**, below the 1100 threshold the AC names. The Story 12.9
+release-surface half stays on record in the ledger as the candidate *next* boundary.
+
+**Task 7 / AC2.1 — test-id name sets, before vs after, by execution.**
+
+```
+before (git show HEAD:tests/test_evidence_citation.py) : 8 ids
+after  (both modules, union)                           : 8 ids
+EQUAL : True      only-before: []      only-after: []
+```
+
+**Task 7 / AC2.3 — collected count: 1597 before, 1597 after. Identical.**
+
+**Task 7 / AC5.8 — assert counts.**
+
+```
+before : test_evidence_citation.py        = 84
+after  : test_evidence_citation.py        = 76
+after  : test_status_document_registry.py = 10
+after total = 86  >=  before 84           -> True
+```
+
+The `+2` are the two assertions `-23` gained (AC6.2/AC6.3): the registry module's path in
+§Enforcement, and one anchor phrase from the new registration rule. **No assertion was deleted,
+softened, skipped, xfailed or narrowed.**
+
+**Task 4 — the three docstring re-points changed no assertion, verified by diff.**
+
+```
+tests/test_module_size_ceiling.py   : 9 insertions, 1 deletion  — 0 changed lines matching 'assert '/'def test_'
+tests/test_spec_claim_scope.py      : 4 insertions, 1 deletion  — 0 changed lines matching 'assert '/'def test_'
+tests/test_v1_commitment_closure.py : 4 insertions, 1 deletion  — 0 changed lines matching 'assert '/'def test_'
+```
+
+**AC6.6 — `deferred-work.md` is append-only, verified structurally.** Both diff hunks are pure
+insertions (`@@ -4412,0 +4413,19 @@` and `@@ -4423,0 +4443,22 @@` — zero lines deleted), and the
+three protected ranges were checked byte-for-byte against `HEAD`: `:1381-1386`, `:2235-2249` and
+`:2523` are all still present verbatim.
 
 ### Completion Notes
 
-_To be completed by the dev agent. Required: DN-1..DN-5 each confirmed or diverged-from with the
-rejected alternative named; the enumerated list of edits to `tests/test_evidence_citation.py` with
-the statement that there is no fifth; and the measured gate deltas._
+**DN-1 — CONFIRMED, boundary taken as specified.** Population versus derivation.
+`_STATUS_DOCUMENTS` has exactly three readers (`_registered_paths`, `-21`, `-22`), so the registry,
+its glob closure and its exclusion table lifted out as a closed unit with **one** import edge.
+*Rejected alternative, as recorded:* splitting off the Story 12.9 release-surface half
+(`-24`/`-25`/`-25b`) — it moves more lines, would read as choosing whichever boundary helps the
+arithmetic most, and would have left the registry in the module that was full. It is recorded in
+the ledger as the next candidate boundary, not taken.
+
+**DN-2 — CONFIRMED.** `-21b` stayed with the derivation it controls. Both module docstrings answer
+"where is `-21`'s control?" at both ends, as the DN requires. *Rejected alternative:* moving it
+because its id says `21`, which would have split the derivation's two controls (`-21b`, `-25b`)
+across modules for no reason but digits.
+
+**DN-3 — CONFIRMED.** One import direction, new → old:
+`tests/test_status_document_registry.py` imports `_NOT_ESTABLISHED_MARKER`,
+`_executed_gate_citations`, `_split_sentences`, `_status_assertions`. The retained module declares
+`_REGISTRY_GUARD_FILE` as a **literal** with a comment stating that an import back would be a cycle
+that fails at collection. *Rejected alternative:* importing it for single-sourcing.
+
+**DN-4 — CONFIRMED.** The registry stayed **Python**, not a data file. Every entry carries the prose
+record of its own registration decision; a JSON/YAML sidecar would lose those or make them
+uncommentable, and would let the governed population be edited without touching a guard.
+
+**DN-5 — CONFIRMED.** `architecture.md` §H and §Enforcement were amended **in place**, dated and
+attributed *(amended 2026-08-17 by Story 13.4)*. These are pointers to where enforcement lives, not
+claims about the world that turned out false, so §3.4's strike form does not apply. `deferred-work.md`
+is the opposite case and was appended to only.
+
+**The edits to `tests/test_evidence_citation.py`, enumerated. There is no fifth.**
+
+1. **Removal of the four moved blocks** — the registry/patterns/exclusions block (78 lines),
+   `_registered_paths` (4), `-21` (43), `-22` (52). Located by **anchor text**, not by the line
+   numbers in §0.2, which had already drifted.
+2. **Module-docstring amendment** — new cohesion statement as the opening line, the id list
+   corrected to what this module now holds, where the other half went and why, DN-2's answer, and
+   the two three-ways-a-guard-lies bullets (`:32-38`) whose subjects now straddle the boundary.
+3. **The `:63-81` Story 12.9 comment block** — one clause re-pointing `_STATUS_DOCUMENTS` to its
+   new home. **The decision it records is preserved verbatim**; only the location changed.
+4. **`_REGISTRY_GUARD_FILE` beside `_GUARD_FILE`** (with the DN-3 cycle comment) **and the `-23`
+   extension** — the new path asserted in both §H and §Enforcement, plus one anchor phrase from the
+   AC6.3 registration rule. **Add only**; every pre-existing anchor in `-23`'s enumeration stays.
+
+**AC5.4's one permitted registry edit was made**, and it travelled with its entry into the new
+module: the `epic-13-retro-INTERIM-2026-08-17.md` comment's final sentence ("THIS LINE PUTS THIS
+FILE AT EXACTLY 1200/1200 … the NEXT status document cannot be registered until this module is
+split") had become false in the direction that matters, so it is **struck and corrected** in place
+rather than erased, naming Story 13.4 and the new host.
+
+**One addition to `_STATUS_DOCUMENTS` beyond the pure relocation, and it is the point of the
+story:** `sprint-change-proposal-2026-08-17.md` is now registered. It is the document whose arrival
+took the tree red, and registering it is what the split existed to make possible. It carries its own
+registration comment in the same form as every entry above it.
+
+**Gate deltas against the §0 baselines — LOCAL runs. CI evidence is NOT ESTABLISHED for this tree.**
+
+| Gate | §0 baseline (`867a3bd`) | Measured now (`47b6dbe` + this change) | Delta |
+|---|---|---|---|
+| `pytest` | 1597 collected / 1597 passed / 0 failed / 0 skipped, exit 0 | 1597 collected / 1597 passed / 0 failed / 0 skipped, exit 0 | **none** |
+| `mypy argus` | Success, 86 source files | Success, 86 source files | **none** |
+| `bandit -r argus` | 19 Low / 0 Med / 0 High (conf 0/0/6/13) | 19 Low / 0 Med / 0 High (conf 0/0/6/13) | **none** |
+
+All three identical, as predicted: the move is pure, `mypy` runs over `argus` only, and **no
+`argus/` file was touched by this story**. No skip appeared.
+
+**⚠️ Platform caveat, stated rather than buried.** All three gates are **Windows-only** local runs.
+CI runs an ubuntu matrix, and this repository has already shipped POSIX-only defects out of a green
+Windows run (`AI-E13-1`). The new module uses `pathlib` throughout, derives its two paths from
+`Path(__file__)`, opens every file with an explicit `encoding="utf-8"`, and contains no `os.sep`, no
+drive letter, no backslash literal and no CRLF-sensitive count — but that is reasoning, not a
+measurement. **CI evidence: NOT ESTABLISHED.**
+
+**Nothing outward-facing.** `git tag -l` re-checked after the change: still empty. No release, no
+tag, no visibility change, and `DF-12-9-A`'s disposition was not edited.
 
 ### File List
 
-_To be completed by the dev agent._
+| Path | Action |
+|---|---|
+| `tests/test_status_document_registry.py` | **NEW** — the registry, its glob closure, its exclusion table, `_registered_paths`, `-21`, `-22` |
+| `tests/test_evidence_citation.py` | **MODIFIED** — the four enumerated edits (1200 → 1076 lines) |
+| `tests/test_module_size_ceiling.py` | **MODIFIED — docstring only**, `_EXCLUDED_BY_DESIGN` cite re-pointed by symbol |
+| `tests/test_spec_claim_scope.py` | **MODIFIED — docstring only**, `-20`..`-23` ownership names both hosts |
+| `tests/test_v1_commitment_closure.py` | **MODIFIED — docstring only**, `-20`..`-23` ownership names both hosts |
+| `_bmad-output/design-artifacts/ArgusAgent/architecture.md` | **MODIFIED** — §H pointer, §Enforcement governance paragraph, new status-document registration rule |
+| `_bmad-output/design-artifacts/ArgusAgent/deferred-work.md` | **APPENDED ONLY** — Story 13.4 dispositions section + `DF-13-4-A` |
+| `_bmad-output/design-artifacts/ArgusAgent/stories/13-4-split-the-status-document-registry.md` | **MODIFIED** — frontmatter, task checkboxes, Dev Agent Record, File List, Change Log, Status |
+| `_bmad-output/design-artifacts/ArgusAgent/sprint-status.yaml` | **MODIFIED** — `13-4` ready-for-dev → in-progress → review |
+
+*Not this story's changes, present in the same working tree:* the six governance artifacts edited by
+the approved `sprint-change-proposal-2026-08-17.md` correct-course run earlier in the session, and
+that proposal document itself. They are listed in that proposal's §6, not here.
 
 ### Review Findings
 
-_To be completed by the code-review agent._
+**Code review (Sonnet), 2026-08-17. VERDICT: pass.** Adversarial review ran three layers (Blind
+Hunter, Edge Case Hunter, Acceptance Auditor) against the working-tree diff, scoped strictly to
+this story's files (excluding the approved, separate `sprint-change-proposal-2026-08-17.md`
+correct-course edits present in the same tree). Every AC was independently re-verified **by
+execution**, not by trusting the Debug Log:
+
+- **AC2 (ids byte-identical):** re-extracted `test_TC_ArgusAgent_*` name sets from
+  `git show HEAD:tests/test_evidence_citation.py` and the union of both modules — **8 before, 8
+  after, empty symmetric difference.** `pytest --collect-only` summed to **1597**, matching.
+- **AC5.1/AC5.8 (nothing weakened):** diffed the moved `-21`/`-22` bodies against `HEAD` byte for
+  byte — **verbatim**, including all non-vacuity machinery (registry-non-empty, file-exists,
+  >10-sentence check in `-21`; globs-resolve-to-something and every-name-found checks in `-22`).
+  Assert counts recomputed independently: **84 → 76 + 10 = 86**, matching the story's claim exactly.
+- **AC5.2/AC5.3:** `_CEILING`/`_breaches_ceiling`/`_physical_line_count`/`_tracked_python_files`/
+  `_measure_population` untouched (zero diff on `test_module_size_ceiling.py` outside the docstring
+  hunk); `_STATUS_DOCUMENT_PATTERNS` diffed byte-identical. No `_EXEMPT_BY_DESIGN` entry added.
+- **AC5.4/AC5.5:** `_STATUS_DOCUMENTS` order re-verified by script — first 18 entries identical to
+  `HEAD` in the same order, exactly one new entry appended (`sprint-change-proposal-2026-08-17.md`)
+  and exactly the claimed strike-and-correct edit to the `epic-13-retro-INTERIM` comment.
+  `_EXCLUDED_BY_DESIGN` diffed byte-identical including all four reasons.
+- **AC5.7:** all 9 diff hunks in `test_evidence_citation.py` map cleanly onto the four enumerated
+  edit categories; no fifth edit found.
+- **AC1.5/DN-3:** confirmed `test_evidence_citation.py` contains no `import` of the new module —
+  only the `_REGISTRY_GUARD_FILE` string literal, with the cycle-avoidance comment present.
+- **AC6.6:** `deferred-work.md`'s three protected ranges (`:1381-1386`, `:2235-2249`, `:2523`)
+  diffed byte-identical against `HEAD`; the Story 13.4 append hunk (`-4542,3 +4583,56`) is a pure
+  insertion with zero deleted lines.
+- **AC6.4/6.5:** `test_module_size_ceiling.py`, `test_spec_claim_scope.py`, `test_v1_commitment_closure.py`
+  diffs confirmed docstring-only — no `assert`/`def test_` line touched in any of the three.
+- **Platform neutrality:** new module uses `pathlib` exclusively, explicit `encoding="utf-8"`, no
+  `os.sep`/backslash/drive-letter literals, `sorted()` on every rendered set. All registered
+  filenames (including the mixed-case `epic-13-retro-INTERIM-2026-08-17.md`) verified to match
+  on-disk names exactly, case for case — this is inherited verbatim from the pre-existing registry,
+  not new behavior, so the story introduces no new Windows/Linux divergence risk. **Gates remain
+  Windows-only** (per the story's own honest caveat); CI evidence stays NOT ESTABLISHED.
+- **Non-vacuity of new `-23` assertions:** `assert _REGISTRY_GUARD_FILE in enforcement` and
+  `assert "in the same change that creates it" in enforcement` are real substring checks against
+  `architecture.md` bytes read from disk (`_ARCHITECTURE.read_text(...)`) — both would fail if the
+  corresponding architecture text were removed. Not decoration.
+
+**Gates, independently re-run:** `pytest -q` → **1597 collected, 1597 passed (all dots), 0 failed,
+0 skipped, exit 0** (confirmed by counting collected-per-file totals and by counting `.`/`F`/`E`
+characters in the raw run output, since this repo's pytest configuration does not print the usual
+terminal summary line — a pre-existing, repo-wide quirk unrelated to this story, also observed on
+`--collect-only`). `mypy argus` → **Success: no issues found in 86 source files.** `bandit -r argus`
+→ **19 Low / 0 Medium / 0 High** (confidence 0/0/6/13). All three **identical to the story's
+claimed baseline and delta**, and `argus/` is confirmed fully untouched (`git diff --stat -- argus/`
+empty).
+
+**Findings (all dismissed as non-blocking):**
+- [x] [Review][Defer] New module's docstring line "so this runs identically on all three CI legs"
+      is a confidence claim CI has not actually verified (CI evidence is explicitly NOT ESTABLISHED
+      per this same story) [tests/test_status_document_registry.py:49-51] — deferred, cosmetic
+      wording nit, not a functional or safety issue; the surrounding reasoning (pure functions, no
+      network/subprocess, explicit utf-8) is accurate as a basis for the *expectation*, just phrased
+      more confidently than "NOT ESTABLISHED" phrasing used elsewhere in this same story.
+
+No decision-needed findings. No patch findings. No High or Medium findings. This is a faithful,
+verbatim cohesion split: every governed invariant (ids, assert semantics, registry membership and
+order, ceiling logic, glob patterns, exclusion table, import direction, append-only ledger ranges)
+was independently re-verified by direct execution/diff rather than by trusting the story's own
+claims, and all of it held.
 
 ---
 
@@ -571,4 +867,6 @@ _To be completed by the code-review agent._
 
 | Date | Version | Description | Author |
 |------|---------|-------------|--------|
+| 2026-08-17 | v1.1 | **Code review PASS. Status → done.** Adversarial review (Blind Hunter, Edge Case Hunter, Acceptance Auditor) ran against the working-tree diff, scoped to this story's files only. Every AC re-verified **by independent execution** rather than trusting the Debug Log: test-id sets (8/8, empty symmetric difference), collected count (1597), assert counts (84 → 76+10=86), `_STATUS_DOCUMENTS` order and membership (18 unchanged + 1 appended), `_EXCLUDED_BY_DESIGN` and `_STATUS_DOCUMENT_PATTERNS` (byte-identical), the four permitted edits (all 9 diff hunks map cleanly, no fifth edit), the one-way import (no back-import found), `deferred-work.md`'s three protected ranges (byte-identical to HEAD) and its append-only hunk structure, and the three docstring-only re-points (zero assertion lines touched). Gates independently re-run: `pytest -q` 1597 collected / 1597 passed (all dots, 0 F/E) / exit 0; `mypy argus` Success, 86 source files; `bandit -r argus` 19 Low / 0 Medium / 0 High (0/0/6/13) — all identical to claimed baseline. One Low/cosmetic finding deferred (`DF` entry, no id assigned): a docstring line in the new module overclaims CI parity that the story itself says is NOT ESTABLISHED. No decision-needed or patch findings; no High/Medium issues. See Review Findings section above. | Reviewer (code-review, Sonnet) |
+| 2026-08-17 | v1.0 | **Implemented. Status → review.** The cohesion split landed as a pure relocation: `_STATUS_DOCUMENTS`, `_STATUS_DOCUMENT_PATTERNS`, `_EXCLUDED_BY_DESIGN`, `_registered_paths`, `-21` and `-22` moved verbatim into `tests/test_status_document_registry.py`; the derivation and `-20`/`-21b`/`-23`/`-24`/`-25`/`-25b` stayed. **Baseline diverged from §0 and it is recorded, not smoothed:** master had moved `867a3bd` → `47b6dbe`, so all three gate baselines were re-measured rather than inherited — and all three came back identical. **The deadlock was reproduced against a REAL document, not a probe:** an approved correct-course run earlier in the same session wrote `sprint-change-proposal-2026-08-17.md` into the artifact directory, taking `-22` RED on the live tree; registering it in the old host produced exactly 1201 lines and an `MAINT-001-02` breach, confirming there is no green intermediate state. **Measured outcome:** `test_evidence_citation.py` 1200 → **1076** (headroom 124), new registry host **259** (headroom **941 ≈ 941 further registrations**). Two probe status documents, one per glob pattern, were planted and **both registered** with the **full suite green at 1597 collected**, then removed with the full suite green at 1597 again and **no residue** — which is `AI-E13-2`'s DoD satisfied in its stronger form. **Invariants held by execution:** test-id name sets byte-identical (8 before / 8 after, empty symmetric difference), **no new `TC-` id**, collected count identical, assert count 84 → **86** (the +2 are `-23` gaining the second guard path and one anchor phrase from the new AC6.3 registration rule — nothing deleted, softened, skipped or narrowed). `_CEILING`, `_breaches_ceiling` and `_STATUS_DOCUMENT_PATTERNS` are byte-unchanged and **no `_EXEMPT_BY_DESIGN` entry was added**. Every moved assertion was proven RED at the real seam from its new home and then restored, with transcripts. `deferred-work.md` received an append-only Story 13.4 section — both diff hunks are pure insertions and the three protected ranges were verified byte-identical against `HEAD` — filing `DF-13-4-A` (record only: `-24`/`-25` are each defined in two modules, a three-epic-old index collision `AC2` forbids fixing here). `architecture.md` §H and §Enforcement amended **in place** (DN-5) and gained the status-document registration rule, which `-23` now anchors. Gates, **LOCAL**: `pytest` 1597 collected / 1597 passed / 0 failed / 0 skipped exit 0 · `mypy argus` Success, 86 source files · `bandit -r argus` 19 Low / 0 Medium / 0 High — **all three identical to baseline, delta none**, as predicted for a pure test-tree move. ⚠️ **CI evidence: NOT ESTABLISHED** — Windows-only local runs against an ubuntu CI matrix. `argus/` byte-unchanged; `git tag -l` empty; nothing outward-facing. | Developer (dev-story) |
 | 2026-08-17 | v0.1 | Story contexted on HEAD `867a3bd`. **The deadlock was REPRODUCED BY EXECUTION, not assumed** (§0.1): with an unregistered probe status document on disk `TC-ArgusAgent-DOCS-001-22` fails and `MAINT-001-02` passes; registering the probe — the only sanctioned fix for that red — takes `tests/test_evidence_citation.py` to **1201 lines**, so `-22` and `-21` pass and `MAINT-001-02` fails. **There is no green intermediate state**, and the only two moves that would produce one are the two this repository forbids by name. A **feasibility dry run of the split was also executed and reverted** (§0.2): the four blocks relocate verbatim, `-21` and `-22` pass from the new module, the retained module's six remaining assertions pass, the cross-module import resolves with no `conftest.py` change, and the measured result is **1030 / 192 lines** before docstrings. The remedy is **cited, not re-derived** — `test_validation_set_decision.py:6-14` and `test_module_size_ceiling.py::_REMEDY` lock it as a cohesion split, *"never shaving lines to make room, and never an exemption"*, and record that splitting this file *"belongs to a story that says so"*. **Test ids are hard-locked** (AC2): `-20`..`-23` are cited at `architecture.md:648` and `:964`, at `deferred-work.md:1384`/`:2236`/`:2523` — one of which is a full pytest node id — and by five test modules **in three different forms requiring three different treatments**, measured and separated in §0 (ids to amend, a line-number cite to re-point by symbol, dated measurements to leave byte-unchanged). **Boundary decided and recorded as DN-1**: `_STATUS_DOCUMENTS` has exactly three readers and none is `-20`/`-21b`/`-23`/`-24`/`-25`/`-25b`, so the population lifts out with one import edge; the Story 12.9 release-surface half was the rejected alternative and is recorded as the **next** boundary rather than taken here. **DN-2** keeps `-21b` beside the derivation it controls and requires both docstrings to say so. **DN-4** rejects `AI-E13-2`'s data-file option, because every registry entry carries the prose record of its own registration. **`AI-E12-1`'s second half is written down as a rule** in §Enforcement (AC6.3), which is the other deliverable `AI-E13-2` names. **Found by measurement and recorded rather than fixed** (§0.3): `TC-ArgusAgent-DOCS-001-24`/`-25` are defined **twice**, by Story 10.2 and Story 12.9 in two modules — a three-epoch-old id collision that AC2 forbids fixing here; filed as `DF-13-4-A`, record only. **One tracker premise measured stale:** `origin/master` **equals** HEAD, not 13 commits behind — master is live, so `AI-E13-1`'s hand-off-green requirement is load-bearing. Baselines, measured by execution: `pytest` **1597 collected / 1597 passed / 0 failed / 0 skipped, exit 0**; `mypy argus` **Success, 86 source files**; `bandit -r argus` **19 Low / 0 Medium / 0 High**. `git tag -l` empty; nothing outward-facing. | Scrum Master (create-story) |
