@@ -1,6 +1,6 @@
 # Story 13.5: Re-measure the gate against the corrected instrument
 
-Status: review
+Status: done
 
 <!-- Contexted 2026-08-18 on HEAD 63a0434 (post-Epic-14, epic-14 rolled up to `done`).
      EVERY premise below was RE-DERIVED BY EXECUTION at contexting time, against the tree as it
@@ -1379,6 +1379,64 @@ false-negative path for an unread corpus; the T2/AC9 non-completion and CI-NOT-E
 disclosures are honest and match the operator's recorded instruction; `DF-13-5-B` is well-formed
 with a named owner and does not re-run Epic 13's original measurement.
 
+**Adversarial code review, iteration 2 (2026-08-19).** Reviewed `git diff 313c94b..ad838f6` (the
+single fix commit) against both iteration-1 findings and the diff's own claims. Independently
+re-executed rather than read back: the full suite (**1,641 passed / 0 failed / 0 skipped**, exit
+0, dot-counted directly from a redirected run — the summary line pytest normally prints was
+absent from this environment's captured output on both a background and a foreground run, so
+pass/fail/skip counts were derived by counting result-marker characters instead of trusting the
+missing line); `mypy` clean on `scripts/pinned_corpus_snapshot.py` and on `argus` (87 source
+files); `bandit -r argus` 0 High / 0 Medium / 20 Low and `bandit` on the touched script 0
+High / 0 Medium; `ruff check` clean on both touched files; the diff touches exactly the four
+files the record claims (`sprint-status.yaml`, this story file, `scripts/pinned_corpus_
+snapshot.py`, `tests/test_pinned_corpus_snapshot.py`) — `architecture.md`, `deferred-work.md`
+and every `argus/` module are byte-unchanged in this commit, confirmed by `git diff --name-only`.
+
+Re-derived by execution, not read back:
+- **The `-72` discrimination claim.** Reverted `dirty_in_scope_paths` to the old uniform
+  `record[3:]` slice in a working-tree edit, re-ran `-72` alone: it goes RED, reproducing exactly
+  the failure the story describes (`/alpha.py`, `/has space.py` in the reported set). Restored the
+  fix; all 6 tests in `tests/test_pinned_corpus_snapshot.py` pass again and the file diff against
+  `HEAD` is empty. The fixture genuinely discriminates between the two parsers, as claimed.
+- **The three corrected line counts.** Called the shipped `_measure_population()` from
+  `tests/test_module_size_ceiling.py` directly: `test_instrument_disclosure.py` = 893,
+  `test_minions_claim_classification.py` = 350, `test_instrument_disclosure_surfaces.py` = 367,
+  `scripts/pinned_corpus_snapshot.py` = 448, `tests/test_pinned_corpus_snapshot.py` = 559 — all
+  five figures match the story record exactly.
+- **The five-checkout blast-radius claim.** Ran `git status --porcelain -z` directly against
+  all five live checkouts (`ai_body_runtime`, `AgentMarkovich`, `Minions`,
+  `XAgents-WebApp`, `Agent-Smith`): zero rename/copy (`R`/`C`) records among them. Ran both the
+  shipped `parse_porcelain_z` and the old uniform-slice rule over each checkout's raw stream:
+  identical resulting path sets on all five (`Minions` 9 dirty in-scope, `Agent-Smith` 6, the
+  other three 0 — matching the story's own re-measurement, and confirming `Minions`' further
+  drift this session was correctly not re-run into the artifact). No write path exists in
+  `scripts/pinned_corpus_snapshot.py` into any of the five checkouts: the only subprocess verbs
+  used are `cat-file`, `ls-tree` and `status` — no `checkout`, `stash`, `clean`, `reset` or
+  `worktree`.
+- **AR8 purity of `parse_porcelain_z`.** No I/O, clock, `uuid4`, `random` or network reference in
+  the function body; it operates only on its `stream` argument and the tests assert
+  `parse_porcelain_z(real) == entries` (call-twice determinism) directly.
+- **The truncation refusal.** `parse_porcelain_z("R  pkg/renamed.py\0")` raises
+  `PinnedSnapshotError` naming the truncation, and a too-short record (`"M\0"`) and an
+  unexpected bare record (`"pkg/orphan.py\0"`) each raise distinctly named refusals — `-73`
+  is not a single catch-all, as claimed.
+
+**One inaccuracy noted, not filed as a finding.** N-16 states that the `-72` guard's floor does
+not depend on CI's git emitting a `C` (copy) record, "but the copy assertion is the half that
+would fail first if it did not." Reading the assertions line by line: `assert "pkg/copied.py" in
+reported` only checks set membership and is satisfied whether `pkg/copied.py` arrives as a `C`
+pair or as a plain staged `A` entry (`git add` was run on it either way), so in fact **no**
+assertion in `-72` or `-73` depends on the `C` record firing — the guard is more robust to a
+missing `C` record than the prose claims, not less. This does not weaken the portability
+disclosure (the load-bearing part — "the floor rests on the rename" — is correct and verified);
+it is a one-line prose overclaim in the story's own self-assessment, inconsequential to
+correctness or to CI risk, and not worth a fix-loop round on its own.
+
+**Severity assessment: no High, no Medium, no Low.** Both iteration-1 findings are resolved as
+claimed, a third defect in the same class (the truncated-stream empty-origin hole) was found and
+closed correctly, and the two additional wrong line counts are now correct. No new defect was
+introduced by this diff.
+
 ---
 
 ## References
@@ -1410,6 +1468,7 @@ with a named owner and does not re-run Epic 13's original measurement.
 
 | Date | Change |
 |---|---|
+| 2026-08-19 | **Code review iteration 2 — VERDICT pass, no findings.** Reviewed `git diff 313c94b..ad838f6` (the single fix commit) against both iteration-1 findings. Independently re-derived by execution: reverted `dirty_in_scope_paths` to the old uniform slice and confirmed `-72` goes RED, then restored the fix and confirmed all 6 tests green; re-measured all five corrected line counts through `_measure_population()` and all five match exactly (893/350/367/448/559); ran `git status -z` directly against all five live checkouts and confirmed zero rename/copy records and identical old/new parsing results on all five, with no write-capable subprocess verb in the module; confirmed AR8 purity and three distinctly named refusals in `-73`; confirmed the diff touches exactly the four claimed files. `mypy`/`bandit`/`ruff` clean; full suite 1,641 passed / 0 failed / 0 skipped, exit 0 (pytest's summary line was absent from this environment's captured output on two separate runs, so the count was independently derived by counting result-marker characters). One prose overclaim noted but not filed as a finding: N-16 names a specific `-72` assertion as depending on CI's git emitting a `C` record, but inspection shows none of the assertions actually do — the guard is more robust than claimed, not less, and this does not weaken the load-bearing portability disclosure. `review` -> `done`. |
 | 2026-08-18 | **Code review iteration 1 addressed — 2 of 2 findings resolved, both Low, neither on a gating path.** (1) `scripts/pinned_corpus_snapshot.py` mis-parsed a `git status --porcelain -z` **rename/copy** record: the origin path is emitted BARE, with no `XY ` prefix, and a uniform `record[3:]` ate its first three characters (`pkg/alpha.py` -> `/alpha.py`). Reproduced RED at the real seam FIRST over a real `git mv`, then fixed by modelling the format instead of assuming it — `parse_porcelain_z` is a pure (AR8) function returning `PorcelainEntry` records, and an unreadable record is now a NAMED refusal rather than a silent slice. **Auditing the sibling assumptions turned up a SECOND hole, found by the new guard on its first run**: a stream truncated after a rename entry yielded an EMPTY origin instead of refusing. Closed in the same pass. `TC-ArgusAgent-PRECISION-001-72` (rename, a real `status.renames=copies` copy, spaces on both halves, non-ASCII) and `-73` (the refusal paths) added — each with its non-vacuity floor asserted FIRST off the RAW stream, and `-72`'s adversarial variant **generated** by applying the old rule to the same real stream, so the fixture is proved to discriminate between the two parsers. Blast radius measured, not assumed: all five live checkouts re-read with pure `git status` calls (no third-party tree mutated), **not one rename/copy record among them**, old and new rules identical on all five — so the committed artifacts are provably unaffected and were NOT regenerated. (2) Every line count this record stated as measured was re-executed through the ceiling guard's own `_measure_population()`: **three were wrong, not one** — `test_instrument_disclosure.py` 897 -> **893**, `test_minions_claim_classification.py` 297 -> **350**, `test_instrument_disclosure_surfaces.py` 372 -> **367**; every pre-split figure, `mypy` (87 source files) and `bandit` (0 High / 0 Medium / 20 Low) confirmed exactly. Corpus figures RECONCILED from the committed artifact (per-member sums == corpus totals: 1,960 / 828 / 5,129 / 1,249 / 4,284 / **0**) rather than re-run, because `minions` has drifted again (9 dirty in-scope files today vs 0 at the run) and the pinned bytes are invariant to exactly that. **No `argus/` LOC changed**, so the dogfood currency guards cannot move and regeneration was correctly skipped (verified, not assumed). No ledger entry appended or dispositioned. **Full suite after the story record was written: 1,641 passed / 0 failed / 0 skipped, exit 0** (baseline 1,639; +2 = `-72` and `-73`). `ruff check` clean, `mypy` clean on `scripts/pinned_corpus_snapshot.py` and over `argus` (87 source files), `bandit` 0 High / 0 Medium. ⛔ CI still **NOT ESTABLISHED** (`origin/master` is `47b6dbe`, nothing pushed) — and the `-z` parsing touched here is exactly the class of code that differs across platforms; the specific unverified claims are named in N-16. `in-progress` -> `review`. |
 | 2026-08-18 | **Implemented.** Materialization moved off the working tree and onto the **pinned git object** (`scripts/pinned_corpus_snapshot.py`): `git ls-tree -r <pin>` for the population, `git cat-file --batch` for the bytes, and **every staged file re-hashed with git's own blob identity** and refused by name if it is not the pinned byte. No corpus member's working tree was mutated. Re-measured through that path: **1,960** in-scope files, **828** test files, **5,129** test functions scored, **1,249** files flagged, **4,284** advisory findings, **0** blocking — all five members pin-verified (1,960/1,960 files) and byte-reproducible across two runs. `vacuous_test_heuristic` **1,032** reproduces §0.1(b) member for member; `vacuous_test_ast` is **0**. Both vacuity floors NARROWED so an empty population with a positive corpus-read proof is admitted and one without is still refused; `decide_gate` re-run -> **`BLOCKED`** + precision condition **`UNEVALUABLE`**, no fourth outcome. `architecture.md`'s *Gate-decision enforcement* amended by **strike** and a new *Corpus-pin provenance enforcement* rule registered. `INSTRUMENT_DISCLOSURE_VALIDATED`'s corpus name corrected (AC6) with `INSTRUMENT_STATUS` and every rendered surface asserted unmoved. `tests/test_built_distribution.py` 1200 -> 954 and `tests/test_instrument_disclosure.py` 1198 -> 893 split by cohesion FIRST; no size exemption added. Seven new guards (`TC-ArgusAgent-PRECISION-001-65`..`-71`), each with a non-vacuity floor and a **generated** adversarial variant; `-55`/`-61` amended to admit the third `BLOCKED` leg against strictly MORE evidence. Ledger: `DF-13-5-B` appended (RULING 3's recorded uncertainty). **Full suite after the story record was written: 1,639 passed / 0 failed / 0 skipped, exit 0** (baseline 1,632; +7 = the new guards). `mypy` clean over 87 source files; `bandit` 0 High / 0 Medium / 20 Low. Commits `d7886ba` (delta) + `91b95e3` (dogfood artifacts, separate). ⛔ **CI NOT ESTABLISHED** — every gate this run was local/Windows and nothing is pushed; `origin/master` is still `47b6dbe`. ⛔ **T2 not performed** by operator instruction, so AC9's clean-tree clause is NOT MET and is recorded on the artifact as `commit_sha_provenance: NOT ESTABLISHED`. `in-progress` -> `review`. |
 | 2026-08-18 | Contexted on HEAD `63a0434` after Epic 14 rolled up to `done`. Four premises refuted by re-measurement and recorded in §0.2 (the `minions` checkout is off-pin), §0.3 (HEAD == pin does not imply pinned bytes), §0.4 (`UNEVALUABLE` is a condition verdict, not a gate outcome) and §0.5 (both producers refuse this story's expected outcome). Two carried-forward premises corrected in the favourable direction in §0.6. `backlog` → `ready-for-dev`. |
