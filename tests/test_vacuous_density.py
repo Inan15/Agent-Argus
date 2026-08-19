@@ -63,6 +63,7 @@ from argus.detectors.vacuous_test import (
 )
 from argus.ledger.coverage_ledger import CoverageDepth
 
+from argus.pipeline_stages import _read_source
 from argus.index.ast_index import build_ast_index  # noqa: E402
 
 
@@ -706,19 +707,60 @@ def test_the_assertion_vocabulary_moves_in_both_directions(tmp_path: Path) -> No
 
 
 def test_the_denominator_is_identical_on_CRLF_and_LF_source(tmp_path: Path) -> None:
-    """TC-ArgusAgent-DETECT-001-118 — AC8.4: the DENOMINATOR specifically, across line terminators.
+    """TC-ArgusAgent-DETECT-001-118 -- AC8.4: the DENOMINATOR specifically, across terminators.
 
-    ``-107`` covers fact (b)'s predicate across CRLF and LF; **nothing covered the statement
-    count**, and the statement count is the thing Story 14.2 rewrote. Local gates here run on
-    Windows and CI runs an ubuntu matrix, and this repository has already shipped a POSIX-only
-    bug out of a green Windows run (``AI-E13-1``).
+    RE-AUTHORED 2026-08-19 by Story 15.2, `-86`-style: an INTENDED behaviour change with the
+    reason recorded, never an assertion adjusted until it matched output. **The three
+    load-bearing assertions at the end are byte-unchanged** -- what changed is the arm that
+    could not fail.
 
-    The fixture deliberately contains a **docstring** and a **wrapped statement**, because
-    those are the two places the two representations could diverge: the docstring is where the
-    new cross-line string state lives, and the wrapped statement is where bracket depth
-    carries across a terminator. The whole ``VacuousTestScore`` is compared field by field, not
-    merely the flag — a scorer can agree on the verdict while disagreeing on the arithmetic
-    that produced it.
+    WHY THE OLD TERMINATOR ARM COULD NOT FAIL -- two independent reasons, both measured
+    ------------------------------------------------------------------------------------
+    1. ``_score_one`` scores ``source.splitlines()`` of the **in-memory** string, not the file
+       it had just written. So the denominator's input was byte-identical in both arms *by
+       construction*, and ``lf.splitlines() == crlf.splitlines()`` is ``True`` anyway.
+    2. The on-disk bytes were not what the fixture claimed either. ``write_text(source,
+       encoding="utf-8")`` uses ``newline=None``, so on Windows the "LF" arm was written as
+       **11 CRLF / 0 bare LF** and the "CRLF" arm as ``\r\r\n`` (**11 CRLF / 11 bare CR**).
+       Neither arm ever presented an LF file to the parser, and both produced an identical
+       index. Re-measured at HEAD ``72a95ef``; exactly those counts.
+
+    So the guard asserted ``f(x) == f(x)`` on a pure function while believing it was varying a
+    terminator. Its sibling ``-107`` had the same defect by a different route (it called
+    ``splitlines()`` on its own fixture, erasing the variable at the seam it varied it across).
+    **Both are one defect: the variable under test was constant.**
+
+    WHAT IT DOES NOW (AC6.1 / AC6.2)
+    --------------------------------
+    The terminators are written as BYTES with ``write_bytes``, the bytes are ASSERTED before
+    anything is scored, and the scored source is read back through **the production read path**
+    (``argus/pipeline_stages._read_source``) rather than taken from the in-memory string.
+
+    AC6.5 / `DN-15-2-4`: THE ARM IS *STILL* TRUE BY CONSTRUCTION, AND THAT IS SAID OUT LOUD
+    ----------------------------------------------------------------------------------------
+    Reading through the production path does not rescue the original equality: ``read_text``'s
+    universal-newline decoding collapses ``\r\n`` to ``\n`` before the detector exists, so the
+    two arms become the SAME STRING and comparing their scores is once again an identity.
+    ⛔ **A guard that cannot fail is not repaired by moving where its input comes from.** So the
+    equality is no longer what this arm asserts. It now asserts **the normalisation itself** --
+    that the CRLF file really was written with CRLF bytes, and that what the read path returns
+    for it contains no ``\r`` and is byte-identical to the LF file's text. That is a property of
+    ``pipeline_stages`` which CAN fail, and Story 15.2's entire scope decision rests on it: it
+    is why ``\r`` / ``\r\n`` cannot reach the detector while the eight exotic separators can.
+
+    The REJECTED alternative (`DN-15-2-4`): delete the arm as unfalsifiable. Rejected because
+    the normalisation it sits on is load-bearing and was, until now, asserted nowhere -- the
+    scope of an entire story rests on a behaviour no guard pinned.
+
+    MUTATION OBSERVED TO MAKE IT RED (AC6.4 / AC9.1): replacing ``_read_source``'s
+    ``read_text(encoding="utf-8", errors="replace")`` with
+    ``read_bytes().decode("utf-8", "replace")`` -- which does not do universal newlines -- leaves
+    ``\r`` in the returned text and reddens the normalisation assertions. Executed and observed.
+
+    The fixture deliberately contains a **docstring** and a **wrapped statement**, because those
+    are the two places the representations could diverge: the docstring is where the cross-line
+    string state lives, and the wrapped statement is where bracket depth carries across a
+    terminator.
     """
     lf = (
         'def test_x():\n'
@@ -736,16 +778,46 @@ def test_the_denominator_is_identical_on_CRLF_and_LF_source(tmp_path: Path) -> N
     crlf = lf.replace("\n", "\r\n")
     assert "\r\n" in crlf  # the fixture really is CRLF
 
-    lf_score, _, _ = _score_one(tmp_path, lf, "terminator_lf")
-    crlf_score, _, _ = _score_one(tmp_path, crlf, "terminator_crlf")
-
-    assert lf_score == crlf_score, (
-        f"the score differs across line terminators: {lf_score} vs {crlf_score}. Everything "
-        "here must operate on the `source.splitlines()` list the detector receives, where "
-        '"a\\r\\nb" and "a\\nb" are the same input — no `$`-anchored pattern, no reliance on '
-        "`\\s` spanning a terminator."
+    # ---- the terminators are WRITTEN as claimed, and the bytes are asserted (AC6.1) ----
+    _grammar_or_unevaluable()
+    written = {}
+    for label, source in (("lf", lf), ("crlf", crlf)):
+        target = tmp_path / f"tests/test_terminator_{label}.py"
+        target.parent.mkdir(parents=True, exist_ok=True)
+        # write_bytes, never write_text(newline=None) -- the platform rewrite is the whole
+        # reason this arm was weak.
+        target.write_bytes(source.encode("utf-8"))
+        written[label] = target.read_bytes()
+    assert written["lf"].count(b"\r") == 0, (
+        f"the LF arm was written with {written['lf'].count(bytes([13]))} CR bytes; on Windows "
+        "`write_text(newline=None)` used to make this 11, which is what made the arm vacuous"
     )
-    # …and it is the INTERESTING arithmetic, not a degenerate agreement on zero: docstring
+    assert written["lf"].count(b"\n") == 11
+    assert written["crlf"].count(b"\r\n") == 11
+    assert written["crlf"].count(b"\r") == 11, "the CRLF arm must be CRLF, never `\\r\\r\\n`"
+
+    # ---- the NORMALISATION, which is the property this arm can actually falsify (AC6.5) ----
+    lf_text = _read_source(tmp_path, "tests/test_terminator_lf.py")
+    crlf_text = _read_source(tmp_path, "tests/test_terminator_crlf.py")
+    assert "\r" not in crlf_text, (
+        "the CRLF file reached the detector with its CR intact; the read path at "
+        "argus/pipeline_stages.py:124 is supposed to normalise it, and Story 15.2's scope "
+        "decision -- that CR/CRLF cannot desynchronise the detector from the index while the "
+        "eight exotic separators can -- rests entirely on that"
+    )
+    assert crlf_text == lf_text, (
+        f"the two arms did not normalise to the same text: {ascii(crlf_text[:60])} vs "
+        f"{ascii(lf_text[:60])}"
+    )
+    assert crlf_text == lf, "the read path must return exactly the LF spelling of the source"
+
+    # ---- and only THEN the arithmetic, scored from the file that was written (AC6.2) ----
+    lf_score, _, _ = _score_one(tmp_path, lf_text, "terminator_lf_scored")
+    crlf_score, _, _ = _score_one(tmp_path, crlf_text, "terminator_crlf_scored")
+    assert lf_score == crlf_score, (
+        f"the score differs across line terminators: {lf_score} vs {crlf_score}"
+    )
+    # ...and it is the INTERESTING arithmetic, not a degenerate agreement on zero: docstring
     # once, wrapped call once, four body statements in total.
     assert lf_score.statement_count == 4
     assert lf_score.assertion_sites == 1

@@ -51,8 +51,12 @@ demonstrated by execution on every run rather than remembered from the story rec
 
 WHY IT IS A SEPARATE MODULE
 ----------------------------
-``tests/test_vacuous_detector.py`` stands at 1,163 lines and ``tests/test_vacuous_density.py``
-at 1,060, against NFR-M1's 1,200 ceiling. The split is by **cohesion**, on the
+``tests/test_vacuous_detector.py`` stood at 1,161 lines and ``tests/test_vacuous_density.py``
+at 1,087, against NFR-M1's 1,200 ceiling, when this module was carved out. (Story 15.2 has
+since split the first of those again, at the real-tree-sitter-substrate boundary, into
+``tests/test_vacuous_detector.py`` + ``tests/test_vacuous_detector_index.py``. The figures
+above are left as the measurement that motivated THIS module rather than silently refreshed;
+current sizes are asserted every run by ``MAINT-001-02``, not remembered here.) The split is by **cohesion**, on the
 ``provenance_scan.py`` / ``test_vacuous_density.py`` precedent — this module owns the
 cross-language vocabulary question end to end, no function is split across the boundary — and
 NOT by a size exemption: the registry may only shrink, and narrowing a population until it

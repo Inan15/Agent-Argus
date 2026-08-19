@@ -909,10 +909,81 @@ def _count_statements(source_lines: list[str], start: int, end: int) -> int:
     is the disagreement class this detector keeps closing elsewhere. The cross-line string
     state the docstring case needs was added THERE, once, and both consumers read it.
 
-    Still PURE, still deterministic, still line-terminator-agnostic: it reads the
-    ``source.splitlines()`` list the detector already holds.
+    Still PURE and still deterministic. It reads the line list the detector already holds
+    -- which since Story 15.2 is :func:`index_aligned_lines`, the index's own newline-based
+    decomposition, and no longer ``source.splitlines()``.
+
+    (X) **"Line-terminator-agnostic" is re-derived, not inherited.** It remains true of ``\r``
+    and ``\r\n``, which never reach a detector (``argus/pipeline_stages.py:124`` normalises
+    them). It is now FALSE as a statement about the other eight separators, and deliberately so:
+    under the corrected decomposition a line may CONTAIN a ``\x0b`` / ``\x0c`` / ``\x85`` /
+    ``\u2028`` / ``\u2029``, which Python's ``\\s`` and ``str.strip()`` both treat as
+    whitespace, where ``splitlines()`` used to remove them by cutting the line in two. That is
+    the point: the character stays inside the line the INDEX numbered, exactly as the parser saw
+    it. Measured against the shipped counter rather than argued -- see
+    ``TC-ArgusAgent-DETECT-001-134``, which pins the whole score against a separator-free
+    control.
     """
     return body_statement_count(source_lines, start, end)
+
+
+def index_aligned_lines(source: str) -> list[str]:
+    """THE LINE-NUMBERING CONTRACT: decompose *source* the way the Story 1.4 index numbers it.
+
+    **In one sentence:** *a detector's line decomposition must BE the index's line
+    decomposition.* The index numbers lines by NEWLINE and hands detectors line SPANS in that
+    numbering; a detector that recovers those spans' TEXT by any other decomposition is reading
+    a different file from the one it was given coordinates into.
+
+    Why (Story 15.2). ``run()`` used ``source.splitlines()``, which splits on ELEVEN things.
+    ``\r`` and ``\r\n`` never reach a detector -- ``argus/pipeline_stages.py:124`` reads with
+    ``read_text(encoding="utf-8", errors="replace")`` and universal-newline decoding collapses
+    them to ``\n`` first. **That normalisation is exactly why the two guards named for this
+    subject could never fail**, and why they were rebuilt to go through the read path (``-107``,
+    ``-118``, ``-135``). The other EIGHT survive and desynchronise the two views: ``\x0b`` VT,
+    ``\x0c`` FF, ``\x1c`` FS, ``\x1d`` GS, ``\x1e`` RS, ``\x85`` NEL, ``\u2028`` LS, ``\u2029``
+    PS. Each occurrence made this list one element longer than the index's, so
+    ``source_lines[n - 1]`` returned line *n-1*'s text for index line *n* and the scored span
+    lost its LAST line -- where a conventionally written test keeps its assertions. Measured on
+    a genuine, mock-free, fully-asserted ten-line test: two form feeds in a comment took density
+    from ``1/3`` to ``1/7`` and FLAGGED it -- a false accusation caused by an invisible
+    character (``-134``).
+
+    (X) **Newline-based BY CONSTRUCTION, never a separator list**, so the ninth separator
+    Unicode adds is handled by a mechanism nobody has to remember. The pop matters:
+    ``"a\nb\n".split("\n")`` is ``['a', 'b', '']``, a phantom trailing element ``splitlines()``
+    does not produce, which would have added a spurious final line to every span here. Dropping
+    ONE trailing empty makes the two byte-identical -- verified over every tracked ``.py`` file
+    and the empty / bare-newline / no-final-newline edge cases (``-136``), so the change is
+    provably INERT on ordinary source and only files carrying one of the eight move at all.
+
+    (X) **Adoptable by a second detector -- and one has NOT adopted it.** Module-level and over
+    ``str`` so another detector can import it instead of inventing a second spelling.
+    ``argus/detectors/secret_scan.py`` carries the SAME breach, deliberately unrepaired here:
+    ``:334`` locates a match by ``source.count("\n", 0, match_start) + 1`` while ``:447``
+    indexes ``source.splitlines()``, so an exotic separator hands its suppression engine the
+    WRONG line and drops an operator's ``argus: ignore-secret``. Measured; ``DF-15-2-B`` (owner
+    XAgent007); scoped out because that direction OVER-reports -- visible, arguable -- where
+    this one falsely accuses a genuine test. **The contract is repository-wide; the repair is
+    one detector deep.**
+
+    (X) **Also still broken**, so it is met as fact not surprise: ``DF-14-3-A``/``-B`` are
+    COUPLED and neither moves here -- ``_is_test_function`` stays case-sensitive
+    ``startswith("test")`` (Go's ``TestXxx`` and JUnit's annotated methods unscored) and Go
+    selector calls still never reach the edge set; fixing ``-A`` alone would score every Go
+    test, find zero assertion sites because ``-B`` hides them, and flag the lot. ``DF-14-3-C``:
+    ``describe``/``it`` callbacks still yield no definitions, so idiomatic Jest / Mocha / Vitest
+    suites stay invisible.
+
+    PURE (AR8): a total function of the source string -- no I/O, clock, LLM, uuid4, random or
+    network, and no dependence on the platform's line-ending conventions.
+    """
+    lines = source.split("\n")
+    if lines and lines[-1] == "":
+        # Exactly ONE trailing empty, and only when present: `splitlines()` treats a final
+        # newline as a TERMINATOR rather than a separator, and so must this.
+        lines.pop()
+    return lines
 
 
 class VacuousTestDetector:
@@ -955,7 +1026,9 @@ class VacuousTestDetector:
                 degraded=(DegradedCondition(file_path=file_path, reason=reason),)
             )
 
-        source_lines = source.splitlines()
+        # THE CONTRACT (Story 15.2): this list IS the index's line numbering. NOT
+        # `source.splitlines()`, which splits on eleven things where `ast_entry` counts one.
+        source_lines = index_aligned_lines(source)
         test_defs = [d for d in ast_entry.definitions if _is_test_function(d)]
         if not test_defs:
             return DetectorResult(

@@ -60,9 +60,24 @@ tolerable.** So wherever the source text cannot be read confidently, the answer 
 
 Platform neutrality is a property of the inputs, not a hope
 ------------------------------------------------------------
-Every function takes the ``source.splitlines()`` list the detector already receives, so no
-line terminator is ever observed: ``"a\\r\\nb".splitlines()`` and ``"a\\nb".splitlines()``
-are the same list. No pattern below is anchored with ``^`` or ``$`` — every one uses ``\\A``
+Every function takes the line list the detector already receives, so no line TERMINATOR is
+ever observed.
+
+(X) **Re-derived by Story 15.2, because the list changed.** That list is no longer
+``source.splitlines()``; it is
+:func:`~argus.detectors.vacuous_test.index_aligned_lines`, the newline-only decomposition the
+Story 1.4 index numbers by. ``\\r`` and ``\\r\\n`` still cannot appear in it -- the read path
+at ``argus/pipeline_stages.py:124`` normalises them long before -- so the neutrality claim
+holds for line terminators. What CHANGED is that a line may now legitimately **contain** one
+of ``\\x0b``, ``\\x0c``, ``\\x1c``, ``\\x1d``, ``\\x1e``, ``\\x85``, ``\\u2028``, ``\\u2029``,
+where ``splitlines()`` used to cut the line in two at them. Python's ``\\s`` and
+``str.strip()`` treat all of those as whitespace, so this module's ``\\A\\s*`` anchors and its
+statement stripping now see characters they never saw before. ⛔ **That was MEASURED, not
+reasoned about**: with each of the eight inserted at the leading and at the trailing edge of a
+body line, ``body_statement_count`` and ``logical_statement_starts`` return values IDENTICAL
+to the separator-free control in all sixteen cases, and ``TC-ArgusAgent-DETECT-001-134``
+pins the whole ``VacuousTestScore`` against a separator-free control end to end. The claim
+survives; its WORDING did not, and is corrected here rather than left to go quietly stale. No pattern below is anchored with ``^`` or ``$`` — every one uses ``\\A``
 and ``\\Z``, which cannot be satisfied by a line terminator — none relies on ``\\s`` spanning
 a terminator, and every identifier pattern is Unicode-aware by construction. Local gates run
 on Windows and CI runs an ubuntu matrix; this module has to score both identically.
@@ -129,7 +144,8 @@ _IDENT = r"[^\W\d]\w*"
 #: not true as written. ``$`` also matches immediately BEFORE a trailing ``\n``, so on an
 #: input that ever carried its terminator the ``value`` group would silently differ between
 #: a CRLF and an LF source. Not exploitable at any current call site (every one of them
-#: passes a ``splitlines()``-derived line, which cannot carry a terminator), and the
+#: passes an ``index_aligned_lines()``-derived line -- ``splitlines()`` until Story 15.2 --
+#: neither of which can carry a terminator), and the
 #: **equivalence was DEMONSTRATED rather than asserted**: both patterns were run over every
 #: line of every staged test file of all three pinned corpus members — **218,017 lines, of
 #: which 25,649 matched as assignments — with 0 disagreements** on the match/no-match verdict
@@ -449,8 +465,13 @@ def logical_statement_count(source_lines: list[str], start: int, end: int) -> in
     only shrink, density can only rise, the floor fires from below, and ``mock_ratio`` is
     taken over ``call_sites``, never over this count).
 
-    Line-terminator-agnostic by construction: it reads the ``source.splitlines()`` list the
-    detector already holds, so ``"a\\r\\nb"`` and ``"a\\nb"`` are the same input (AC8.1).
+    Line-terminator-agnostic by construction: it reads the line list the detector already
+    holds -- since Story 15.2 that is
+    :func:`~argus.detectors.vacuous_test.index_aligned_lines`, not ``source.splitlines()`` --
+    and ``\\r`` / ``\\r\\n`` cannot reach it at all, because the read path normalises them
+    (``argus/pipeline_stages.py:124``). Under the corrected decomposition a line MAY now carry
+    an exotic separator that ``splitlines()`` would have split on; measured, that changes
+    neither this count nor the statement starts (see the module docstring).
     """
     return sum(
         _simple_statement_segments(text)
