@@ -415,7 +415,7 @@ def test_repeated_callee_evidence_does_not_depend_on_edge_order() -> None:
 #: ``_REPEATED_CALLEE_SHAPES`` precedent: the defect is a CLASS, and a hand-picked pair would
 #: have missed the half nobody thought of.
 #:
-#: (X) This tuple is a MEASUREMENT, never the contract. The fix is newline-based *by
+#: This tuple is a MEASUREMENT, never the contract. The fix is newline-based *by
 #: construction* (:func:`~argus.detectors.vacuous_test.index_aligned_lines`), so a ninth exotic
 #: separator is handled by a mechanism nobody has to remember. If this list were the mechanism,
 #: the ninth separator would be a fresh false accusation waiting for someone to notice it.
@@ -476,7 +476,7 @@ def _score_through_the_read_path(
 ) -> tuple[VacuousTestScore, str, AstIndexEntry, Definition]:
     """Score *source* the way PRODUCTION does: bytes on disk -> read path -> real index -> score.
 
-    Every step of the production path is used and none is simulated. (X) The bytes are written
+    Every step of the production path is used and none is simulated. The bytes are written
     with an explicit ``encoding="utf-8"`` and ``newline=""`` and are then ASSERTED (AC11.3):
     ``\\x85`` is one byte in latin-1 and two in UTF-8, ``\\u2028`` / ``\\u2029`` are three, and
     ``write_text(newline=None)`` rewrites ``\\n`` -> ``\\r\\n`` on Windows and not on Linux --
@@ -659,7 +659,7 @@ def test_cr_and_crlf_are_normalised_by_the_read_path_not_the_detector(tmp_path: 
         relative = f"tests/test_terminator_{name.lower()}.py"
         target = tmp_path / relative
         target.parent.mkdir(parents=True, exist_ok=True)
-        # (X) write_bytes, never write_text(newline=None): on Windows the latter writes the
+        # write_bytes, never write_text(newline=None): on Windows the latter writes the
         # "LF" arm as CRLF and the "CRLF" arm as `\r\r\n`, which is exactly how `-118` came to
         # have an arm that could not fail. The bytes are then ASSERTED, on both platforms.
         target.write_bytes(source.encode("utf-8"))
@@ -724,7 +724,7 @@ def test_the_contract_decomposition_is_inert_on_newline_only_source() -> None:
     only floored, never pinned, because pinning it would make this guard fail for the wrong
     reason every time a module is added.
 
-    (X) THE TRAP, asserted rather than left unmentioned: ``"a\\nb\\n".split("\\n")`` is
+    THE TRAP, asserted rather than left unmentioned: ``"a\\nb\\n".split("\\n")`` is
     ``['a', 'b', '']`` -- a phantom trailing element ``splitlines()`` does not produce, which
     would have added a spurious final line to every span in the repository. The guard pins that
     difference, so an implementation "simplified" to a bare ``split`` reddens here.
@@ -990,7 +990,7 @@ def test_a_shifted_span_cannot_manufacture_verdict_eligibility(tmp_path: Path) -
     - **Corroboration wrongly GRANTED (``False`` -> ``True``): NO REPRODUCTION FOUND against
       the shipped code**, across the six structurally distinct layouts below.
 
-    (X) **"No reproduction found" is recorded as exactly that, and NEVER as "cannot happen"** --
+    **"No reproduction found" is recorded as exactly that, and NEVER as "cannot happen"** --
     and here that distinction has teeth, because the absence was measured to be CONTINGENT, not
     structural.
 

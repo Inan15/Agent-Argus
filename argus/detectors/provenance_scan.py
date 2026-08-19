@@ -63,7 +63,7 @@ Platform neutrality is a property of the inputs, not a hope
 Every function takes the line list the detector already receives, so no line TERMINATOR is
 ever observed.
 
-(X) **Re-derived by Story 15.2, because the list changed.** That list is no longer
+**Re-derived by Story 15.2, because the list changed.** That list is no longer
 ``source.splitlines()``; it is
 :func:`~argus.detectors.vacuous_test.index_aligned_lines`, the newline-only decomposition the
 Story 1.4 index numbers by. ``\\r`` and ``\\r\\n`` still cannot appear in it -- the read path

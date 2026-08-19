@@ -913,7 +913,7 @@ def _count_statements(source_lines: list[str], start: int, end: int) -> int:
     -- which since Story 15.2 is :func:`index_aligned_lines`, the index's own newline-based
     decomposition, and no longer ``source.splitlines()``.
 
-    (X) **"Line-terminator-agnostic" is re-derived, not inherited.** It remains true of ``\r``
+    **"Line-terminator-agnostic" is re-derived, not inherited.** It remains true of ``\r``
     and ``\r\n``, which never reach a detector (``argus/pipeline_stages.py:124`` normalises
     them). It is now FALSE as a statement about the other eight separators, and deliberately so:
     under the corrected decomposition a line may CONTAIN a ``\x0b`` / ``\x0c`` / ``\x85`` /
@@ -949,7 +949,7 @@ def index_aligned_lines(source: str) -> list[str]:
     from ``1/3`` to ``1/7`` and FLAGGED it -- a false accusation caused by an invisible
     character (``-134``).
 
-    (X) **Newline-based BY CONSTRUCTION, never a separator list**, so the ninth separator
+    (1) **Newline-based BY CONSTRUCTION, never a separator list**, so the ninth separator
     Unicode adds is handled by a mechanism nobody has to remember. The pop matters:
     ``"a\nb\n".split("\n")`` is ``['a', 'b', '']``, a phantom trailing element ``splitlines()``
     does not produce, which would have added a spurious final line to every span here. Dropping
@@ -957,7 +957,7 @@ def index_aligned_lines(source: str) -> list[str]:
     and the empty / bare-newline / no-final-newline edge cases (``-136``), so the change is
     provably INERT on ordinary source and only files carrying one of the eight move at all.
 
-    (X) **Adoptable by a second detector -- and one has NOT adopted it.** Module-level and over
+    (2) **Adoptable by a second detector -- and one has NOT adopted it.** Module-level and over
     ``str`` so another detector can import it instead of inventing a second spelling.
     ``argus/detectors/secret_scan.py`` carries the SAME breach, deliberately unrepaired here:
     ``:334`` locates a match by ``source.count("\n", 0, match_start) + 1`` while ``:447``
@@ -967,13 +967,23 @@ def index_aligned_lines(source: str) -> list[str]:
     this one falsely accuses a genuine test. **The contract is repository-wide; the repair is
     one detector deep.**
 
-    (X) **Also still broken**, so it is met as fact not surprise: ``DF-14-3-A``/``-B`` are
+    (3) **Also still broken**, so it is met as fact not surprise: ``DF-14-3-A``/``-B`` are
     COUPLED and neither moves here -- ``_is_test_function`` stays case-sensitive
     ``startswith("test")`` (Go's ``TestXxx`` and JUnit's annotated methods unscored) and Go
     selector calls still never reach the edge set; fixing ``-A`` alone would score every Go
     test, find zero assertion sites because ``-B`` hides them, and flag the lot. ``DF-14-3-C``:
     ``describe``/``it`` callbacks still yield no definitions, so idiomatic Jest / Mocha / Vitest
     suites stay invisible.
+
+    **DN-15-2-2 -- the rejected alternative, rationale corrected.** Rejected: ``_score`` taking
+    ``source: str`` and decomposing internally. This shape keeps arithmetic decoupled from
+    decomposition -- a guard checking only ratio exactness (``-93``) need not stand up a source
+    string. ⚠️ **The blast radius first cited against it was OVERSTATED and is corrected here**
+    (review iteration 1, measured): only THREE pre-existing sites hand ``_score`` a list they
+    built -- ``_score_one`` in ``tests/test_vacuous_density.py`` and in
+    ``tests/test_vacuous_cross_language.py``, and the direct call in ``-93`` -- one internal line
+    each, no ``assert`` touched, so AC8.3 would not literally have been violated either way. The
+    decision stands on decoupling; the number did not.
 
     PURE (AR8): a total function of the source string -- no I/O, clock, LLM, uuid4, random or
     network, and no dependence on the platform's line-ending conventions.

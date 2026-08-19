@@ -5182,3 +5182,44 @@ disposed and three new ones are filed, one of which bounds Epic 15.
     Story 15.2's acceptance criteria, so nothing actionable is lost today. It becomes 🟠 the moment
     somebody cites *"22 of 24 REAL"* as an established property of the suite, because at that point
     the citation has no retrievable backing.
+
+## Deferred from: code review of story 15-2-the-detector-and-the-index-agree-on-what-a-line-is (2026-08-19)
+
+- **`DF-15-2-D` — `argus/detectors/vacuous_test.py` ends Story 15.2 with 4 lines of headroom.**
+  This is `DF-14-3-H`'s condition, moved onto the PRODUCTION module. That entry covers
+  `tests/test_vacuous_detector.py` only — Story 15.2 split it, 1,161 → **791** — and nothing in this
+  ledger tracked the analogous, now-live condition on the detector itself. It is filed because that
+  story's own completion notes wrote *"recommend a ledger entry"* and then filed none: **a
+  disposition recorded in prose and not in the ledger is not a disposition** (`AI-E12-3` /
+  `AI-E12-6`, restated as that story's own `AC12.9`). **Measured with the ceiling guard's own
+  method** (`_physical_line_count`, `_CEILING = 1200`): **1,186 of 1,200** at review iteration 1
+  (`c66a065`), and **1,196 of 1,200 — 4 lines — after the iteration-1 fix round**, which moved
+  `DN-15-2-2`'s rejected alternative out of story prose into the docstring that governs it because
+  `AC2.2` requires the contract's decisions to live *"where the next author will read it."* That
+  +10 is recorded here rather than absorbed quietly: the fix that resolves one review finding is
+  what consumed the headroom the other one is about. **`MAINT-001-02` and `-03` are green and no
+  `_EXEMPT_BY_DESIGN` entry was added** — the registry may only shrink (`-04`), and the remedy
+  `tests/test_module_size_ceiling.py::_REMEDY` names is a **cohesion split**, never a shave and
+  never an exemption. The contract docstring was condensed twice during implementation and was
+  deliberately **not** shaved below the content `AC2.2` / `AC2.4` / `AC10.1` / `AC10.2` require to
+  be **in the code**: the index named as the counterparty, `argus/pipeline_stages.py:124` named as
+  the reason `` / `
+` are not part of the problem, the adoptability statement a second
+  detector would read, the `DF-15-2-B` price, and the `DF-14-3-A` / `-B` / `-C` statement of what
+  stays broken. ⛔ **The trigger, stated so it is not a judgement call at the moment it is
+  inconvenient:** the next change of any size to `argus/detectors/vacuous_test.py` performs the
+  cohesion split FIRST — by subject cohesion, never by arithmetic, with no function split across
+  the boundary — on the `provenance_scan.py` / `test_vacuous_density.py` /
+  `test_vacuous_detector_index.py` precedent. **Four lines is not room for a bug fix, let alone a
+  guard.**
+  - id: DF-15-2-D
+  - origin_story: 15-2-the-detector-and-the-index-agree-on-what-a-line-is (found in review
+    iteration 1; the condition is created by that story's own delta, 1,113 → 1,196)
+  - owner: **XAgent007 (Engineering Lead)** (`AI-E9-8`)
+  - target_story: **NONE** — it is a precondition on whoever opens that module next rather than a
+    piece of work with a schedule of its own, and pinning it to a story nobody has written yet is
+    exactly how `DF-14-3-H`'s `target_story: 13-5` went stale
+  - category: maintainability / NFR-M1 headroom
+  - severity: 🟡 — nothing is failing today and the ceiling guard is the live safety net: it fails
+    loudly at 1,201, never silently. It becomes a forced choice the moment the next line is
+    written, and the tempting answer at that moment is the exemption `MAINT-001-04` forbids.
