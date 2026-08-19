@@ -516,10 +516,34 @@ claude-opus-4-8 (BMAD dev-story, mode=implement)
 - **Test-file id (V1):** path under a `tests/` segment OR basename `test_*.py` / `*_test.py`. Detector
   runs on test files ONLY; a non-test file degrades `not_a_test_file` (not mis-flagged) — AC7.
 - **Test-function id:** a `Definition` of kind `function` whose name starts with `test`.
-- **Assertion-density denominator = test-body STATEMENTS** (non-blank/non-comment body lines, def header
-  excluded) — robust to multi-line statements. Assertion sites = assertion-primitive call edges + bare
+- **Assertion-density denominator = test-body STATEMENTS** ~~(non-blank/non-comment body lines, def header
+  excluded) — robust to multi-line statements~~ **— AMENDED 2026-08-17 by
+  [sprint-change-proposal-2026-08-17.md](../sprint-change-proposal-2026-08-17.md) / Story 14.2.**
+  The struck text is self-contradictory: a count of **LINES** is not *robust to multi-line statements* —
+  it is the thing multi-line statements break. Measured against a true `ast`-module statement count over
+  the 1,812 flagged tests in the `minions` corpus member at its pinned sha, the line count inflates the
+  denominator **2.04×**, and correcting it alone lifts **14 of the 31** adjudicated false positives back
+  above the `1/4` floor. **The decision was validly taken** — AC1 explicitly delegated the choice of
+  denominator to the dev — **so it is amended on the record, not treated as a gap** (§3.4 evidence
+  immutability: it was the state this story was written in). The denominator is now real statements;
+  a multi-line statement counts **once**. Assertion sites = assertion-primitive call edges + bare
   `assert` statements counted from the source span (a bare `assert` is not a tree-sitter `call` node, so
   it is absent from the 1.4 edge set — counted deterministically from source lines).
+  - **FIGURE CORRECTED 2026-08-18 by Story 14.2 (the story that implemented the amendment above).**
+    The `2.04×` and `1,812` in the 2026-08-17 amendment are **superseded**; they are left standing
+    rather than overwritten, for the same §3.4 reason the original text is struck rather than erased —
+    a figure that was acted on is part of the record even once it is known to be wrong. **Re-measured
+    by execution on `966ceba`**, through the shipped `build_ast_index` and `VacuousTestDetector`, over
+    the `minions` member staged at its unchanged pinned sha `ec63b729`, against CPython's own `ast`
+    module as ground truth (every `ast.stmt` in the function body, recursively): the flagged population
+    is **1,848** tests, not 1,812, and the line count inflates the denominator **1.907×**
+    (29,093 lines ÷ 15,255 statements), not 2.04×. The gap is not definitional — counting only
+    TOP-LEVEL body statements gives 2.664×, so 2.04 is neither. **The defect was real and large and
+    the amendment was right; only the multiplier was stale**, most likely carried from an earlier tree
+    (Story 14.1 rewrote this detector on 2026-08-18). The corrected denominator measures **1.005×** of
+    ground truth, exact on 1,784 of the 1,848 spans. The *"14 of the 31"* attribution above **does
+    reproduce exactly** and is unchanged. Recorded here because this is where the number lives; the
+    full re-measurement is `stories/14-2-…md` §0.2.
 - **Thresholds (heuristic, documented as such):** FLAG when `assertion_density < 1/4` OR `mock_ratio > 1/2`.
 - **Ratio type = `Fraction`** (exact, NEVER `float` — the 1.1 serializer rejects `float`). Proven by
   serializing the emitted finding payload through `canonical.dumps_bytes` (TC-APAA-DETECT-001-92).
