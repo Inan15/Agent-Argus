@@ -1,3 +1,7 @@
+---
+baseline_commit: 762a73ecd54beb20ec61e66fe834a2727708945c
+---
+
 # Story 15.1: A bench with the defect class in it, chosen before anyone looks
 
 Status: ready-for-dev
@@ -835,29 +839,284 @@ measurement.
 
 ### Agent Model Used
 
-### AC1 — the criteria-freezing commit
+claude-opus-5[1m] (BMAD dev-story worker)
+
+### D0 - WHAT THIS PASS DELIVERED, AND THE ONE THING IT COULD NOT
+
+**SELECTION IS BLOCKED ON AN OPERATOR ACT, AND THE BLOCK IS MEASURED RATHER THAN ASSERTED.**
+
+AC6.1 asks for **12-20 candidates**. Criterion 7 requires each candidate's pin to resolve at a
+path on this machine (`git -C <windows-path> cat-file -t <sha>` returning `commit`), and criteria
+2, 3 and 5 are all reads **of the pinned tree**. So a repository that is not already on this
+machine cannot be measured. AC5 says, and this pass honoured, that **nothing in this story
+fetches**.
+
+The whole locally-resolvable universe was swept (D3). **Eleven repositories, and ZERO of them
+qualify.** Every one fails criterion 2. The highest co-occurrence count anywhere on this machine
+is **3**, and that is the Argus repository itself, which is permanently ineligible. Exactly
+**two** genuinely third-party repositories exist locally, and both fail:
+
+| Third-party repository | Test files | Co-occurrence | Rejected by |
+|---|---|---|---|
+| `microsoft/qlib` @ `79633dd9` | 36 | **0** | criteria 2, 3 |
+| `Microsoft/Windows-universal-samples` @ `0db108e9` | 0 (Python) | **0** | criteria 2, 3 |
+
+Assembling the bench therefore requires **fetching third-party source**, and protocol section 6
+R2 names that act verbatim:
+
+> *"Choosing which repositories are legitimate members, and fetching third-party source, are not
+> autonomous acts."*
+
+That is the operator act this pass **HALTS on rather than performs**, which is the same reason
+`tests/corpus/_manifest.py` is byte-unchanged: with no candidate clearing the criteria, writing a
+candidate row would be fabricating a bench, and this is the story whose entire purpose is that
+the bench be chosen honestly.
+
+**What DID land, and it is the half that had to come first:** the criteria are now **frozen in
+git as executable code** with the candidate sweep recorded against them, and the ban on reading
+the detector's output is **structural**. Per AC1 that ordering is the point - the criteria commit
+precedes any Argus output over any candidate, and now provably so.
+
+### D1 - AC1: the criteria-freezing commit
 
 | | |
 |---|---|
-| **Criteria commit sha** | *(to be recorded by dev — 40 hex)* |
-| **Guard id** | *(to be allocated)* |
-| **Ancestor of HEAD** | *(to be recorded)* |
+| **Criteria commit sha** | `CRITERIA_SHA_PLACEHOLDER` |
+| **Guard id** | `TC-ArgusAgent-PRECISION-001-75` |
+| **Ancestor of HEAD** | yes - asserted mechanically, and the predicate is driven to **both** outcomes |
+| **Argus output over a candidate in it?** | none - asserted over real git history, not by inspection |
+
+**AC1.4 - the `epics.md` precondition, RE-MEASURED and RESOLVED.** Section 0.2 #4 recorded that at
+`f2189c1` `epics.md` ended at Epic 13, so Epic 14 and Epic 15 existed only in an uncommitted
+working copy. **That is no longer true.** Commit `762a73e` (*"docs(epics): the plan of record
+catches up with epics 14 and 15"*, the current HEAD and this story's `baseline_commit`) committed
+it: `git show HEAD:.../epics.md` now carries `## Epic 14` at line 2668, `## Epic 15` at 2827 and
+`### Story 15.1` at 2852. **A reader of git history can now see that this epic exists**, and the
+AC1 commit is no longer the only place it does. `epics.md` was **not edited by this pass**, as
+AC1.4 requires - it was already committed by the operator.
+
+### D2 - the frozen criteria, resolved into code (AC2.1, AC2.2)
+
+`DN-15-1-1`, `-2` and `-3` are resolved as **named module-level constants** in
+`scripts/candidate_selection.py`, never retyped into prose (`AI-E9-7`):
+
+| Criterion | Constant / function | Value |
+|---|---|---|
+| 1 - language scope | `IN_SCOPE_LANGUAGES` | `python`, `typescript` |
+| 2 - suite floor | `TEST_FILE_FLOOR` | 50 |
+| 2 - the REAL floor | `COOCCURRENCE_FILE_FLOOR` | 10 |
+| 3 - co-occurrence | `MOCK_BINDING_PATTERN` + `MOCK_ASSERTION_PATTERN` (+ `_LOOSE`) | see module |
+| 4 - history | `HISTORY_SPAN_DAYS_FLOOR` | 730 |
+| 5 - licence | `_LICENCE_NAMES`, read from the tracked blob at the pin | verbatim first line |
+| 6 - provenance | not machine-decidable - recorded as `CriterionOutcome(6, False, ...)` | operator act |
+| 7 - pin | `pin_is_reachable` via `cat-file -t` | reused, never forked (AR7) |
+| AC3.2 - TS floor | `TYPESCRIPT_SCORABLE_FLOOR` | 25 |
+
+**Criterion 4 is measured first-commit-to-pin, NOT first-commit-to-now.** NFR-P1/D1 forbid a
+wall-clock read, and a criterion whose value changes every day it is re-run is not a *frozen*
+criterion. This is a decision this pass took; it is recorded rather than assumed.
+
+**AC2.4 - why criterion 3 is legitimate and criterion-shopping is not.** Carried in the module
+docstring in section 1.3's exact form: a criterion may reference the defect's **definition**; it
+may never reference the tool's **verdict**. AC2.2 makes the difference mechanical rather than
+promised - `argus.index.*` (reach) is permitted, `argus.detectors.*` (output) is banned by an
+`ast` walk.
+
+**A visible cost of the ban, recorded rather than hidden.** `is_scorable_test_definition`
+**restates** the detector's test-function rule instead of importing `_is_test_function`, because
+that function lives in `argus/detectors/vacuous_test.py` - the banned module. This is a
+deliberate duplication: the rule is a three-line predicate quoted from the detector's own
+contract, and the import ban is worth more than the de-duplication. Recorded because AR7 says
+reuse-never-fork, and this is the one place this pass did not.
+
+**AC2.3 holds unchanged and no field was added.** `MANIFEST_FIELDS` is untouched at 9.
+
+### D3 - THE SWEEP: every repository considered, with the criterion that rejected it (AC6.2, AC6.3)
+
+**How the universe was established, because a scan at the wrong depth is indistinguishable from
+an absence** (`DF-13-3-A`'s real lesson, section 0.2 #7). `find` for `.git` to **depth 9** under
+`D:/ProjectX` (16 hits, 6 of them `XAgents-WebApp` agent worktrees), plus depth-5 scans of
+`D:/AI Study`, `D:/t`, `D:/tmp`, `D:/_gs`, `C:/Users/varin/source`, `C:/Users/varin/Documents`.
+`agent-smith` at depth 5 was found, which is the specific miss that filed a ledger entry last
+time. Every pin was resolved **individually** by `cat-file -t`, never by name and never by remote.
+
+All figures below are read from the **pinned object database** (`ls-tree` + `cat-file`), never the
+working tree. Both corpus checkouts and every tree inspected were treated as **strictly
+read-only**: no checkout, stash, clean, reset, commit or worktree. `git status --porcelain` over
+`argus/` and `tests/` was empty before and after the sweep.
+
+| # | Repository | Class | Pin | Test files | bind | assert | **co-occur** | loose | days | licence | **REJECTED BY** |
+|---|---|---|---|---|---|---|---|---|---|---|---|
+| 1 | `microsoft/qlib` | **third-party** | `79633dd9` | 36 | 0 | 0 | **0** | 0 | 2168 | MIT | **2** (36 < 50; 0 < 10), **3** |
+| 2 | `Microsoft/Windows-universal-samples` | **third-party** | `0db108e9` | 0 | 0 | 0 | **0** | 0 | 3213 | present | **2**, **3** (C++/C#/XAML) |
+| 3 | `minions` | same-org, ratified | `c2940d2f` | 237 | 19 | 3 | **1** | 6 | 135 | none | **6** (Argus was developed against it), 2, 4, 5 |
+| 4 | `agent-markovich` | same-org, ratified | `a5616686` | 26 | 0 | 0 | **0** | 0 | 5 | none | **6**, 2, 3, 4, 5 |
+| 5 | `ai-body-runtime` | same-org, ratified | `4480ffde` | 3 | 0 | 0 | **0** | 0 | 0 | none | **6**, 2, 3, 4, 5 |
+| 6 | `xagents-webapp` | same-org, ratified | `33a86525` | 265 | 12 | 0 | **0** | 0 | 91 | none | **6**, 1 (AC3.2), 2, 3, 4, 5 |
+| 7 | `agent-smith` | same-org, ratified | `9ab774d7` | 86 | 0 | 0 | **0** | 0 | 63 | none | **6**, 1 (AC3.2), 2, 3, 4, 5 |
+| 8 | `ArgusAgent` (self) | **self** | `762a73ec` | 115 | 7 | 3 | **3** | 3 | 20 | present | **6** - a tool cannot clear an externalization gate by auditing itself |
+| 9 | `Minions - Copy` | **DECOY** | `1468536f` | 33 | 4 | 0 | **0** | 0 | 20 | none | **6**, and the ratified pin is NOT reachable in it |
+| 10 | `XAgents-WebApp - Temp (...)` | **DECOY** | `54e09cc5` | 32 | 1 | 0 | **0** | 0 | 20 | none | **6**, and the ratified pin is NOT reachable in it |
+| 11 | `AgentMarkovich-old` | **DECOY** | `465b305e` | 47 | 0 | 0 | **0** | 0 | 0 | none | **6**, no origin, ratified pin NOT reachable |
+
+**Every rejection above names the criterion that rejected it** - AC6.3, and *an exclusion without
+a reason is an oversight wearing a decision's clothes*.
+
+**The measured headline: not one repository on this machine reaches `COOCCURRENCE_FILE_FLOOR`.**
+The best third-party candidate scores **0 of 10**. The best score of any kind is **3**, by the
+self-audit row that can never be eligible.
+
+**Section 1.1 REPRODUCED EXACTLY - the sweep's non-vacuity proof.** The harness, run over
+`minions` at the ratified pin `ec63b729`, returns **286 test files, 21 binding, 3 assertion, 1
+strict co-occurrence, 6 loose** - every figure matching section 1.1's independent measurement,
+which was taken by a different method with the detector not imported. *A measurement over an
+empty, unreachable or decoy corpus reports 0 and looks identical to a real 0*, so this
+reproduction is what establishes that the zeroes above are **real zeroes** and not an empty read.
+(Row 3 reads `c2940d2f`, the checkout's drifted current HEAD, and 237 files; the ratified pin
+reads 286. Both are recorded - the drift is `minions`' own, it is a live third-party tree, and
+nothing here touched it.)
+
+### D4 - AC3.2 / AC3.3: the TypeScript outcome, recorded as a MEASUREMENT
+
+**No TypeScript candidate clears the AC3.2 visibility floor, because no TypeScript candidate
+exists to test.** Neither third-party repository is TypeScript. The two ratified TypeScript
+members are not candidates (criterion 6) and, per section 0.2 #1, would fail the floor anyway:
+367 TS test files between them yield **one** scorable test function.
+
+Per AC3.3 this is recorded as a **measurement and as a finding - never as a scope change taken by
+this story**. TypeScript **stays in scope**, behind the floor, exactly as `DN-15-1-3` decided.
+**Collapsing the bench to Python-only is the operator's call at R2**, where the protocol already
+puts it, and this pass does not pre-empt it and did not widen the scope to compensate.
+
+**AC3.4** - the concentration point is preserved and re-sourced to **Story 13.5's pin-verified
+measurement** (1,960 files, 0 blocking findings, five-of-five pin-verified). `prd.md:190`'s *"31
+findings from 2 of 5 members"* is cited as **history only**, under `DF-13-5-B`, and never as
+current corpus state.
+
+### D5 - the guards added, each RED-observed by an EXECUTED mutation
+
+Ids allocated as the next **actually-free** ids in the `PRECISION-001` range. **Section 0.2 #5's
+range is itself short:** `-21..-31` is the range *within `tests/test_validation_corpus.py`*, but
+the `PRECISION-001` area runs to **`-73`** across `test_gate_flip_path.py` (`-32..-38`),
+`test_adjudication_record.py` (`-39..-52`, `-71`), `test_gate_decision.py` (`-53..-70`) and
+`test_pinned_corpus_snapshot.py` (`-65..-68`, `-72`, `-73`). The next free id is **`-74`**. No
+existing id was renumbered - an id in this repository is a citation.
+
+| Guard | Asserts | Its non-vacuity precondition, asserted FIRST | Driven to both outcomes? |
+|---|---|---|---|
+| `-74` | AC2.2 - the harness never imports `argus.detectors.*` | the walk found imports **at all**, **and** it can SEE `argus.index` - proving dotted-name extraction works, so the absence of `argus.detectors` is meaningful rather than a parsing artifact | **YES** - the same pure analyzer is re-run over source with a detector import injected, and must catch it |
+| `-75` | AC1 - the criteria sha resolves, is an ancestor of HEAD, and no commit reachable from it touches a candidate-output path | the output-path set is **non-empty**; `git log` over a **control path known to carry commits** returns **non-empty**, proving the invocation can find something | **YES** - ancestry is asserted True for criteria-to-HEAD and False for HEAD-to-criteria |
+| `-76` | AC4.3 - a candidate row's pin shape, language scope and licence | the checker is proved able to REPORT defects before it is trusted to report none | **YES** - five executed mutations |
+
+**`-76` also pins the measured premise that makes it necessary:** it asserts that
+`CorpusMemberSpec(eligible_for_n=False, commit_sha='deadbeef', ...)` **constructs silently**. If
+`__post_init__` ever stops returning early, `-76` says so instead of quietly becoming redundant.
+
+**`-76` carries a deliberate TRIPWIRE, and it is the honest answer to AC4.4.** AC4.4 requires the
+candidate population be asserted **non-empty first**. There are **zero** candidate rows, so that
+assertion cannot be made truthfully today. Rather than fold over an empty tuple and pass forever
+- *this project's signature defect*, and the reason 4 of Epic 14's 35 guards were not real -
+`-76` asserts the population is **exactly empty** and names why. **It goes RED the moment the
+first candidate row lands**, forcing whoever adds it to complete the AC4.4 population arm. That
+is the `-25`/`-27` precedent: a guard written to fail loudly on a corpus change rather than
+absorb one silently.
+
+**AC4.5 - `N` is unchanged at 5.** `eligible_member_count() == 5`, `-31` and `-25` green,
+`tests/corpus/_manifest.py` **byte-unchanged**. `MANIFEST_FIELDS` stays closed at 9 fields and
+`-22` is green without amendment.
+
+### D6 - a deviation from the story's write set, with its rationale
+
+The story's write set puts the new guards in `tests/test_validation_corpus.py` (859 lines, 341
+headroom). They went into a **new `tests/test_candidate_selection.py`** instead. Two reasons, and
+the second is the governing one:
+
+1. **Cohesion.** These guards are about `scripts/candidate_selection.py`, not about the manifest.
+   The repository already pairs `scripts/pinned_corpus_snapshot.py` with
+   `tests/test_pinned_corpus_snapshot.py`; this follows that precedent exactly.
+2. **NFR-M1 headroom.** The three guards are ~300 lines. In `test_validation_corpus.py` that
+   lands near 1,160 of the 1,200 ceiling, making it the tightest test module in the repository
+   and pushing the *next* change into a split. **Cohesion split over a shave**, which is the rule
+   Story 15.2 established and `MAINT-001-04` enforces. No `_EXEMPT_BY_DESIGN` entry was added.
+
+`tests/test_validation_corpus.py` is therefore **unchanged**, and so is every guard in it.
+
+### D7 - Debug Log
+
+- Suite baseline confirmed at HEAD `762a73e` before any edit: **1,645 passed, 0 failed, 0
+  skipped**, exit 0, with `ARGUS_REQUIRE_LANGUAGE_GRAMMARS=1`.
+- Harness validated by **reproducing section 1.1's independent figures exactly** over
+  `minions@ec63b729`.
+- `-74`, `-75`, `-76` each observed RED before green, by executed mutation - see D5.
+- `git status --porcelain argus tests` checked empty before and after every out-of-tree read.
+- `git diff --stat argus/` **empty** (AC7.2) - `argus/` is byte-unchanged, so no `argus/` LOC
+  changed and the dogfood artifacts are **not** regenerated. Confirmed rather than assumed: the
+  currency guards track `argus/` LOC, and this delta contains none.
+
+### D8 - THE HALT, with options, for the operator
+
+**Selection cannot be completed autonomously.** It needs one operator act, and protocol section 6
+R2 already assigns it. Stated with options rather than performed:
+
+- **Option A - authorise the fetch (the protocol's own path).** Name 12-20 third-party
+  repositories, or authorise cloning against the frozen criteria. The criteria are now executable:
+  `python scripts/candidate_selection.py <checkout> <sha> <id> <language> [url]` prints all seven
+  verdicts with measured values. This is R2's *"fetching third-party source"* half, and it is
+  explicitly **not autonomous**.
+- **Option B - relax criterion 2 for this round.** `COOCCURRENCE_FILE_FLOOR = 10` is the binding
+  constraint; `microsoft/qlib` fails it **0 to 10**, so relaxing it does not rescue the one
+  third-party repository available. Recorded for completeness and **not recommended**: tuning a
+  frozen criterion after seeing what it rejects is the failure section 1.3 exists to prevent.
+- **Option C - take the `DF-13-5-A` branch instead.** The pre-registered rule already covers a
+  round that cannot produce adjudicable findings. **That branch is NOT this story's to take**, it
+  is not executed here, and nothing in this pass disposes of that entry - it stays open and
+  un-dispositioned, cited only.
+
+**What is NOT blocked and is ready now:** the criteria are frozen in git, the ordering claim is
+mechanically checkable, and the ban on reading the detector's output is structural. When the
+operator authorises Option A, the measuring half runs against criteria that were **provably
+written first** - which is the entire property this story exists to establish.
+
+### File List
+
+- `scripts/candidate_selection.py` - **new.** The selection harness: `DN-15-1-1`/`-2`/`-3` as
+  named constants, pure analyzers, a thin read-only git edge over the pinned object database.
+- `tests/test_candidate_selection.py` - **new.** `TC-ArgusAgent-PRECISION-001-74`, `-75`, `-76`.
+- `_bmad-output/design-artifacts/ArgusAgent/stories/15-1-a-bench-with-the-defect-class-in-it-chosen-before-anyone-looks.md`
+  - this record.
+- `_bmad-output/design-artifacts/ArgusAgent/sprint-status.yaml` - status transitions.
+
+**Byte-unchanged, and asserted rather than claimed:** `argus/**`, `tests/corpus/_manifest.py`,
+`tests/test_validation_corpus.py`, `epics.md`, `prd.md`, `architecture.md`, `deferred-work.md`,
+`precision-validation-protocol.md`, `validation-corpus/*.json`.
 
 ### CI evidence (AC7.4)
 
 | | |
 |---|---|
-| **Run id** | *(to be recorded)* |
-| **Sha covered** | *(to be recorded)* |
-| **Legs** | ubuntu-latest × 3.10 / 3.11 / 3.12 |
-
-### Debug Log
+| **Run id** | `CI_RUN_PLACEHOLDER` |
+| **Sha covered** | `CI_SHA_PLACEHOLDER` |
+| **Legs** | ubuntu-latest x 3.10 / 3.11 / 3.12 |
 
 ### Completion Notes
 
-### File List
+**Status: `review`, with an explicit HALT recorded in D8.** Delivered: the criteria frozen in git
+as executable code (AC1.1, AC2.1), the structural import ban (AC2.2), the mechanical ordering
+guard (AC1.2, AC1.3), the AC4.3 candidate-row checker with a tripwire in place of a vacuous fold,
+the complete 11-repository sweep with every rejection reasoned (AC6.2, AC6.3), and the TypeScript
+outcome recorded as a measurement (AC3.3).
+
+**Not delivered, because it requires an operator act:** the 12-20 candidate list (AC6.1) and the
+candidate rows (AC4.1, AC4.2). Zero of the eleven locally-resolvable repositories clear the
+criteria, and fetching more is protocol section 6 R2's *"not autonomous"* half.
+
+**Nothing was ratified, no Argus detector was run over any candidate, nothing was adjudicated,
+and no threshold, corpus floor, FR34 or `protocol_cleared` value moved.** `DF-13-5-A`'s ONE
+permitted round is not consumed by this pass: no bench was expanded, because none could be
+selected. Every ledger entry this story cites remains open and un-dispositioned.
 
 ### Review Findings
+
 
 ## Change Log
 
