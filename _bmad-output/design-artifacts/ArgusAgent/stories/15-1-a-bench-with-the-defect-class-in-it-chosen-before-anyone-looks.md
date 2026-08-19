@@ -4,7 +4,7 @@ baseline_commit: 762a73ecd54beb20ec61e66fe834a2727708945c
 
 # Story 15.1: A bench with the defect class in it, chosen before anyone looks
 
-Status: in-progress  <!-- HALTED on an operator act - protocol section 6 R2. See Dev Agent Record D8. -->
+Status: review  <!-- The D8 HALT was resolved by operator ruling 2026-08-19 (XAgent007): the fetch was authorised. See AC5's dated strike and Dev Agent Record D9-D14. -->
 
 | | |
 |---|---|
@@ -501,10 +501,48 @@ set is undisturbed. `eligible_member_count()` is asserted **still 5** after the 
 
 ### AC5 — Metadata and a pin, never source
 
+> ### ⛔ AMENDED 2026-08-19 BY OPERATOR RULING (XAgent007) — A DATED STRIKE, NOT A DELETION
+>
+> The original text is preserved below **struck through**, per this project's §3.4 convention that
+> records are **superseded, never erased**. A reader who never saw the authorising conversation
+> must be able to reconstruct what the story said before, what changed, who changed it, and why.
+>
+> **What changed.** The clause *"Nothing in this story fetches"* is **lifted, once, for this
+> story.** Everything else in AC5 stands unchanged and was honoured in full.
+>
+> **Why.** The dev pass of 2026-08-19 halted correctly. AC6.1 asks for 12–20 candidates;
+> criterion 7 requires each pin to resolve at a path on the machine and criteria 2, 3 and 5 are
+> reads **of the pinned tree**, so a repository that is not present cannot be measured at all.
+> The whole locally-resolvable universe was swept: **11 repositories, ZERO qualifying** (§D3).
+> Assembling any bench therefore required **fetching third-party source** — which protocol §6 R2
+> names verbatim as *"not an autonomous act"*. The dev agent stated the options and performed
+> none of them. **The operator authorised the fetch**, which is R2's own path.
+>
+> **The two declined alternatives, with the operator's reasons, recorded so the decision is
+> auditable rather than assumed:**
+>
+> - **(B) Relax the floor — DECLINED.** Tuning a frozen criterion *after seeing what it rejects*
+>   is exactly the failure §1.3 exists to prevent. It would also not have worked: the one
+>   third-party repository then available (`qlib`) scored **0** against a floor of 10, so no
+>   defensible relaxation rescued it.
+> - **(C) Take the `DF-13-5-A` branch — DECLINED.** Consuming the ONE pre-registered round
+>   without ever assembling a bench is not what that rule contemplates. The rule is **cited, not
+>   executed**, and the entry stays open and un-dispositioned (§2).
+>
+> **What the amendment does NOT license.** No threshold, corpus floor, FR34 or `protocol_cleared`
+> value moves. `DN-5` still holds — **nothing in `tests/corpus/_manifest.py` fetches**, and `-28`
+> still proves it. **No source byte is vendored:** a candidate remains metadata and a pin. Every
+> clone lived **outside this repository** and was read only through the git object database at
+> its pin. `DF-13-5-A`'s ONE round is **not** consumed by this story, which remains selection-only.
+
 **Given** NFR-S1 forbids third-party source bytes in this repository and in every artifact
-**Then** a candidate is **metadata and a pin**, exactly as the five ratified members are. Nothing in
-this story fetches, vendors or commits third-party source; `DN-5` holds (nothing in the module
-fetches) and `TC-ArgusAgent-PRECISION-001-28`'s `rglob` over `tests/corpus/` stays green.
+**Then** a candidate is **metadata and a pin**, exactly as the five ratified members are.
+~~Nothing in this story fetches, vendors or commits third-party source;~~ **[struck 2026-08-19 —
+see the ruling above. The operative rule is now: nothing in this story VENDORS or COMMITS
+third-party source, and nothing in the *module* fetches. Fetching to a location outside the
+repository, under the operator's authorisation, is permitted for this story only.]** `DN-5` holds
+(nothing in the module fetches) and `TC-ArgusAgent-PRECISION-001-28`'s `rglob` over
+`tests/corpus/` stays green.
 
 **Both corpus checkouts and every candidate tree are live third-party trees — strictly read-only:**
 no `checkout`, `stash`, `clean`, `reset`, `commit` or leftover worktree, per *Corpus-pin provenance
@@ -815,17 +853,21 @@ measurement.
       AC1.3)
 - [x] Record the `epics.md`-uncommitted precondition on the AC1 commit; **do not edit `epics.md`**
       (AC1.4)
-- [ ] ⛔ **BLOCKED — operator act (protocol §6 R2).** Assemble **12–20** candidates against the frozen criteria; resolve **each** path individually by
-      `cat-file -t <pin>` and beware the §0.3 decoys (AC6.1, criterion 7)
+- [x] Assemble **12–20** candidates against the frozen criteria; resolve **each** path individually by
+      `cat-file -t <pin>` and beware the §0.3 decoys (AC6.1, criterion 7) — **14 candidates, from 20
+      fetched under the operator's 2026-08-19 authorisation; criteria applied UNCHANGED (§D9-D11)**
 - [x] For every TypeScript candidate, measure and record its **scorable test function count** through
       the index; apply the AC3.2 floor; if none clears it, record that as a **measurement** (AC3.2,
       AC3.3)
 - [x] Record per-candidate reasons **and every rejection with the criterion that rejected it** (AC6.2,
       AC6.3)
-- [ ] ⛔ **BLOCKED — no candidate clears the criteria; see D0/D8.** Add candidate rows: `eligible_for_n=False` plus the R2 reason; **no field added** (AC4.1, AC4.2)
-- [ ] ⛔ **PARTIAL — guards added and RED-observed (`-76`); the AC4.4 non-empty population floor is BLOCKED and carries a tripwire.** Add the AC4.3 guards for pin shape, language scope and licence, **each with a non-empty
+- [x] Add candidate rows: `eligible_for_n=False` plus the R2 reason; **no field added** (AC4.1,
+      AC4.2) — **14 rows, `MANIFEST_FIELDS` still closed at 9, N still 5 (§D12)**
+- [x] Add the AC4.3 guards for pin shape, language scope and licence, **each with a non-empty
       candidate-population floor asserted first and each observed RED by an executed mutation**
-      (AC4.3, AC4.4)
+      (AC4.3, AC4.4) — **the `-76` tripwire FIRED and was re-authored, not relaxed; `-27` was
+      re-authored as a second intended behaviour change; `-78`/`-79` added; nine executed
+      mutations drove them RED (§D13)**
 - [x] Verify `eligible_member_count() == 5` and `-31` green — **`N` is unchanged** (AC4.5)
 - [x] Verify `git diff --stat argus/` is **empty** (AC7.2)
 - [x] Full suite green at **1,645+**, exit 0, **0 skipped**, with `ARGUS_REQUIRE_LANGUAGE_GRAMMARS=1`
@@ -841,7 +883,14 @@ measurement.
 
 claude-opus-5[1m] (BMAD dev-story worker)
 
-### D0 - WHAT THIS PASS DELIVERED, AND THE ONE THING IT COULD NOT
+### D0 - WHAT THE FIRST PASS DELIVERED, AND THE ONE THING IT COULD NOT
+
+> ⛔ **SUPERSEDED 2026-08-19 by §D9, and PRESERVED rather than rewritten** (§3.4: records are
+> superseded, never erased). Everything D0 measured was **true when measured and is still true** —
+> eleven locally-resolvable repositories, zero qualifying, the block real rather than asserted.
+> What changed is not the measurement but the **authorisation**: the operator granted the fetch,
+> which is protocol §6 R2's own path. **Read D0 as the record of why the halt was correct**, and
+> §D9-§D14 as the record of what happened after it was answered. Nothing below is retracted.
 
 **SELECTION IS BLOCKED ON AN OPERATOR ACT, AND THE BLOCK IS MEASURED RATHER THAN ASSERTED.**
 
@@ -1055,6 +1104,11 @@ the second is the governing one:
 
 ### D8 - THE HALT, with options, for the operator
 
+> ✅ **ANSWERED 2026-08-19 by XAgent007. Option A was AUTHORISED; options B and C were DECLINED**,
+> with the operator's reasons recorded on AC5's dated strike. This section is **preserved as
+> written** because the options a decision rejected are part of the decision. What follows below
+> is the halt exactly as it was raised; §D9 records what was done once it was answered.
+
 **Selection cannot be completed autonomously.** It needs one operator act, and protocol section 6
 R2 already assigns it. Stated with options rather than performed:
 
@@ -1077,53 +1131,330 @@ mechanically checkable, and the ban on reading the detector's output is structur
 operator authorises Option A, the measuring half runs against criteria that were **provably
 written first** - which is the entire property this story exists to establish.
 
+### D9 - THE OPERATOR RULING, AND HOW THE FETCH WAS EXERCISED
+
+**The halt of §D8 was answered on 2026-08-19 by XAgent007: option A — authorise the fetch —
+was GRANTED. Options B and C were DECLINED.** The full ruling, with the operator's reasons for
+declining each alternative, is recorded as a **dated strike on AC5** rather than as a quiet
+edit, per the convention that records are superseded and never erased. A reader who never saw
+the authorising conversation can reconstruct the whole decision from AC5 alone.
+
+**⛔ THE FETCH DID NOT AND COULD NOT CHANGE THE CRITERIA, AND THAT ORDERING IS THIS STORY'S ONLY
+PRODUCT.** The seven criteria were frozen as **executable code** in commit
+`16d7100d73261c759d6176351f2caeff3d1fe172`, which **precedes every fetch performed in this
+pass** — the clones did not exist when the constants were written. They were then applied
+**exactly as committed**. Not one constant was retuned: `COOCCURRENCE_FILE_FLOOR` is still
+**10**, `TEST_FILE_FLOOR` still **50**, `HISTORY_SPAN_DAYS_FLOOR` still **730**, the predicates
+unchanged. `-77` pins those three constants so a silent retune is a test failure rather than a
+diff nobody reads, and `-75` asserts the ordering against **real git history** rather than
+against an intention.
+
+**How the fetch was performed, and why each precaution is there:**
+
+| Precaution | What was done | Why |
+|---|---|---|
+| **Nothing lands in this repository** | every clone under `D:/_bench/<short-name>`, outside the repo tree entirely | NFR-S1: no third-party source byte here. `git status --porcelain` over `argus/` and `tests/` was empty of any candidate source before and after |
+| **Short paths** | `D:/_bench/pip`, `D:/_bench/tox`, … | Windows `MAX_PATH` (~260) **silently drops files** from deep trees; a truncated tree measures low and looks identical to a real low count |
+| **No working tree at all** | `git clone --no-checkout` | the pinned tree is read from the **object database** (`ls-tree -r` + `cat-file`), reusing `scripts/pinned_corpus_snapshot.py`. With no checked-out files there is no working tree to read by accident — Story 13.5 exists because working-tree reads silently measured the wrong bytes |
+| **Every pin explicit and verified** | `rev-parse HEAD` at fetch time, then `cat-file -t <sha>` returning `commit`, **per repository** | §0.3's lesson: resolve by object type, never by name and never by remote |
+| **Decoy defence** | `git remote get-url origin` checked to match the intended URL **and** the pin verified to resolve **in the clone actually read** | three decoy trees on this machine share real origins with **wrong bytes**; matching the remote is not matching the tree |
+| **Read-only after pinning** | no checkout, stash, clean, reset, commit or worktree, on any tree | the two existing corpus checkouts and every fetched tree belong to other projects |
+
+**⛔ THE NON-VACUITY PROOF FOR THE WHOLE SWEEP.** *A measurement over an empty, unreachable or
+decoy corpus reports 0 and looks identical to a real 0.* So before any candidate figure was
+believed, the harness was pointed at `minions` at its **ratified pin** `ec63b729` and required to
+reproduce §1.1's **independently taken** figures:
+
+> measured **(286, 21, 3, 1, 6)** · §1.1 **(286, 21, 3, 1, 6)** — **REPRODUCED EXACTLY**
+
+§1.1 was measured by a different method in a different session with the detector not imported.
+That the harness lands on the same five numbers is what establishes that the zeroes and the
+counts below are **real** rather than an empty read. `minions`' working tree was confirmed
+**unmutated** across the read (30 porcelain entries before, 30 after — its own pre-existing
+drift, untouched).
+
+### D10 - THE SWEEP: 20 fetched, 14 admitted, 6 rejected, criteria unchanged
+
+**Why these twenty were considered at all, stated so the selection is auditable and not a lucky
+dip.** Every one is a **permissively-licensed, actively-maintained public Python project with a
+substantial test suite** whose tests must cross an **external boundary** — network, subprocess,
+filesystem, or a cloud SDK — that a unit suite conventionally replaces with a test double. That
+is a rationale referencing the **defect's definition** (an assertion made against a mock-derived
+value rather than against the SUT result), and it references **nothing Argus has ever said about
+any of them**. Per-repository rationales are recorded **in the manifest itself**, on each row's
+`adjudication_caveat`, and `-79` asserts every one is substantive, carries its measured figures
+as digits, and contains **no detector-output vocabulary**.
+
+**The criteria, not the author, decided who passed.** Twenty were fetched precisely so the
+frozen floors would have real work to do; six failed and are recorded with the criterion that
+rejected them rather than quietly dropped.
+
+### D11 - AC7.5: THE ONE REVIEWABLE LIST FOR THE R2 RATIFICATION ACT
+
+Per candidate: the seven criteria with measured values, the pin, the resolved path and the
+licence. Every figure read from the **git object database at the pin**, detector **not
+imported**. Criterion 6 is **absent from this table on purpose** — it is not machine-decidable,
+and it is precisely what the operator decides at R2 (AC2.3).
+
+| # | Repository (`member_id`) | Pin | Read at | c1 | c2 tests / co-occur | c3 strict / loose | c4 days | c5 licence | c7 |
+|---|---|---|---|---|---|---|---|---|---|
+| 1 | `aws-aws-sam-cli`<br>https://github.com/aws/aws-sam-cli | `5b6ebdba5866` | `D:/_bench/samcli` | PASS python | **PASS 497** / **215** | PASS 215 / 218 | PASS 3294 | PASS Apache-2.0 (`LICENSE`) | PASS `commit` |
+| 2 | `celery-celery`<br>https://github.com/celery/celery | `2c42237d3757` | `D:/_bench/celery` | PASS python | **PASS 147** / **71** | PASS 71 / 73 | PASS 6325 | PASS BSD-3 (`LICENSE`) | PASS `commit` |
+| 3 | `certbot-certbot`<br>https://github.com/certbot/certbot | `abf9d1b2e143` | `D:/_bench/certbot` | PASS python | **PASS 97** / **53** | PASS 53 / 53 | PASS 5206 | PASS Apache-2.0 (`LICENSE.txt`) | PASS `commit` |
+| 4 | `conda-conda`<br>https://github.com/conda/conda | `ad60271d8409` | `D:/_bench/conda` | PASS python | **PASS 170** / **22** | PASS 22 / 23 | PASS 5055 | PASS BSD-3 (`LICENSE`) | PASS `commit` |
+| 5 | `getsentry-sentry-python`<br>https://github.com/getsentry/sentry-python | `064542dd2cbd` | `D:/_bench/sentrypy` | PASS python | **PASS 155** / **25** | PASS 25 / 28 | PASS 2977 | PASS MIT (`LICENSE`) | PASS `commit` |
+| 6 | `googleapis-google-auth-library-python`<br>https://github.com/googleapis/google-auth-library-python | `2ea24b034367` | `D:/_bench/gauth` | PASS python | **PASS 84** / **45** | PASS 45 / 46 | PASS 3440 | PASS Apache-2.0 (`LICENSE`) | PASS `commit` |
+| 7 | `mitmproxy-mitmproxy`<br>https://github.com/mitmproxy/mitmproxy | `bae1a7e179da` | `D:/_bench/mitmproxy` | PASS python | **PASS 193** / **18** | PASS 18 / 19 | PASS 6022 | PASS MIT (`LICENSE`) | PASS `commit` |
+| 8 | `pypa-pip`<br>https://github.com/pypa/pip | `0268b0aa0843` | `D:/_bench/pip` | PASS python | **PASS 141** / **12** | PASS 12 / 16 | PASS 6515 | PASS MIT (`LICENSE.txt`) | PASS `commit` |
+| 9 | `python-poetry-poetry`<br>https://github.com/python-poetry/poetry | `92b74dcfe348` | `D:/_bench/poetry` | PASS python | **PASS 128** / **35** | PASS 35 / 35 | PASS 3084 | PASS MIT (`LICENSE`) | PASS `commit` |
+| 10 | `redis-redis-py`<br>https://github.com/redis/redis-py | `3972275826c4` | `D:/_bench/redispy` | PASS python | **PASS 116** / **42** | PASS 42 / 44 | PASS 6127 | PASS MIT (`LICENSE`) | PASS `commit` |
+| 11 | `scrapy-scrapy`<br>https://github.com/scrapy/scrapy | `df64fe32f614` | `D:/_bench/scrapy` | PASS python | **PASS 151** / **12** | PASS 12 / 16 | PASS 6315 | PASS BSD-3 (`LICENSE`) | PASS `commit` |
+| 12 | `spotify-luigi`<br>https://github.com/spotify/luigi | `715f65c4a56a` | `D:/_bench/luigi` | PASS python | **PASS 123** / **32** | PASS 32 / 33 | PASS 5356 | PASS Apache-2.0 (`LICENSE`) | PASS `commit` |
+| 13 | `streamlink-streamlink`<br>https://github.com/streamlink/streamlink | `a9d6db50f4ee` | `D:/_bench/streamlink` | PASS python | **PASS 218** / **22** | PASS 22 / 41 | PASS 5483 | PASS BSD-2 (`LICENSE`) | PASS `commit` |
+| 14 | `tox-dev-tox`<br>https://github.com/tox-dev/tox | `c3927c6437ad` | `D:/_bench/tox` | PASS python | **PASS 96** / **10** | PASS 10 / 13 | PASS 2333 | PASS MIT (`LICENSE`) | PASS `commit` |
+
+**Criterion 6, for all fourteen — the operator's column.** All fourteen are genuinely
+**arms-length third-party**: Argus was never developed against any of them, no Argus author has
+contributed to any of them, and none was selected on anything Argus reported. These are the
+**first arms-length repositories this corpus has ever held** — the five ratified members are
+same-org, which §0's manifest comment records as the corpus's main limitation. ⚠️ `provenance`
+is a **closed** three-value vocabulary and `independent` means *"not the tool auditing itself"*;
+it does **not** encode third-party. **No field was added** (`MANIFEST_FIELDS` stays closed at
+9), so the third-party property is carried in each row's caveat prose and enforced by selection
+(AC2.3), and `-78` asserts a reader cannot mistake candidacy for membership.
+
+### D12 - AC6.3: EVERY REPOSITORY CONSIDERED AND REJECTED, WITH THE CRITERION THAT REJECTED IT
+
+*An exclusion without a reason is an oversight wearing a decision's clothes.* Six of the twenty
+fetched repositories failed, **every one of them on criterion 2**, and each is recorded with its
+measured figures rather than with a verdict:
+
+| # | Repository considered and REJECTED | Pin | tests | bind | assert | **co-occur** | loose | days | licence | REJECTED BY |
+|---|---|---|---|---|---|---|---|---|---|---|
+| 1 | `elastic-elasticsearch-py`<br>https://github.com/elastic/elasticsearch-py | `73b09cd86c7c` | 84 | 8 | 11 | **5** | 5 | 4857 | Apache-2.0 | **criterion 2** — **5 co-occurrence files < 10** |
+| 2 | `docker-docker-py`<br>https://github.com/docker/docker-py | `afc6d1ee308e` | 56 | 7 | 10 | **4** | 5 | 4804 | Apache-2.0 | **criterion 2** — **4 co-occurrence files < 10** |
+| 3 | `twilio-twilio-python`<br>https://github.com/twilio/twilio-python | `306691e793f4` | 21 | 7 | 3 | **3** | 4 | 6174 | MIT | **criterion 2** — 21 test files < 50; **3 co-occurrence files < 10** |
+| 4 | `ansible-ansible-lint`<br>https://github.com/ansible/ansible-lint | `a892e6aa1841` | 70 | 5 | 3 | **3** | 4 | 4752 | GPL-3.0 | **criterion 2** — **3 co-occurrence files < 10** |
+| 5 | `locustio-locust`<br>https://github.com/locustio/locust | `437d749230a9` | 33 | 7 | 2 | **2** | 2 | 5894 | MIT | **criterion 2** — 33 test files < 50; **2 co-occurrence files < 10** |
+| 6 | `pre-commit-pre-commit`<br>https://github.com/pre-commit/pre-commit | `a9bba55a3f74` | 54 | 2 | 2 | **1** | 1 | 4540 | MIT | **criterion 2** — **1 co-occurrence files < 10** |
+
+**All six were rejected by the floor as frozen, and the floor was not moved to save any of
+them.** `pre-commit` misses by **9**; `docker-py` by **6**; `elasticsearch-py` by **5**. Three of
+the six clear `TEST_FILE_FLOOR` comfortably and still fail — which is `DN-15-1-2`'s own point
+measured again on new data: **suite size does not carry the defect class**, and a raw test-count
+floor would have admitted all three.
+
+**The eleven locally-resolvable repositories swept in the first pass (§D3) remain rejected on
+the same criteria and are not re-litigated here.** Two were third-party (`microsoft/qlib`,
+`Windows-universal-samples`) and both scored **0** co-occurrence; five are the ratified
+members and are rejected by criterion 6; one is the Argus repository itself, permanently
+ineligible; three are decoys whose ratified pins do not resolve. **Twenty-six repositories were
+considered in total across the two passes; fourteen are admitted as candidates.**
+
+### D13 - THE GUARDS: two re-authored as INTENDED BEHAVIOUR CHANGES, two new, nine executed REDs
+
+**⛔ `-76`'s TRIPWIRE FIRED, WHICH IS WHAT IT WAS BUILT TO DO.** The first pass could not assert
+AC4.4's non-empty population truthfully — there were no candidates — and rather than fold over
+an empty tuple and pass forever (*this project's signature defect*, and how 4 of Epic 14's 35
+guards failed) it asserted the population was **exactly empty** and named why. The first
+candidate row turned it RED on the very next run. It was **re-authored, not adjusted until it
+matched output, and not relaxed to `>= 0`**: the reason it existed and the reason it changed are
+both recorded in its docstring, and it now carries AC4.4's real population arm — non-empty
+**first**, size inside AC6.1's 12–20 band, and the per-row fold **counted** so silence means
+inspection rather than absence.
+
+**⛔ `-27` WAS THE SECOND INTENDED BEHAVIOUR CHANGE, AND IT WAS NOT ANTICIPATED BY THE STORY.**
+It asserted *"promoting any ineligible row raises"*. That held only because the corpus's only
+ineligible rows were the self-audit and the superseded run, both of which raise on the
+**provenance** check. It went RED when the candidates landed, and the honest reading of that RED
+is that the assertion **conflated two different kinds of ineligibility**:
+
+- **INTRINSIC** (`self` / `superseded`) — a permanent disqualification. Promotion must RAISE.
+  **This arm is preserved exactly as it was.**
+- **PENDING** (a candidate) — a decision nobody has taken yet. Promotion is *precisely* the
+  protocol §6 R2 act, so it must **not** raise. A guard that made ratification impossible would
+  have quietly appointed itself the gate in place of the operator.
+
+**The candidate arm is strictly stronger than what it replaces, never a loosening** (`DF-8-5-B`).
+It asserts AC4.2's real property — the **single-edit** flip, `eligible_for_n=True` with the
+reason still in place, **RAISES** — so promotion costs **two** deliberate edits, both visible in
+a diff; and then that the two-edit form yields a row that genuinely would count, which is what
+makes R2 a decision rather than a formality. Each ineligible row now yields **three** variants
+where it yielded two, and **both branches are asserted to have actually been taken** — an
+unexercised branch is not a passing branch.
+
+**New guards, at the true next-free ids.** The `PRECISION-001` area ran to `-77`; the new ids are
+`-78` and `-79`. No id was renumbered — an id in this repository is a citation.
+
+| Guard | Asserts | Its non-vacuity precondition, asserted FIRST | Driven to both outcomes? |
+|---|---|---|---|
+| `-78` | AC4.1/AC4.5/AC6.1 — candidacy is a **state, not a promotion**: every row ineligible, carrying the EXACT pending reason, `provenance` explained, pins/ids/URLs distinct, and **N still 5** | the population is non-empty and inside the 12–20 band **before** any per-row property is read; the fold is counted | **YES** — a near-miss reason citing **R3** instead of R2 must be rejected, and it is |
+| `-79` | AC6.2/AC2.4 — every rationale is **substantive and measured**, and contains **no detector-output vocabulary** | both predicates are exercised on probes **before** the population: a clean rationale must pass, an impression must fail, a rationale missing *why* must fail, and one reporting a detector result must be caught | **YES** — four executed probes, two each way |
+
+**`-79` closes the other end of the ban `-74` opens.** `-74` makes it structurally impossible for
+the *harness* to read the detector; `-79` makes it impossible to write a detector result into a
+candidate's *record* by hand. A ban held at only one end is a ban somebody walks around.
+
+**⛔ NINE EXECUTED MUTATIONS, each observed RED before the guard was trusted** (`DF-15-2-A` arm
+(a) — *4 of Epic 14's 35 guards did not hold what their titles claimed*). Every mutation was
+applied to a **named real row**, the guard run, and `tests/corpus/_manifest.py` restored
+byte-for-byte, **verified by sha256**:
+
+| # | Executed mutation of a real row | Guard(s) | Result |
+|---|---|---|---|
+| 1 | **the entire candidate population disappears** | `-76`, `-78`, `-79`, `-27` | **RED — all four, independently** |
+| 2 | one candidate is promoted to eligible, so N would move off 5 | `-78` | RED |
+| 3 | one row's reason cites the wrong protocol rule (**R3**, not R2) | `-78` | RED |
+| 4 | two candidates share **one pin** — the bench looks larger than it measures | `-78` | RED |
+| 5 | a rationale drops its THIRD-PARTY statement | `-79` | RED |
+| 6 | a rationale **reports what the detector said** | `-79` | RED |
+| 7 | a candidate carries an 8-char pin — which **constructs silently** today | `-76` | RED |
+| 8 | a candidate is declared `ruby` — which **constructs silently** today | `-76` | RED |
+| 9 | a candidate's pin is malformed, so the R2 two-edit promotion would raise | `-27` | RED |
+
+Mutation **1** is the important one: it is the vacuity shape itself, and all four guards' non-empty
+floors were confirmed to fire **individually** under it, not merely in aggregate.
+
+**`-74`, `-75`, `-77` are unchanged and green.** `-21`..`-26`, `-28`..`-31` and
+`DOGFOOD-001-53`..`-55` are green **without amendment**; `-22` still sees a schema closed at
+nine fields.
+
+### D14 - WHAT IS STILL NOT DONE, STATED SO THIS STORY IS NOT MISREAD
+
+- **NOTHING IS RATIFIED.** All fourteen rows carry `eligible_for_n=False`. `eligible_member_count()`
+  is **5**, `-31` and `-25` are green, and the adjudication set is undisturbed. Admission is the
+  operator's act at protocol §6 R2 and it has not been taken.
+- **THE DETECTOR WAS NEVER RUN OVER ANY CANDIDATE.** Not once. The ban is structural (`-74`), not
+  promised, and the index was not needed either: all fourteen candidates are Python, so AC3.2's
+  extractor-visibility floor — the only permitted use of `argus.index` — never had to be invoked.
+- **NOTHING IS ADJUDICATED**, and no threshold, corpus floor, FR34 or `protocol_cleared` value
+  moved. Epic 15 makes the gate **evaluable**; it does not clear it.
+- **`DF-13-5-A`'s ONE permitted round is NOT consumed by this story.** 15.1 is selection-only: it
+  chooses, it does not run, and it does not reach the branch point. The rule is **cited verbatim
+  in §2 and its branch is not executed**. That entry remains open and un-dispositioned, as do
+  `DF-13-5-B`, `DF-14-3-A`/`-B`/`-C`, `DF-14-3-F`, `DF-13-3-A` and `DF-15-2-A`/`-B`/`-C`/`-D`.
+  **`deferred-work.md` was not touched by this pass**, and nothing was appended to it.
+- **AC3.2 / AC3.3 — the TypeScript outcome is unchanged and still a MEASUREMENT.** No TypeScript
+  candidate cleared the floor, because none was fetched: the twenty repositories considered are
+  all Python. **TypeScript stays in scope** behind `DN-15-1-3`'s measured floor. Collapsing the
+  bench to Python-only is **the operator's call at R2** and this pass did not pre-empt it, did not
+  widen the scope to compensate, and did not reopen `DF-14-3-C`.
+- **The bench is a CANDIDATE bench.** Whether it contains the defect class *as the detector
+  defines it* — SUT result discarded, assertion on a mock-derived value — is **not established
+  here and could not be**: co-occurrence is a deliberately broader **text proxy** for the
+  definition, and it cannot see discarded-versus-consumed. Establishing that is what a run after
+  ratification would do. What **is** established: the bench holds **614** co-occurrence files
+  against the current corpus's **1**, and it was chosen before anyone looked.
+
+### D15 - Debug Log (this pass)
+
+- Suite baseline re-confirmed at HEAD `08788c4` before any edit: **1,649 passed, 0 failed, 0
+  skipped**, exit 0, `ARGUS_REQUIRE_LANGUAGE_GRAMMARS=1`.
+- 20 repositories cloned `--no-checkout` to `D:/_bench/*`; **20 of 20** verified on both arms —
+  `origin` matches the intended URL **and** the recorded pin resolves via `cat-file -t` to
+  `commit`.
+- Harness validated by reproducing §1.1 **exactly** over `minions@ec63b729` (286/21/3/1/6).
+- Nine executed mutations, each observed RED; manifest restored byte-for-byte (sha256 verified).
+- `git diff --stat argus/` **empty** — `argus/` is byte-unchanged (AC7.2). **No `argus/` LOC
+  changed, so the dogfood artifacts were NOT regenerated**, and that was confirmed rather than
+  assumed: the code commit `c028da5` contains **zero** `argus/` files (`git show --name-only`),
+  and the currency guards track `argus/` LOC.
+- Module sizes after the change, against the 1,200 ceiling: `tests/corpus/_manifest.py` **886**
+  (was 546), `tests/test_candidate_selection.py` **697** (was 439), `tests/test_validation_corpus.py`
+  **915** (was 859). `argus/detectors/vacuous_test.py` is **untouched at 1,196** — `DF-15-2-D`'s
+  trigger is **not fired by this story**, no split was owed, and **no `_EXEMPT_BY_DESIGN` entry
+  was added**.
+- Full suite after the story record: **1,651 passed, 0 failed, 0 errors, 0 skipped**, exit 0
+  (baseline 1,649 plus `-78` and `-79`). **0 skipped** matters: `pytest.skip` is a FALSE GREEN.
+
 ### File List
 
-- `scripts/candidate_selection.py` - **new.** The selection harness: `DN-15-1-1`/`-2`/`-3` as
-  named constants, pure analyzers, a thin read-only git edge over the pinned object database.
-- `tests/test_candidate_selection.py` - **new.** `TC-ArgusAgent-PRECISION-001-74`, `-75`, `-76`.
+- `scripts/candidate_selection.py` - **new in the first pass, UNCHANGED by this one.** The
+  selection harness: `DN-15-1-1`/`-2`/`-3` as named constants, pure analyzers, a thin read-only
+  git edge over the pinned object database. Deliberately untouched — it is the frozen criteria,
+  and editing it after seeing which candidates it rejected is the one thing this story forbids.
+- `tests/corpus/_manifest.py` - **modified.** The fourteen candidate rows, each
+  `eligible_for_n=False` with the exact protocol §6 R2 pending reason and an
+  `adjudication_caveat` carrying why it was considered and its measured figures. **No schema
+  change: `MANIFEST_FIELDS` stays closed at nine and no field was added.** 546 -> 886 lines.
+- `tests/test_candidate_selection.py` - **modified.** `-76` re-authored (its tripwire fired);
+  `TC-ArgusAgent-PRECISION-001-78` and `-79` added. `-74`, `-75`, `-77` unchanged. 439 -> 697.
+- `tests/test_validation_corpus.py` - **modified.** `-27` re-authored to separate INTRINSIC from
+  PENDING ineligibility, with the intrinsic arm preserved exactly and the candidate arm made
+  strictly stronger. Every other guard in the module is unchanged. 859 -> 915.
 - `_bmad-output/design-artifacts/ArgusAgent/stories/15-1-a-bench-with-the-defect-class-in-it-chosen-before-anyone-looks.md`
-  - this record.
-- `_bmad-output/design-artifacts/ArgusAgent/sprint-status.yaml` - status transitions.
+  - this record, plus AC5's dated strike.
+- `_bmad-output/design-artifacts/ArgusAgent/sprint-status.yaml` - status transition to `review`.
 
-**Byte-unchanged, and asserted rather than claimed:** `argus/**`, `tests/corpus/_manifest.py`,
-`tests/test_validation_corpus.py`, `epics.md`, `prd.md`, `architecture.md`, `deferred-work.md`,
+**Byte-unchanged, and asserted rather than claimed:** `argus/**` (`git diff --stat argus/` empty,
+and the code commit contains zero `argus/` files), `argus/detectors/vacuous_test.py` (still
+1,196 — no split was owed and none was taken), `argus/pipeline.py`,
+`scripts/candidate_selection.py`, `epics.md`, `prd.md`, `architecture.md`, `deferred-work.md`,
 `precision-validation-protocol.md`, `validation-corpus/*.json`.
+
+**Fetched but deliberately OUTSIDE this repository, and vendored nowhere:** twenty clones under
+`D:/_bench/`. No third-party source byte is in this repository or in any artifact it produces
+(NFR-S1 / DN-4), and `-28`'s `rglob` over `tests/corpus/` is green.
 
 ### CI evidence (AC7.4)
 
-| | |
-|---|---|
-| **Run id** | `32232696728` (*ArgusAgent Repository Audit & Assurance CI*) + `32232696610` (*Security Shield*) |
-| **Sha covered** | `4f4db781c2939517f6e74bfb4990ac31c41f93ec` |
-| **Legs** | ubuntu-latest x 3.10 / 3.11 / 3.12 |
+| | | |
+|---|---|---|
+| | **First pass** | **This pass** |
+| **Run id** | `32232696728` + `32232696610` (*Security Shield*) | `32270312088` (*Repository Audit & Assurance CI*) + `32270311904` (*Security Shield*) |
+| **Sha covered** | `4f4db781c2939517f6e74bfb4990ac31c41f93ec` | `c028da5b06a553f9c79c37877874e37a0bdecc61` |
+| **Legs** | ubuntu-latest x 3.10 / 3.11 / 3.12 | ubuntu-latest x 3.10 / 3.11 / 3.12 — **all three `success`** |
 
-**Discharged by OBSERVATION, not by assertion** (AC7.4). All three legs of run `32232696728` report `success` — *Run Argus Quality Gates & Audit Suite* on **3.10**, **3.11** and **3.12** — over commit `4f4db78`, which carries this story's entire delta. Local gates are Windows-only and this repository has shipped POSIX-only bugs out of a green Windows run, so the run id is recorded **together with the sha it covers**, in the `_executed_gate_citations` form. A local pass alone would not have discharged AC7.
+**Discharged by OBSERVATION, not by assertion** (AC7.4). Local gates are Windows-only and this
+repository has shipped POSIX-only bugs out of a green Windows run, so each run id is recorded
+**together with the sha it covers**, in the `_executed_gate_citations` form. A local pass alone
+would not have discharged AC7. **This pass:** all three legs of run `32270312088` report `success` — *Run Argus Quality Gates & Audit Suite* on **3.10**, **3.11** and **3.12** — over commit `c028da5`, which carries this pass's entire code delta (the fourteen candidate rows, the re-authored `-76` and `-27`, and the new `-78`/`-79`). Observed by `gh run view`, per leg, after completion; not inferred from a green local run. The story record commit that follows carries no code.
 
 ### Completion Notes
 
-**Status: `review`, with an explicit HALT recorded in D8.** Delivered: the criteria frozen in git
-as executable code (AC1.1, AC2.1), the structural import ban (AC2.2), the mechanical ordering
-guard (AC1.2, AC1.3), the AC4.3 candidate-row checker with a tripwire in place of a vacuous fold,
-the complete 11-repository sweep with every rejection reasoned (AC6.2, AC6.3), and the TypeScript
-outcome recorded as a measurement (AC3.3).
+**Status: `review`. The §D8 HALT is ANSWERED, not outstanding** — the operator authorised the
+fetch on 2026-08-19 (recorded as a dated strike on AC5, with both declined alternatives and
+their reasons), and this pass carried out the half that was blocked.
 
-**Not delivered, because it requires an operator act:** the 12-20 candidate list (AC6.1) and the
-candidate rows (AC4.1, AC4.2). Zero of the eleven locally-resolvable repositories clear the
-criteria, and fetching more is protocol section 6 R2's *"not autonomous"* half.
+**Delivered by this pass:** the bench — **14 candidates** from 20 fetched, inside AC6.1's 12–20
+band (AC6.1, AC6.2); every rejection recorded with the criterion that rejected it (AC6.3);
+fourteen manifest rows that cannot count toward `N` (AC4.1, AC4.2, AC4.5); `-76`'s tripwire
+re-authored after it fired, and `-27` re-authored as a second intended behaviour change, both
+with their reasons on the record and neither relaxed (AC4.3, AC4.4); two new guards `-78` and
+`-79`; and the operator's single reviewable R2 list (AC7.5).
+
+**Delivered by the first pass and still standing:** the criteria frozen in git as executable
+code in `16d7100` (AC1.1, AC2.1), the structural `argus.detectors` import ban (AC2.2), and the
+mechanical ordering guard over real git history (AC1.2, AC1.3).
+
+**⛔ THE PROPERTY THIS STORY EXISTS TO ESTABLISH, AND IT NOW HOLDS.** The criteria were frozen in
+a commit that **precedes every fetch**, and they were applied **exactly as committed** — not one
+constant retuned after seeing what it rejected, `COOCCURRENCE_FILE_FLOOR` still 10. Six
+repositories failed and were recorded rather than accommodated. The bench carries **614**
+co-occurrence files against the current corpus's **1**, and it was **chosen before anyone
+looked**: `-75` proves the ordering against git history, `-74` proves the harness could not read
+the detector, and `-79` proves no detector output was written into any candidate's record.
 
 **Nothing was ratified, no Argus detector was run over any candidate, nothing was adjudicated,
-and no threshold, corpus floor, FR34 or `protocol_cleared` value moved.** `DF-13-5-A`'s ONE
-permitted round is not consumed by this pass: no bench was expanded, because none could be
-selected. Every ledger entry this story cites remains open and un-dispositioned.
+and no threshold, corpus floor, FR34 or `protocol_cleared` value moved.** `N` is still **5**.
+`DF-13-5-A`'s ONE permitted round is **not consumed by this story**, which is selection-only and
+never reaches the branch point; the rule is cited verbatim and its branch is not executed. Every
+ledger entry this story cites remains open and un-dispositioned, and `deferred-work.md` was not
+touched.
+
+**What a reviewer should attack first:** the bench is a *candidate* bench chosen by a **text
+proxy**. Co-occurrence cannot see whether the SUT result is discarded or consumed, which is what
+actually decides verdict-eligibility — so *"614 co-occurrence files"* is **not** a prediction
+that the detector will flag any of them, and it must not be read as one. It could not be:
+predicting the yield would be looking.
 
 ### Review Findings
-
 
 ## Change Log
 
 | Date | Change | By |
 |---|---|---|
+| 2026-08-19 | **dev-story pass 2 — THE OPERATOR AUTHORISED THE FETCH, AND THE BENCH LANDED. Status `in-progress` -> `review`.** The §D8 halt was answered by XAgent007: option A (authorise the fetch, protocol §6 R2's own path) **GRANTED**; option B (relax the floor) and option C (take the pre-registered branch) **DECLINED**. Recorded as a **dated strike on AC5, never a deletion** (§3.4), citing the operator, the date and both declined alternatives with their reasons, so the story reads truthfully to someone who never saw the conversation. **THE ORDERING IS THE EVIDENCE AND IT HELD:** the seven criteria were frozen as executable code in `16d7100d73261c759d6176351f2caeff3d1fe172`, which **precedes every fetch**, and were applied **EXACTLY as committed** — `COOCCURRENCE_FILE_FLOOR` still **10**, `TEST_FILE_FLOOR` still 50, `HISTORY_SPAN_DAYS_FLOOR` still 730, no predicate touched; `-77` pins all three so a silent retune is a test failure. **20 repositories fetched, 14 admitted, 6 rejected** — inside AC6.1's 12–20 band. Every clone landed **outside this repository** at a short path under `D:/_bench/`, `--no-checkout` so there is no working tree to misread, read only through the **git object database at the pin**, with `origin` **and** pin verified individually on all 20 (three decoy trees on this machine carry real origins with wrong bytes). **NON-VACUITY PROOF:** the harness reproduced §1.1's independent measurement **EXACTLY** over `minions@ec63b729` (286/21/3/1/6), which is what makes the zeroes real zeroes. **THE BENCH:** 2,316 test files and **614 co-occurrence files** against the current corpus's **1** — recorded as an order-of-magnitude fact and explicitly **NOT** a prediction of yield. **REJECTIONS, all six on criterion 2**, each with measured figures: `elasticsearch-py` 5/10, `docker-py` 4/10, `twilio-python` 3 (and 21 test files), `ansible-lint` 3, `locust` 2 (and 33 files), `pre-commit` 1. Three of the six clear the test-file floor comfortably and still fail — `DN-15-1-2`'s point re-measured on new data: suite size does not carry the defect class. **TWO INTENDED BEHAVIOUR CHANGES, each re-authored with its reason and neither relaxed:** `-76`'s tripwire (population asserted EXACTLY empty) **FIRED as designed** on the first candidate row and now carries AC4.4's real population arm — non-empty first, 12–20 band, fold counted; and `-27`, which asserted *"promoting any ineligible row raises"* — true only while the sole ineligible rows raised on **provenance** — was found to **conflate INTRINSIC ineligibility (permanent; arm preserved exactly) with PENDING ineligibility (the R2 act itself; must remain possible)**, and its candidate arm is **strictly stronger**: the SINGLE-edit flip raises, so promotion costs two deliberate edits. **NEW:** `-78` (candidacy is a state, not a promotion) and `-79` (every rationale substantive, measured, and free of detector-output vocabulary — the verdict ban's other end, since `-74` holds only the harness end). **NINE EXECUTED MUTATIONS drove them RED before trust**, including the whole population disappearing, which reds `-76`/`-78`/`-79`/`-27` **individually**; the manifest was restored byte-for-byte, sha256-verified. **UNCHANGED, asserted not claimed:** `argus/**` byte-unchanged (so **no dogfood regeneration** — confirmed by `git diff --stat argus/` empty and zero `argus/` files in the code commit, not assumed), `argus/detectors/vacuous_test.py` still 1,196 with **no `_EXEMPT_BY_DESIGN` entry and no split owed**, `scripts/candidate_selection.py` deliberately untouched, `MANIFEST_FIELDS` closed at 9, **N = 5**, `-31`/`-25`/`-22` green without amendment, and every threshold / corpus floor / FR34 / `protocol_cleared`. **Nothing ratified, no detector run over any candidate, nothing adjudicated.** TypeScript **stays in scope** behind `DN-15-1-3`'s floor — all 20 fetched are Python, so no TS candidate was tested; collapsing to Python-only remains the operator's call at R2 and was not pre-empted. `DF-13-5-A`'s ONE round is **not consumed** — 15.1 selects and never reaches the branch point; the rule is cited verbatim and its branch is not executed. Every ledger entry cited stays open and un-dispositioned; `deferred-work.md` was not touched. Suite **1,651 passed, 0 failed, 0 skipped**, exit 0, with `ARGUS_REQUIRE_LANGUAGE_GRAMMARS=1`. | Developer (dev-story) |
 | 2026-08-17 | Created as `backlog` under Epic 15, by operator decision. §0 written as a premise list explicitly requiring re-derivation at create-story time. | XAgent007 |
 | 2026-08-19 | **dev-story pass. SELECTION HALTED ON AN OPERATOR ACT, measured rather than asserted — status held at `in-progress`, NOT advanced to review.** AC6.1 wants 12-20 candidates; criterion 7 needs each pin to resolve at a path on this machine and criteria 2/3/5 read the pinned tree, so an unfetched repository cannot be measured — and AC5 forbids fetching. The locally-resolvable universe was swept (`find` for `.git` to depth 9 under `D:/ProjectX` plus five other roots, every pin resolved individually by `cat-file -t`): **11 repositories, ZERO qualify**, all failing criterion 2. Exactly two are genuinely third-party and both fail — `microsoft/qlib` @ `79633dd9` (36 test files, **0** co-occurrence, MIT, 2168 days) and `Windows-universal-samples` @ `0db108e9` (0 Python test files). The highest co-occurrence count anywhere on this machine is **3**, by the Argus repository itself, which can never be eligible. Assembling the bench needs third-party source **fetched**, which protocol §6 R2 names verbatim as not an autonomous act; it is named with three options in §D8 and **not performed**. **DELIVERED:** the criteria frozen in git as executable code in their own commit `16d7100d73261c759d6176351f2caeff3d1fe172` (AC1.1) with `DN-15-1-1`/`-2`/`-3` as named constants in `scripts/candidate_selection.py`; the structural `argus.detectors` import ban (`-74`, with a second non-vacuity floor requiring the walk to SEE `argus.index`); the mechanical ordering guard (`-75`, three preconditions pinned first, ancestry driven to both outcomes); the AC4.3 candidate-row checker (`-76`, five executed-mutation REDs, plus a tripwire asserting the population is EXACTLY empty that goes RED when the first candidate lands); and the criteria-are-code guard (`-77`). Harness validated by **reproducing §1.1 exactly** over `minions@ec63b729` (286/21/3/1/6), which is what proves the zeroes are real zeroes. **CORRECTIONS TO §0:** AC1.4's `epics.md` residue is **RESOLVED** — `762a73e` committed Epics 14 and 15, so git history now shows this epic exists, and `epics.md` was not edited; and §0.2 #5's guard range is short again — `PRECISION-001` runs to **`-73`** across five modules, not to `-31`, so the next free id was `-74`. **UNCHANGED, asserted not claimed:** `argus/**` byte-unchanged (so no dogfood regeneration — the currency guards track `argus/` LOC and this delta contains none), `tests/corpus/_manifest.py`, `tests/test_validation_corpus.py`, `MANIFEST_FIELDS` closed at 9, **N = 5**, and every threshold / corpus floor / FR34 / `protocol_cleared`. Nothing ratified, no detector run over any candidate, nothing adjudicated. `DF-13-5-A`'s ONE permitted round is **not consumed** — no bench was expanded, because none could be selected. Every ledger entry cited stays open and un-dispositioned; `deferred-work.md` was not touched. Suite **1,649 passed, 0 failed, 0 skipped**, exit 0, with `ARGUS_REQUIRE_LANGUAGE_GRAMMARS=1`. CI green on run **`32232696728`** over sha **`4f4db78`**, ubuntu-latest x 3.10 / 3.11 / 3.12, all three legs `success`. | Developer (dev-story) |
 | 2026-08-19 | **Contexted by create-story on HEAD `f2189c1`.** Every §0 premise re-derived by execution. **Six premises survived exactly** (manifest shape, closed schema, construction-time refusal, resolved floor, the stopping rule, the sourcing rule). **Eight did not, and are corrected with the original named as wrong:** the TypeScript scoping premise (measured — 367 TS test files across the two ratified TS members yield **1** scorable test function); `prd.md:190` cited as current state (superseded); *"expected zero"* as a forecast (now a measurement); AC1's uncommitted-tree blocker (resolved for the code tree, with the `epics.md` residue named); the `-21..-30` guard range (runs to `-31` plus three DOGFOOD ids); *"the guard is structural"* (`__post_init__` returns early, so pin, language and provenance are unchecked on a candidate row); the `DF-13-3-A` lesson (the pin was never unreachable); and premise 5 (`epic-14` is `done`, so the parallelism dispensation is moot). **New measurement added:** across 315 Python test files at three pins, between **1 and 6** carry a mock-binding / mock-assertion co-occurrence — establishing *why* the corpus returned zero, without running the detector. Status `backlog` to `ready-for-dev`. | Scrum Master (create-story) |
