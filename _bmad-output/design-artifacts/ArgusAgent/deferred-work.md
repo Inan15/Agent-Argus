@@ -5036,6 +5036,24 @@ disposed and three new ones are filed, one of which bounds Epic 15.
   - severity: 🟡 — not a breach and the ceiling guard is green today, so nothing is failing. It
     becomes a forced choice the moment the next case is written, and the tempting answer at that
     moment is the exemption this entry forbids.
+  - **⚠️ AMENDED 2026-08-19 by `sprint-change-proposal-2026-08-19.md` §2.4 — append-only, the
+    entry above is NOT rewritten (§3.4). THIS ENTRY REMAINS OPEN; nothing here disposes of it.**
+    Its `target_story: 13-5` is **stale**. Story 13.5 reached `done` on 2026-08-19 and
+    `tests/test_vacuous_detector.py` is **still 1,161 of 1,200** — re-measured this session with
+    the ceiling guard's own method — so the split it named as 13.5's *"precondition, not its
+    afterthought"* did not happen, and 13.5 simply never needed a case in that module.
+    **`target_story` is re-pointed at `15-2-the-detector-and-the-index-agree-on-what-a-line-is`**,
+    which does need cases there: making `TC-ArgusAgent-DETECT-001-107` real requires a fixture
+    through the real index, a control, and one row per separator for the eight characters measured
+    in that proposal's §1.3. That does not fit in 39 lines and **must not be made to fit.** The ⛔
+    instruction is unchanged and is restated because it is now due: **cohesion split FIRST**, on
+    the `provenance_scan.py` / `test_vacuous_density.py` / `test_status_document_registry.py`
+    precedent, with no function split across the boundary — **no `_EXEMPT_BY_DESIGN` entry and no
+    shave**, because `MAINT-001-04`'s registry may only shrink. Also re-derived here, because
+    `AI-E13F-8` asked for the table and this is the second module on the same story's blast radius:
+    `argus/detectors/vacuous_test.py` **1,113**, `argus/pipeline.py` **1,111** (⛔ byte-fenced by
+    Story 12.1, must not be added to), `argus/detectors/provenance_scan.py` **955**,
+    `tests/test_vacuous_density.py` **1,087**, `tests/test_vacuous_cross_language.py` **1,027**.
 
 - **`DF-13-5-B` — Epic 13's ORIGINAL 0 TP / 26 FP baseline was measured through the
   working-tree-reading instrument, so WHICH BYTES it read is not established.**
@@ -5068,3 +5086,99 @@ disposed and three new ones are filed, one of which bounds Epic 15.
     `BLOCKED`, the precision condition is `UNEVALUABLE`, `protocol_cleared` is still the literal
     `False` and the FR34 disclosure is untouched. It would become 🔴 the moment somebody cited
     those 31 dispositions as a measured precision figure at a named commit.
+
+## Correct-course 2026-08-19 — what Story 15.2 does NOT fix, and the process gap underneath it
+
+> **All three were found by EXECUTION**, during the `AI-E14-2` / `SD-1` vacuity sweep of Epic 14's
+> 35 guards and the probes that sweep provoked. The measurements are reproduced in
+> [sprint-change-proposal-2026-08-19.md](sprint-change-proposal-2026-08-19.md) §1.2, §1.6 and §5.
+> **Nothing in this section disposes of any other entry in this ledger**, and the proposal that
+> filed these three disposes of nothing either. All three are OPEN, each with a named owner.
+
+- **`DF-15-2-A` — a vacuity sweep is in NO definition of done, and 4 of Epic 14's 35 guards did not
+  hold what their titles claimed.** Measured: `-131` and `-132` (found during Story 14.3's review,
+  both given non-vacuity floors), `-107` (**VACUOUS** — `lf.splitlines() == crlf.splitlines()` is
+  `True`, so its headline assertion is `f(x) == f(x)` on a pure function and no line-ending defect
+  can falsify it) and `-118` (**WEAK** — the terminator arm it is named for cannot fail, because
+  `_score_one` scores the in-memory string and on Windows `write_text(newline=None)` writes the
+  "LF" arm as CRLF and the "CRLF" arm as CR CR LF). That is **11%**, in the epic chartered to stop
+  a detector asserting things it had not established, inside that detector's own suite. **Both
+  sweeps were run by hand, after the fact, by someone who decided to ask. Nothing in the loop asks.**
+  Two arms are proposed and **neither is implemented here**, because a change to the loop's phase
+  rules is not a change to this repository: **(a)** a story that adds a guard asserting an absence,
+  an equality or an invariance records, per guard, **one mutation executed and observed to make it
+  RED** — not a claim that one exists; and **(b)** the narrow mechanisable half of the standing rule
+  `AI-E14-1` / `AI-E13F-1` proposes — **a guard asserting `f(a) == f(b)` must first assert
+  `a != b`**, which is machine-checkable over the corpus of comparison assertions and would have
+  caught `-107` and `-118` on the day each was written. ⚠️ **The widening matters:** every prior
+  instance of that standing rule (`AI-E11-1`'s floor, `-115`'s floor, `corpus_read_proof`, `-68`)
+  is about a guard asserting an **absence**; `-107` asserts an **equality** and is vacuous anyway,
+  so the rule as currently drafted would not have reached it. A blanket "sweep everything" DoD is
+  explicitly **rejected**: mutation-sweeping 35 guards is a session's work, and a DoD nobody can
+  afford is waived, which also teaches that DoD items are negotiable.
+  - id: DF-15-2-A
+  - origin_story: (filed by correct-course 2026-08-19; NOT created by any story) — the gap is in
+    the loop's phase rules, not in this repository's source
+  - owner: **dev-loop orchestrator** (the phase rule) + **XAgent007** (the standard, per `AI-E14-1`
+    / `AI-E13F-1`)
+  - target_story: **NONE** — it is a process change plus a registration in `architecture.md`
+    §Enforcement, and `AI-E12-5` waited four retrospectives precisely because it was filed as prose
+    only. It must land **registered**, with its enforcing module and test ids.
+  - category: guard adequacy / process
+  - severity: 🟠 — nothing is failing and no guard is loose today, but the two guards this sweep
+    caught were caught by a sweep that was optional, ran once, ran late, and ran only because two
+    consecutive retrospectives wrote it down. Epic 15 is `DF-13-5-A`'s ONE round.
+
+- **`DF-15-2-B` — `argus/detectors/secret_scan.py` carries the SAME line-numbering contract breach
+  as the vacuous-test detector, and Story 15.2 does not repair it.** Measured against the shipped
+  module: `secret_scan.py:334` derives a match's line by counting newlines — the index's convention
+  — and `:434`/`:447` then index into `source.splitlines()` with that number to recover the line
+  **text** the suppression engine reads. With one form feed in a comment above the secret, the
+  scanner reports line 3 and the suppression engine is handed `'tail'` instead of the line actually
+  carrying `AWS_KEY = "AKIA…"  # argus: ignore-secret`. Reproduced identically for `\x0c`, `\x0b`,
+  `\x1e` and `\u2028`. **The measured direction is the safe one:** the operator's suppression is
+  dropped, so the secret is **reported** rather than hidden. ⚠️ **The dangerous mirror — a
+  suppression comment on an unrelated line being applied to a real secret, silently — is NOT
+  established**, and this entry does not assert it; **measuring it is part of the entry**, and it is
+  the first thing whoever takes this should do, because that direction is 🔴 and the measured one is
+  not. **Why it is not folded into Story 15.2:** that story's host test module has 39 lines of
+  headroom and already owes a cohesion split, and a repair scoped to one detector that quietly grows
+  a second is how a scoped repair loses its scope. The point the proposal draws from it stands
+  either way — **the contract is repository-wide, not detector-local**: two detectors, written by
+  different stories, made the same mistake independently.
+  - id: DF-15-2-B
+  - origin_story: (filed by correct-course 2026-08-19) — defect is in `argus/detectors/secret_scan.py`
+  - owner: **XAgent007 (Engineering Lead)** (`AI-E9-8`)
+  - target_story: **NONE** — it should land deliberately, after Story 15.2 has established what the
+    corrected line-numbering contract looks like, rather than as a drive-by beside it
+  - category: detector correctness / line-numbering contract
+  - severity: 🟠 as MEASURED — over-reporting, which the operator can see and argue with. It becomes
+    🔴 if the unmeasured mirror direction reproduces, because a silently-suppressed real secret is
+    the one failure this detector exists to prevent. **The severity is therefore conditional on a
+    measurement nobody has taken, and that is the honest state of it.**
+
+- **`DF-15-2-C` — the 24-guard vacuity sweep's per-id verdict table has no durable home in this
+  repository, so `AI-E14-2` is NOT discharged.** `AI-E14-2`'s DoD is *"each of the 24 ids carries a
+  recorded verdict (reaches-mechanism / hardened / confirmed-with-floor)"*. The sweep ran on
+  2026-08-19 and produced exactly that — 24 verdicts, each backed by a named mutation that was
+  executed and observed, plus the 26-entry mutation legend and the precondition-floor check on the
+  nine absence-asserting guards among them. **It lives in a session-scoped scratch file.** The
+  change proposal carries the totals (22 REAL / 1 VACUOUS / 1 WEAK) and the two failures in full,
+  but not the per-id table, because a change proposal is a decision record and not an evidence
+  store. A verdict no future reader can retrieve is a verdict this repository does not have — the
+  same shape as `AI-E12-6`'s defect, one level up: **a result recorded in prose somewhere else.**
+  ⛔ **Do not treat the proposal's §1.2 summary as the record**, and do not mark `AI-E14-2`
+  discharged against it.
+  - id: DF-15-2-C
+  - origin_story: (filed by correct-course 2026-08-19) — the gap is in the artifact tree, not in
+    any source module
+  - owner: **XAgent007 (Engineering Lead)** (`AI-E9-8`)
+  - target_story: **NONE** — it needs a decision about **where** guard-adequacy verdicts live (a
+    dated artifact? per-guard docstrings? a registry with a guard over it, on the
+    `_STATUS_DOCUMENTS` precedent?), and that decision should be taken once rather than improvised
+    by the next sweep
+  - category: evidence durability / governance record
+  - severity: 🟡 — the two verdicts that **matter** are preserved in full, in the proposal and in
+    Story 15.2's acceptance criteria, so nothing actionable is lost today. It becomes 🟠 the moment
+    somebody cites *"22 of 24 REAL"* as an established property of the suite, because at that point
+    the citation has no retrievable backing.

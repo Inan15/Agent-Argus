@@ -162,6 +162,23 @@ _STATUS_DOCUMENTS: tuple[str, ...] = (
     # ⚠️ It must be committed TOGETHER with this line — `-22` closes in BOTH directions, so the
     # document without this entry and this entry without the document red `master` equally.
     "epic-13-retro-2026-08-19.md",
+    # Registered 2026-08-19 by the correct-course run that wrote it — the registration is part of
+    # writing the document, not a later cleanup (`AI-E12-1`'s second half, applied to a change
+    # proposal for the second time after `sprint-change-proposal-2026-08-17b.md` established it
+    # here). `-22` was observed RED against this document before this line (`unregistered:
+    # ['sprint-change-proposal-2026-08-19.md']`) and GREEN after, on the live tree, and the full
+    # suite was re-run green afterwards. Verified before registering, in the same form as every
+    # entry above: `_status_assertions()` returns 0 for it — no phrase in `_STATUS_CLAIMS` occurs
+    # in it at all, denied or otherwise — so `-21`'s per-document loop short-circuits and this
+    # registration is inert rather than load-bearing. `_executed_gate_citations()` returns 0, so it
+    # mints an excuse for nothing. The document asserts no release status of any kind: it is the
+    # APPROVED proposal that adds Story 15.2 to Epic 15 (the line-numbering contract between
+    # `argus/detectors/vacuous_test.py` and the Story 1.4 index), and the one status-shaped
+    # question it raises — whether the defect can reach verdict-eligibility — is recorded as NOT
+    # established in either direction and pushed into that story's AC1 rather than answered here.
+    # ⚠️ It must be committed TOGETHER with this line — `-22` closes in BOTH directions, so the
+    # document without this entry and this entry without the document red `master` equally.
+    "sprint-change-proposal-2026-08-19.md",
 )
 
 # Exactly the set the epic's AC names — "any future change proposal or retrospective".
