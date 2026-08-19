@@ -179,6 +179,24 @@ _STATUS_DOCUMENTS: tuple[str, ...] = (
     # ⚠️ It must be committed TOGETHER with this line — `-22` closes in BOTH directions, so the
     # document without this entry and this entry without the document red `master` equally.
     "sprint-change-proposal-2026-08-19.md",
+    # Registered 2026-08-19 by the Epic-15 retrospective that wrote it — `AI-E12-1`'s SECOND half
+    # ("make the registration part of the retrospective step's own DoD") on its FOURTH consecutive
+    # application, after the Epic-13 INTERIM, Epic-14 and FINAL Epic-13 entries above established
+    # it. Same one-line edit, same reason, same verification-before-registration: `-22` was observed
+    # RED against this document before this line (`unregistered:
+    # ['epic-15-retro-2026-08-19.md']`) and GREEN after, on the live tree.
+    # `_status_assertions()` returns 0 for it — no phrase in `_STATUS_CLAIMS` occurs in it at all,
+    # denied or otherwise — so `-21`'s per-document loop short-circuits and this registration is
+    # inert rather than load-bearing. `_executed_gate_citations()` returns 0, so it mints an excuse
+    # for nothing. The document asserts no release status of any kind: it records that the precision
+    # gate is UNCHANGED and still `UNEVALUABLE`, that the FR34 disclosure stands, that protocol §6
+    # R2 ratification has NOT been taken (all 14 candidate rows remain `eligible_for_n=False` and
+    # `eligible_member_count()` is 5), that `DF-13-5-A`'s ONE pre-registered round is UNSPENT, and
+    # that publication is NOT ESTABLISHED — `git tag -l` empty, no release. It dispositions NO
+    # ledger entry and edits no planning document.
+    # ⚠️ It must be committed TOGETHER with this line — `-22` closes in BOTH directions, so the
+    # document without this entry and this entry without the document red `master` equally.
+    "epic-15-retro-2026-08-19.md",
 )
 
 # Exactly the set the epic's AC names — "any future change proposal or retrospective".

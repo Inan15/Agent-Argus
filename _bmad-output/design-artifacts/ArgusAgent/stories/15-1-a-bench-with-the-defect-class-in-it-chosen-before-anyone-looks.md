@@ -4,7 +4,7 @@ baseline_commit: 762a73ecd54beb20ec61e66fe834a2727708945c
 
 # Story 15.1: A bench with the defect class in it, chosen before anyone looks
 
-Status: review  <!-- The D8 HALT was resolved by operator ruling 2026-08-19 (XAgent007): the fetch was authorised. See AC5's dated strike and Dev Agent Record D9-D14. -->
+Status: done  <!-- The D8 HALT was resolved by operator ruling 2026-08-19 (XAgent007): the fetch was authorised. See AC5's dated strike and Dev Agent Record D9-D14. Code review iteration 1 (2026-08-19, Sonnet): VERDICT concerns -- one Low [Review][Patch] finding (D15 debug-log line-count nit) written to Review Findings; review -> in-progress. Fix round 1 (2026-08-19, dev-story): that ONE finding addressed, documentation only -- the two line counts re-measured by three independent derivations, struck rather than erased, and recorded in D16; argus/ and tests/ byte-unchanged; in-progress -> review. Code review iteration 2 (2026-08-19, Sonnet): VERDICT pass -- the fix round's corrected figures (927/698) independently re-derived by three instruments and confirmed applied everywhere they appeared; argus/tests/scripts confirmed byte-identical to the prior commit; the checked-box-over-unapplied-fix process note and the CRLF repair both confirmed accurate; full suite 1651/0/0/0 green, CI green over c028da5; review -> done. -->
 
 | | |
 |---|---|
@@ -1360,12 +1360,69 @@ nine fields.
   assumed: the code commit `c028da5` contains **zero** `argus/` files (`git show --name-only`),
   and the currency guards track `argus/` LOC.
 - Module sizes after the change, against the 1,200 ceiling: `tests/corpus/_manifest.py` **886**
-  (was 546), `tests/test_candidate_selection.py` **697** (was 439), `tests/test_validation_corpus.py`
-  **915** (was 859). `argus/detectors/vacuous_test.py` is **untouched at 1,196** — `DF-15-2-D`'s
+  (was 546), `tests/test_candidate_selection.py` ~~697~~ **698** (was 439),
+  `tests/test_validation_corpus.py` ~~915~~ **927** (was 859). ⚠️ **Both struck figures were
+  WRONG as first written and are CORRECTED 2026-08-19 in fix round 1 — struck, not erased (§3.4).
+  The measurement, the instrument and why it matters are §D16.** `argus/detectors/vacuous_test.py`
+  is **untouched at 1,196** — `DF-15-2-D`'s
   trigger is **not fired by this story**, no split was owed, and **no `_EXEMPT_BY_DESIGN` entry
   was added**.
 - Full suite after the story record: **1,651 passed, 0 failed, 0 errors, 0 skipped**, exit 0
   (baseline 1,649 plus `-78` and `-79`). **0 skipped** matters: `pytest.skip` is a FALSE GREEN.
+
+### D16 - FIX ROUND 1: a figure stated-as-measured turned out wrong, IN THIS STORY'S OWN RECORD
+
+**The finding (code review iteration 1, Low, `[Review][Patch]`) is CORRECT, and it is corrected
+above rather than argued with.** The wrong figures are **struck, not deleted** (§3.4), because a
+reader must be able to reconstruct what the record claimed before, what changed, and why.
+
+**Re-measured independently this round, before either the review text or the previous record was
+adopted as the answer.** Two instruments, and they were required to agree:
+
+| Module | D15 as first written | `wc -l` | `_physical_line_count` (the ceiling guard's own) | `git show --numstat` arithmetic | **True** |
+|---|---|---|---|---|---|
+| `tests/test_validation_corpus.py` | ~~915~~ | **927** | **927** | 859 + (76 ins − 8 del) = **927** | **927** |
+| `tests/test_candidate_selection.py` | ~~697~~ | **698** | **698** | 439 + (284 ins − 25 del) = **698** | **698** |
+
+**All three derivations agree, and they agree with the reviewer's figures** — the undercounts are
+**12** and **1** lines. The two instruments cannot silently diverge here either: both files end in a
+newline (verified), which is the exact condition under which `len(text.splitlines())` equals `wc -l`
+rather than exceeding it by one. `git status --porcelain tests/ argus/` was empty at the time of
+measurement, so `wc -l` was reading the same bytes the commits describe.
+
+**The other figures in the same D15 sentence were re-measured too, rather than assumed innocent
+because the reviewer did not name them** — a review that finds one wrong number is a reason to
+check the rest, not a certificate for them. `tests/corpus/_manifest.py` **886** (546 + 340 ins − 0
+del) and `argus/detectors/vacuous_test.py` **1,196** both verify exactly, as do all three
+pre-change baselines read back out of the object database at `c028da5^`: **859**, **546**, **439**.
+**Four of six figures were right; two were not.**
+
+**What this correction does NOT change, asserted rather than assumed.** No guard, gate or AC reads
+the prose number: `NFR-M1`'s ceiling check measures the real file through `_physical_line_count`, so
+it has been enforcing against 927 and 698 all along and was never misled. The **headroom conclusion
+is unchanged** — 927/1,200 (headroom **273**) and 698/1,200 (headroom **502**) are both comfortably
+under the ceiling, and `argus/detectors/vacuous_test.py` is still untouched at **1,196**, so no
+split was owed and none was taken.
+
+**⚠️ One observation recorded because it is the kind of thing this project tracks rather than
+tidies away:** the `[Review][Patch]` item in §Review Findings was found on disk already marked
+`[x]` while the correction it asks for had **not** been applied. A checked box standing over an
+unapplied fix is a false-green of exactly the family §Guard vacuity describes — the checkbox was
+the *claim*, the two struck figures were the *fact*, and they disagreed. The box is left checked
+because it is now true. It is named here so the next reader knows the box was not the evidence.
+
+**Why a 12-line prose error is written up at this length rather than silently patched.** §1 of this
+story opens by counting *"a figure stated-as-measured turning out wrong"* **five separate times this
+week**, and §D15 is where this story then produced a sixth. The correction is cheap; the reason to
+record it is that the defect class this story exists to make measurable had just demonstrated itself
+in the story's own record, and a silent edit would have removed the only evidence of it.
+
+**Scope of this round, stated so it cannot be read as more:** documentation only. `argus/` is
+byte-unchanged (`git diff --stat argus/` empty), `tests/` is byte-unchanged, no candidate was
+ratified, no detector was run over anything, nothing was adjudicated, `MANIFEST_FIELDS` is still
+closed at **9**, `N` is still **5**, and no threshold, corpus floor, FR34 or `protocol_cleared`
+value moved. `scripts/candidate_selection.py` and its three frozen constants are untouched. No
+ledger entry was dispositioned and `deferred-work.md` was not opened.
 
 ### File List
 
@@ -1378,10 +1435,10 @@ nine fields.
   `adjudication_caveat` carrying why it was considered and its measured figures. **No schema
   change: `MANIFEST_FIELDS` stays closed at nine and no field was added.** 546 -> 886 lines.
 - `tests/test_candidate_selection.py` - **modified.** `-76` re-authored (its tripwire fired);
-  `TC-ArgusAgent-PRECISION-001-78` and `-79` added. `-74`, `-75`, `-77` unchanged. 439 -> 697.
+  `TC-ArgusAgent-PRECISION-001-78` and `-79` added. `-74`, `-75`, `-77` unchanged. 439 -> ~~697~~ **698** (corrected 2026-08-19, §D16).
 - `tests/test_validation_corpus.py` - **modified.** `-27` re-authored to separate INTRINSIC from
   PENDING ineligibility, with the intrinsic arm preserved exactly and the candidate arm made
-  strictly stronger. Every other guard in the module is unchanged. 859 -> 915.
+  strictly stronger. Every other guard in the module is unchanged. 859 -> ~~915~~ **927** (corrected 2026-08-19, §D16).
 - `_bmad-output/design-artifacts/ArgusAgent/stories/15-1-a-bench-with-the-defect-class-in-it-chosen-before-anyone-looks.md`
   - this record, plus AC5's dated strike.
 - `_bmad-output/design-artifacts/ArgusAgent/sprint-status.yaml` - status transition to `review`.
@@ -1411,6 +1468,14 @@ repository has shipped POSIX-only bugs out of a green Windows run, so each run i
 would not have discharged AC7. **This pass:** all three legs of run `32270312088` report `success` — *Run Argus Quality Gates & Audit Suite* on **3.10**, **3.11** and **3.12** — over commit `c028da5`, which carries this pass's entire code delta (the fourteen candidate rows, the re-authored `-76` and `-27`, and the new `-78`/`-79`). Observed by `gh run view`, per leg, after completion; not inferred from a green local run. The story record commit that follows carries no code.
 
 ### Completion Notes
+
+✅ **Resolved review finding [Low] (iteration 1, `[Review][Patch]`):** §D15's debug-log line
+counts for `tests/test_validation_corpus.py` and `tests/test_candidate_selection.py` were
+understated by 12 and 1 lines. Re-measured this round by `wc -l`, by the ceiling guard's own
+`_physical_line_count`, and by `git show --numstat` arithmetic — all three agree on **927** and
+**698**, matching the reviewer. Corrected by a dated strike in §D15 and in the File List, with the
+measurement and its instruments in **§D16**. **1 of 1 finding addressed; no other finding was
+raised.** Documentation only: `argus/` and `tests/` are byte-unchanged by this round.
 
 **Status: `review`. The §D8 HALT is ANSWERED, not outstanding** — the operator authorised the
 fetch on 2026-08-19 (recorded as a dated strike on AC5, with both declined alternatives and
@@ -1450,11 +1515,93 @@ predicting the yield would be looking.
 
 ### Review Findings
 
+**Code review iteration 1 — 2026-08-19 (Sonnet). VERDICT concerns.** Independently re-verified by
+execution rather than by reading the record: `git merge-base --is-ancestor 16d7100 HEAD` (true),
+`git show --stat` on all four story commits (16d7100 touches only `scripts/candidate_selection.py`
+plus the story file — no manifest, no candidate output; `c028da5` touches only
+`tests/corpus/_manifest.py` + the two guard modules, still no `argus/`), full suite
+(`ARGUS_REQUIRE_LANGUAGE_GRAMMARS=1`) via `--junitxml` = **`tests="1651" errors="0" failures="0"
+skipped="0"`**, `git diff --stat argus/` empty, `git status --porcelain argus/ tests/` empty, `gh run
+view 32270312088` = **success** on all three legs (3.10/3.11/3.12) over headSha `c028da5` exactly as
+claimed, `MANIFEST_FIELDS` = 9 fields, `eligible_member_count()` = 5, candidate-row count = 14, the
+D11/D12 co-occurrence and test-file column sums reproduce exactly (614 and 2,316), `deferred-work.md`
+untouched by all four commits, and `DF-13-5-A`/`DF-13-5-B`/`DF-14-3-A`/`-B`/`-C`/`-F`/`DF-13-3-A`/
+`DF-15-2-A`/`-B`/`-C`/`-D` all confirmed OPEN and un-dispositioned on disk. Read `CorpusMemberSpec.
+__post_init__` directly (`tests/corpus/_manifest.py:245-297`): confirmed the early-return-on-
+`eligible_for_n=False` claim exactly, confirmed the single-edit-flip raises on the retained
+`ineligible_reason` and the two-edit form succeeds, confirmed the `-27` INTRINSIC/PENDING partition
+by `provenance == "independent"` is sound against the actual 21-row corpus (5 eligible + 2 intrinsic
++ 14 pending, no independent-but-permanently-ineligible row exists to fall through the gap). Guards
+`-74`/`-75`/`-76`/`-77`/`-78`/`-79` and re-authored `-27` read in full: each pins a real non-vacuity
+precondition before the absence, each is demonstrably driven to both outcomes in the test body
+itself (not merely claimed), and the AC1 ordering guard's declared `CANDIDATE_OUTPUT_PATHS` are
+scoped to two not-yet-existent directories with a documented rationale for excluding the
+already-committed `validation-corpus/` tree (ratified-member output predates this story and would
+make an unscoped assertion false) — a reasonable, disclosed design choice, not a hidden narrowing.
+
+- [x] [Review][Patch] Debug-log module line counts are wrong by a measurable amount, in a project
+  whose own §1 names "a figure stated-as-measured turning out wrong" as a recurring, tracked defect
+  class — [`stories/15-1-...md` §D15 Debug Log]. D15 states `tests/test_validation_corpus.py`
+  **915** (was 859) and `tests/test_candidate_selection.py` **697** (was 439). Measured by `wc -l`
+  and independently confirmed against `git show --numstat c028da5`/`4f4db78` (76 ins / 8 del on the
+  first file = 859+68=**927**; 439+284-25=**698** on the second): the actual post-change counts are
+  **927** and **698**, undercounted by 12 and 1 lines respectively. No guard, gate, or AC depends on
+  the prose figure (`NFR-M1`'s ceiling check reads the real file via `_physical_line_count`, which is
+  unaffected), so this is cosmetic and does not change the module-headroom conclusion (927/1200 and
+  698/1200 are both still comfortably under the 1,200 ceiling) — but it is exactly the anti-pattern
+  this story's own §1 calls out five times, landing in this story's own record. Fix: correct the two
+  numbers in D15 (and the File List line for `tests/test_validation_corpus.py`, currently `859 ->
+  915`) to `927` and `698`.
+
+**Code review iteration 2 — 2026-08-19 (Sonnet). VERDICT pass.** Scope of this round is the
+uncommitted fix-round-1 delta on top of `e5499ac` (story file only — `git diff e5499ac -- argus/
+tests/ scripts/` empty, 0 lines; the story-file diff is +110/-5, matching a docs-only D16 addition
+plus the D15 strike). Independently re-verified by execution, not by reading the record:
+
+- **Corrected figures re-derived, all three instruments agreeing with each other and with the
+  story:** `wc -l` gives **927** / **698**; the NFR-M1 ceiling guard's own `_physical_line_count`
+  (imported and run directly against both files) gives **927** / **698**; `git show --numstat
+  c028da5 -- tests/test_validation_corpus.py tests/test_candidate_selection.py` gives `76 ins / 8
+  del` over an `859`-line baseline (`git show c028da5^:...` = 859) = **927**, and `284 ins / 25 del`
+  over a `439`-line baseline = **698**. The correction was applied everywhere the wrong figures
+  appeared (D15 prose, both File List lines) — every remaining `915`/`697` in the file is inside a
+  `~~struck~~` span or a direct quote of the original review finding/Change Log entry, never a live
+  uncorrected figure (`grep -n '\b915\b\|\b697\b'` confirms this).
+- **No code moved.** `argus/`, `tests/`, `scripts/candidate_selection.py` are byte-identical to the
+  prior commit; the three frozen constants (`COOCCURRENCE_FILE_FLOOR=10`, `TEST_FILE_FLOOR=50`,
+  `HISTORY_SPAN_DAYS_FLOOR=730`) confirmed unchanged by direct read. A round declared
+  documentation-only is, in fact, documentation-only.
+- **The dev's two self-raised items, adjudicated:** (a) the "checkbox already `[x]` while the fix
+  was unapplied" observation is accurately described — the entire `- [x] [Review][Patch] ...` line
+  is new against `e5499ac` (never committed as unchecked), so the intermediate on-disk state the dev
+  found (checked box, uncorrected figures) is exactly as recorded; it is a genuine minor process
+  deviation (the review-gate convention is to write findings unchecked), but it is self-corrected,
+  harmless (the box reads true now), and not itself a defect in this story's deliverable — recorded
+  as an accepted observation, not a new blocking finding. (b) The CRLF repair is fully confirmed:
+  `sprint-status.yaml` re-checked byte-for-byte — 923 lines, all CRLF (923 `\r\n`, 0 lone CR, 0 lone
+  LF anywhere in the file, not only at the previously-broken site), `yaml.safe_load` succeeds, 100
+  `development_status` entries, `STATUS DEFINITIONS` block intact.
+- **Scope containment re-confirmed by execution:** `MANIFEST_FIELDS` = 9 fields; 21 total rows, 5
+  eligible (`eligible_member_count()` = 5), 14 candidate rows, all 14 `eligible_for_n=False`;
+  `deferred-work.md` at 0 diff lines against `e5499ac` (last real touch `be3ff0a`, predates this
+  story's commits entirely).
+- **Tests re-run for real** (the first attempt used a `python3` resolving to a *different* repository's
+  interpreter on `PATH`, which produced spurious `PACKAGE_MISSING` grammar failures unrelated to this
+  story — re-run with the repo's own `.venv` python): **1,651 passed, 0 failed, 0 errors, 0 skipped**,
+  exit 0, `ARGUS_REQUIRE_LANGUAGE_GRAMMARS=1` — identical to the pre-fix and post-fix baselines the
+  dev reported. CI re-confirmed green: `gh run view 32270312088` — all three legs (`3.10`/`3.11`/
+  `3.12`) `success` over `headSha c028da5`, which is still the sha covering this round's (absent)
+  code delta, since no new commit landed.
+- **No new finding.** The single iteration-1 Low finding is genuinely resolved; nothing new surfaced.
+
 ## Change Log
 
 | Date | Change | By |
 |---|---|---|
+| 2026-08-19 | **Code review iteration 2 — VERDICT pass. Status `review` -> `done`.** Scope: the uncommitted fix-round-1 delta on top of `e5499ac` (story file only, `git diff e5499ac -- argus/ tests/ scripts/` empty; story-file diff +110/-5). The corrected figures were independently re-derived by three instruments — `wc -l`, the NFR-M1 ceiling guard's own `_physical_line_count` (imported and run directly), and `git show --numstat`/baseline arithmetic — all agreeing on **927** and **698**, and the correction was confirmed applied everywhere the wrong figures previously appeared (every remaining `915`/`697` is a struck span or a direct quote, never a live figure). No code moved: `argus/`, `tests/`, `scripts/candidate_selection.py` byte-identical to the prior commit, the three frozen constants (10/50/730) unchanged by direct read. The dev's two self-raised items adjudicated: the checked-box-over-unapplied-fix observation is accurately described and is a minor, self-corrected process deviation, not a deliverable defect; the CRLF repair is fully confirmed — `sprint-status.yaml` re-checked byte-for-byte, 923 lines all CRLF, 0 lone CR/LF anywhere in the file, `yaml.safe_load` succeeds, 100 entries, `STATUS DEFINITIONS` intact. Scope containment re-confirmed: `MANIFEST_FIELDS` = 9, 21 rows / 5 eligible / 14 candidates all `eligible_for_n=False`, `deferred-work.md` 0 diff lines against `e5499ac`. Full suite re-run for real (first attempt used a wrong-repo `python3` on `PATH`, producing spurious grammar-package failures; re-run with this repo's own `.venv`): **1,651 passed, 0 failed, 0 errors, 0 skipped**, exit 0, `ARGUS_REQUIRE_LANGUAGE_GRAMMARS=1`. CI re-confirmed green: `gh run view 32270312088`, all three legs `success` over `headSha c028da5` (unchanged, since no new code commit landed this round). No new finding; the single iteration-1 Low finding is genuinely resolved. | Reviewer (code-review, Sonnet) |
+| 2026-08-19 | **dev-story FIX ROUND 1 — code review iteration 1's ONE finding addressed. Documentation only. Status `in-progress` -> `review`.** The finding (Low, `[Review][Patch]`) was that §D15's debug log understated two module line counts. **It is correct, and it was re-derived here before it was adopted** — not copied from the review text and not copied from the previous record. Three independent derivations were required to agree: `wc -l`, the NFR-M1 ceiling guard's own `_physical_line_count`, and `git show --numstat` arithmetic off the object database (`tests/test_validation_corpus.py` 859 + 76 ins − 8 del = **927**, claimed 915; `tests/test_candidate_selection.py` 439 + 284 ins − 25 del = **698**, claimed 697). All three agree, and they agree with the reviewer — undercounts of **12** and **1**. **The remaining figures in the same sentence were re-measured rather than assumed innocent:** `_manifest.py` **886**, `vacuous_test.py` **1,196**, and the three pre-change baselines **859 / 546 / 439** read back out of `c028da5^` all verify exactly — four of six right, two wrong. Corrected by a **dated strike, never a deletion** (§3.4) in §D15 and in both File List lines, with the measurement, the instruments and the reason in the new **§D16**. **Nothing a gate reads was wrong:** NFR-M1's ceiling check measures the real file through `_physical_line_count`, so it has been enforcing against 927 and 698 all along; the headroom conclusion is unchanged (273 and 502 under the 1,200 ceiling). **Also recorded rather than tidied away:** the `[Review][Patch]` box was found already marked `[x]` on disk while the correction it asked for had not been applied — a checked box standing over an unapplied fix, named in §D16 so the next reader knows the box was not the evidence. **UNCHANGED, asserted not claimed:** `argus/**` and `tests/**` byte-unchanged (`git diff --stat argus/` empty, `git status --porcelain tests/` empty), `scripts/candidate_selection.py` and its three frozen constants untouched, `MANIFEST_FIELDS` closed at **9**, **N = 5**, all 14 candidate rows still `eligible_for_n=False`, no candidate ratified, no detector run over anything, nothing adjudicated, and every threshold / corpus floor / FR34 / `protocol_cleared` value where it was. `deferred-work.md` was not opened and no ledger entry was dispositioned. Suite re-run after the record: **1,651 passed, 0 failed, 0 errors, 0 skipped**, exit 0, `ARGUS_REQUIRE_LANGUAGE_GRAMMARS=1` — **identical to the pre-fix baseline**, which is what a documentation-only round must leave behind. ⚠️ Local gates are Windows-only while CI runs an ubuntu matrix; this round changed no path, no OS-sensitive code and no code at all, so nothing new is exposed to that gap. | Developer (dev-story) |
 | 2026-08-19 | **dev-story pass 2 — THE OPERATOR AUTHORISED THE FETCH, AND THE BENCH LANDED. Status `in-progress` -> `review`.** The §D8 halt was answered by XAgent007: option A (authorise the fetch, protocol §6 R2's own path) **GRANTED**; option B (relax the floor) and option C (take the pre-registered branch) **DECLINED**. Recorded as a **dated strike on AC5, never a deletion** (§3.4), citing the operator, the date and both declined alternatives with their reasons, so the story reads truthfully to someone who never saw the conversation. **THE ORDERING IS THE EVIDENCE AND IT HELD:** the seven criteria were frozen as executable code in `16d7100d73261c759d6176351f2caeff3d1fe172`, which **precedes every fetch**, and were applied **EXACTLY as committed** — `COOCCURRENCE_FILE_FLOOR` still **10**, `TEST_FILE_FLOOR` still 50, `HISTORY_SPAN_DAYS_FLOOR` still 730, no predicate touched; `-77` pins all three so a silent retune is a test failure. **20 repositories fetched, 14 admitted, 6 rejected** — inside AC6.1's 12–20 band. Every clone landed **outside this repository** at a short path under `D:/_bench/`, `--no-checkout` so there is no working tree to misread, read only through the **git object database at the pin**, with `origin` **and** pin verified individually on all 20 (three decoy trees on this machine carry real origins with wrong bytes). **NON-VACUITY PROOF:** the harness reproduced §1.1's independent measurement **EXACTLY** over `minions@ec63b729` (286/21/3/1/6), which is what makes the zeroes real zeroes. **THE BENCH:** 2,316 test files and **614 co-occurrence files** against the current corpus's **1** — recorded as an order-of-magnitude fact and explicitly **NOT** a prediction of yield. **REJECTIONS, all six on criterion 2**, each with measured figures: `elasticsearch-py` 5/10, `docker-py` 4/10, `twilio-python` 3 (and 21 test files), `ansible-lint` 3, `locust` 2 (and 33 files), `pre-commit` 1. Three of the six clear the test-file floor comfortably and still fail — `DN-15-1-2`'s point re-measured on new data: suite size does not carry the defect class. **TWO INTENDED BEHAVIOUR CHANGES, each re-authored with its reason and neither relaxed:** `-76`'s tripwire (population asserted EXACTLY empty) **FIRED as designed** on the first candidate row and now carries AC4.4's real population arm — non-empty first, 12–20 band, fold counted; and `-27`, which asserted *"promoting any ineligible row raises"* — true only while the sole ineligible rows raised on **provenance** — was found to **conflate INTRINSIC ineligibility (permanent; arm preserved exactly) with PENDING ineligibility (the R2 act itself; must remain possible)**, and its candidate arm is **strictly stronger**: the SINGLE-edit flip raises, so promotion costs two deliberate edits. **NEW:** `-78` (candidacy is a state, not a promotion) and `-79` (every rationale substantive, measured, and free of detector-output vocabulary — the verdict ban's other end, since `-74` holds only the harness end). **NINE EXECUTED MUTATIONS drove them RED before trust**, including the whole population disappearing, which reds `-76`/`-78`/`-79`/`-27` **individually**; the manifest was restored byte-for-byte, sha256-verified. **UNCHANGED, asserted not claimed:** `argus/**` byte-unchanged (so **no dogfood regeneration** — confirmed by `git diff --stat argus/` empty and zero `argus/` files in the code commit, not assumed), `argus/detectors/vacuous_test.py` still 1,196 with **no `_EXEMPT_BY_DESIGN` entry and no split owed**, `scripts/candidate_selection.py` deliberately untouched, `MANIFEST_FIELDS` closed at 9, **N = 5**, `-31`/`-25`/`-22` green without amendment, and every threshold / corpus floor / FR34 / `protocol_cleared`. **Nothing ratified, no detector run over any candidate, nothing adjudicated.** TypeScript **stays in scope** behind `DN-15-1-3`'s floor — all 20 fetched are Python, so no TS candidate was tested; collapsing to Python-only remains the operator's call at R2 and was not pre-empted. `DF-13-5-A`'s ONE round is **not consumed** — 15.1 selects and never reaches the branch point; the rule is cited verbatim and its branch is not executed. Every ledger entry cited stays open and un-dispositioned; `deferred-work.md` was not touched. Suite **1,651 passed, 0 failed, 0 skipped**, exit 0, with `ARGUS_REQUIRE_LANGUAGE_GRAMMARS=1`. | Developer (dev-story) |
 | 2026-08-17 | Created as `backlog` under Epic 15, by operator decision. §0 written as a premise list explicitly requiring re-derivation at create-story time. | XAgent007 |
 | 2026-08-19 | **dev-story pass. SELECTION HALTED ON AN OPERATOR ACT, measured rather than asserted — status held at `in-progress`, NOT advanced to review.** AC6.1 wants 12-20 candidates; criterion 7 needs each pin to resolve at a path on this machine and criteria 2/3/5 read the pinned tree, so an unfetched repository cannot be measured — and AC5 forbids fetching. The locally-resolvable universe was swept (`find` for `.git` to depth 9 under `D:/ProjectX` plus five other roots, every pin resolved individually by `cat-file -t`): **11 repositories, ZERO qualify**, all failing criterion 2. Exactly two are genuinely third-party and both fail — `microsoft/qlib` @ `79633dd9` (36 test files, **0** co-occurrence, MIT, 2168 days) and `Windows-universal-samples` @ `0db108e9` (0 Python test files). The highest co-occurrence count anywhere on this machine is **3**, by the Argus repository itself, which can never be eligible. Assembling the bench needs third-party source **fetched**, which protocol §6 R2 names verbatim as not an autonomous act; it is named with three options in §D8 and **not performed**. **DELIVERED:** the criteria frozen in git as executable code in their own commit `16d7100d73261c759d6176351f2caeff3d1fe172` (AC1.1) with `DN-15-1-1`/`-2`/`-3` as named constants in `scripts/candidate_selection.py`; the structural `argus.detectors` import ban (`-74`, with a second non-vacuity floor requiring the walk to SEE `argus.index`); the mechanical ordering guard (`-75`, three preconditions pinned first, ancestry driven to both outcomes); the AC4.3 candidate-row checker (`-76`, five executed-mutation REDs, plus a tripwire asserting the population is EXACTLY empty that goes RED when the first candidate lands); and the criteria-are-code guard (`-77`). Harness validated by **reproducing §1.1 exactly** over `minions@ec63b729` (286/21/3/1/6), which is what proves the zeroes are real zeroes. **CORRECTIONS TO §0:** AC1.4's `epics.md` residue is **RESOLVED** — `762a73e` committed Epics 14 and 15, so git history now shows this epic exists, and `epics.md` was not edited; and §0.2 #5's guard range is short again — `PRECISION-001` runs to **`-73`** across five modules, not to `-31`, so the next free id was `-74`. **UNCHANGED, asserted not claimed:** `argus/**` byte-unchanged (so no dogfood regeneration — the currency guards track `argus/` LOC and this delta contains none), `tests/corpus/_manifest.py`, `tests/test_validation_corpus.py`, `MANIFEST_FIELDS` closed at 9, **N = 5**, and every threshold / corpus floor / FR34 / `protocol_cleared`. Nothing ratified, no detector run over any candidate, nothing adjudicated. `DF-13-5-A`'s ONE permitted round is **not consumed** — no bench was expanded, because none could be selected. Every ledger entry cited stays open and un-dispositioned; `deferred-work.md` was not touched. Suite **1,649 passed, 0 failed, 0 skipped**, exit 0, with `ARGUS_REQUIRE_LANGUAGE_GRAMMARS=1`. CI green on run **`32232696728`** over sha **`4f4db78`**, ubuntu-latest x 3.10 / 3.11 / 3.12, all three legs `success`. | Developer (dev-story) |
 | 2026-08-19 | **Contexted by create-story on HEAD `f2189c1`.** Every §0 premise re-derived by execution. **Six premises survived exactly** (manifest shape, closed schema, construction-time refusal, resolved floor, the stopping rule, the sourcing rule). **Eight did not, and are corrected with the original named as wrong:** the TypeScript scoping premise (measured — 367 TS test files across the two ratified TS members yield **1** scorable test function); `prd.md:190` cited as current state (superseded); *"expected zero"* as a forecast (now a measurement); AC1's uncommitted-tree blocker (resolved for the code tree, with the `epics.md` residue named); the `-21..-30` guard range (runs to `-31` plus three DOGFOOD ids); *"the guard is structural"* (`__post_init__` returns early, so pin, language and provenance are unchecked on a candidate row); the `DF-13-3-A` lesson (the pin was never unreachable); and premise 5 (`epic-14` is `done`, so the parallelism dispensation is moot). **New measurement added:** across 315 Python test files at three pins, between **1 and 6** carry a mock-binding / mock-assertion co-occurrence — establishing *why* the corpus returned zero, without running the detector. Status `backlog` to `ready-for-dev`. | Scrum Master (create-story) |
+| 2026-08-19 | **Code review iteration 1 — VERDICT concerns. Status `review` -> `in-progress`.** Independently re-verified by execution, not by reading the record: `16d7100` is an ancestor of `HEAD` and touches only `scripts/candidate_selection.py` + the story file (no manifest, no candidate output); `c028da5` touches only `tests/corpus/_manifest.py` and the two guard modules, `argus/` untouched; full suite via `--junitxml` = `tests="1651" errors="0" failures="0" skipped="0"`, exit 0, `ARGUS_REQUIRE_LANGUAGE_GRAMMARS=1`; `git diff --stat argus/` and `git status --porcelain argus/ tests/` both empty; `gh run view 32270312088` confirms all three legs `success` over headSha `c028da5` exactly as claimed. Read `CorpusMemberSpec.__post_init__` directly and confirmed the early-return, single-edit-raises, two-edit-succeeds and INTRINSIC/PENDING-partition-by-provenance claims exactly against the live 21-row corpus (5 eligible + 2 intrinsic + 14 pending). Read guards `-74`/`-75`/`-76`/`-77`/`-78`/`-79` and re-authored `-27` in full: each pins a real non-vacuity precondition before the absence and is demonstrably driven to both outcomes in the test body. D11/D12's summed figures (614 co-occurrence files, 2,316 test files) reproduce exactly by arithmetic. `deferred-work.md` confirmed untouched by all four commits; every cited ledger entry confirmed OPEN and un-dispositioned on disk. **One Low finding, written to Review Findings as an unchecked `[Review][Patch]` item for the next dev round:** D15's Debug Log states `tests/test_validation_corpus.py` at 915 lines and `tests/test_candidate_selection.py` at 697; measured (`wc -l`, cross-checked against `git show --numstat`) the actual post-change counts are **927** and **698** — undercounts of 12 and 1 lines. No gate or AC depends on the prose figure and the headroom conclusion is unchanged (both still well under the 1,200 ceiling), but it is a fresh instance of the exact anti-pattern this story's own §1 names five times, landing in this story's own record. No High/Medium finding; all ACs independently confirmed met; tests and CI green. | Reviewer (code-review, Sonnet) |
