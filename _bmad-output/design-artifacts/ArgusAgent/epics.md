@@ -2483,7 +2483,19 @@ only work in this plan that can remove the tool's provisional status, and it is 
 **Covers:** DF-7-2-A, DF-6-6-A / -P1 / -P2 · the architecture's OPEN validation-set input (L152-154)
 **Depends on Epic 12** (a published tool whose findings are worth adjudicating)
 **Dependency flow:** 13.1 -> 13.2 -> 13.3, strictly sequential. No parallelism — each story's output is
-the next one's input.
+the next one's input. **Amended 2026-08-17: 13.5 is appended, and it depends on Epic 14.**
+
+> ⚠️ **RE-OPENED 2026-08-17** by [sprint-change-proposal-2026-08-17.md](sprint-change-proposal-2026-08-17.md).
+> Stories 13.1–13.3 completed and the gate decision was recorded as `BLOCKED` (0 TP / 26 FP / 5
+> BORDERLINE over 31 findings). The measurement then established that **the single rule class it
+> measured is defective**: `vacuous_test_ast`'s AST corroboration tests whether a test constructs a
+> mock, not whether the asserted values derive from the SUT — a conformance gap against
+> cross-cutting concern #6. **Epic 13 cannot close on a measurement of a broken instrument.**
+> Story 13.5 re-runs it; **Epic 14 blocks 13.5.**
+>
+> **The 13.1–13.3 records are NOT rewritten.** They are the true, byte-reproducible measurement of
+> the detector as it stood on 2026-08-17, and the adjudication record is append-only (§3.4 evidence
+> immutability). A correction supersedes; it never erases.
 
 > ✅ **Start condition MET — adjudicator named 2026-08-10b.** This epic required a named human because no
 > agent can adjudicate a finding as genuinely real; that is the whole point of the measurement.
@@ -2617,6 +2629,390 @@ assumption A5 remains UNSUPPORTED and H3's blocking-vs-advisory policy decision 
 deferred-work entries DF-6-7-A, DF-8-4-B (bytes-example half), DF-8-4-C, DF-8-4-D, DF-8-5-B, DF-8-5-C
 and DF-9-2-C are open with no named human.** The retrospective re-derives this list at the time it is
 written rather than copying it — the point is that it is measured, not that it matches this sentence.
+
+---
+
+### Story 13.5: Re-measure the gate against the corrected instrument
+
+*Added 2026-08-17 by [sprint-change-proposal-2026-08-17.md](sprint-change-proposal-2026-08-17.md). **Blocked on Epic 14.***
+
+As the Argus maintainer,
+I want the gate re-measured once the blocking rule proves what it claims,
+So that the recorded decision reflects the instrument Argus actually ships.
+
+**Acceptance Criteria:**
+
+**Given** Epic 14 has closed and `vacuous_test_ast` is granted only on evidence that the asserted
+values do not derive from the SUT
+**When** the five ratified members are re-audited at their **UNCHANGED** pinned shas
+**Then** the new blocking-finding population is adjudicated by the named human (protocol §2), the
+rows are **APPENDED as superseding rows** — the record is append-only and 13.1–13.3's 31 rows stay —
+and `decide_gate` is re-run over the result.
+
+**Given** correcting the detector is expected to take the corpus to **zero** blocking findings
+(measured: minions-wide promotions 24 → 0 under the candidate predicate)
+**Then** an empty precision denominator is recorded as **`UNEVALUABLE`, never as `CLEARED`**, and the
+FR34 disclosure **stays**. Whatever the arithmetic says is what is recorded — a fix that removes the
+findings removes the measurement, not the shortfall.
+
+**Given** `DF-13-3-A` records the `agent-smith` pinned sha as unreachable, and it is reachable
+**Then** that entry is corrected **first**, so the re-run measures all five members against their
+true pinned trees rather than a reconstruction.
+
+**Given** a re-measurement is the moment a threshold looks negotiable
+**Then** the ≥80% threshold, the corpus membership and FR34 are **unchanged** by this story. A failed
+measurement is not a reason to amend the threshold — it is the measurement working.
+
+---
+
+## Epic 14: Make the Moat Hold — the blocking rule proves what it claims · *Argus repo*
+
+Epic 13 measured the ≥80%-precision gate and returned **0 TP / 26 FP** over 31 findings in one rule
+class. The measurement worked; what it found is that **the instrument is defective**. This epic fixes
+the instrument. It does **NOT** re-measure — that is Story 13.5, which does not begin until this epic
+closes.
+
+**Covers:** the cross-cutting-#6 conformance gap · the Story 1.5 denominator amendment · the
+cross-language assertion vocabulary *(added 2026-08-17b)*
+**Depends on:** nothing. **Blocks:** Story 13.5, and therefore Epic 13's closure.
+**Source:** [sprint-change-proposal-2026-08-17.md](sprint-change-proposal-2026-08-17.md) ·
+Story 14.3 by [sprint-change-proposal-2026-08-17b.md](sprint-change-proposal-2026-08-17b.md)
+
+> ⚠️ **This epic does not clear the gate and cannot.** Correcting the detector is expected to take
+> the corpus to zero blocking findings, which `architecture.md` records as `UNEVALUABLE`, never
+> `CLEARED`. Clearing requires findings that are *real*, which requires a corpus containing the
+> defect class. That is an operator decision recorded at §2.5 of the source proposal — **not work in
+> this epic.**
+
+### Story 14.1: A verdict-eligible vacuous finding proves vacuity, not mocking
+
+As the Argus maintainer,
+I want the AST corroboration step to be evidence that the asserted values do not derive from the SUT,
+So that a 🔴 rests on the fact cross-cutting concern #6 requires rather than on the presence of a mock.
+
+**Acceptance Criteria:**
+
+**Given** `_ast_corroborated`'s fact (b) is `assertion_sites >= 1 and mock_sites >= 1`, and across
+**1,836** heuristically-flagged tests in the two contributing corpus members `ast_corroborated` is
+equivalent to `mock_sites >= 1` in **1,835** cases
+**When** this story completes
+**Then** fact (b) discriminates real vacuity from mock-using-but-valid tests, and the equivalence
+above **no longer holds** on the same population — **re-measured and recorded, not asserted**.
+
+**Given** the false-accusation moat is the point
+**Then** a test whose assertions constrain the real SUT result is **NOT** corroborated, however many
+mocks it constructs; **and** a SUT call inside a `pytest.raises` / `assertRaises` context counts as
+result-**CONSUMED**, because raising *is* the observation.
+
+**Given** cartridges `vacuous_basic`, `holdout_vacuous` and `nonascii_unicode` assert that a planted
+vacuous test emits `vacuous_test_ast` and blocks — `holdout_vacuous` being the anti-overfitting
+control (DN-HOLDOUT)
+**Then** all three stay green, and the story **records the measured recall** rather than assuming it.
+
+**Given** `TC-ArgusAgent-DETECT-001-86` currently pins corroboration on a test that asserts on the
+real SUT result
+**Then** it is **re-authored as an intended behaviour change**, with the reason recorded in the story
+— never silently adjusted to match new output.
+
+**Given** the module docstring's *"the conservative default is the moat"*
+**Then** where the unresolved 1.4 edge set cannot establish fact (b), corroboration is **NOT** granted
+and the finding stays `vacuous_test_heuristic` / advisory. It does not fabricate corroboration.
+
+**Given** AR8 (the scorer is PURE), AR4 (`Fraction`, never `float`) and NFR-D2 (deterministic,
+zero-token)
+**Then** all three hold unchanged, and no clock / uuid / random / iteration-order enters any
+`.argus/`-bound output.
+
+**Given** local gates are Windows-only while CI runs an ubuntu matrix, and this repository has
+shipped POSIX-only bugs out of a green Windows run
+**Then** this story is **not marked done on a local pass alone**.
+
+### Story 14.2: The density scorer counts statements, and knows the assertions the ecosystem writes
+
+As the Argus maintainer,
+I want the assertion-density score computed over real statements and real assertions,
+So that the advisory signal stops flagging half of every test suite.
+
+**Acceptance Criteria:**
+
+**Given** `_count_statements` counts non-blank/non-comment **LINES**, measured at **2.04×** inflation
+against a true statement count over 1,812 flagged tests
+**When** this story completes
+**Then** the denominator counts **statements**, a multi-line statement counts **once**, and the Story
+1.5 locked decision is **amended at its source** with a date and a reason (struck, never erased).
+
+**Given** `_ASSERTION_CALLEES` is documented as *"unittest family + pytest helpers"* and contains **no
+pytest helper**
+**Then** it recognises `pytest.raises`/`warns`, the `unittest.mock` assertion methods
+(`assert_not_called`, `assert_called_once_with`, …) and project-defined helpers by naming convention —
+**13 of the 31** adjudicated findings call an assertion it cannot currently see.
+
+**Given** the thresholds `ASSERTION_DENSITY_FLOOR = 1/4` and `MOCK_RATIO_CEILING = 1/2`
+**Then** they are **NOT changed by this story**. If the corrected counts argue for different
+thresholds, that is a separate, evidenced decision — never a silent re-tune riding on a bug fix.
+
+**Given** the flag rate is **51.6%** of all test functions on the minions tree today
+**Then** the story records the **re-measured rate over the same population**, as a number.
+
+**Given** committed dogfood artifacts are detector-output-dependent
+**Then** they are regenerated **through their own renderers** and `test_dogfood_artifact_currency.py`
+is green.
+
+**Given** local gates are Windows-only while CI runs an ubuntu matrix
+**Then** this story is **not marked done on a local pass alone**.
+
+### Story 14.3: The assertion vocabulary crosses the languages the installer ships
+
+*Added 2026-08-17 by [sprint-change-proposal-2026-08-17b.md](sprint-change-proposal-2026-08-17b.md),
+APPROVED by XAgent007. **Runs strictly AFTER Story 14.2**, which owns the same frozenset.*
+
+As the Argus maintainer,
+I want an assertion to be recognised in every language the default install can parse,
+So that a test with a real assertion is never flagged vacuous for being written in TypeScript.
+
+**Acceptance Criteria:**
+
+**Given** `_ASSERTION_CALLEES` holds **23** names and every one of them is `unittest`, while the
+shipped index emits `expect`, `toBe` and `assertEquals` as ordinary edges — measured by execution
+over six fixtures in the source proposal §1.3
+**When** this story completes
+**Then** the table recognises the assertion vocabulary of the languages `pyproject.toml` ships a
+grammar for and DN-6 admits — at minimum JS/TS (`expect`, `toBe`, `toEqual`, `toThrow`, `assert`,
+`ok`, `deepStrictEqual`), Java/JUnit (`assertEquals`, `assertThat`, `assertTrue`, `fail`) and Go
+(`Fatal`, `Fatalf`, `Error`, `Errorf`, `NoError`, `Equal`) — **and the JS fixture measured at
+`assertions=0 density=0 FLAGGED` is re-measured and is NOT flagged.**
+
+**Given** the change can only raise `assertion_sites`, the NUMERATOR of a ratio whose floor fires
+from BELOW
+**Then** it is demonstrated **by execution** that no test flagged before is unflagged into a
+BLOCKING finding, and that the total flag count **falls or holds** — never rises. A change that can
+only remove flags must be shown to have only removed them.
+
+**Given** two ratified corpus members are TypeScript (`xagents-webapp`, `agent-smith`) and the
+source proposal's §2.3 corpus-impact claim is explicitly **UNMEASURED** — a derivation from a
+measured mechanism, not a measurement
+**Then** the flag delta over those members is measured **before and after**, and recorded as a
+number. **If the prediction is wrong, this story records that it was wrong** and does not retro-fit
+its rationale to the result.
+
+**Given** NFR-P2 confines the language conditional to `argus/index/`
+**Then** `_ASSERTION_CALLEES` stays a **FLAT, language-agnostic** name set on the
+`_UNAMBIGUOUS_TEST_SUFFIXES` precedent (`vacuous_test.py:212-215`) — **no language field enters the
+detector** — and the accepted cross-language collision cost (a Python `expect()` now counts as an
+assertion; the error direction is one fewer flag) is recorded with its rejected alternative.
+
+**Given** Story 14.2 owns the same frozenset and adds the pytest helpers to it
+**Then** 14.3 runs strictly after 14.2 and does **not** re-open, re-order or re-litigate 14.2's
+Python entries — the DN-4 discipline, applied to a second pair.
+
+**Given** `DF-14-3-A` (the `startswith("test")` predicate), `DF-14-3-B` (Go selector calls absent
+from the edge set) and `DF-14-3-C` (callback test blocks yielding no definitions) are measured and
+filed
+**Then** they are **CITED, NOT FIXED HERE**, and this story states plainly that Go and Java tests
+remain unscored after it lands. ⛔ **`DF-14-3-A` MUST NOT be fixed alone**: Go tests are silent today
+*because* of it, and lowering the predicate's case-sensitivity while `DF-14-3-B` stands would score
+every Go test at `assertion_sites=0` and flag it — converting silence into a fresh false accusation
+across an entire language. A and B move together or not at all.
+
+**Given** AR8 (the scorer is PURE), AR4 (`Fraction`, never `float`) and NFR-D2 (deterministic,
+zero-token)
+**Then** all three hold unchanged, and no clock / uuid / random / iteration-order enters any
+`.argus/`-bound output.
+
+**Given** local gates are Windows-only while CI runs an ubuntu matrix
+**Then** this story is **not marked done on a local pass alone**.
+
+---
+
+## Epic 15: Make the Gate Evaluable — a bench with the defect class in it · *Argus repo*
+
+*Created 2026-08-17 by **operator decision (XAgent007)**, NOT by a change proposal — recorded here
+because the distinction matters: `sprint-change-proposal-2026-08-17b.md` §4.4 states "no epic is
+created", and that was true of that proposal. This epic is the separate, later container its §3.1
+option 1 left unfiled, admitted by direct authorisation on the Story 13.4 precedent.*
+
+Epic 14 repairs the instrument. It **cannot** clear the ≥80% gate, because a corrected detector is
+expected to emit **zero** blocking findings on the current five-member corpus, and an empty
+precision denominator is `UNEVALUABLE` by construction. Clearing needs **findings that are real**,
+which needs a bench that **contains the defect class**. This epic assembles that bench.
+
+**Covers:** the §2.5 operator decision's option (a) — `DF-13-5-A` · the line-numbering contract
+between the detector and the 1.4 index (added 2026-08-19 by
+[sprint-change-proposal-2026-08-19.md](sprint-change-proposal-2026-08-19.md))
+**Depends on:** Epic 14 (a bench measured with a broken instrument measures nothing).
+**Blocks:** nothing currently scheduled. It is the **new** attempt at clearing, not a repair of the
+old one.
+
+> ⚠️ **This epic does not clear the gate either.** It makes the gate *evaluable*. Whether it clears
+> is a measurement, and the stopping rule was **pre-registered on 2026-08-17 in `DF-13-5-A`** —
+> **before** any repository was chosen and before any number existed. One round. If that round
+> yields zero blocking findings or precision below 80%, the answer is a better detector, **not a
+> bigger bench.**
+
+### Story 15.1: A bench with the defect class in it, chosen before anyone looks
+
+As the Argus maintainer,
+I want a candidate bench of independent public repositories selected against written criteria
+**before** Argus is run over any of them,
+So that whatever precision it eventually measures means something.
+
+**Acceptance Criteria:**
+
+**Given** selecting repositories *after* seeing what the tool says about them is the
+corpus-shopping failure the 13.1 amendment rejected by name
+**When** this story completes
+**Then** the selection criteria are written and **frozen in a commit that precedes every commit
+containing Argus output over any candidate**, and that commit sha is recorded in the story. Git
+history is the evidence; a stated intention is not.
+
+**Given** every criterion must be checkable **without running Argus**
+**Then** the criteria are exactly these, and each is observable from the repository alone: an
+admitted primary language; a test suite above a stated size floor; **demonstrable use of mocking**
+(the defect class lives where mocks live); at least two years of history, so tests have had time to
+rot; a permissive licence, recorded; independent provenance — **no XAgents-affiliated repository and
+nothing Argus was developed against**; and a resolvable pin.
+
+**Given** DN-6 admits Python, JavaScript, TypeScript, Go, Java and PHP, while `DF-14-3-A`/`-B`
+leave Go and Java **unscored** and `DF-14-3-C` leaves callback-style JS/TS suites invisible
+**Then** this bench is scoped **Python and TypeScript ONLY**, with that reason recorded. Admitting a
+language the detector cannot score would inflate **N** — the number that satisfies the floor —
+while contributing nothing to the number that gates. *(The `N` that gates and the `N` that
+contributes are already different numbers; this story must not widen the gap.)*
+
+**Given** protocol §6 **R2** makes ratification an **operator act** — *"choosing which repositories
+are legitimate members, and fetching third-party source, are not autonomous acts"*
+**Then** every candidate enters `tests/corpus/_manifest.py` with `eligible_for_n=False` and
+`ineligible_reason="candidate — awaiting operator ratification (protocol §6 R2)"`. The row validates
+at construction, so a candidate **cannot** silently count toward N; `MANIFEST_FIELDS` stays a closed
+schema and no field is added.
+
+**Given** NFR-S1 forbids third-party source bytes in this repository
+**Then** a candidate is **metadata and a pin** — never vendored source — exactly as the five ratified
+members already are.
+
+**Given** the target is 12–20 candidates for ≥10 ratified
+**Then** the story records **why each candidate was chosen**, and the recorded exclusions for any
+repository considered and rejected. An exclusion without a reason is an oversight wearing a
+decision's clothes (the DN-4 rule, applied to candidates).
+
+**Given** this story is selection ONLY
+**Then** it does **NOT** ratify, does **NOT** run Argus over any candidate, does **NOT** adjudicate
+anything, and touches neither the ≥80% threshold, FR34, nor the manifest schema.
+
+**Given** local gates are Windows-only while CI runs an ubuntu matrix
+**Then** this story is **not marked done on a local pass alone**.
+
+### Story 15.2: The detector and the index agree on what a line is
+
+*Added 2026-08-19 by [sprint-change-proposal-2026-08-19.md](sprint-change-proposal-2026-08-19.md),
+APPROVED by XAgent007 on that date. **Ordering, which travels as a CONSTRAINT and not as a
+number:** this story must be `done` **before any commit containing Argus output over any Epic-15
+candidate**. Story 15.1 is selection-only — it does not ratify, does not run Argus over any
+candidate and does not adjudicate — so **15.1 is NOT blocked by this story and this story is NOT
+blocked by 15.1**; the two may proceed in either order or concurrently. 15.1 was not renumbered to
+express the ordering because an id in this repository is a **citation**: `stories/15-1-*.md`,
+`sprint-status.yaml`, `DF-13-5-A` and the Epic-13 FINAL retrospective §14 all name it. The
+precedent is Story 14.3, which was appended after 14.2 carrying a "strictly after 14.2" constraint
+on its own record.*
+
+As the Argus maintainer,
+I want the detector to read the same lines the index numbered,
+So that an invisible character in a file cannot make Argus say a fully-asserted test asserts
+nothing.
+
+**Acceptance Criteria:**
+
+**Given** the false flag reproduced in `sprint-change-proposal-2026-08-19.md` §1.3 uses a fixture
+with **no mock-bound assertions**, so the fact-(b) corroboration path was **never exercised**, and
+the source proposal explicitly declines to assert an answer
+**When** this story completes
+**Then** it is **DETERMINED BY EXECUTION** whether the shifted line view can carry a finding to
+**verdict-eligibility** — i.e. whether the corrupted span can make `ast_corroborated` read `True`
+where a correct span reads `False`, or the reverse. The answer is **recorded as a measurement in
+either direction**, and if it is *yes* the story records that the severity is higher than the
+proposal that created it assumed. **Neither answer may be assumed, and "no reproduction found" is
+recorded as exactly that rather than as "cannot happen".**
+
+**Given** `str.splitlines()` splits on eleven things and the Story 1.4 index numbers lines by
+newline alone
+**Then** the fix is stated and implemented as a **LINE-NUMBERING CONTRACT** — the detector's line
+decomposition is the index's line decomposition — and **not** as a special case for any one
+character. A patch that names `\x0c` and no other character does **not** satisfy this AC.
+
+**Given** eight characters were measured to survive the production read path
+(`argus/pipeline_stages.py:124`, universal newlines) and to desynchronise the two views
+**Then** the fix is **MEASURED, not assumed, against every one of them**: `\x0b` (VT), `\x0c` (FF),
+`\x1c` (FS), `\x1d` (GS), `\x1e` (RS), `\x85` (NEL), `\u2028` (LS), `\u2029` (PS) — and `\r` and
+`\r\n` are measured **too**, with their normalisation at the read path re-verified rather than
+inherited from this list. A guard covers each, through the **real index**, and each is shown to go
+RED before the fix.
+
+**Given** the corrected decomposition changes what `_score` reads for every file
+**Then** it is demonstrated **by execution** that on all-`\n` source the corrected and current
+decompositions are **identical**, so the change is inert on the existing corpus and every existing
+fixture, and corrective only where the two views currently disagree. Any flag-count delta over the
+ratified corpus members is **measured and recorded as a number**, in both directions.
+
+**Given** `TC-ArgusAgent-DETECT-001-107` is **VACUOUS** — `lf.splitlines() == crlf.splitlines()` is
+`True`, so its headline assertion is `f(x) == f(x)` on a pure function, and its only live assertion
+duplicates `-104` verbatim
+**Then** `-107` is **REBUILT around the split rather than deleted** — the split is genuinely
+unguarded and deleting the guard would remove the id that names the subject — and it is
+demonstrated by a **mutation that makes it RED**, recorded in the story.
+
+**Given** `TC-ArgusAgent-DETECT-001-118` is **WEAK** — `_score_one` scores the in-memory string, and
+on Windows `write_text(newline=None)` writes the "LF" arm as CRLF (measured: 11 CRLF / 0 bare CR)
+and the "CRLF" arm as `\r\r\n` (11 CRLF / 11 bare CR)
+**Then** its terminator arm is made able to fail: the fixtures are written with the terminators they
+claim (`newline=""` or `write_bytes`), and the scored source is derived from **the file that was
+written** through the same read path production uses — **and its three load-bearing assertions
+(`statement_count == 4`, `assertion_sites == 1`, `assertion_density == 1/4`) are preserved
+unchanged.**
+
+**Given** `tests/test_vacuous_detector.py` is at **1,161 of NFR-M1's 1,200** — 39 lines — and
+`DF-14-3-H` requires the split **first**
+**Then** the **COHESION SPLIT** happens **before** any case is added, on the `provenance_scan.py` /
+`test_vacuous_density.py` / `test_status_document_registry.py` precedent, with **no function split
+across the boundary**, the rejected boundary recorded in the new module's docstring, and **NO
+`_EXEMPT_BY_DESIGN` entry and no shave** — `MAINT-001-04`'s registry may only shrink.
+
+**Given** splitting the module that holds the moat's own false-accusation guards risks silently
+dropping a case (`AI-E3-1`)
+**Then** the `TC-ArgusAgent-*` id inventory is compared **by execution** before and after, and the
+counts are shown equal.
+
+**Given** `argus/pipeline.py` is at **1,111** and byte-fenced by Story 12.1
+**Then** **no line is added to it.**
+
+**Given** `argus/detectors/provenance_scan.py:63-73`, `:132` and `:452` document themselves as
+*"line-terminator-agnostic by construction"* over a `splitlines()`-derived list
+**Then** that prose is **re-derived against the corrected decomposition** and corrected if it has
+become false. A stale docstring asserting an invariant that no longer holds is how the next author
+reintroduces this defect.
+
+**Given** `DF-14-3-A` and `DF-14-3-B` are **COUPLED**, and the one-character fix to `-A` alone
+converts Go's harmless silence into a language-wide false accusation
+**Then** this story does **NOT** touch `_is_test_function`, the edge extractor, or
+`_ASSERTION_CALLEES`, and states plainly that Go and Java remain unscored and callback-style JS/TS
+suites remain invisible after it lands (`DF-14-3-C`).
+
+**Given** `argus/detectors/secret_scan.py` carries the **same** contract breach (`:334` counts
+newlines, `:447` indexes `splitlines()`), measured in the source proposal §1.6
+**Then** it is **cited and NOT fixed here** (`DF-15-2-B`), and the story records that the repair is
+scoped to one detector while the contract is repository-wide.
+
+**Given** AR8 (PURE scorer), AR4 (`Fraction`, never `float`), NFR-D2 (deterministic, zero-token) and
+NFR-P2 (the language conditional lives in `argus/index/`)
+**Then** all four hold unchanged, and **no threshold moves** — not `ASSERTION_DENSITY_FLOOR`, not
+`MOCK_RATIO_CEILING`, not the ≥80% gate.
+
+**Given** Story 15.1 is selection-only and does not run Argus over any candidate
+**Then** this story does **NOT** block it and is **NOT** blocked by it; but this story must be
+`done` **before any commit containing Argus output over any Epic-15 candidate.**
+
+**Given** local gates are Windows-only while CI runs an ubuntu matrix, and `\r\n` handling is
+exactly the class that differs across platforms
+**Then** this story is **not marked done on a local pass alone.**
 
 ---
 
