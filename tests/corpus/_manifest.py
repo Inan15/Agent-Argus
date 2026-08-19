@@ -480,6 +480,346 @@ VALIDATION_CORPUS: tuple[CorpusMemberSpec, ...] = (
             "fabricated citation. This is why AC3 is a BUILD and not a re-run."
         ),
     ),
+
+    # ── CANDIDATES, selected 2026-08-19 under Story 15.1 — NOT RATIFIED, NOT IN N ────────────
+    #
+    # ⛔ THESE FOURTEEN ROWS COUNT TOWARD NOTHING. Each carries `eligible_for_n=False` and the
+    # same ratification-pending reason, so `eligible_members()` is unchanged and N is still 5.
+    # Protocol §6 R2, verbatim: *"choosing which repositories are legitimate members, and
+    # fetching third-party source, are not autonomous acts."* Story 15.1 prepares that decision
+    # and does not take it. `MANIFEST_FIELDS` stays CLOSED at nine — no field was added for
+    # candidacy, because candidacy is expressible in the fields that already exist, and adding
+    # one would be a schema change smuggled in as a convenience.
+    #
+    # ⛔ PROMOTION TAKES TWO DELIBERATE EDITS, BOTH VISIBLE IN A DIFF. Flipping `eligible_for_n`
+    # to `True` while the `ineligible_reason` is still present RAISES ("an ELIGIBLE member
+    # carries an ineligible_reason"). That is the R2 act, and it is deliberately not a
+    # one-character change. `-78` asserts the single-edit flip still raises for every row here.
+    #
+    # HOW THEY WERE CHOSEN, AND WHY THE ORDER MATTERS MORE THAN THE LIST. The seven criteria
+    # were frozen as executable code in `scripts/candidate_selection.py` at commit
+    # `16d7100d73261c759d6176351f2caeff3d1fe172`, which PRECEDES every fetch — `-75` asserts
+    # that ordering against real git history rather than asserting an intention. The criteria
+    # were then applied UNCHANGED: twenty repositories were fetched, fourteen passed, six were
+    # rejected, and not one constant was retuned after seeing what it rejected. Retuning a
+    # frozen criterion once you can see which candidates it excludes is the exact failure the
+    # freeze exists to prevent, so the rejections are recorded rather than legislated away.
+    #
+    # THE LINE EVERY ROW HERE RESPECTS: a criterion may reference the defect's DEFINITION; a
+    # criterion may never reference the tool's VERDICT. Each `adjudication_caveat` records WHY
+    # the repository was considered at all, and every rationale is a statement about the
+    # boundary its tests must cross — never a statement about anything Argus reported. The
+    # detector was NEVER imported, and `-74` enforces that structurally by an `ast` walk rather
+    # than by this comment.
+    #
+    # ON `provenance="independent"` — READ AC2.3 BEFORE ASSUMING WHAT IT MEANS. The vocabulary
+    # is CLOSED at three values and `independent` means, as it always has here, "not the tool
+    # auditing itself". It does NOT encode "third-party". These fourteen genuinely ARE
+    # arms-length third-party repositories — the first in this corpus that are — and that
+    # property is carried in each `adjudication_caveat`'s prose and enforced by selection,
+    # because it is stricter than the field can express. A reader who takes `independent` to
+    # mean arms-length would misread the five RATIFIED rows above, which are same-org.
+    #
+    # EVERY FIGURE BELOW WAS READ FROM THE GIT OBJECT DATABASE AT THE PIN, never from a working
+    # tree (Story 13.5 exists because working-tree reads silently measured the wrong bytes), and
+    # every pin was resolved INDIVIDUALLY by `cat-file -t` returning `commit` with the clone's
+    # `origin` verified — three decoy trees on the selection machine carry the right origin URL
+    # and the wrong bytes, so matching the remote is not matching the tree. The harness was
+    # proved non-vacuous by reproducing an independent earlier measurement EXACTLY (`minions` at
+    # its ratified pin: 286 test files / 21 binding / 3 asserting / 1 co-occurrence / 6 loose) —
+    # a measurement over an empty or unreachable tree reports 0 and looks identical to a real 0.
+    #
+    # NO SOURCE BYTE IS VENDORED (NFR-S1 / DN-4): a candidate is metadata and a pin, exactly as
+    # the five ratified members are, and `-28` still walks `tests/corpus/` for stray files.
+    CorpusMemberSpec(
+        member_id="aws-aws-sam-cli",
+        repository_url="https://github.com/aws/aws-sam-cli",
+        commit_sha="5b6ebdba5866be7a9430d2127630e96329a87649",
+        licence="Apache-2.0 — 'Apache License' (LICENSE, tracked at the pin)",
+        primary_language="python",
+        provenance="independent",
+        eligible_for_n=False,
+        ineligible_reason="candidate - awaiting operator ratification (protocol section 6 R2)",
+        adjudication_caveat=(
+            "THIRD-PARTY and arms-length: Argus was never developed against it, no Argus author has "
+            "contributed to it, and it was not selected on anything Argus said about it. CONSIDERED BECAUSE "
+            "its tests drive the AWS SDK across a service boundary that is substituted throughout — a "
+            "rationale that references the defect's definition, never the tool's verdict. MEASURED at the "
+            "pin, read from the git object database with the detector NOT imported: 497 test files, 296 "
+            "binding a mock primitive, 217 asserting on a mock-derived value, 215 carrying BOTH (the "
+            "DN-15-1-1 co-occurrence, floor 10; loose variant 218), rate 215/497 exact, 3294 days of history "
+            "first-commit-to-pin. Criterion 6 is NOT machine-decidable: admitting this row is the operator's "
+            "act at R2."
+        ),
+    ),
+    CorpusMemberSpec(
+        member_id="celery-celery",
+        repository_url="https://github.com/celery/celery",
+        commit_sha="2c42237d375718a84f01f3a7b4eb12a85e061e37",
+        licence="BSD-3-Clause — 'Copyright (c) 2017-2026 Asif Saif Uddin, core team & contributors. All rights reserved.' (LICENSE, tracked at the pin)",
+        primary_language="python",
+        provenance="independent",
+        eligible_for_n=False,
+        ineligible_reason="candidate - awaiting operator ratification (protocol section 6 R2)",
+        adjudication_caveat=(
+            "THIRD-PARTY and arms-length: Argus was never developed against it, no Argus author has "
+            "contributed to it, and it was not selected on anything Argus said about it. CONSIDERED BECAUSE "
+            "its tests drive broker and transport boundaries that cannot be exercised for real in a unit "
+            "suite — a rationale that references the defect's definition, never the tool's verdict. MEASURED "
+            "at the pin, read from the git object database with the detector NOT imported: 147 test files, 81 "
+            "binding a mock primitive, 71 asserting on a mock-derived value, 71 carrying BOTH (the DN-15-1-1 "
+            "co-occurrence, floor 10; loose variant 73), rate 71/147 exact, 6325 days of history "
+            "first-commit-to-pin. Criterion 6 is NOT machine-decidable: admitting this row is the operator's "
+            "act at R2."
+        ),
+    ),
+    CorpusMemberSpec(
+        member_id="certbot-certbot",
+        repository_url="https://github.com/certbot/certbot",
+        commit_sha="abf9d1b2e143c51fe1a2209a3b8be33e6a24267f",
+        licence="Apache-2.0 — 'Certbot ACME Client' (LICENSE.txt, tracked at the pin)",
+        primary_language="python",
+        provenance="independent",
+        eligible_for_n=False,
+        ineligible_reason="candidate - awaiting operator ratification (protocol section 6 R2)",
+        adjudication_caveat=(
+            "THIRD-PARTY and arms-length: Argus was never developed against it, no Argus author has "
+            "contributed to it, and it was not selected on anything Argus said about it. CONSIDERED BECAUSE "
+            "its tests drive an ACME client against a CA and against system configuration, neither reachable "
+            "in a unit suite — a rationale that references the defect's definition, never the tool's verdict. "
+            "MEASURED at the pin, read from the git object database with the detector NOT imported: 97 test "
+            "files, 73 binding a mock primitive, 54 asserting on a mock-derived value, 53 carrying BOTH (the "
+            "DN-15-1-1 co-occurrence, floor 10; loose variant 53), rate 53/97 exact, 5206 days of history "
+            "first-commit-to-pin. Criterion 6 is NOT machine-decidable: admitting this row is the operator's "
+            "act at R2."
+        ),
+    ),
+    CorpusMemberSpec(
+        member_id="conda-conda",
+        repository_url="https://github.com/conda/conda",
+        commit_sha="ad60271d84099ea3bac642038560ecf0e2ad0a41",
+        licence="BSD-3-Clause — 'BSD 3-Clause License' (LICENSE, tracked at the pin)",
+        primary_language="python",
+        provenance="independent",
+        eligible_for_n=False,
+        ineligible_reason="candidate - awaiting operator ratification (protocol section 6 R2)",
+        adjudication_caveat=(
+            "THIRD-PARTY and arms-length: Argus was never developed against it, no Argus author has "
+            "contributed to it, and it was not selected on anything Argus said about it. CONSIDERED BECAUSE "
+            "its tests drive a package solver against network and filesystem boundaries that are "
+            "conventionally faked — a rationale that references the defect's definition, never the tool's "
+            "verdict. MEASURED at the pin, read from the git object database with the detector NOT imported: "
+            "170 test files, 55 binding a mock primitive, 29 asserting on a mock-derived value, 22 carrying "
+            "BOTH (the DN-15-1-1 co-occurrence, floor 10; loose variant 23), rate 11/85 exact, 5055 days of "
+            "history first-commit-to-pin. Criterion 6 is NOT machine-decidable: admitting this row is the "
+            "operator's act at R2."
+        ),
+    ),
+    CorpusMemberSpec(
+        member_id="getsentry-sentry-python",
+        repository_url="https://github.com/getsentry/sentry-python",
+        commit_sha="064542dd2cbdbe0b11f1cda7f47d7d2920b0c38b",
+        licence="MIT — 'MIT License' (LICENSE, tracked at the pin)",
+        primary_language="python",
+        provenance="independent",
+        eligible_for_n=False,
+        ineligible_reason="candidate - awaiting operator ratification (protocol section 6 R2)",
+        adjudication_caveat=(
+            "THIRD-PARTY and arms-length: Argus was never developed against it, no Argus author has "
+            "contributed to it, and it was not selected on anything Argus said about it. CONSIDERED BECAUSE "
+            "it is an SDK whose tests must substitute the HTTP transport that ships events — a rationale that "
+            "references the defect's definition, never the tool's verdict. MEASURED at the pin, read from the "
+            "git object database with the detector NOT imported: 155 test files, 69 binding a mock primitive, "
+            "25 asserting on a mock-derived value, 25 carrying BOTH (the DN-15-1-1 co-occurrence, floor 10; "
+            "loose variant 28), rate 5/31 exact, 2977 days of history first-commit-to-pin. Criterion 6 is NOT "
+            "machine-decidable: admitting this row is the operator's act at R2."
+        ),
+    ),
+    CorpusMemberSpec(
+        member_id="googleapis-google-auth-library-python",
+        repository_url="https://github.com/googleapis/google-auth-library-python",
+        commit_sha="2ea24b03436765fa3cf279ce148482ff6332136b",
+        licence="Apache-2.0 — 'Apache License' (LICENSE, tracked at the pin)",
+        primary_language="python",
+        provenance="independent",
+        eligible_for_n=False,
+        ineligible_reason="candidate - awaiting operator ratification (protocol section 6 R2)",
+        adjudication_caveat=(
+            "THIRD-PARTY and arms-length: Argus was never developed against it, no Argus author has "
+            "contributed to it, and it was not selected on anything Argus said about it. CONSIDERED BECAUSE "
+            "its tests must substitute the token endpoint and the HTTP request callable — a rationale that "
+            "references the defect's definition, never the tool's verdict. MEASURED at the pin, read from the "
+            "git object database with the detector NOT imported: 84 test files, 52 binding a mock primitive, "
+            "45 asserting on a mock-derived value, 45 carrying BOTH (the DN-15-1-1 co-occurrence, floor 10; "
+            "loose variant 46), rate 15/28 exact, 3440 days of history first-commit-to-pin. Criterion 6 is "
+            "NOT machine-decidable: admitting this row is the operator's act at R2."
+        ),
+    ),
+    CorpusMemberSpec(
+        member_id="mitmproxy-mitmproxy",
+        repository_url="https://github.com/mitmproxy/mitmproxy",
+        commit_sha="bae1a7e179da7f9e516ba1b9fe0743f4fd758894",
+        licence="MIT — 'Copyright (c) 2013, Aldo Cortesi. All rights reserved.' (LICENSE, tracked at the pin)",
+        primary_language="python",
+        provenance="independent",
+        eligible_for_n=False,
+        ineligible_reason="candidate - awaiting operator ratification (protocol section 6 R2)",
+        adjudication_caveat=(
+            "THIRD-PARTY and arms-length: Argus was never developed against it, no Argus author has "
+            "contributed to it, and it was not selected on anything Argus said about it. CONSIDERED BECAUSE "
+            "its tests drive proxy, TLS and connection layers that a unit suite must substitute — a rationale "
+            "that references the defect's definition, never the tool's verdict. MEASURED at the pin, read "
+            "from the git object database with the detector NOT imported: 193 test files, 30 binding a mock "
+            "primitive, 20 asserting on a mock-derived value, 18 carrying BOTH (the DN-15-1-1 co-occurrence, "
+            "floor 10; loose variant 19), rate 18/193 exact, 6022 days of history first-commit-to-pin. "
+            "Criterion 6 is NOT machine-decidable: admitting this row is the operator's act at R2."
+        ),
+    ),
+    CorpusMemberSpec(
+        member_id="pypa-pip",
+        repository_url="https://github.com/pypa/pip",
+        commit_sha="0268b0aa084332f5d3cc044810b5958d0c2d1894",
+        licence="MIT — 'Copyright (c) 2008-present The pip developers (see AUTHORS.txt file)' (LICENSE.txt, tracked at the pin)",
+        primary_language="python",
+        provenance="independent",
+        eligible_for_n=False,
+        ineligible_reason="candidate - awaiting operator ratification (protocol section 6 R2)",
+        adjudication_caveat=(
+            "THIRD-PARTY and arms-length: Argus was never developed against it, no Argus author has "
+            "contributed to it, and it was not selected on anything Argus said about it. CONSIDERED BECAUSE "
+            "its tests drive package resolution, network and subprocess boundaries that are conventionally "
+            "replaced with test doubles — a rationale that references the defect's definition, never the "
+            "tool's verdict. MEASURED at the pin, read from the git object database with the detector NOT "
+            "imported: 141 test files, 34 binding a mock primitive, 15 asserting on a mock-derived value, 12 "
+            "carrying BOTH (the DN-15-1-1 co-occurrence, floor 10; loose variant 16), rate 4/47 exact, 6515 "
+            "days of history first-commit-to-pin. Criterion 6 is NOT machine-decidable: admitting this row is "
+            "the operator's act at R2."
+        ),
+    ),
+    CorpusMemberSpec(
+        member_id="python-poetry-poetry",
+        repository_url="https://github.com/python-poetry/poetry",
+        commit_sha="92b74dcfe348d0e01e14d40d6c1fa47a4ee04a54",
+        licence="MIT — 'Copyright (c) 2018-present Sébastien Eustace' (LICENSE, tracked at the pin)",
+        primary_language="python",
+        provenance="independent",
+        eligible_for_n=False,
+        ineligible_reason="candidate - awaiting operator ratification (protocol section 6 R2)",
+        adjudication_caveat=(
+            "THIRD-PARTY and arms-length: Argus was never developed against it, no Argus author has "
+            "contributed to it, and it was not selected on anything Argus said about it. CONSIDERED BECAUSE "
+            "its tests drive a dependency resolver against PyPI and filesystem boundaries that are "
+            "conventionally faked — a rationale that references the defect's definition, never the tool's "
+            "verdict. MEASURED at the pin, read from the git object database with the detector NOT imported: "
+            "128 test files, 54 binding a mock primitive, 39 asserting on a mock-derived value, 35 carrying "
+            "BOTH (the DN-15-1-1 co-occurrence, floor 10; loose variant 35), rate 35/128 exact, 3084 days of "
+            "history first-commit-to-pin. Criterion 6 is NOT machine-decidable: admitting this row is the "
+            "operator's act at R2."
+        ),
+    ),
+    CorpusMemberSpec(
+        member_id="redis-redis-py",
+        repository_url="https://github.com/redis/redis-py",
+        commit_sha="3972275826c4c2a40c05c999e55d682ffbd33a48",
+        licence="MIT — 'MIT License' (LICENSE, tracked at the pin)",
+        primary_language="python",
+        provenance="independent",
+        eligible_for_n=False,
+        ineligible_reason="candidate - awaiting operator ratification (protocol section 6 R2)",
+        adjudication_caveat=(
+            "THIRD-PARTY and arms-length: Argus was never developed against it, no Argus author has "
+            "contributed to it, and it was not selected on anything Argus said about it. CONSIDERED BECAUSE "
+            "it is a client library whose tests must substitute the socket and connection layer — a rationale "
+            "that references the defect's definition, never the tool's verdict. MEASURED at the pin, read "
+            "from the git object database with the detector NOT imported: 116 test files, 56 binding a mock "
+            "primitive, 48 asserting on a mock-derived value, 42 carrying BOTH (the DN-15-1-1 co-occurrence, "
+            "floor 10; loose variant 44), rate 21/58 exact, 6127 days of history first-commit-to-pin. "
+            "Criterion 6 is NOT machine-decidable: admitting this row is the operator's act at R2."
+        ),
+    ),
+    CorpusMemberSpec(
+        member_id="scrapy-scrapy",
+        repository_url="https://github.com/scrapy/scrapy",
+        commit_sha="df64fe32f61482c2f2f79c6a30960362a0228456",
+        licence="BSD-3-Clause — 'Copyright (c) Scrapy developers.' (LICENSE, tracked at the pin)",
+        primary_language="python",
+        provenance="independent",
+        eligible_for_n=False,
+        ineligible_reason="candidate - awaiting operator ratification (protocol section 6 R2)",
+        adjudication_caveat=(
+            "THIRD-PARTY and arms-length: Argus was never developed against it, no Argus author has "
+            "contributed to it, and it was not selected on anything Argus said about it. CONSIDERED BECAUSE "
+            "its tests drive an HTTP downloader and scheduler across boundaries a unit suite must substitute "
+            "— a rationale that references the defect's definition, never the tool's verdict. MEASURED at the "
+            "pin, read from the git object database with the detector NOT imported: 151 test files, 34 "
+            "binding a mock primitive, 12 asserting on a mock-derived value, 12 carrying BOTH (the DN-15-1-1 "
+            "co-occurrence, floor 10; loose variant 16), rate 12/151 exact, 6315 days of history "
+            "first-commit-to-pin. Criterion 6 is NOT machine-decidable: admitting this row is the operator's "
+            "act at R2."
+        ),
+    ),
+    CorpusMemberSpec(
+        member_id="spotify-luigi",
+        repository_url="https://github.com/spotify/luigi",
+        commit_sha="715f65c4a56a908ef0a1df4df6fc33b8420e2e6c",
+        licence="Apache-2.0 — 'Apache License' (LICENSE, tracked at the pin)",
+        primary_language="python",
+        provenance="independent",
+        eligible_for_n=False,
+        ineligible_reason="candidate - awaiting operator ratification (protocol section 6 R2)",
+        adjudication_caveat=(
+            "THIRD-PARTY and arms-length: Argus was never developed against it, no Argus author has "
+            "contributed to it, and it was not selected on anything Argus said about it. CONSIDERED BECAUSE "
+            "its tests drive a workflow scheduler against remote targets that are conventionally faked — a "
+            "rationale that references the defect's definition, never the tool's verdict. MEASURED at the "
+            "pin, read from the git object database with the detector NOT imported: 123 test files, 46 "
+            "binding a mock primitive, 33 asserting on a mock-derived value, 32 carrying BOTH (the DN-15-1-1 "
+            "co-occurrence, floor 10; loose variant 33), rate 32/123 exact, 5356 days of history "
+            "first-commit-to-pin. Criterion 6 is NOT machine-decidable: admitting this row is the operator's "
+            "act at R2."
+        ),
+    ),
+    CorpusMemberSpec(
+        member_id="streamlink-streamlink",
+        repository_url="https://github.com/streamlink/streamlink",
+        commit_sha="a9d6db50f4ee4f302a2c73f5e26490395730c396",
+        licence="BSD-2-Clause — 'Copyright (c) 2011-2016, Christopher Rosell' (LICENSE, tracked at the pin)",
+        primary_language="python",
+        provenance="independent",
+        eligible_for_n=False,
+        ineligible_reason="candidate - awaiting operator ratification (protocol section 6 R2)",
+        adjudication_caveat=(
+            "THIRD-PARTY and arms-length: Argus was never developed against it, no Argus author has "
+            "contributed to it, and it was not selected on anything Argus said about it. CONSIDERED BECAUSE "
+            "its per-plugin tests substitute the HTTP session that fetches every stream — a rationale that "
+            "references the defect's definition, never the tool's verdict. MEASURED at the pin, read from the "
+            "git object database with the detector NOT imported: 218 test files, 54 binding a mock primitive, "
+            "23 asserting on a mock-derived value, 22 carrying BOTH (the DN-15-1-1 co-occurrence, floor 10; "
+            "loose variant 41), rate 11/109 exact, 5483 days of history first-commit-to-pin. Criterion 6 is "
+            "NOT machine-decidable: admitting this row is the operator's act at R2."
+        ),
+    ),
+    CorpusMemberSpec(
+        member_id="tox-dev-tox",
+        repository_url="https://github.com/tox-dev/tox",
+        commit_sha="c3927c6437add6d0dd527e14008fe7b174aa3150",
+        licence="MIT — 'Permission is hereby granted, free of charge, to any person obtaining a' (LICENSE, tracked at the pin)",
+        primary_language="python",
+        provenance="independent",
+        eligible_for_n=False,
+        ineligible_reason="candidate - awaiting operator ratification (protocol section 6 R2)",
+        adjudication_caveat=(
+            "THIRD-PARTY and arms-length: Argus was never developed against it, no Argus author has "
+            "contributed to it, and it was not selected on anything Argus said about it. CONSIDERED BECAUSE "
+            "its tests drive environment creation and subprocess execution, both conventionally substituted — "
+            "a rationale that references the defect's definition, never the tool's verdict. MEASURED at the "
+            "pin, read from the git object database with the detector NOT imported: 96 test files, 24 binding "
+            "a mock primitive, 14 asserting on a mock-derived value, 10 carrying BOTH (the DN-15-1-1 "
+            "co-occurrence, floor 10; loose variant 13), rate 5/48 exact, 2333 days of history "
+            "first-commit-to-pin. Criterion 6 is NOT machine-decidable: admitting this row is the operator's "
+            "act at R2."
+        ),
+    ),
 )
 
 

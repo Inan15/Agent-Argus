@@ -1,17 +1,24 @@
 """Story 15.1 — the SELECTION harness, and the ORDERING claim that gives it its meaning.
 
-Verification area ``TC-ArgusAgent-PRECISION-001-74``..``-77``. **No new area is opened**: the
+Verification area ``TC-ArgusAgent-PRECISION-001-74``..``-79``. **No new area is opened**: the
 validation set is the precision gate's substrate, so its selection guards continue the existing
-``PRECISION-001`` area. Ids are the next **actually free** ones — the area runs to ``-73`` across
-five modules, and ``-21..-31`` is only this area's range *inside*
+``PRECISION-001`` area. Ids are the next **actually free** ones — the area ran to ``-73`` across
+five modules when this module was created, and ``-21..-31`` is only this area's range *inside*
 ``tests/test_validation_corpus.py``. No existing id was renumbered; an id here is a citation.
 
-**Why these three guards exist, in one sentence.** Story 15.1's whole claim is that the bench was
+**Why these guards exist, in one sentence.** Story 15.1's whole claim is that the bench was
 chosen **before anyone looked at what Argus says about it** — and an intention to pick-before-
 looking is not evidence of having done so. Git history is the evidence; an asserted intention is
 not. So the ban on looking is enforced by an ``ast`` walk (``-74``), the ordering is checked
-against real git history (``-75``), and the shapes a candidate row can silently take are checked
-by a pure fold (``-76``).
+against real git history (``-75``), the shapes a candidate row can silently take are checked by
+a pure fold (``-76``), the criteria are pinned as code rather than prose (``-77``), candidacy is
+held distinct from membership (``-78``), and every candidate's recorded justification is proved
+substantive and free of any detector output (``-79``).
+
+**The two halves of the ban, and why both ends are needed.** ``-74`` closes the *measurement*
+end: the harness cannot import the detector, so no verdict could have reached a figure. ``-79``
+closes the *record* end: no verdict may be written into a candidate's rationale by hand either.
+A ban held at only one end is a ban somebody walks around.
 
 **Why this module is separate from ``tests/test_validation_corpus.py``.** These guards are about
 ``scripts/candidate_selection.py``, not about the manifest — the repository already pairs
@@ -35,6 +42,7 @@ from __future__ import annotations
 import ast
 import subprocess
 import sys
+from dataclasses import replace
 from pathlib import Path
 
 import pytest
@@ -294,6 +302,25 @@ def test_TC_ArgusAgent_PRECISION_001_76_a_candidate_row_cannot_carry_a_bad_pin_o
     The three missing checks are added as a **pure fold over the rows**, never as a new
     ``__post_init__`` branch — a new branch would change behaviour for the five RATIFIED rows,
     which is outside this story and would move ``N``.
+
+    ⛔ **RE-AUTHORED 2026-08-19 — the TRIPWIRE FIRED, exactly as it was built to.** This guard
+    originally ended with ``assert len(candidates) == 0``. That was not a mistake and it is not
+    being "fixed": at the time it was written the candidate population was genuinely empty — the
+    first Story 15.1 pass swept the whole locally-resolvable universe, found eleven repositories
+    and zero clearing ``COOCCURRENCE_FILE_FLOOR``, and halted on the protocol §6 R2 operator act
+    rather than fabricate a bench. AC4.4 requires the population be proved **non-empty before**
+    any per-row absence is read off it, and that assertion could not be made truthfully then.
+    Folding over an empty tuple and passing forever is this project's signature defect — 4 of
+    Epic 14's 35 guards failed exactly that way — so the emptiness was asserted **exactly**, with
+    instructions to replace it the moment a real population existed.
+
+    **The operator authorised the fetch on 2026-08-19** (recorded as a dated strike on AC5), the
+    frozen criteria were applied unchanged to twenty fetched repositories, fourteen passed, and
+    this assertion went RED on the first run afterwards. It is therefore **replaced, not
+    deleted and not relaxed to ``>= 0``**: the AC4.4 population arm is now completed as intended
+    — the population is asserted non-empty, its size is asserted against AC6.1's band, and the
+    fold is asserted to have actually visited every row, so "no defects" can never again mean
+    "nothing was inspected".
     """
     # ── The premise, asserted rather than remembered: these three CONSTRUCT SILENTLY today. ──
     for bad_sha in ("deadbeef", "zzzz"):
@@ -358,8 +385,29 @@ def test_TC_ArgusAgent_PRECISION_001_76_a_candidate_row_cannot_carry_a_bad_pin_o
             "EXECUTED mutation, because 4 of Epic 14's 35 guards did not hold what they claimed."
         )
 
-    # ── The real population. ──
+    # ── ⛔ AC4.4's POPULATION ARM, asserted BEFORE any absence is read off the rows. ──
+    #
+    # This is the replacement for the tripwire described in the docstring. The order matters and
+    # is not cosmetic: the population is proved non-empty FIRST, and only then is each row's
+    # "no defects" result treated as evidence. Reversed, a manifest that lost every candidate
+    # row would report a clean sweep of nothing.
     candidates = _candidate_rows()
+    assert candidates, (
+        "there are ZERO candidate rows, so the per-row check below would fold over an empty "
+        "tuple and pass while inspecting nothing — this project's signature defect, and the "
+        "reason 4 of Epic 14's 35 guards were not real. If the bench was genuinely withdrawn, "
+        "this guard must be re-authored to say so with the reason recorded, exactly as the "
+        "tripwire it replaced was. It must never be relaxed to `>= 0`."
+    )
+    assert 12 <= len(candidates) <= 20, (
+        f"the candidate population is {len(candidates)}, outside AC6.1's declared 12-20 band "
+        f"(`DF-13-5-A`'s own number, pre-registered 2026-08-17 before any repository was "
+        f"chosen). A band asserted here is a band that cannot drift into 'keep expanding until "
+        f"it passes' — the failure mode the pre-registered ONE-round rule exists to prevent."
+    )
+
+    # ── The real population, per row — and the fold is COUNTED, so silence means inspection. ──
+    inspected = 0
     for spec in candidates:
         defects = candidate_row_defects(
             member_id=spec.member_id,
@@ -369,24 +417,10 @@ def test_TC_ArgusAgent_PRECISION_001_76_a_candidate_row_cannot_carry_a_bad_pin_o
             ast_ineligible_languages=AST_INELIGIBLE_LANGUAGES,
         )
         assert not defects, f"candidate row {spec.member_id!r} is malformed: {list(defects)}"
-
-    # ── ⛔ THE TRIPWIRE. Read this before "fixing" it. ──
-    #
-    # AC4.4 requires the candidate population be asserted NON-EMPTY before any absence is read
-    # off it. There are ZERO candidate rows: the Story 15.1 sweep measured 11 locally-resolvable
-    # repositories and not one clears COOCCURRENCE_FILE_FLOOR, and fetching more is protocol
-    # section 6 R2's operator act. So the non-empty assertion cannot be made truthfully today.
-    #
-    # Folding over an empty tuple and passing forever is this project's SIGNATURE DEFECT. So the
-    # emptiness is asserted EXACTLY, and this goes RED the moment the first candidate lands —
-    # which is the `-25`/`-27` precedent: fail loudly on a corpus change rather than absorb one
-    # silently. When it reds, REPLACE it with `assert candidates` and complete AC4.4. Do NOT
-    # delete it, and do NOT relax it to `>= 0`.
-    assert len(candidates) == 0, (
-        f"{len(candidates)} candidate row(s) have landed in the manifest. This assertion is a "
-        "TRIPWIRE, not a bug: AC4.4 requires the candidate population to be asserted NON-EMPTY "
-        "before the per-row absences above mean anything. Replace this line with "
-        "`assert candidates, '...'` now that a real population exists. Do not delete it."
+        inspected += 1
+    assert inspected == len(candidates), (
+        f"the fold inspected {inspected} of {len(candidates)} candidate rows. A clean result "
+        "over a partially-walked population is not a clean population."
     )
 
     # ── AC4.5 — N is unchanged. Candidates can never move it; that is the whole design. ──
@@ -436,4 +470,229 @@ def test_TC_ArgusAgent_PRECISION_001_77_the_criteria_are_declared_in_code_not_in
         "a file carrying BOTH a mock binding and a mock assertion does NOT satisfy the "
         "criterion, so the predicate cannot select the defect class at all and every zero it "
         "reports is meaningless."
+    )
+
+
+# ─────────────────────────────────────────────────────────────────────────────────────
+# AC4.1 / AC6.1 — the candidate CONTRACT: what admission to this manifest does and does
+# not mean. Ids continue from the true next-free id in the PRECISION-001 area (`-77`).
+# ─────────────────────────────────────────────────────────────────────────────────────
+
+#: AC4.1 — the EXACT reason every candidate row carries, character for character. A single
+#: shared string rather than fourteen paraphrases: a per-row wording would let one row drift
+#: into sounding ratified, and `_candidate_rows()` keys off this text to find the population at
+#: all. It is declared here and asserted, never retyped into prose (`AI-E9-7`).
+_RATIFICATION_PENDING_REASON = (
+    "candidate - awaiting operator ratification (protocol section 6 R2)"
+)
+
+
+def test_TC_ArgusAgent_PRECISION_001_78_a_candidate_is_pending_a_decision_nobody_has_taken() -> None:
+    """TC-ArgusAgent-PRECISION-001-78 — AC4.1/AC4.5/AC6.1: candidacy is a state, not a promotion.
+
+    ⛔ **WHAT THIS GUARD IS FOR.** Fourteen third-party repositories entered the manifest on
+    2026-08-19. Every one of them is *pending an operator decision that has not been taken* —
+    protocol §6 R2, verbatim: *"choosing which repositories are legitimate members, and fetching
+    third-party source, are not autonomous acts."* The single most damaging thing that could
+    happen to this corpus is for that pending state to quietly read as ratified: a row that
+    drifted into ``N`` would put the >=80% precision gate over a bench **no named human ever
+    admitted**, which is the failure the whole protocol exists to prevent.
+
+    So the properties that keep candidacy visibly distinct from membership are asserted here
+    rather than trusted to a comment:
+
+    (a) the population exists and sits inside AC6.1's declared 12-20 band;
+    (b) every candidate is ``eligible_for_n=False`` and carries the EXACT pending reason;
+    (c) every candidate's pin, id and URL is **distinct** — a duplicated pin would inflate the
+        apparent bench while measuring the same bytes twice;
+    (d) ``N`` is **still 5**, and the eligible set is the ratified five, disjoint from these.
+
+    **Non-vacuity (``DF-15-2-A`` arm (a)).** The population is proved non-empty before any of
+    the above is read off it, the fold is counted, and the exact-reason predicate is driven to
+    **both** outcomes by an executed mutation — a near-miss wording must be rejected, or "every
+    row matches" would be a statement about a predicate that matches anything.
+    """
+    candidates = _candidate_rows()
+    assert candidates, (
+        "there are ZERO candidate rows. Every assertion below would fold over an empty tuple "
+        "and pass while checking nothing."
+    )
+    assert 12 <= len(candidates) <= 20, (
+        f"{len(candidates)} candidates, outside AC6.1's 12-20 band. The band is `DF-13-5-A`'s "
+        "own pre-registered number and is asserted so the bench cannot grow round after round."
+    )
+
+    # ── (b) The pending state, exact. ──
+    checked = 0
+    for spec in candidates:
+        assert spec.eligible_for_n is False, (
+            f"{spec.member_id!r} is marked ELIGIBLE while still described as a candidate. It "
+            "would count toward N without any operator having admitted it — the protocol "
+            "section 6 R2 act performed by nobody."
+        )
+        assert spec.ineligible_reason == _RATIFICATION_PENDING_REASON, (
+            f"{spec.member_id!r} carries {spec.ineligible_reason!r}, not the exact pending "
+            f"reason {_RATIFICATION_PENDING_REASON!r}. One row wording its own status is how a "
+            "candidate starts reading as a member."
+        )
+        assert spec.provenance == "independent", (
+            f"{spec.member_id!r}: provenance {spec.provenance!r}. Read AC2.3 — `independent` "
+            "means 'not the tool auditing itself' and does NOT encode 'third-party'; the "
+            "third-party property lives in the caveat prose because the closed vocabulary "
+            "cannot express it."
+        )
+        checked += 1
+    assert checked == len(candidates), (
+        f"only {checked} of {len(candidates)} candidate rows were checked"
+    )
+
+    # ── ⛔ The predicate, driven to BOTH outcomes by an EXECUTED near-miss. ──
+    near_miss = "candidate - awaiting operator ratification (protocol section 6 R3)"
+    assert near_miss != _RATIFICATION_PENDING_REASON, "the mutation is not a mutation"
+    assert near_miss.replace("R3", "R2") == _RATIFICATION_PENDING_REASON, (
+        "the near-miss differs from the real reason by more than the one token it is meant to, "
+        "so it does not test the equality it claims to test"
+    )
+    probe = replace(candidates[0], ineligible_reason=near_miss)
+    assert probe.ineligible_reason != _RATIFICATION_PENDING_REASON, (
+        "a row whose reason cites the WRONG protocol rule compares equal to the right one. The "
+        "equality above is therefore satisfied by anything and asserts nothing."
+    )
+
+    # ── (c) Distinctness. A duplicated pin measures the same bytes twice under two names. ──
+    for label, values in (
+        ("member_id", [s.member_id for s in candidates]),
+        ("commit_sha", [s.commit_sha for s in candidates]),
+        ("repository_url", [s.repository_url for s in candidates]),
+    ):
+        duplicates = sorted({v for v in values if values.count(v) > 1})
+        assert not duplicates, (
+            f"duplicate candidate {label}(s): {duplicates}. The bench would look larger than "
+            "the number of distinct trees it actually measures."
+        )
+
+    # ── (d) AC4.5 — N is UNCHANGED, and the eligible set is the ratified five, unmoved. ──
+    eligible = {s.member_id for s in VALIDATION_CORPUS if s.eligible_for_n}
+    assert eligible_member_count() == 5, (
+        f"N moved to {eligible_member_count()}. Story 15.1 is SELECTION ONLY. Fourteen "
+        "candidates landing must leave N at exactly 5, or a bench nobody ratified is already "
+        "inside the gate's denominator."
+    )
+    assert not (eligible & {s.member_id for s in candidates}), (
+        "a candidate id appears in the ELIGIBLE set. The two populations must stay disjoint "
+        "until an operator moves a row between them, deliberately, in a visible diff."
+    )
+    assert len(eligible) == 5, f"the eligible set is {sorted(eligible)}, not the ratified five"
+
+
+def test_TC_ArgusAgent_PRECISION_001_79_every_candidate_records_why_it_was_considered() -> None:
+    """TC-ArgusAgent-PRECISION-001-79 — AC6.2/AC2.4: the justification is DATA, and it is measured.
+
+    ⛔ **THE RULE THIS GUARD MAKES MECHANICAL** (§1.3, and the whole reason Story 15.1 exists):
+
+        A criterion may reference the defect's DEFINITION.
+        A criterion may never reference the tool's VERDICT.
+
+    Selecting repositories likely to contain the defect is ordinary benchmark design — a bench
+    for a null-pointer analyser is chosen from code that dereferences pointers. Selecting
+    repositories **the detector already reported on** is criterion-shopping wearing public
+    repositories as a disguise, and it is the same fallacy the Story 13.1 amendment rejected by
+    name when it refused *"an externalization gate clearable by a corpus the team authored,
+    planted, and wrote the answers for."*
+
+    ``-74`` already makes the ban structural at the *harness* level: the selection module cannot
+    import ``argus.detectors.*``, so no verdict could have reached the measurement. This guard
+    closes the other end — the **recorded justification** — so that a future editor cannot write
+    a detector result into a candidate's rationale by hand. It also enforces AC6.2's substance
+    floor, the same one ``-24`` already applies to the two recorded exclusions: *an exclusion
+    without a reason is an oversight wearing a decision's clothes*, and an ADMISSION without one
+    is the same defect facing the other way.
+
+    **Non-vacuity.** The population is proved non-empty first; the fold is counted; and both
+    predicates — the substance floor and the verdict ban — are driven to **both** outcomes by
+    executed probes, so neither can be a check that accepts everything.
+    """
+    candidates = _candidate_rows()
+    assert candidates, "ZERO candidate rows — every assertion below would fold over nothing"
+
+    #: Detector-OUTPUT vocabulary. A rationale containing any of these was written by someone
+    #: who had read a verdict. Deliberately narrow and literal: broad words like "verdict" and
+    #: "detector" appear in the caveats' own DISCLAIMERS, and a ban that fired on a row saying
+    #: "this was not selected on the tool's verdict" would be a guard punishing honesty.
+    verdict_vocabulary = (
+        "vacuous_test",
+        "true positive",
+        "false positive",
+        "flagged",
+        "verdict-eligible",
+        "blocking finding",
+        "advisory finding",
+    )
+
+    def cites_a_verdict(text: str) -> bool:
+        lowered = text.lower()
+        return any(term in lowered for term in verdict_vocabulary)
+
+    def is_substantive(text: str) -> bool:
+        """AC6.2: a rationale that states WHY, and carries MEASURED figures rather than an
+        impression. The digit requirement is the load-bearing half — "it uses a lot of mocks"
+        is an impression; "215 of 497 test files carry the co-occurrence" is a measurement.
+        """
+        return (
+            len(text.split()) >= 40
+            and "CONSIDERED BECAUSE" in text
+            and "THIRD-PARTY" in text
+            and sum(character.isdigit() for character in text) >= 8
+        )
+
+    # ── ⛔ BOTH predicates driven to BOTH outcomes, by EXECUTED probes, BEFORE the population
+    #    is read. A checker that has not been seen rejecting something is not a checker. ──
+    clean_probe = (
+        "THIRD-PARTY and arms-length. CONSIDERED BECAUSE its tests drive a network boundary "
+        "that a unit suite must substitute, which is where an assertion against a mock-derived "
+        "value lives. MEASURED at the pin with the detector NOT imported: 120 test files, 44 "
+        "binding a mock primitive, 31 asserting on one, 27 carrying both, 1500 days of history."
+    )
+    assert is_substantive(clean_probe) and not cites_a_verdict(clean_probe), (
+        "the checkers reject a well-formed rationale, so every row they accept below is "
+        "accepted for the wrong reason"
+    )
+    assert not is_substantive("third-party, looks about right"), (
+        "a five-word impression with no figures passes the substance floor; the floor is not a "
+        "floor and AC6.2's 'with its measured figures' is unenforced"
+    )
+    assert not is_substantive(clean_probe.replace("CONSIDERED BECAUSE", "chosen since")), (
+        "the substance floor does not require the rationale to state WHY the repository was "
+        "considered at all, which is exactly what AC6.2 asks for"
+    )
+    assert cites_a_verdict(clean_probe + " Argus flagged 12 of these."), (
+        "a rationale that reports what the detector said passes the verdict ban. The ban "
+        "catches nothing, and selection-on-output could be recorded here undetected."
+    )
+
+    # ── The real population. ──
+    examined = 0
+    for spec in candidates:
+        caveat = spec.adjudication_caveat or ""
+        assert caveat.strip(), (
+            f"{spec.member_id!r} was admitted as a candidate with NO recorded rationale. AC6.2 "
+            "requires why-it-was-chosen with its measured figures; an admission without one is "
+            "an oversight wearing a decision's clothes, the DN-4 rule facing forwards."
+        )
+        assert is_substantive(caveat), (
+            f"{spec.member_id!r}: the rationale is not substantive — it must state THIRD-PARTY "
+            "status, say CONSIDERED BECAUSE, run to at least 40 words and carry the measured "
+            f"figures as digits. Got {len(caveat.split())} words: {caveat[:120]!r}"
+        )
+        assert not cites_a_verdict(caveat), (
+            f"{spec.member_id!r}: the rationale cites the DETECTOR'S OUTPUT. A criterion may "
+            "reference the defect's definition; it may never reference the tool's verdict. "
+            "Selecting on output is criterion-shopping, and it would void the ordering claim "
+            "that `-75` establishes over git history."
+        )
+        examined += 1
+
+    assert examined == len(candidates) >= 12, (
+        f"examined {examined} of {len(candidates)} candidate rationales; the closure did not "
+        "run over the population"
     )

@@ -399,11 +399,37 @@ def test_TC_ArgusAgent_PRECISION_001_27_adversarial_variants_are_GENERATED_from_
     that actually exist**, which is the difference between a guard that closes over a
     hand-written sample and one that closes over the population (``AI-E10-5``).
 
-    For each ineligible member the story's own RED recipe is generated twice: strip its reason,
-    and promote it to eligible. Both must raise. The count is asserted, so a manifest that
-    stopped being enumerated cannot make this pass by iterating zero times.
+    For each ineligible member the story's own RED recipe is generated: strip its reason, and
+    attempt to promote it. The count is asserted, so a manifest that stopped being enumerated
+    cannot make this pass by iterating zero times.
+
+    ⛔ **RE-AUTHORED 2026-08-19 (Story 15.1) — INTENDED BEHAVIOUR CHANGE, recorded as one.**
+    This guard previously asserted a single rule for every ineligible row: *"promoting it to
+    eligible raises"*. That held only because the corpus's ONLY ineligible rows were the Argus
+    self-audit (``provenance='self'``) and the superseded Minions run (``'superseded'``), both
+    of which raise on the provenance check. It went RED the moment Story 15.1's fourteen
+    **candidate** rows landed, and the honest reading of that RED is that the old assertion was
+    **conflating two different kinds of ineligibility**, not that the new rows are wrong:
+
+    - **INTRINSIC ineligibility** (self / superseded) — a permanent disqualification. A tool
+      cannot clear an externalization gate by auditing itself, and a run that *"can never be
+      re-derived in this repository"* cannot be adjudicated. Promotion must RAISE, **and that
+      property is preserved below exactly as it was.**
+    - **PENDING ineligibility** (candidate) — a decision nobody has taken yet. Promotion is
+      precisely the protocol §6 R2 ratification act, so it must **not** raise: a guard that made
+      ratification impossible would have quietly appointed itself the gate in place of the
+      operator.
+
+    **The candidate arm is STRICTLY STRONGER than what it replaces, never a relaxation**
+    (``DF-8-5-B``: no assertion is loosened to make a suite green). For a candidate it asserts
+    AC4.2's real property — the **single-edit** flip, ``eligible_for_n=True`` with the reason
+    still in place, **RAISES** — so promotion costs **two** deliberate edits, both visible in a
+    diff, and cannot happen by flipping one boolean. It then asserts that the two-edit form
+    yields a row that genuinely would count, which is what makes R2 a decision rather than a
+    formality. Each ineligible row therefore yields **three** variants where it yielded two.
     """
     generated = 0
+    intrinsic = pending = 0
     for spec in VALIDATION_CORPUS:
         if spec.eligible_for_n:
             # A real eligible member: demoting it without a reason must raise.
@@ -416,15 +442,57 @@ def test_TC_ArgusAgent_PRECISION_001_27_adversarial_variants_are_GENERATED_from_
             replace(spec, ineligible_reason=None)
         generated += 1
 
-        with pytest.raises(ValueError, match="independent"):
-            replace(spec, eligible_for_n=True, ineligible_reason=None)
-        generated += 1
+        if spec.provenance == "independent":
+            # PENDING (a Story 15.1 candidate). AC4.2's real property: the SINGLE-edit flip —
+            # `eligible_for_n=True` with the reason still in place — RAISES, so a candidate can
+            # never become a member by flipping one boolean.
+            pending += 1
+            with pytest.raises(ValueError, match="ineligible_reason"):
+                replace(spec, eligible_for_n=True)
+            generated += 1
 
-    # An ELIGIBLE row yields one variant, an INELIGIBLE row yields two, so the expected count
+            # ...and the TWO-edit form succeeds, because that IS the protocol §6 R2 act. A
+            # guard that made ratification impossible would have appointed itself the gate.
+            promoted = replace(spec, eligible_for_n=True, ineligible_reason=None)
+            assert promoted.eligible_for_n and promoted.provenance == "independent", (
+                f"{spec.member_id}: the two-edit promotion did not yield a row that counts. "
+                "Ratification is exactly these two edits, so if this shape cannot be built the "
+                "operator has no way to admit a candidate at all."
+            )
+            generated += 1
+        else:
+            # INTRINSIC (self / superseded): permanently disqualified, and the provenance check
+            # runs BEFORE the reason check, so BOTH promotion shapes raise on provenance. This
+            # arm is preserved exactly as the guard originally asserted it.
+            intrinsic += 1
+            with pytest.raises(ValueError, match="independent"):
+                replace(spec, eligible_for_n=True)
+            generated += 1
+
+            with pytest.raises(ValueError, match="independent"):
+                replace(spec, eligible_for_n=True, ineligible_reason=None)
+            generated += 1
+
+    # ⛔ Non-vacuity for the branch above: BOTH arms must actually have been taken. If the
+    # corpus ever loses all its intrinsic exclusions, or all its candidates, one of these
+    # branches silently stops being exercised and this guard would keep passing while covering
+    # half of what its docstring claims — the shape DF-15-2-A arm (a) exists to catch.
+    assert intrinsic >= 2, (
+        f"only {intrinsic} intrinsically-ineligible row(s) exercised. The Argus self-audit and "
+        "the superseded Minions run are both required to be present (-24), and the "
+        "promotion-RAISES arm is untested without them."
+    )
+    assert pending >= 1, (
+        f"only {pending} pending-ineligible (candidate) row(s) exercised, so the arm asserting "
+        "that R2 ratification remains POSSIBLE never ran. An unexercised branch is not a "
+        "passing branch."
+    )
+
+    # An ELIGIBLE row yields one variant, an INELIGIBLE row yields three, so the expected count
     # is derived from the real composition rather than from a fixed multiple — a bare
     # `2 * len(...)` went red the moment the corpus stopped being all-ineligible (2026-08-16),
     # which was the guard being arithmetically wrong rather than the manifest being wrong.
-    expected = sum(1 if s.eligible_for_n else 2 for s in VALIDATION_CORPUS)
+    expected = sum(1 if s.eligible_for_n else 3 for s in VALIDATION_CORPUS)
     assert generated == expected >= len(VALIDATION_CORPUS) >= 5, (
         f"generated {generated} adversarial variants, expected {expected} from "
         f"{len(VALIDATION_CORPUS)} real members — the closure did not run over the population"
