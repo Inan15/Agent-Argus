@@ -1118,6 +1118,63 @@ a different locale and a case-sensitive filesystem
         and has gone red three times in one epic. ⛔ **Never append a disposition to
         `deferred-work.md` to make a guard quiet.**
 
+### Review Findings
+
+**Code review, iteration 1 (2026-08-19, Sonnet).** Scope: commits `3acb028`, `e5a9e76`, `e3b9b52`,
+`c66a065` (`git diff 72a95ef..c66a065`). VERDICT: **concerns**. Independently re-verified by
+execution, not inherited from the Dev Agent Record: full suite **1645 collected, exit 0**;
+`mypy argus` **Success, 87 files**; `index_aligned_lines` correctly desynchronises from
+`splitlines()` on all eight separators and agrees with it on every all-`\n` edge case tried
+(empty, no trailing newline, BOM, separator-only, mixed separators, multi-blank-tail) plus a
+fresh 324-file tracked-tree sweep (0 disagreements, superset of the story's 219); the `-137` /
+AC1 claim was reproduced from scratch with an independent script — the granting direction does
+NOT reproduce against shipped code, DOES reproduce under all eight separators once
+`provenance_scan`'s `located is None: consumed += 1` defensive line is removed (with the pre-fix
+decomposition), and does NOT reproduce even with that line removed once the fix (`index_aligned_lines`)
+is applied — confirming `-137` is genuinely load-bearing and not vacuous; `secret_scan.py`,
+`pipeline.py` and `deferred-work.md` are byte-unchanged (`git diff` empty); no `_EXEMPT_BY_DESIGN`
+entry added; module sizes, CI run conclusions (`32217374903`, success on 3.10/3.11/3.12) and the
+`-88`→`-94` guard-message correction all confirmed independently. No functional defect found; all
+ACs the reviewer sampled are met by execution. The findings below are documentation/process
+completeness gaps, all Low severity — cleanups for the next round, not blockers.
+
+- [x] [Review][Patch] Production-module headroom (`argus/detectors/vacuous_test.py` now
+      1,186/1,200, 14 lines) is disclosed only in this story's Completion Notes, not in
+      `deferred-work.md` — the dev's own text "recommend a ledger entry" was not acted on.
+      `DF-14-3-H` covers the identical condition for the TEST module (now resolved by this
+      story's split) but nothing in the ledger tracks the analogous, now-live condition on the
+      PRODUCTION module, even though this project has repeatedly named "a disposition recorded
+      in prose and not in the ledger is not a disposition" (`AI-E12-3`/`AI-E12-6`, restated in
+      this story's own AC12.9) as a recurring failure class. Not a functional defect — the
+      `MAINT-001-02`/`-03` ceiling guard remains the live safety net and will fail loudly, not
+      silently, the moment a future change pushes past 1,200. Action: append a
+      `DF-15-2-D`-style entry (owner + target_story) mirroring `DF-14-3-H`'s format.
+      [`_bmad-output/design-artifacts/ArgusAgent/deferred-work.md`]
+- [x] [Review][Patch] `DN-15-2-2`'s rejected alternative (`_score` taking `source: str` instead
+      of `list[str]`) is recorded only in this story's Completion Notes prose, never in
+      `argus/detectors/vacuous_test.py` itself — inconsistent with this story's own pattern for
+      every other DN it took (`DN-15-2-1` is recorded in both split modules' docstrings,
+      `DN-15-2-3` in `-107`'s docstring, `DN-15-2-4` in `-118`'s), and short of AC2.2's "written
+      down where the next author will read it" for this specific decision. Also worth
+      re-examining on the merits next time the file has headroom: the blast radius cited for the
+      rejection ("forced edits to `-101`..`-112`/`-118`") is broader than what a byte-diff check
+      shows — only three shared helper functions (`_score_one` in `test_vacuous_density.py` and
+      `test_vacuous_cross_language.py`, and the single direct call at
+      `test_vacuous_detector.py:320`, id `-93`) call `_score` with a hand-built
+      `.splitlines()` list; each would need a one-line internal edit and no `assert` statement
+      would change, so AC8.3's actual text ("assertions byte-unchanged") would not literally be
+      violated by the rejected shape. The chosen shape is a defensible, legitimate choice on its
+      own merits (it lets arithmetic-only guards like `-93` stay decoupled from the decomposition
+      contract) — this is a documentation-accuracy note, not a request to redo the decision.
+      Action: correct the docstring's rationale and/or add a short cross-reference to
+      `DN-15-2-2` in `index_aligned_lines`'s docstring next time this file has headroom to spend.
+      [`argus/detectors/vacuous_test.py:911-980`]
+- [x] [Review][Patch] Nine `(X)` placeholder markers were left unfilled in new/edited docstrings
+      — apparent leftovers from an unfinished numbered-list template, not meaningful content.
+      Action: renumber `(1)`/`(2)`/`(3)`/... or drop the parenthetical entirely.
+      [`argus/detectors/vacuous_test.py:916,952,960,970`; `argus/detectors/provenance_scan.py:66`;
+      `tests/test_vacuous_detector_index.py:418,479,662,727,993`]
+
 ---
 
 ## Dev Agent Record
@@ -1339,6 +1396,69 @@ anywhere referenced a moved symbol.
 
 ### Completion Notes
 
+#### Review iteration 1 — the three Low findings, addressed (2026-08-19)
+
+⛔ **Documentation and ledger only. No behaviour changed, and none needed to.** The review found
+**no functional defect and no unmet AC**, and re-derived the substance independently rather than
+inheriting this record — including that `-137` is genuinely load-bearing (the granting direction
+does not reproduce against shipped code, DOES reproduce under all eight separators once
+`provenance_scan`'s defensive `consumed += 1` is removed with the pre-fix decomposition, and does
+not reproduce even then once the fix is applied). **Nothing in that verification was redone,
+re-measured or disturbed.** The delta of this round touches only docstrings, comments, this record
+and the ledger; no expression, no threshold, no assertion and no test id moved. Gates re-run
+after: suite **1645 collected, exit 0**; `mypy argus` **Success, 87 files**.
+
+**Finding 1 — the ledger entry this story recommended and did not file. FILED.** The completion
+notes below wrote *"recommend a ledger entry"* for the production module's headroom and stopped
+there, which is the exact class `AI-E12-3` / `AI-E12-6` and this story's own `AC12.9` name: a
+disposition recorded in prose and not in the ledger is not a disposition. **`DF-15-2-D`** is now
+appended to `deferred-work.md` — OPEN, owner **XAgent007 (Engineering Lead)**, `target_story:
+NONE` — recording the measured size, that `MAINT-001-02`/`-03` are green with **no
+`_EXEMPT_BY_DESIGN` entry**, that the docstring was condensed twice and deliberately not shaved
+below the content AC2.2 / AC2.4 / AC10.1 / AC10.2 require to be in the code, and the trigger:
+**the next change of any size to `argus/detectors/vacuous_test.py` performs the cohesion split
+first.** `DF-14-3-H` covers the test module only and stays OPEN; **nothing was disposed of** by
+this append, and `TC-ArgusAgent-DOCS-001-78` was re-run against both analyzers to prove it —
+`ledger_closed_ids` does not contain `DF-15-2-D`, and this story file yields **zero** closure
+claims.
+
+**Finding 2 — `DN-15-2-2` moved into the code, and its rationale CORRECTED.** The rejected
+alternative (`_score` taking `source: str`) lived only in this file's prose, unlike `DN-15-2-1`
+(both split modules' docstrings), `DN-15-2-3` (`-107`) and `DN-15-2-4` (`-118`) — short of AC2.2's
+*"written down where the next author will read it."* It now lives in `index_aligned_lines`'s
+docstring, the thing it governs. ⛔ **And my rationale was overstated, which is recorded rather
+than quietly repaired.** I wrote that the rejected shape would force edits to `-101`..`-112` and
+`-118`; the reviewer measured, and I re-confirmed by execution, that only **three** pre-existing
+sites hand `_score` a list they built — `_score_one` in `tests/test_vacuous_density.py:121` and
+`tests/test_vacuous_cross_language.py:203`, and the single direct call in `-93`
+(`tests/test_vacuous_detector.py:320`) — one internal line each, **no `assert` changed**, so
+AC8.3's literal *"assertions byte-unchanged"* would not have been violated either way. **The
+decision stands** on its real merit (arithmetic decoupled from decomposition: a guard checking
+only ratio exactness need not stand up a source string), **and the number does not.** An
+overstated rationale defending a correct decision is still the `DF-8-5-C` class.
+
+**Finding 3 — nine unfilled `(X)` markers. All nine fixed; the population was swept.** Three of
+them form a real series in `index_aligned_lines`'s docstring and are now numbered **(1)** / **(2)**
+/ **(3)**; the other six were standalone and the marker is dropped
+(`argus/detectors/vacuous_test.py:916`, `argus/detectors/provenance_scan.py:66`,
+`tests/test_vacuous_detector_index.py:418`, `:479`, `:662`, `:727`, `:993` — line numbers as at
+`c66a065`). ⛔ **`argus/detectors/provenance_scan.py:764` was NOT touched**: its
+`with pytest.raises(X): parse(bad)` is a legitimate code example, as is the identical construct at
+`tests/test_vacuous_detector.py:348`; both are byte-identical at `72a95ef`, so neither was
+introduced by this story. **Swept rather than spot-fixed:** the story's own `argus`/`tests` delta
+grepped for `(X)` returns **exactly the nine**, and for `TODO` / `FIXME` / `XXX` / `TBD` / `(?)` /
+`(N)` / `<X>` / *placeholder* returns **nothing**.
+
+⚠️ **The cost of Finding 2, stated because it is the subject of Finding 1.** Moving `DN-15-2-2`
+into the code added **10 lines** to `argus/detectors/vacuous_test.py`: **1,186 → 1,196 of 1,200,
+headroom 14 → 4.** It fits; the ceiling guard is green; **no exemption was added and no line was
+shaved from the AC2.2 / AC2.4 / AC10.1 / AC10.2 content.** The addition was condensed to eight
+prose lines and deliberately reuses item **(2)**'s existing statement of the shape rather than
+restating it. `argus/pipeline.py` stays at **1,111** and `argus/detectors/secret_scan.py` at
+**575**, both byte-unchanged, and `DF-15-2-B` stays excluded per AC10.1. **`DF-15-2-D` records the
+new number, not the old one** — the fix that resolves one finding is what consumed the headroom
+the other is about, and that is written into the entry rather than absorbed.
+
 **What was implemented.** A stated **line-numbering contract** —
 `argus/detectors/vacuous_test.index_aligned_lines(source: str) -> list[str]` — newline-based
 **by construction**, with no separator set and no `\x0c` special case, so the ninth exotic
@@ -1390,14 +1510,15 @@ field set unchanged. **No threshold moved** — `ASSERTION_DENSITY_FLOOR`, `MOCK
 the ≥80% gate, FR34, `protocol_cleared`, `GATE_OUTCOMES`, corpus membership and `MANIFEST_FIELDS`
 are byte-unchanged. `RULE_AST`/`RULE_HEURISTIC` and the Story 1.6 surface unchanged.
 **`argus/pipeline.py` and `argus/detectors/secret_scan.py` are byte-unchanged** (`git diff`
-empty). No `_EXEMPT_BY_DESIGN` entry added. `deferred-work.md` **not touched** — nothing was
-closed and no guard was quieted by prose.
+empty). No `_EXEMPT_BY_DESIGN` entry added. `deferred-work.md` was **not touched during implementation**; the
+iteration-1 fix round APPENDS one entry (`DF-15-2-D`, OPEN) and disposes of nothing — no entry
+was marked closed, and no guard was quieted by prose.
 
 **Module sizes after (NFR-M1 = 1,200):**
 
 | module | before | after | headroom |
 |---|---|---|---|
-| `argus/detectors/vacuous_test.py` | 1,113 | **1,186** | **14** |
+| `argus/detectors/vacuous_test.py` | 1,113 | **1,196** | **4** |
 | `argus/detectors/provenance_scan.py` | 955 | **976** | 224 |
 | `argus/pipeline.py` | 1,111 | **1,111** | 89 |
 | `tests/test_vacuous_detector.py` | 1,161 | **791** | 409 |
@@ -1405,13 +1526,17 @@ closed and no guard was quieted by prose.
 | `tests/test_vacuous_density.py` | 1,087 | **1,159** | 41 |
 | `tests/test_vacuous_cross_language.py` | 1,027 | **1,031** | 169 |
 
-⚠️ **A cost to flag for the reviewer, stated rather than buried:** `vacuous_test.py` ends at
-**1,186 / 1,200 — 14 lines of headroom.** `MAINT-001-02`/`-03` are green and the AC12.6 bound
-holds, but this is the same condition `DF-14-3-H` was filed about for the test module, and the
-next story touching this file will hit the ceiling. The contract docstring was condensed twice
-to buy that margin; it was **not** shaved below the content AC2.2 / AC2.4 / AC10.1 / AC10.2
-require to be *in the code*, and **no exemption was added**. The proper remedy is a cohesion
-split of `vacuous_test.py`, which this story is not scoped to perform. Recommend a ledger entry.
+⚠️ **A cost to flag for the reviewer, stated rather than buried:** `vacuous_test.py` ended
+iteration 1 at **1,186 / 1,200 — 14 lines of headroom**, and ends the iteration-1 fix round at
+**1,196 / 1,200 — 4 lines** (measured with the ceiling guard's own `_physical_line_count`).
+`MAINT-001-02`/`-03` are green and the AC12.6 bound holds, but this is the same condition
+`DF-14-3-H` was filed about for the test module, and the next story touching this file will hit
+the ceiling. The contract docstring was condensed twice to buy that margin; it was **not** shaved
+below the content AC2.2 / AC2.4 / AC10.1 / AC10.2 require to be *in the code*, and **no exemption
+was added**. The proper remedy is a cohesion split of `vacuous_test.py`, which this story is not
+scoped to perform. ⛔ **The recommendation is no longer prose:** it is filed as **`DF-15-2-D`**
+(OPEN, owner XAgent007), with the trigger written down — the next change of any size to this
+module performs the split first.
 
 **Gates, against the Task 0 baseline:**
 
@@ -1440,6 +1565,16 @@ Closed through that item's own pre-authorised order: commit the `argus/` delta (
   | ″ | ″ | Argus Quality Gates & Audit Suite (**3.12**) | ✅ **success** |
   | ArgusAgent Student Code Audit & Security Shield | **32217374974** | Argus Code Quality & Security Audit | ✅ **success** |
 
+  **Review iteration 1's fix round was pushed and read the same way.** Commit `bc4bce9` on
+  `master` (`be3ff0a` docstrings + ledger, `bc4bce9` the regenerated artifacts):
+
+  | Workflow | Run id | Job | Conclusion |
+  |---|---|---|---|
+  | ArgusAgent Repository Audit & Assurance CI | **32221995572** | Argus Quality Gates & Audit Suite (**3.10**) | ✅ **success** |
+  | ″ | ″ | Argus Quality Gates & Audit Suite (**3.11**) | ✅ **success** |
+  | ″ | ″ | Argus Quality Gates & Audit Suite (**3.12**) | ✅ **success** |
+  | ArgusAgent Student Code Audit & Security Shield | **32221995581** | Argus Code Quality & Security Audit | ✅ **success** |
+
   This is the part that could not be established on a Windows-only pass: `ubuntu-latest` is a
   **case-sensitive filesystem with a UTF-8 default locale**, and `\x85` / `\u2028` / `\u2029` —
   one byte in latin-1, two and three in UTF-8 — are exactly the class that behaves differently
@@ -1458,8 +1593,8 @@ ran no gate round.
 ### File List
 
 **Modified**
-- `argus/detectors/vacuous_test.py` — `index_aligned_lines` (the contract), `run()` points at it, `:913` prose re-derived
-- `argus/detectors/provenance_scan.py` — AC10.3 prose re-derived at `:63-73`, `:132`, `:452` (docstrings/comments only; no logic)
+- `argus/detectors/vacuous_test.py` — `index_aligned_lines` (the contract), `run()` points at it, `:913` prose re-derived. **Review iteration 1:** `DN-15-2-2` and its corrected blast radius moved into the contract docstring; four `(X)` markers resolved
+- `argus/detectors/provenance_scan.py` — AC10.3 prose re-derived at `:63-73`, `:132`, `:452` (docstrings/comments only; no logic). **Review iteration 1:** one `(X)` marker resolved at `:66`; `:764` deliberately untouched
 - `tests/test_vacuous_detector.py` — cohesion split (retains the pure-logic half); `-107` removed from here
 - `tests/test_vacuous_density.py` — `-118` re-authored (AC6)
 - `tests/test_vacuous_cross_language.py` — stale module-size prose corrected
@@ -1467,13 +1602,14 @@ ran no gate round.
 - `_bmad-output/design-artifacts/ArgusAgent/minions-dogfood-budget-plan.md` — regenerated
 - `_bmad-output/design-artifacts/ArgusAgent/minions-dogfood-proof.md` — regenerated
 - `_bmad-output/design-artifacts/ArgusAgent/sprint-status.yaml` — `ready-for-dev` → `in-progress` → `review`
+- `_bmad-output/design-artifacts/ArgusAgent/deferred-work.md` — **review iteration 1:** `DF-15-2-D` appended (OPEN). Append-only; nothing disposed of
 - `_bmad-output/design-artifacts/ArgusAgent/stories/15-2-the-detector-and-the-index-agree-on-what-a-line-is.md` — this record
 
 **Added**
-- `tests/test_vacuous_detector_index.py` — the integration half of the split, plus `-107` rebuilt and `-134`/`-135`/`-136`/`-137`
+- `tests/test_vacuous_detector_index.py` — the integration half of the split, plus `-107` rebuilt and `-134`/`-135`/`-136`/`-137`. **Review iteration 1:** five `(X)` markers resolved (comments/docstrings only)
 
 **Deliberately NOT touched:** `argus/pipeline.py`, `argus/detectors/secret_scan.py`,
-`deferred-work.md`, `architecture.md`, `epics.md`, and every pre-existing uncommitted path
+`architecture.md`, `epics.md`, and every pre-existing uncommitted path
 (`E-PRD/prd.md`, `stories/1-5-*.md`, `stories/15-1-*.md`, `argusdemo/`, `.bmad-drift-audit/`,
 `bmad-dev-loop-pack/`, `_bmad-output/audit-reports/*`). Both corpus checkouts were read
 **read-only**; no write of any kind, no checkout, stash, clean, reset or worktree.
@@ -1486,3 +1622,4 @@ ran no gate round.
 |---|---|---|---|
 | 2026-08-19 | v0.1 | **Story contexted on HEAD `72a95ef`.** §0 re-measurement executed out-of-tree against the shipped modules; `git status --porcelain argus tests` empty before and after. **THE DEFECT SURVIVED RE-MEASUREMENT INTACT:** the form-feed table reproduces byte-for-byte through the real index (3/9 → 2/8 → 1/7 → 0/6; flagged at 2 and 3 form feeds), all **eight** exotic separators desynchronise the two views, and `\r`/`\r\n` are confirmed normalised at `argus/pipeline_stages.py:124` so they cannot reach the detector. `-107`'s tautology re-executed (`lf.splitlines() == crlf.splitlines()` is `True`; its live assertion is a byte-identical duplicate of `-104`); `-118`'s Windows byte counts re-measured exactly (LF arm 11 CRLF / 0 bare CR, CRLF arm 11 CRLF / 11 bare CR). **FOUR PREMISES DID NOT SURVIVE and are corrected, not propagated:** (1) `argus/detectors/secret_scan.py` is **575** lines, not the **583** stated in the proposal's §2.4 — 575 at HEAD and at `57946a8`, so the briefed figure was never measured; (2) `tests/test_vacuous_detector.py` holds **24** `TC-ArgusAgent-*` ids, not `DF-14-3-H`'s *"roughly thirty-five"* — 24 is the number AC7's by-execution inventory must return; (3) `DF-15-2-B`'s *"the scanner reports line 3"* is **fixture-dependent** — a minimal fixture reports **2** — while the mechanism and the wrong-line direction reproduce exactly; (4) **§0.17** — the briefed working-tree list was stale by **ten paths**, all of them landed by `f1ab81c` / `57946a8` / `72a95ef`, and `argus/` and `tests/` are both **clean**. **TWO NEW MEASURED FACTS the proposal did not have:** the audited population contains **ZERO** of the eight separators (`argus/` 87 files, `tests/` 120, Minions 757, Agent-Smith 852 with its one NEL hit under both `node_modules` and `.next`), which turns AC4.2's corpus delta into a falsifiable prediction of **0 and 0**; and the *"drop one trailing empty"* newline decomposition is **byte-identical to `splitlines()` on all 219 tracked `.py` files** plus seven edge cases, which establishes AC4.1 is satisfiable and names the phantom-trailing-element trap. **AC1 is preserved as an OPEN question in both directions**, as approved: every reproduction returns `ast_corroborated=False` because the mock-free fixture short-circuits fact (a), so the corroboration path has still never been exercised — and the chain that would make a *yes* lethal was established by reading (`RULE_AST` → `depth_supported` non-`None` → `verdict_gate.py:86-96` → `VERDICT-001-30` arm 1 → `NOT_READY_FOR_RELEASE` on a default run). **The cohesion split is PRESCRIBED with its boundary and two rejected alternatives** (`DN-15-2-1`: lines 838 → EOF, the real-tree-sitter-substrate subject the module's own docstring already names), and **where every new case lives is decided before it is written.** **The structural root cause of `-107`'s vacuity is named** (`_score` takes `list[str]`, so the caller owns the decomposition and the guard re-implemented it) and turned into AC2.3. **`DF-15-2-B` scope decision taken explicitly** with the argument for folding it in stated fairly and the price of excluding it recorded as AC10.1. Full suite re-run after writing this file. Nothing committed, staged or pushed; no file under `argus/` or `tests/` was modified. | Scrum Master (create-story) |
 | 2026-08-19 | v1.0 | **Implemented (dev-story).** §0 re-derived on this tree before anything was written: **every figure held**, including the story's four corrections (`secret_scan.py` **575**, **24** ids, the `DF-15-2-B` fixture nuance, the working-tree list) — and §0.2 reproduced **byte-for-byte** (3/9 → 2/8 → 1/7 → 0/6, flagged at 2 and 3 form feeds). **The fix is a stated CONTRACT, not a character special-case:** `index_aligned_lines(source)` is newline-based **by construction** — no separator set, no `\x0c` case — so the ninth exotic separator needs nobody to remember it (`DN-15-2-2`; rejected: `_score` taking `source: str`, which would have forced edits to `-101`..`-112`/`-118`/`_score_one` that AC8.3 forbids). **Cohesion split FIRST** (`DN-15-2-1`, lines 838 → EOF): `test_vacuous_detector.py` **1,161 → 791** + `test_vacuous_detector_index.py`, both rejected boundaries in the new docstring, id union **24 → 24 by execution, none lost**, suite green before a single case was added. ⚠️ **The split falsified the moved `UNEVALUABLE` guard's own message** — it named `-88`, which stayed behind in the grammar-free half — now corrected to `-94`, the integration moat guard actually at risk. **RED observed before green on all 24 separator rows**, and **every mutation claimed in a docstring was executed**: M1 (revert decomposition) reddens `-134`/`-107`/`-137`, M2 (drop the trailing-empty pop) reddens `-136`, M3 (defeat universal newlines) reddens `-135`/`-118`. ⛔ **One of my own claims was measured FALSE and is recorded as false:** I had written that M4 (`consumed += 1` → `continue`) reddens `-137`; executed, it does not, and the docstring was corrected to name M1. **AC1 DETERMINED BY EXECUTION over six layouts × 8 separators × 2 counts, through the real index and read path:** corroboration wrongly **WITHHELD reproduces**; corroboration wrongly **GRANTED does NOT reproduce** against shipped code — recorded as *"no reproduction found"*, **never as "cannot happen"** — **and the absence was measured to be CONTINGENT:** with the pre-fix decomposition and *only* the conservative `consumed += 1` removed, the granting direction **reproduces under all eight separators**. So severity is **not** higher than the proposal assumed, but the margin was **one line of defensive coding that nothing had pinned**; `-137` is that pin. ⛔ **My AC1.1 prediction ("YES both directions") was WRONG and is recorded as wrong.** `-107` **REBUILT** (it was VACUOUS: `lf.splitlines() == crlf.splitlines()` is `True`, so its headline was `f(x) == f(x)`, and its only live assertion duplicated `-104`) and relocated, now pinning corroboration-invariance across the seam — something `-104` cannot see (`DN-15-2-3`). `-118` re-authored: bytes written and **asserted**, source read through the production path, **three load-bearing assertions byte-unchanged**; AC6.5 honoured — the arm is **still** true by construction, said so out loud, and now asserts **the normalisation itself** (`DN-15-2-4`; rejected: deleting the arm). **AC4.2 measured in both directions, corpora strictly read-only: 0 GAINED / 0 LOST** on Minions (540/540), Agent-Smith (334/334) and Argus (275/275) — **the predicted outcome**; inertness measured separately over all **219** tracked `.py` files. **P4 was off** (predicted ≈837/≈370, measured **791/391**) and is recorded rather than smoothed. AC10.3 **measured, not reasoned**: with each of the eight at both edges of a body line the statement counter and statement starts are **identical to control in all sixteen cases** — the claim survives, its wording did not, and `provenance_scan.py:63-73`/`:132`/`:452` plus `vacuous_test.py:913` are corrected in place. **A measured asymmetry recorded and not repaired:** a CR-only file is numbered as ONE line by the index while the read path reads ten; the contract still holds, the outcome is the safe degrade, `-135` asserts both, and it belongs to `argus/index/`. **Nothing re-baselined; no threshold moved;** `argus/pipeline.py` and `argus/detectors/secret_scan.py` **byte-unchanged**; no `_EXEMPT_BY_DESIGN` entry; **`deferred-work.md` not touched**. Gates: `pytest` **1645 collected, exit 0** (+4 = exactly the four new ids), `mypy argus` **Success 87**, `bandit` **0 High / 0 Med / 20 Low** — all unchanged from baseline. Dogfood currency guards fired on the LOC proxy (29,755 → 29,776) and were closed through `AI-E12-11`'s own order: `3acb028` → regenerate → `e5a9e76`. ⚠️ **Flagged for review:** `vacuous_test.py` ends at **1,186 / 1,200 (14 headroom)** — the `DF-14-3-H` condition, now on the production module; recommend a ledger entry, no exemption added. **CI matrix ESTABLISHED and GREEN** on `e3b9b52`: run **32217374903** succeeded on `ubuntu-latest` x Python **3.10 / 3.11 / 3.12**, and run **32217374974** (security shield) succeeded — so the non-ASCII separators were exercised under a UTF-8 locale and a case-sensitive filesystem, which a Windows-only pass could not establish. `AI-E14-2` **not** discharged; `DF-13-5-A` cited, never executed. Status `in-progress` → `review`. | Dev (dev-story) |
+| 2026-08-19 | v1.1 | **Code review iteration 1 addressed (dev-story, fix mode) — 3 of 3 Low findings resolved; documentation and ledger ONLY, no behaviour changed.** The review found **no functional defect and no unmet AC**, and re-derived the substance independently rather than inheriting this record — `index_aligned_lines` newline-based by construction, the 324-file tracked-tree sweep, and the `-137`/AC1 contingency claim reproduced from scratch (does NOT reproduce against shipped code; DOES under all eight separators once `provenance_scan`'s defensive `consumed += 1` is removed with the pre-fix decomposition; does NOT even then once the fix is applied — so `-137` is genuinely load-bearing, not vacuous). ⛔ **None of that was redone, re-measured or disturbed.** **(1) `DF-15-2-D` FILED** in `deferred-work.md` — OPEN, owner XAgent007, `target_story: NONE` — for the production module's headroom, because this record wrote *"recommend a ledger entry"* and filed none, which is exactly `AI-E12-3`/`AI-E12-6` and this story's own `AC12.9`: a disposition recorded in prose and not in the ledger is not a disposition. The entry records the measured size, `MAINT-001-02`/`-03` green with **no `_EXEMPT_BY_DESIGN` entry**, the deliberate refusal to shave below the AC2.2/AC2.4/AC10.1/AC10.2 content, and the trigger: the next change of any size to that module performs the cohesion split FIRST. **Append-only; nothing disposed of** — `DOCS-001-78` re-run against both analyzers (`ledger_closed_ids` has no `DF-15-2-D`; this file yields zero closure claims). **(2) `DN-15-2-2` MOVED INTO THE CODE** it governs (`index_aligned_lines`'s docstring), matching this story's own pattern for `DN-15-2-1`/`-3`/`-4` and AC2.2's *"where the next author will read it"* — ⛔ **and my own rationale was measured OVERSTATED and is recorded as wrong, not quietly repaired:** I claimed the rejected shape (`_score` over `source: str`) would force edits to `-101`..`-112`/`-118`; in fact only **three** pre-existing sites hand `_score` a list they built (`_score_one` in `test_vacuous_density.py:121` and `test_vacuous_cross_language.py:203`, and the direct call in `-93` at `test_vacuous_detector.py:320`), one internal line each, **no `assert` changed**, so AC8.3's literal text was not at stake either way. The decision **stands** on decoupling; the number does not — an overstated rationale defending a correct decision is still the `DF-8-5-C` class. **(3) Nine unfilled `(X)` markers RESOLVED** — three numbered **(1)**/**(2)**/**(3)** as the real series they are in the contract docstring, six dropped; ⛔ `provenance_scan.py:764` and `test_vacuous_detector.py:348` NOT touched (legitimate `pytest.raises(X)` code examples, byte-identical at `72a95ef`); swept for `TODO`/`FIXME`/`XXX`/`TBD`/`(N)`/`<X>`/placeholder across this story's whole `argus`/`tests` delta — **nothing further found**. ⚠️ **The cost, stated not buried:** Finding 2 added **10 lines** to `argus/detectors/vacuous_test.py` — **1,186 → 1,196 of 1,200, headroom 14 → 4** by the ceiling guard's own method. It fits, no exemption was added, no AC-required content was shaved, and **`DF-15-2-D` carries the NEW number**: the fix that resolves one finding is what consumed the headroom the other is about. `argus/pipeline.py` **1,111** and `argus/detectors/secret_scan.py` **575** byte-unchanged; `DF-15-2-B` stays excluded (AC10.1); `DF-14-3-A`/`-B`/`-C` cited, not drifted into; no threshold, corpus, FR34, `protocol_cleared` or `GATE_OUTCOMES` touched. Gates: `pytest` **1645 passed, exit 0** (unchanged — no id added or removed), `mypy argus` **Success, 87 files**. Dogfood currency guards fired on the LOC proxy (29,776 → 29,786) and were re-closed through `AI-E12-11`'s own order: `be3ff0a` → regenerate → `bc4bce9`, no `.md` hand-edited and no assertion loosened (`DF-8-5-B`). **CI matrix GREEN on `bc4bce9`:** run **32221995572** succeeded on `ubuntu-latest` × Python **3.10/3.11/3.12**, run **32221995581** (security shield) succeeded. Status stays `review`. | Dev (dev-story, review fix 1) |
