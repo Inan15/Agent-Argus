@@ -4,7 +4,7 @@ baseline_commit: 762a73ecd54beb20ec61e66fe834a2727708945c
 
 # Story 15.1: A bench with the defect class in it, chosen before anyone looks
 
-Status: ready-for-dev
+Status: in-progress  <!-- HALTED on an operator act - protocol section 6 R2. See Dev Agent Record D8. -->
 
 | | |
 |---|---|
@@ -800,38 +800,38 @@ measurement.
 
 ## Tasks & Subtasks
 
-- [ ] **Read §0 first.** The premises are re-derived; do not re-derive them again, but do **not**
+- [x] **Read §0 first.** The premises are re-derived; do not re-derive them again, but do **not**
       inherit any figure §0 marks CORRECTED or VOID. (AC: all)
-- [ ] Resolve `DN-15-1-1` / `-2` / `-3` into declared **code constants** beside the harness (AC2.1,
+- [x] Resolve `DN-15-1-1` / `-2` / `-3` into declared **code constants** beside the harness (AC2.1,
       AC2.2)
-- [ ] Build the selection harness: pure analyzers plus a thin git edge, reading from the **pinned
+- [x] Build the selection harness: pure analyzers plus a thin git edge, reading from the **pinned
       object database**; `argus.index.*` permitted, `argus.detectors.*` **banned** (AC2.2)
-- [ ] Write the AC2.2 import-ban guard **with `-28`'s non-vacuity floor**, and observe it RED by
+- [x] Write the AC2.2 import-ban guard **with `-28`'s non-vacuity floor**, and observe it RED by
       adding a detector import, then remove it (AC2.2, AC4.4)
-- [ ] **Freeze the criteria plus the full candidate list in their OWN commit**, containing no Argus
+- [x] **Freeze the criteria plus the full candidate list in their OWN commit**, containing no Argus
       output over any candidate; record its 40-hex sha here (AC1.1)
-- [ ] Write the AC1 ordering guard: sha resolves, ancestor of HEAD, no output path touched; **pin all
+- [x] Write the AC1 ordering guard: sha resolves, ancestor of HEAD, no output path touched; **pin all
       three non-vacuity preconditions and drive the ancestry predicate to BOTH outcomes** (AC1.2,
       AC1.3)
-- [ ] Record the `epics.md`-uncommitted precondition on the AC1 commit; **do not edit `epics.md`**
+- [x] Record the `epics.md`-uncommitted precondition on the AC1 commit; **do not edit `epics.md`**
       (AC1.4)
-- [ ] Assemble **12–20** candidates against the frozen criteria; resolve **each** path individually by
+- [ ] ⛔ **BLOCKED — operator act (protocol §6 R2).** Assemble **12–20** candidates against the frozen criteria; resolve **each** path individually by
       `cat-file -t <pin>` and beware the §0.3 decoys (AC6.1, criterion 7)
-- [ ] For every TypeScript candidate, measure and record its **scorable test function count** through
+- [x] For every TypeScript candidate, measure and record its **scorable test function count** through
       the index; apply the AC3.2 floor; if none clears it, record that as a **measurement** (AC3.2,
       AC3.3)
-- [ ] Record per-candidate reasons **and every rejection with the criterion that rejected it** (AC6.2,
+- [x] Record per-candidate reasons **and every rejection with the criterion that rejected it** (AC6.2,
       AC6.3)
-- [ ] Add candidate rows: `eligible_for_n=False` plus the R2 reason; **no field added** (AC4.1, AC4.2)
-- [ ] Add the AC4.3 guards for pin shape, language scope and licence, **each with a non-empty
+- [ ] ⛔ **BLOCKED — no candidate clears the criteria; see D0/D8.** Add candidate rows: `eligible_for_n=False` plus the R2 reason; **no field added** (AC4.1, AC4.2)
+- [ ] ⛔ **PARTIAL — guards added and RED-observed (`-76`); the AC4.4 non-empty population floor is BLOCKED and carries a tripwire.** Add the AC4.3 guards for pin shape, language scope and licence, **each with a non-empty
       candidate-population floor asserted first and each observed RED by an executed mutation**
       (AC4.3, AC4.4)
-- [ ] Verify `eligible_member_count() == 5` and `-31` green — **`N` is unchanged** (AC4.5)
-- [ ] Verify `git diff --stat argus/` is **empty** (AC7.2)
-- [ ] Full suite green at **1,645+**, exit 0, **0 skipped**, with `ARGUS_REQUIRE_LANGUAGE_GRAMMARS=1`
+- [x] Verify `eligible_member_count() == 5` and `-31` green — **`N` is unchanged** (AC4.5)
+- [x] Verify `git diff --stat argus/` is **empty** (AC7.2)
+- [x] Full suite green at **1,645+**, exit 0, **0 skipped**, with `ARGUS_REQUIRE_LANGUAGE_GRAMMARS=1`
       (AC7.3)
-- [ ] Commit, push, and **record the CI run id together with the sha it covers** (AC7.4)
-- [ ] Hand the operator **one reviewable list** for the R2 ratification act (AC7.5)
+- [x] Commit, push, and **record the CI run id together with the sha it covers** (AC7.4)
+- [x] Hand the operator **one reviewable list** for the R2 ratification act (AC7.5)
 
 ---
 
@@ -881,7 +881,7 @@ precedes any Argus output over any candidate, and now provably so.
 
 | | |
 |---|---|
-| **Criteria commit sha** | `CRITERIA_SHA_PLACEHOLDER` |
+| **Criteria commit sha** | `16d7100d73261c759d6176351f2caeff3d1fe172` |
 | **Guard id** | `TC-ArgusAgent-PRECISION-001-75` |
 | **Ancestor of HEAD** | yes - asserted mechanically, and the predicate is driven to **both** outcomes |
 | **Argus output over a candidate in it?** | none - asserted over real git history, not by inspection |
