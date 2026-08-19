@@ -10,10 +10,10 @@ The frozen `pipeline.run_audit_detailed` (REUSED — no fork) was run over the g
 
 **This is a SELF-audit — Argus auditing Argus (Story 8.5 / AC2).** The subject is this repository's own package, not an independent codebase. A self-audit is MATERIALLY WEAKER evidence than the independent-repository run it supersedes: the tool and the tree share authorship, so the run cannot demonstrate that the tool finds defects it was not written alongside. It is reportable as a reproducibility and no-source-retention demonstration; it is NEVER independent corroboration of the tool's detection ability. The independent Story-7.2 run over the Minions platform repository is preserved verbatim at `minions-dogfood-proof-story-7-2-superseded.md` and cannot be re-executed here, because that source is not in this repository. The filename `minions-dogfood-proof.md` is a retained HISTORICAL identifier (an evidence path that moves is an evidence path that gets lost); the subject is what this section names, not what the filename suggests.
 
-- Commit descriptor (`git rev-parse HEAD` at generation): `d7886baba881f40ea2dd90bbfc949e40bc629537`
+- Commit descriptor (`git rev-parse HEAD` at generation): `3acb028d78d8684665463cbc75437ca93f896c68`
 - Enumerated population (the HONEST label — Story 12.1, closing `DF-10-4-D`): the file list in this artifact is enumerated from the git INDEX (`git ls-files`), NOT from the tree at the commit descriptor above. The two are the same tree exactly when `argus/` carries no staged-or-uncommitted change, and `TC-ArgusAgent-DOGFOOD-001-50` fails unless they agree — so this artifact cannot quietly describe one tree while citing another.
 - Source files audited: **87**
-- Total physical LOC (build-cost proxy): **29682**
+- Total physical LOC (build-cost proxy): **29776**
 - Partition units (7.1 plan, CONSUMED): **3**
 - **Verdict: `RELEASE_READY` (exit `0`)**
 - **Decision row (FR16 / DR-3), as DISCLOSED by the gate: `row_3_gates_met`**
@@ -48,14 +48,14 @@ The run's V1 deterministic zero-token cost total is **435 credits** (folded via 
 
 - Under `BudgetConfig(ceiling_credits=843)` the run FITS (`ceiling_reached is False`): **True**
 - Under a ceiling ONE credit below the total the run BREACHES (the >=-is-a-breach REUSE — the 3.2 halt->skip->downgrade->report path fires): **True**
-- NFR-C1 baseline ratio (audit-cost / build-cost proxy): `145/9894` (`Fraction`/marker — never a float)
+- NFR-C1 baseline ratio (audit-cost / build-cost proxy): `435/29776` (`Fraction`/marker — never a float)
 
 ## 3. The SIGNED, source-free evidence bundle (AC-BUNDLE / FR29 / NFR-A1 / NFR-S1)
 
 Exported via the done 4.3 `build_evidence_bundle` + persisted via `persist_evidence_bundle` (REUSED — no forked bundle model / serializer), serialized THROUGH the single 1.1 `canonical.dumps_bytes` and stamped by the 1.1 content-addressed, **prev-hash-chained** envelope (the ArgusAgent "signature"; the point-in-time stamp is the envelope `created_at`, EXCLUDED from the hash — NFR-A1/D3).
 
-- Persisted bundle locator: `state/3cf8f0cdb3d58c024e13e583209caeb65dbf5835ea765300b048cc84b2154453.json`
-- Bundle content hash (the signature): `3cf8f0cdb3d58c024e13e583209caeb65dbf5835ea765300b048cc84b2154453`
+- Persisted bundle locator: `state/d66fd5b0a6a05c5ed763f69ce24441982b7386cc6a6382dbe73faceda8447c1b.json`
+- Bundle content hash (the signature): `d66fd5b0a6a05c5ed763f69ce24441982b7386cc6a6382dbe73faceda8447c1b`
 - Canonical bundle byte length: **74141**
 - Referential-integrity report consistent (4.2 lint): **True**
 - **No-source-retention MOAT (NFR-S1 / NFR-S3):** the bundle retains NO source byte and NO secret value — the moat is STRUCTURAL (no bundle field holds a source/secret value; only locations + redacted indicators). Proven over the REAL audited tree by `tests/test_secret_containment.py` (`TC-ArgusAgent-SECURITY-001-23`) and `tests/test_dogfood_proof.py` (`TC-ArgusAgent-DOGFOOD-001-22`).
