@@ -56,6 +56,7 @@ from _manifest import (  # noqa: E402
     VALIDATION_CORPUS,
     CorpusMemberSpec,
     eligible_member_count,
+    unratified_bench_candidates,
 )
 
 from candidate_selection import (  # noqa: E402
@@ -279,12 +280,20 @@ def test_TC_ArgusAgent_PRECISION_001_75_the_criteria_commit_precedes_every_candi
 
 
 def _candidate_rows() -> tuple[CorpusMemberSpec, ...]:
-    """Rows admitted as CANDIDATES awaiting the protocol section 6 R2 ratification act."""
-    return tuple(
-        spec
-        for spec in VALIDATION_CORPUS
-        if not spec.eligible_for_n and "candidate" in (spec.ineligible_reason or "").lower()
-    )
+    """Rows admitted as CANDIDATES awaiting the protocol section 6 R2 ratification act.
+
+    ⛔ DELEGATES; it does not re-implement. This function used to carry a VERBATIM COPY of
+    ``_manifest.bench_candidates()``'s predicate, so when Story 16.4 corrected that predicate
+    the copy here kept the defect — AR7's reuse-never-fork rule, and exactly the shape
+    ``AI-E9-7`` warns about for constants.
+
+    It maps to ``unratified_bench_candidates()`` rather than to ``bench_candidates()``, which
+    keeps this module's behaviour BIT-IDENTICAL today: nothing is ratified, so the two
+    populations coincide. Which of the guards below should measure the frozen BENCH instead of
+    the pending subset is a semantic decision belonging to the story that carries the operator's
+    ratification authority, and it is deliberately NOT taken here (Story 16.4 / HALT-3).
+    """
+    return unratified_bench_candidates()
 
 
 def test_TC_ArgusAgent_PRECISION_001_76_a_candidate_row_cannot_carry_a_bad_pin_or_language() -> None:

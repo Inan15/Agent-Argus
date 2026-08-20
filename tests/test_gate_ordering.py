@@ -33,6 +33,8 @@ A constant retyped is a constant that drifts, and 16.2's hand-off says so in ter
 
 from __future__ import annotations
 
+import ast
+import dataclasses
 import subprocess
 from pathlib import Path
 
@@ -59,6 +61,12 @@ def _git(*args: str) -> subprocess.CompletedProcess[str]:
         ["git", "-C", str(_REPO_ROOT), *args],
         capture_output=True,
         text=True,
+        # ⛔ EXPLICIT, and found by execution rather than by review. `text=True` alone decodes
+        # with the LOCALE codec — cp1252 on this Windows machine — and `git show` of a source
+        # blob carries UTF-8 punctuation, so `-103` died on a UnicodeDecodeError here while it
+        # would have passed on the ubuntu CI leg. The reverse of this repository's usual
+        # Windows/POSIX asymmetry, and the same lesson: name the encoding, never inherit it.
+        encoding="utf-8",
         timeout=120,
     )
 
@@ -273,3 +281,197 @@ def test_TC_ArgusAgent_PRECISION_001_102_the_landing_order_is_derived_from_histo
             f"HEAD reports as an ancestor of the STRICTLY earlier generated commit {commit}. The "
             f"predicate answers the same way in both directions and discriminates nothing."
         )
+
+
+# ─────────────────────────────────────────────────────────────────────────────
+# HALT-3 — bench membership is HISTORICAL, and does not dissolve at ratification
+# ─────────────────────────────────────────────────────────────────────────────
+
+#: The ORIGINAL live predicate ``bench_candidates()`` folded on before Story 16.4. It is
+#: correct AS OF ``BENCH_COMMIT_SHA`` — nothing had been ratified then, so the two fields it
+#: reads still carried the bench. It is retained HERE, in the re-derivation, rather than in the
+#: manifest, because that historical blob is the only place it is still true.
+_CANDIDATE_MARKER = "candidate"
+
+
+def _bench_ids_at(commit_sha: str) -> frozenset[str]:
+    """Re-derive the bench from ``_manifest.py`` AS READ OUT OF GIT at *commit_sha*.
+
+    Parsed with :mod:`ast` rather than by regex: the manifest is Python, and a substring search
+    over it would match a member id inside a prose ``adjudication_caveat`` as readily as a real
+    row. The ORIGINAL predicate is applied, which is what makes this an independent derivation
+    rather than a restatement of the constant it checks.
+    """
+    blob = _git("show", f"{commit_sha}:tests/corpus/_manifest.py")
+    assert blob.returncode == 0, f"`git show` failed: {blob.stderr.strip()!r}"
+    tree = ast.parse(blob.stdout)
+    found: set[str] = set()
+    rows = 0
+    for node in ast.walk(tree):
+        if not isinstance(node, ast.Call):
+            continue
+        name = node.func.id if isinstance(node.func, ast.Name) else getattr(node.func, "attr", "")
+        if name != "CorpusMemberSpec":
+            continue
+        rows += 1
+        fields = {
+            kw.arg: kw.value
+            for kw in node.keywords
+            if kw.arg and isinstance(kw.value, ast.Constant)
+        }
+        member_id = fields.get("member_id")
+        eligible = fields.get("eligible_for_n")
+        reason = fields.get("ineligible_reason")
+        if member_id is None or eligible is None:
+            continue
+        reason_text = reason.value if reason is not None and isinstance(reason.value, str) else ""
+        if eligible.value is False and _CANDIDATE_MARKER in reason_text.lower():
+            found.add(str(member_id.value))
+    assert rows, (
+        f"the AST walk over _manifest.py at {commit_sha} found ZERO CorpusMemberSpec rows, so "
+        f"the set below is empty for a reason that has nothing to do with the bench. A parser "
+        f"that finds nothing reports an empty bench for a full one."
+    )
+    return frozenset(found)
+
+
+def test_TC_ArgusAgent_PRECISION_001_103_the_bench_is_what_was_frozen_at_the_bench_commit() -> None:
+    """TC-ArgusAgent-PRECISION-001-103 — HALT-3: ``BENCH_MEMBER_IDS`` re-derived from history.
+
+    **Observable (guard-adequacy (i)):** ``_manifest.BENCH_MEMBER_IDS`` versus the bench read
+    out of ``tests/corpus/_manifest.py`` **at** ``BENCH_COMMIT_SHA``, under the ORIGINAL
+    ``not eligible_for_n and "candidate" in ineligible_reason`` predicate — in **both**
+    directions. Plus the ordering that makes the bench mean anything:
+    **criteria → bench → seal**, each an ancestor of the next, read from the object database.
+
+    **The defect that moves it (guard-adequacy (ii)):** a member added to or removed from
+    ``BENCH_MEMBER_IDS`` today reddens this, because the frozen set no longer matches what was
+    frozen. So does re-pointing ``BENCH_COMMIT_SHA`` at a commit where the bench was different.
+    That is the whole value of the constant: it is checkable against something nobody can edit
+    without rewriting history.
+
+    **The adversarial variant, GENERATED (guard-adequacy (iii)):** the comparison set is
+    *parsed out of a historical blob* rather than listed here, so it is regenerated from git on
+    every run and its row count is asserted non-zero. A parser that silently matched nothing
+    would report an empty bench for a full one, which is the vacuity this closes.
+
+    ⛔ **Non-vacuity is `DF-13-5-A`'s own number.** The bench is asserted to sit inside the
+    pre-registered **12–20** band — the same band ``-76``/``-78`` enforce — so this guard cannot
+    pass over a bench that has quietly emptied.
+    """
+    from tests.corpus._manifest import BENCH_COMMIT_SHA, BENCH_MEMBER_IDS
+    from tests.test_candidate_selection import CRITERIA_COMMIT_SHA
+
+    _assert_sha_resolves("15.1 (bench)", BENCH_COMMIT_SHA)
+    _assert_sha_resolves("15.1 (criteria)", CRITERIA_COMMIT_SHA)
+
+    # ── Non-vacuity FIRST: a bench outside DF-13-5-A's pre-registered band is not a bench. ──
+    assert 12 <= len(BENCH_MEMBER_IDS) <= 20, (
+        f"BENCH_MEMBER_IDS holds {len(BENCH_MEMBER_IDS)} members, outside `DF-13-5-A`'s "
+        f"pre-registered 12-20 band. Every equality below would still 'hold' over a bench that "
+        f"had quietly emptied."
+    )
+
+    # ── THE RE-DERIVATION, in both directions. ──
+    frozen = _bench_ids_at(BENCH_COMMIT_SHA)
+    assert frozen == BENCH_MEMBER_IDS, (
+        f"BENCH_MEMBER_IDS does not match the bench frozen at {BENCH_COMMIT_SHA}. "
+        f"constant-only={sorted(BENCH_MEMBER_IDS - frozen)} "
+        f"history-only={sorted(frozen - BENCH_MEMBER_IDS)}. The bench is a HISTORICAL set: it "
+        f"is what was admitted at that commit, and it is not editable after the fact."
+    )
+
+    # ── THE ORDERING: criteria -> bench -> seal, and NOT the other way. ──
+    for earlier, later, why in (
+        (CRITERIA_COMMIT_SHA, BENCH_COMMIT_SHA, "the criteria were frozen BEFORE the selection"),
+        (BENCH_COMMIT_SHA, _seal_commit_sha(), "the bench was frozen BEFORE the seal"),
+    ):
+        assert _git("merge-base", "--is-ancestor", earlier, later).returncode == 0, (
+            f"{earlier} is not an ancestor of {later}, so it is NOT true that {why}."
+        )
+        assert _git("merge-base", "--is-ancestor", later, earlier).returncode != 0, (
+            f"{later} also reports as an ancestor of {earlier}; the predicate discriminates "
+            f"nothing and the ordering above is unverified."
+        )
+
+    # ── The bench commit is NOT the criteria commit, and the distinction is load-bearing. ──
+    assert BENCH_COMMIT_SHA != CRITERIA_COMMIT_SHA, (
+        "the bench and the criteria are recorded as the same commit. The criteria were frozen "
+        "three commits before the bench landed, and collapsing them would let a bench chosen "
+        "AFTER the criteria were seen claim it had been chosen before."
+    )
+
+
+def test_TC_ArgusAgent_PRECISION_001_104_ratification_does_not_remove_a_member_from_the_bench() -> None:
+    """TC-ArgusAgent-PRECISION-001-104 — HALT-3: the invariance that had to be measured to be found.
+
+    **Observable (guard-adequacy (i)):** ``bench_candidates()`` evaluated over a manifest in
+    which bench members carry the POST-RATIFICATION field values — ``eligible_for_n=True`` and
+    ``ineligible_reason=None``, the exact two edits protocol §6 R2 makes. The bench must be
+    **unchanged**.
+
+    **The defect that moves it (guard-adequacy (ii)):** this is not hypothetical and it is not a
+    style preference. Against the pre-16.4 implementation — which folded on those two very
+    fields — ratifying three members dropped the bench 14 → 11 and reddened four shipped guards
+    (``-76``, ``-78``, ``-79``, ``-89``), one of them by breaching ``DF-13-5-A``'s own
+    pre-registered band. This guard is that measurement, made permanent and cheap.
+
+    **The adversarial variant, GENERATED (guard-adequacy (iii)):** the ratified manifest is
+    constructed at run time from the live rows via :func:`dataclasses.replace`, so it covers
+    whatever the bench happens to hold rather than a fixture that would drift away from it, and
+    the drive is asserted to have TAKEN before its effect is read.
+
+    ⛔ It also holds the line the old predicate held: a row marked as an unratified candidate
+    that is NOT in ``BENCH_MEMBER_IDS`` fails here, so a new candidate still cannot be added
+    without being registered.
+    """
+    from tests.corpus import _manifest
+    from tests.corpus._manifest import BENCH_MEMBER_IDS, bench_candidates
+
+    before = bench_candidates()
+    assert before, "non-vacuity: the manifest holds ZERO bench candidates"
+    assert {spec.member_id for spec in before} == set(BENCH_MEMBER_IDS)
+
+    # ── An unratified candidate row that nobody registered is still caught. ──
+    unregistered = sorted(
+        spec.member_id
+        for spec in _manifest.VALIDATION_CORPUS
+        if not spec.eligible_for_n
+        and _CANDIDATE_MARKER in (spec.ineligible_reason or "").lower()
+        and spec.member_id not in BENCH_MEMBER_IDS
+    )
+    assert not unregistered, (
+        f"{unregistered} carry the candidate marker but are absent from BENCH_MEMBER_IDS. The "
+        f"bench is a frozen historical set; a row cannot join it by describing itself as a "
+        f"candidate, and a genuinely new bench needs a new dated set with its own commit."
+    )
+
+    # ── THE INVARIANCE: apply R2's two edits to every bench row and re-fold. ──
+    ratified = tuple(
+        dataclasses.replace(spec, eligible_for_n=True, ineligible_reason=None)
+        if spec.member_id in BENCH_MEMBER_IDS
+        else spec
+        for spec in _manifest.VALIDATION_CORPUS
+    )
+    inert = [
+        spec.member_id
+        for spec in ratified
+        if spec.member_id in BENCH_MEMBER_IDS and not spec.eligible_for_n
+    ]
+    assert not inert, f"the synthetic ratification did not take on {inert} — the drive is inert"
+
+    original = _manifest.VALIDATION_CORPUS
+    try:
+        _manifest.VALIDATION_CORPUS = ratified
+        after = bench_candidates()
+    finally:
+        _manifest.VALIDATION_CORPUS = original
+
+    assert _manifest.VALIDATION_CORPUS is original, "the manifest was not restored"
+    assert {spec.member_id for spec in after} == {spec.member_id for spec in before}, (
+        f"ratifying the bench CHANGED it: {len(before)} -> {len(after)}. Membership in a set "
+        f"frozen in the past cannot depend on a field edited in the future. This is the HALT-3 "
+        f"defect: it breaches `DF-13-5-A`'s pre-registered 12-20 band and breaks "
+        f"SEALED_PARTITION_TABLE's both-directions equality with the bench."
+    )
+    assert len(after) == len(before) == len(BENCH_MEMBER_IDS)

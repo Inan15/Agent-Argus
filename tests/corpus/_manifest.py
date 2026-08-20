@@ -85,7 +85,10 @@ __all__ = [
     "AST_INELIGIBLE_LANGUAGES",
     "AST_INELIGIBILITY_REASONS",
     "SOURCING_RULE",
+    "BENCH_COMMIT_SHA",
+    "BENCH_MEMBER_IDS",
     "PRE_SEAL_MEMBER_IDS",
+    "unratified_bench_candidates",
     "SEALED_PARTITION_TABLE",
     "bench_candidates",
     "member",
@@ -254,6 +257,51 @@ SEALED_PARTITION_TABLE: tuple[tuple[str, str], ...] = (
     ("streamlink-streamlink", "open"),
     ("tox-dev-tox", "open"),
 )
+
+#: HALT-3 (Story 16.4) — the Story 15.1 BENCH: the 14 members admitted as candidates, frozen at
+#: :data:`BENCH_COMMIT_SHA`. **Historical and CLOSED**, exactly like :data:`PRE_SEAL_MEMBER_IDS`
+#: — and for the reason :data:`SEALED_PARTITION_TABLE`'s own docstring already states:
+#: *"After R2 a ratified candidate carries ``eligible_for_n=True`` and is indistinguishable from
+#: a pre-seal member by its fields alone."*
+#:
+#: ⛔ **WHY THIS SET EXISTS AT ALL.** Story 16.2 froze the PARTITION so it would survive the
+#: protocol §6 R2 ratification act, but bench MEMBERSHIP was still derived from the two fields
+#: R2 edits (``eligible_for_n`` and ``ineligible_reason``), so ratifying a member silently
+#: removed it FROM THE BENCH IT WAS CHOSEN INTO. Story 16.4 MEASURED the consequence: ratifying
+#: three members dropped the bench 14 -> 11, breaching ``DF-13-5-A``'s pre-registered 12-20 band
+#: and breaking :data:`SEALED_PARTITION_TABLE`'s both-directions equality with the bench.
+#: Membership in a set frozen in the past cannot depend on state edited in the future. This
+#: constant COMPLETES 16.2's own design intent rather than introducing a new one.
+#:
+#: ⛔ It is DERIVED, not chosen. ``TC-ArgusAgent-PRECISION-001-103`` re-derives it from
+#: ``tests/corpus/_manifest.py`` **as read out of git at** :data:`BENCH_COMMIT_SHA`, applying the
+#: ORIGINAL live predicate — correct at that commit precisely because nothing had been ratified
+#: yet — and asserts equality in BOTH directions behind a non-vacuity floor that is
+#: ``DF-13-5-A``'s own 12-20 band.
+BENCH_MEMBER_IDS: frozenset[str] = frozenset(
+    {
+        "aws-aws-sam-cli",
+        "celery-celery",
+        "certbot-certbot",
+        "conda-conda",
+        "getsentry-sentry-python",
+        "googleapis-google-auth-library-python",
+        "mitmproxy-mitmproxy",
+        "pypa-pip",
+        "python-poetry-poetry",
+        "redis-redis-py",
+        "scrapy-scrapy",
+        "spotify-luigi",
+        "streamlink-streamlink",
+        "tox-dev-tox",
+    }
+)
+
+#: The commit in which Story 15.1's bench LANDED — the 14 rows entered this manifest here.
+#: ⛔ NOT ``CRITERIA_COMMIT_SHA``: the criteria were frozen three commits earlier, when this
+#: manifest still held only 7 rows. The ordering criteria -> bench -> seal is asserted from the
+#: object database by ``TC-ArgusAgent-PRECISION-001-103``, never from this comment.
+BENCH_COMMIT_SHA = "c028da5b06a553f9c79c37877874e37a0bdecc61"
 
 #: The `ineligible_reason` marker Story 15.1 gave every bench candidate. Named once so
 #: `bench_candidates()` folds on a constant rather than on a substring repeated at call sites.
@@ -969,10 +1017,34 @@ def bench_candidates() -> tuple[CorpusMemberSpec, ...]:
     :func:`eligible_members` takes. It is the population :data:`SEALED_PARTITION_TABLE` is
     frozen over, so the table's key set and this fold are asserted equal in both directions
     rather than each being maintained by hand.
+
+    ⛔ **It keys on :data:`BENCH_MEMBER_IDS`, never on eligibility.** It used to fold on
+    ``not eligible_for_n and "candidate" in ineligible_reason`` — the exact two fields the
+    protocol §6 R2 ratification act edits — so a ratified member LEFT the bench it was chosen
+    into. Being admitted to the bench is a historical fact about a frozen set; being ratified is
+    a later and separate act, and one may not silently undo the other. For the LIVE pending
+    state, which ratification legitimately empties, see :func:`unratified_bench_candidates`.
+    """
+    return tuple(spec for spec in VALIDATION_CORPUS if spec.member_id in BENCH_MEMBER_IDS)
+
+
+def unratified_bench_candidates() -> tuple[CorpusMemberSpec, ...]:
+    """The bench members STILL AWAITING the protocol §6 R2 ratification act.
+
+    ⛔ **This is a different population from :func:`bench_candidates` and the difference is the
+    whole of HALT-3.** The bench is HISTORICAL and closed — what was admitted at
+    :data:`BENCH_COMMIT_SHA`. *Pending* is a LIVE state that ratification legitimately empties.
+    Before 16.4 one predicate served both, so ratifying a member silently shrank the bench; a
+    guard asking *"is this row still pending?"* and a guard asking *"is the bench intact?"* got
+    the same answer to two different questions.
+
+    Guards asserting a row's **pending state** read this. Guards asserting anything about **the
+    bench as chosen** — its size band, its pins, its recorded rationales — read
+    :func:`bench_candidates`, which ratification does not move.
     """
     return tuple(
         spec
-        for spec in VALIDATION_CORPUS
+        for spec in bench_candidates()
         if not spec.eligible_for_n
         and _CANDIDATE_REASON_MARKER in (spec.ineligible_reason or "").lower()
     )
