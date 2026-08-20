@@ -197,6 +197,24 @@ _STATUS_DOCUMENTS: tuple[str, ...] = (
     # ⚠️ It must be committed TOGETHER with this line — `-22` closes in BOTH directions, so the
     # document without this entry and this entry without the document red `master` equally.
     "epic-15-retro-2026-08-19.md",
+    # Registered 2026-08-20 by the change proposal that carries it — `AI-E12-1`'s second half
+    # ("make the registration part of the authoring step's own DoD") on its FIFTH consecutive
+    # application. Same one-line edit, same verification-before-registration: `-22` was observed
+    # RED against this document before this line (`unregistered:
+    # ['sprint-change-proposal-2026-08-20.md']`) and GREEN after, on the live tree.
+    # `_status_assertions()` returns 0 for it and `_executed_gate_citations()` returns 0, so
+    # `-21`'s per-document loop short-circuits and this registration is inert rather than
+    # load-bearing — it mints an excuse for nothing.
+    # WHAT THE DOCUMENT ASSERTS, so the registration is judged against its contents: the gate is
+    # UNCHANGED and still `BLOCKED` with an empty precision denominator; `protocol_cleared` is
+    # `False` and has never been `True`; the >=80% threshold, `VALIDATION_SET_FLOOR_N`, FR34 and
+    # the five ratified members are untouched; all 14 candidate rows stay `eligible_for_n=False`;
+    # `DF-13-5-A`'s ONE round is UNSPENT. It PROPOSES a §5 amendment in the STRENGTHENING
+    # direction and applies none of it — the document is `AWAITING OPERATOR APPROVAL`, which is a
+    # status about the proposal and not a release status about the tool.
+    # ⚠️ It must be committed TOGETHER with this line — `-22` closes in BOTH directions, so the
+    # document without this entry and this entry without the document red `master` equally.
+    "sprint-change-proposal-2026-08-20.md",
 )
 
 # Exactly the set the epic's AC names — "any future change proposal or retrospective".

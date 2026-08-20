@@ -5223,3 +5223,36 @@ disposed and three new ones are filed, one of which bounds Epic 15.
   - severity: 🟡 — nothing is failing today and the ceiling guard is the live safety net: it fails
     loudly at 1,201, never silently. It becomes a forced choice the moment the next line is
     written, and the tempting answer at that moment is the exemption `MAINT-001-04` forbids.
+
+## Deferred from: the Epic 15 retrospective (2026-08-19), filed 2026-08-20
+
+- **`DF-15-2-E` — `tests/test_vacuous_density.py` sits at 41 lines of headroom with NO ledger entry
+  at all.** This is `DF-15-2-D`'s condition on the sibling module, and it is filed because the
+  Epic 15 retrospective found the *absence* rather than the size: `argus/detectors/vacuous_test.py`
+  (1,196/1,200) is tracked by `DF-15-2-D` and `tests/test_vacuous_detector.py` by `DF-14-3-H`,
+  while this module — the third of the three that Story 14.2 and Story 15.2 grew — **was tracked by
+  nothing**. An untracked approach to a ceiling is worse than a tracked one precisely because
+  nobody is watching it: the guard still fails loudly at 1,201, but it fails as a surprise.
+  **Measured with the ceiling guard's own method** (`_physical_line_count`, `_CEILING = 1200`):
+  **1,159 of 1,200 — 41 lines** at HEAD `ef41449`. That is materially more room than
+  `DF-15-2-D`'s four, which is why this is filed at 🟡 and not raised further; it is enough for a
+  guard or two and not enough for a story's worth of them.
+  ⛔ **The trigger, stated so it is not a judgement call at the moment it is inconvenient:** the
+  first change that would take this module past **1,180** performs the cohesion split FIRST — by
+  subject cohesion, never by arithmetic, with no function split across the boundary — on the
+  `test_vacuous_detector_index.py` precedent Story 15.2 set. The margin is deliberate: a split
+  decided at 1,199 is a split decided under duress, and duress is what produces the
+  `_EXEMPT_BY_DESIGN` entry `MAINT-001-04` forbids.
+  - id: DF-15-2-E
+  - origin_story: **NONE** — found by the Epic 15 retrospective (`epic-15-retro-2026-08-19.md`,
+    SD-6) rather than by a story's review, and filed by
+    `sprint-change-proposal-2026-08-20.md` §4.4. Recorded as retrospective-origin because a
+    finding attributed to a story that did not make it is the `DF-13-3-A` failure shape.
+  - owner: **XAgent007 (Engineering Lead)** (`AI-E9-8`)
+  - target_story: **NONE** — a precondition on whoever opens that module next, not work with a
+    schedule of its own. Pinning it to an unwritten story is how `DF-14-3-H`'s
+    `target_story: 13-5` went stale, and `DF-15-2-D` already declines to repeat it.
+  - category: maintainability / NFR-M1 headroom
+  - severity: 🟡 — nothing is failing, 41 lines is real room, and the ceiling guard is the live
+    safety net. The defect being recorded here is the **absence of tracking**, not the size; it
+    becomes 🟠 if this module crosses 1,180 with this entry still un-actioned.
