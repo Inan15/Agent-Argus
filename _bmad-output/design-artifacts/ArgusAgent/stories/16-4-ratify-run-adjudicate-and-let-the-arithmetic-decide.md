@@ -1028,9 +1028,109 @@ M1 and M3 are AC2.4's *"cited sha replaced with one that is not an ancestor"*; M
 - **AC2.5 / DN-16-4-3 / `DF-16-3-A`** — landed in a **NEW** module.
   `tests/test_gate_seal.py` is **byte-unchanged at 1,145**; its 55 lines of headroom are intact.
 
+#### TASK 2b — HALT-3: BENCH MEMBERSHIP MADE HISTORICAL (operator go: *"Yes, proceed"*, 2026-08-21)
+
+⛔ **Scope of that go, recorded because it matters.** *"Yes, proceed"* was read as **HALT-3 only**
+— the refactor I had said I could start autonomously. It is **not** a §6 R2 authorisation and is
+not treated as one: HALT-1 is not executable by an agent by design (the fetch **is** the R2 act,
+and no candidate checkout exists on this machine) and HALT-2 is a choice AC1.3 forbids me to take.
+**Nothing was ratified. Tasks 3–8 remain unauthorised and unstarted.**
+
+**What landed, and why it is the smallest change that resolves anything.**
+`SEALED_PARTITION_TABLE`'s own docstring already said the thing 16.2 had half-built:
+
+> *"After R2 a ratified candidate carries `eligible_for_n=True` and is indistinguishable from a
+> pre-seal member by its fields alone; this table and `PRE_SEAL_MEMBER_IDS` are what keep the two
+> apart."*
+
+16.2 froze the **partition** so it would survive R2 — but bench **membership** was still derived
+from the two fields R2 edits. This completes 16.2's own design intent rather than proposing a new
+one:
+
+- `BENCH_MEMBER_IDS` — frozen, closed, 14, **historical**, modelled exactly on `PRE_SEAL_MEMBER_IDS`
+  and placed beside it. ⛔ **A frozen set, not a new manifest field** — `MANIFEST_FIELDS` stays at
+  **9**, as AC6.2 requires; adding a column would have broken it.
+- `BENCH_COMMIT_SHA = c028da5…` — the commit where the 14 rows landed. ⛔ **Not**
+  `CRITERIA_COMMIT_SHA`: measured, the criteria were frozen **three commits earlier**, when this
+  manifest held only **7** rows. Collapsing the two would let a bench chosen *after* the criteria
+  were seen claim it had been chosen before.
+- `bench_candidates()` now folds on `member_id in BENCH_MEMBER_IDS`.
+- `unratified_bench_candidates()` — new, and the distinction is the whole of HALT-3. The bench is
+  **historical**; *pending* is a **live** state ratification legitimately empties. One predicate
+  was answering both questions.
+
+**AR7 finding, not in §0.4 and not in the thirteen.** `tests/test_candidate_selection.py:281`
+carried a **verbatim fork** of the old predicate, so correcting the manifest alone would have left
+the defect live in the guards that matter most. It now delegates — to
+`unratified_bench_candidates()`, which keeps that module **bit-identical today**.
+
+**⛔ A portability bug in my own Task 2 code, caught by execution.** `_git()` used `text=True`,
+which decodes with the **locale** codec — cp1252 here — so `-103`'s `git show` of a UTF-8 source
+blob died on `UnicodeDecodeError`. It would have passed on the ubuntu CI leg. The encoding is now
+named explicitly. This is `AC8.3`'s Windows/POSIX asymmetry **with the polarity reversed**, and it
+is the second bug this story's own execution found in this story's own guards.
+
+#### ⛔ THE MEASURED RESULT — AND I OVER-CLAIMED
+
+I predicted the refactor would take the breakage set **13 → ~9**, with `-76`, `-78`, `-79` and
+`-89` all green. **Re-measured by the same reverted three-row flip: 13 → 12, and only `-89` went
+green.** The prediction was wrong and is recorded as wrong.
+
+What that one fixes is not nothing: **`-89` was one of AC7.1's two outright contradictions.**
+`SEALED_PARTITION_TABLE` no longer has to move when a member is ratified, so AC7.1's
+must-not-move entry for it is now satisfiable. **`prd.md` / `DOCS-001-75` still is not** — that
+contradiction stands, untouched, and remains the operator's to resolve.
+
+Why the other three did not move, stated precisely rather than excused: `-76`, `-78` and `-79`
+assert over the **pending** population, and `-78` does so deliberately — *"a candidate is pending
+a decision nobody has taken"*, with `eligible_for_n is False` and
+`ineligible_reason == _RATIFICATION_PENDING_REASON` per row, plus a disjointness assertion whose
+own words are *"until an operator moves a row between them, deliberately, in a visible diff."*
+
+⛔ **I stopped there on purpose.** Re-pointing those three at the frozen bench would take the count
+to roughly **10** and, for `-76` and `-79`, would be a pure strengthening. It is still **the dated
+amendment §0.4 reserves to the story that carries ratification authority** — deciding which
+population a shipped guard measures is a semantic act, and the difference between doing it under
+that authority and doing it in a refactor is exactly the difference §0.4 warns about. The
+vocabulary those amendments need now exists; taking them is not mine.
+
+**The residual twelve are therefore intended work, not modelling errors:**
+
+| Class | Guards | Discharge |
+|---|---|---|
+| Population re-pointing (bench vs pending) | `-76`, `-78`, `-79` | dated amendment, under ratification authority |
+| Genuine N-move pins | `-82`, `-92`, `-25`, `-31` | dated amendment naming this story — §0.4's own remedy |
+| Artifact currency | `-54`, `-59`, `DOGFOOD-53`, `DOGFOOD-54` | regenerate; no code change |
+| Published prose | `DOCS-001-75` | ⛔ **AC7.1 conflict, unresolved** |
+
+**Behaviour preservation, asserted by execution rather than by intention:** bench **14**,
+unratified **14**, N **5**, `MANIFEST_FIELDS` **9**, `SEALED_PARTITION_TABLE` **14 and
+byte-unchanged**, both builders `--check` exit **0**, and
+`git diff -- validation-corpus/` **empty** — no artifact moved. `mypy` Success on 92 files.
+
+**AC2.4-equivalent mutation run — four executed, four observed RED, manifest restored
+byte-identical after each:**
+
+| # | Mutation | Observed RED |
+|---|---|---|
+| M5 | drop `tox-dev-tox` from `BENCH_MEMBER_IDS` | `-103` — `history-only=['tox-dev-tox']` |
+| M6 | add a member never on the bench | `-103` — `constant-only=['never-on-the-bench']` |
+| M7 | point `BENCH_COMMIT_SHA` at the criteria commit | `-103` — all 14 `constant-only` |
+| M8 | **restore the pre-16.4 predicate** | `-104` — *"ratifying the bench CHANGED it: 14 → 0"* |
+
+**M8 is the one that counts:** it puts the real defect back and the guard catches it at the real
+seam, which is guard-adequacy (ii) discharged by execution rather than by argument.
+
+| Module | `_physical_line_count` | Headroom |
+|---|---|---|
+| `tests/corpus/_manifest.py` | 1,101 | 99 |
+| `tests/test_gate_ordering.py` | 477 | 723 |
+| `tests/test_candidate_selection.py` | 749 | 451 |
+| `tests/test_gate_seal.py` *(byte-unchanged)* | 1,145 | 55 |
+
 #### GATES ON THE HALTED TREE (AC8.1, AC8.2)
 
-Full suite **exit 0** with `ARGUS_REQUIRE_LANGUAGE_GRAMMARS=1`, **0 skipped**;
+Re-measured after the HALT-3 refactor: full suite **1,677 collected · exit 0** with `ARGUS_REQUIRE_LANGUAGE_GRAMMARS=1`, **0 skipped** (1,673 baseline + `-101`/`-102` + `-103`/`-104`);
 `mypy argus` **Success, 92 source files**; `bandit` **No issues identified** (25,419 LOC);
 both builders `--check` exit **0**; module-size ceiling green with **no new exemption**.
 
@@ -1056,12 +1156,14 @@ measurement and restored byte-exact; it is not in this story's write set and is 
 |---|---|
 | `tests/test_gate_ordering.py` | **new** — the AC2 ordering guard (`-101`, `-102`), 275 lines. Landed as **`3a99eed`**, recorded here in a LATER commit because a commit cannot cite itself |
 | `_bmad-output/design-artifacts/ArgusAgent/stories/16-4-ratify-run-adjudicate-and-let-the-arithmetic-decide.md` | Tasks 0–2 checked; Dev Agent Record, File List, Change Log; Status |
+| `tests/corpus/_manifest.py` | HALT-3 — `BENCH_MEMBER_IDS` + `BENCH_COMMIT_SHA` (frozen, historical); `bench_candidates()` re-keyed; `unratified_bench_candidates()` added. `MANIFEST_FIELDS` still 9, `SEALED_PARTITION_TABLE` byte-unchanged |
+| `tests/test_candidate_selection.py` | AR7 de-fork — `_candidate_rows()` delegates instead of re-implementing. Bit-identical behaviour today |
 | `_bmad-output/design-artifacts/ArgusAgent/sprint-status.yaml` | `ready-for-dev` → `in-progress`, HALTED at Task 1 |
 
-⛔ **Not written, and deliberately so:** `tests/corpus/_manifest.py`, `prd.md`,
+⛔ **Not written, and deliberately so:** `prd.md`,
 `precision-validation-protocol.md`, `deferred-work.md`, `architecture.md`, both builders, the
 adjudication record, `gate-decision-record.json`, and every `argus/**` file. Each belongs to a
-task the operator has not authorised.
+task the operator has not authorised. `tests/corpus/_manifest.py` WAS written — for the HALT-3 refactor under the 2026-08-21 go, and **not** for a ratification edit: no row's `eligible_for_n` or `ineligible_reason` moved, and N is still 5.
 
 ---
 
@@ -1069,5 +1171,6 @@ task the operator has not authorised.
 
 | Date | Change | By |
 |------|--------|-----|
+| 2026-08-21 | **HALT-3 resolved structurally under the operator's *"Yes, proceed"* — read as HALT-3 ONLY, and recorded as such.** It is not a §6 R2 authorisation: HALT-1 is not executable by an agent by design and HALT-2 is a choice AC1.3 forbids me to take. Nothing was ratified; N is still 5; Tasks 3-8 unstarted. LANDED: `BENCH_MEMBER_IDS` + `BENCH_COMMIT_SHA` (`c028da5`, MEASURED to be three commits AFTER `CRITERIA_COMMIT_SHA`, where the manifest held only 7 rows), `bench_candidates()` re-keyed to the frozen historical set, and `unratified_bench_candidates()` split out because the bench is HISTORICAL while *pending* is a LIVE state ratification legitimately empties. A frozen constant rather than a manifest column, so `MANIFEST_FIELDS` stays 9 per AC6.2. This COMPLETES 16.2's own stated intent — the partition was frozen to survive R2 while membership still keyed on the two fields R2 edits. AR7 finding not in §0.4: `test_candidate_selection.py:281` carried a VERBATIM FORK of the old predicate and now delegates. ⛔ **I OVER-CLAIMED and it is recorded as wrong**: I predicted 13 -> ~9 breakages; re-measured, it is **13 -> 12**, and only `-89` went green. That one still matters — it removes ONE of AC7.1's two outright contradictions (`SEALED_PARTITION_TABLE` no longer has to move); **`prd.md` / `DOCS-001-75` stands, unresolved, and is the operator's.** The other three (`-76`/`-78`/`-79`) assert over the PENDING population by design, and re-pointing them — worth roughly two more — is the dated amendment §0.4 reserves to the story carrying ratification authority, so it was deliberately NOT taken. A portability bug in this story's OWN Task 2 code was caught by execution: `_git()` used `text=True`, which decodes with the LOCALE codec (cp1252 here), so `-103` died on a UTF-8 blob and would have PASSED on ubuntu CI — the usual Windows/POSIX asymmetry reversed. Encoding now named. Four executed mutations, four observed REDs, manifest restored byte-identical after each; M8 restores the pre-16.4 predicate and reddens `-104` with *"ratifying the bench CHANGED it: 14 -> 0"*. Behaviour preservation asserted by execution: bench 14, unratified 14, N 5, MANIFEST_FIELDS 9, SEALED_PARTITION_TABLE byte-unchanged, both builders `--check` exit 0, and `git diff` over `validation-corpus/` EMPTY. Gates: 1,677 collected exit 0 / 0 skipped, mypy 92 files, bandit clean over 25,419 LOC, ceiling green with no new exemption. | dev-story (Opus 5) |
 | 2026-08-21 | **dev-story Tasks 0-2 executed; the story is HALTED at Task 1 and is NOT complete.** §0 re-measured by execution on this tree: §0.0/§0.1/§0.3/§0.5/§0.6/§0.8 reproduced exactly, and **§0.2's two arms reproduced exactly** (`3/16` appended vs `1/1` superseding over an identical six-TP population), so the story's central premise SURVIVES. **THREE premises did not.** (1) `minions` carries **12** dirty entries, not 10 — immaterial, for §0.7's own reason. (2) Arm A is `evaluable=True` **only because** the new run's emitted population excludes the old run's five `BORDERLINE` findings; fold them in and arm A is `evaluable=False`. Its exact shape is *exhaustiveness judged over 6 findings, ratio computed over 32.* (3) ⛔ **§0.4 says FOUR guards go red when N moves; the MEASURED number is THIRTEEN** — by a fully-reverted three-row flip, full suite, `git checkout` restore, porcelain clean, nothing committed and no detector run. Nine are unnamed by §0.4, and for `-76`/`-78` the assertion that fires first is the pre-registered **12-20 candidate band**, not the `eligible_member_count() == 5` literal §0.4 cites — so amending the N literal alone leaves both red. **The mechanism:** `bench_candidates()` folds on the exact two fields AC1.1 says ratification edits, so ratifying three members drops the candidate population 14 -> 11, breaching `DF-13-5-A`'s own pre-registered band and breaking `SEALED_PARTITION_TABLE`'s both-directions equality with it. ⛔ **AC7.1 is internally inconsistent with ratification**: `DOCS-001-75` requires `prd.md` to state the live eligible-member count (*"which is the whole point"*) and `-89` requires the frozen table to track `bench_candidates()`, and AC7.1 declares both byte-unchanged. Filed as **HALT-3**; no guard was loosened and none was touched. **HALT-1 and HALT-2 raised with their figures and NOT chosen; no plumbing written for either arm.** Task 2 landed `tests/test_gate_ordering.py` (new, 275 lines, `-101`/`-102`): the three condition-landing shas proved ancestors of HEAD with zero candidate-output commits each, constants IMPORTED, three non-vacuity preconditions, ancestry driven both ways, and a GENERATED adversarial population from `SEAL..HEAD` with its count asserted. A bug in the guard was caught **by execution** (`--is-ancestor` is reflexive and `rev-list A..HEAD` includes HEAD) and repaired by stating the reflexive case, never by softening the assertion. **Four executed mutations, four observed REDs, `sha256` restored identically after each.** `tests/test_gate_seal.py` byte-unchanged at 1,145 — `DF-16-3-A`'s 55 lines intact. Gates green: suite exit 0 / 0 skipped, mypy 92 files, bandit clean, both builders `--check` exit 0, ceiling green with no new exemption. CI run id **OPEN** (nothing pushed). ⛔ **Nothing was ratified, fetched, run over a bench member, or dispositioned. Tasks 3-8 untouched.** | dev-story (Opus 5) |
 | 2026-08-20 | Story contexted at HEAD `3022415`, baseline measured by execution (mypy 92 files Success, bandit clean over 25,419 LOC, both builders `--check` exit 0, tree clean, 26 ahead of `origin/master`). §0 premises measured read-only on the live tree. **§0.2 records the story's central finding, proved by execution rather than argued: §5's breadth, seal and yield arms and the precision ratio are all folded over the LIVE ROWS OF `adjudication-record.json`, not over the run's emitted population, and the two have already drifted apart — so an identical six-finding, six-TP round folds to `3/16` (`NOT_CLEARED`, `evaluable=True`) if appended to the committed record and to `1/1` if written to a fresh superseding one. Both arms brush against a rule this project holds; filed as HALT-2 rather than resolved.** §0.3 counts what §6 R2 costs before the act: `sealed ∩ ratified = ∅`, six named sealed candidates, ≥3 ratified AND contributing, ≥5 verdict-eligible in total, and no candidate checkout present on this machine. §0.4 enumerates by execution the **four shipped guards that go RED the moment N moves** (`-76`, `-78`, `-82`, `-92`), each of which is correct as written and must be amended by dated authorisation rather than loosened. §0.5 finds `INSTRUMENT_DISCLOSURE_VALIDATED`'s *"ratified five-repository validation corpus"* latent and reachable-if-cleared. **§0.7 re-measures the five ratified checkouts and retires a stale escalation rather than repeating it**: `minions` has drifted further off its pin since 13.5 (`cabf73a4` → `f63d0490`, 7 → 10 dirty entries) and it **does not matter** — 13.5 resolved E1 by fixing the instrument, so the runner reads the pinned object and proves every staged byte against it; what a NEWLY FETCHED candidate does need is a clone deep enough to contain its pin, recorded here rather than discovered as a `PinUnreachable` refusal mid-run. §2.4 flags that adding this story's set to `_ADJUDICATION_SETS` would retroactively declare the newly-audited members `pre-seal` and destroy the seal condition in the act of satisfying it. §2.6 takes the no-`V1.4` decision a fourth time and adds §4's own reason: a version taken *during* a run is *"amended before, never reinterpreted during"* read backwards. Locked decisions cited and not reopened: `DF-16-1-A` unlanded, `DF-13-5-A`'s round UNSPENT at contexting, amendment-A UNAPPROVED, the seal unopened. `backlog` → `ready-for-dev`. | create-story (Scrum Master) |
