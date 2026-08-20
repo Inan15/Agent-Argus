@@ -67,13 +67,16 @@ from argus.precision.gate_breadth import (
 )
 from argus.precision.gate_decision import (
     BREADTH_CONDITION_ID,
+    SEAL_CONDITION_ID,
     SECTION_5_CONDITIONS,
+    YIELD_CONDITION_ID,
     CleanRepoEvidence,
     GateDecision,
     decide_gate,
     section_5_condition,
 )
 from argus.precision.gate_disclosure import derive_concentration, ratified_corpus_members
+from argus.precision.gate_yield import verdict_eligible_population_floor
 from argus.precision.replay_harness import PRECISION_GATE_THRESHOLD, registry_module
 
 # The SEALED-population generators are IMPORTED, never copied (AR7 — the same reason
@@ -203,7 +206,11 @@ def _decide(
 
 
 def expected_section_5_outcome(
-    fold: AdjudicatedPrecision, *, breadth_holds: bool, seal_holds: bool
+    fold: AdjudicatedPrecision,
+    *,
+    breadth_holds: bool,
+    seal_holds: bool,
+    yield_holds: bool,
 ) -> str:
     """Protocol §5's three-way dispatch, RECOMPUTED from its preconditions — ONE mirror.
 
@@ -231,13 +238,26 @@ def expected_section_5_outcome(
     had to state what it believes about the seal rather than silently inherit the old answer,
     which is how 16.1's breadth clause came to be unreachable in ``-55``.
 
-    ⛔ **Both terms must be DERIVED FROM THE FIXTURE and passed IN — never read back out of
-    ``assess_breadth`` or ``assess_seal``.** A mirror fed the predicate's own answer moves in
+    ⛔ **``yield_holds`` ADDED 2026-08-20 (Story 16.3 / AC4.4), on exactly the same terms
+    again.** §5 gained a SEVENTH condition; the mirror is ADDED TO, never forked. It too is a
+    REQUIRED keyword argument with no default, and the cost of that rule is deliberate and was
+    paid on this story: it forced ``tests/test_gate_decision.py`` — nine lines under NFR-M1's
+    ceiling — to be split before the term could be added. A default would have been free and
+    would have let ``-55`` keep believing the old answer, which is precisely how 16.1's
+    breadth clause came to be unreachable there.
+
+    ⛔ **All three terms must be DERIVED FROM THE FIXTURE and passed IN — never read back out
+    of ``assess_breadth``, ``assess_seal`` or ``assess_yield``.** A mirror fed the predicate's own answer moves in
     lockstep with the defect and survives exactly the mutation that should kill it. The seal
     clause is driven INDEPENDENTLY of breadth by
     ``tests/test_gate_seal.py::TC-ArgusAgent-PRECISION-001-90``, which pins breadth TRUE and
     sweeps the sealed count — here the two move in lockstep, because a population generated
-    over sealed members has ``sealed contributing == contributing``.
+    over sealed members has ``sealed contributing == contributing``. The yield clause is
+    driven INDEPENDENTLY of both by
+    ``tests/test_gate_yield.py::TC-ArgusAgent-PRECISION-001-97``, which pins breadth AND the
+    seal TRUE and moves the population size alone across the floor — the third form of the
+    same lockstep trap, since over a sealed-only population breadth, seal and yield all rise
+    together with the fixture size.
 
     PURE (AR8): a frozen fold and two bools in, a registered outcome name out. No I/O, no clock.
     """
@@ -248,6 +268,8 @@ def expected_section_5_outcome(
     if not breadth_holds:
         return "BLOCKED"
     if not seal_holds:
+        return "BLOCKED"
+    if not yield_holds:
         return "BLOCKED"
     return "CLEARED" if fold.meets_threshold else "NOT_CLEARED"
 
@@ -581,18 +603,24 @@ def test_TC_ArgusAgent_PRECISION_001_85_the_measured_sentence_names_its_populati
         "reason it was blocked for before (AC3.5)."
     )
     assert section_5_condition(decision.conditions, BREADTH_CONDITION_ID).verdict == "FAILED"
-    # ⛔ RE-AUTHORED 2026-08-20 (Story 16.2 / AC6.3) — INTENDED BEHAVIOUR CHANGE. §5 gained a
-    # SIXTH condition by dated addition on the same day, under the same DN-16-1-2 rule this
-    # assertion was written to enforce: the five historical ids keep their historical
-    # positions and the new one is APPENDED. The breadth id is additionally asserted to be
-    # still at its historical position, so a condition INSERTED rather than appended — the
-    # specific way this could go wrong — reddens this even at the right count.
-    assert len(decision.conditions) == len(SECTION_5_CONDITIONS) == 6, (
-        "§5 must now carry exactly six conditions: the five historical ones in their "
-        "historical positions, plus the appended seal condition (DN-16-1-2, inherited by "
-        "Story 16.2)"
+    # ⛔ RE-AUTHORED 2026-08-20 (Story 16.2 / AC6.3), then again the same day (Story 16.3 /
+    # AC4.4) — an INTENDED BEHAVIOUR CHANGE both times, annotated as one rather than silently
+    # bumped. §5 gained a SIXTH condition and then a SEVENTH by dated addition, under the same
+    # DN-16-1-2 rule this assertion was written to enforce: the historical ids keep their
+    # historical positions and each new one is APPENDED. All three amended ids are
+    # additionally asserted to be still at their historical positions, so a condition INSERTED
+    # rather than appended — the specific way this could go wrong — reddens this even at the
+    # right count. The literal is spelled out rather than derived on purpose: a count read
+    # back out of SECTION_5_CONDITIONS would agree with any number of conditions, including a
+    # condition quietly dropped.
+    assert len(decision.conditions) == len(SECTION_5_CONDITIONS) == 7, (
+        "§5 must now carry exactly seven conditions: the four original ones in their "
+        "historical positions, plus the appended breadth (16.1), seal (16.2) and yield "
+        "(16.3) conditions (DN-16-1-2, inherited by Story 16.2 and Story 16.3)"
     )
     assert SECTION_5_CONDITIONS[4] == BREADTH_CONDITION_ID, SECTION_5_CONDITIONS
+    assert SECTION_5_CONDITIONS[5] == SEAL_CONDITION_ID, SECTION_5_CONDITIONS
+    assert SECTION_5_CONDITIONS[6] == YIELD_CONDITION_ID, SECTION_5_CONDITIONS
 
 
 def test_TC_ArgusAgent_PRECISION_001_86_the_outcome_recomputation_carries_a_live_breadth_term() -> None:
@@ -667,12 +695,25 @@ def test_TC_ArgusAgent_PRECISION_001_86_the_outcome_recomputation_carries_a_live
         # tests/test_gate_seal.py::TC-ArgusAgent-PRECISION-001-90. Neither value is read back
         # out of assess_breadth or assess_seal.
         holds = contributing >= floor
+        # The YIELD term, added 2026-08-20 (Story 16.3 / AC4.4), derived from the FIXTURE's
+        # own `size` and asserted to be ABOVE the floor for every population this guard
+        # generates — so the yield clause can never be what refuses one of them, and this
+        # guard keeps measuring breadth rather than quietly becoming a guard about yield.
+        # That is the same failure 16.2 had to repair here when the seal landed.
+        yield_holds = size >= verdict_eligible_population_floor(PRECISION_GATE_THRESHOLD)
+        assert yield_holds, (
+            f"the generated population of {size} is below §5's yield floor of "
+            f"{verdict_eligible_population_floor(PRECISION_GATE_THRESHOLD)}, so every "
+            f"assertion below would be about the yield clause and not about breadth"
+        )
         assert decision.seal is not None
         assert decision.seal.sealed_contributing_member_count == contributing, (
             "the generated population is not entirely sealed, so `holds` below would be "
             "the wrong seal term and this guard would be asserting over the wrong fixture"
         )
-        expected = expected_section_5_outcome(fold, breadth_holds=holds, seal_holds=holds)
+        expected = expected_section_5_outcome(
+            fold, breadth_holds=holds, seal_holds=holds, yield_holds=yield_holds
+        )
         assert expected == ("CLEARED" if holds else "BLOCKED"), expected
         assert decision.outcome == expected, (
             f"{contributing} contributing member(s) against a floor of {floor}: the "
@@ -686,7 +727,9 @@ def test_TC_ArgusAgent_PRECISION_001_86_the_outcome_recomputation_carries_a_live
             # recomputation answers the opposite. This is what "unreachable branch" looked
             # like before, and what makes it a driven branch now.
             assert (
-                expected_section_5_outcome(fold, breadth_holds=True, seal_holds=True)
+                expected_section_5_outcome(
+                    fold, breadth_holds=True, seal_holds=True, yield_holds=True
+                )
                 == "CLEARED"
             ), (
                 "the breadth clause is not what refused this population — some other "

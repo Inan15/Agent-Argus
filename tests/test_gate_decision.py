@@ -76,6 +76,7 @@ from argus.precision.adjudication import (
 )
 from argus.precision.gate_breadth import assess_breadth
 from argus.precision.gate_seal import sealed_member_floor
+from argus.precision.gate_yield import verdict_eligible_population_floor
 from argus.precision.gate_decision import (
     BREADTH_CONDITION_ID,
     CONDITION_VERDICTS,
@@ -401,10 +402,28 @@ def test_TC_ArgusAgent_PRECISION_001_55_the_live_outcome_is_derived_not_chosen()
         for member in ratified_corpus_members()
         if member["partition"] == "sealed"
     } & {row.member_id for row in record.live_rows()}
+    # The YIELD term, added 2026-08-20 (Story 16.3 / AC4.4) on exactly the same terms as the
+    # seal term above it: a THIRD REQUIRED keyword argument with no default, so this caller
+    # had to state what it believes rather than inherit the old answer. It is COUNTED HERE
+    # from the record's own live rows — the same quantity `derive_concentration` publishes as
+    # `adjudicated_population` — and is never read back out of `assess_yield`; a mirror fed
+    # the predicate's own answer moves in lockstep with the defect and survives exactly the
+    # mutation that should kill it. As with the two terms above, THIS FIXTURE DOES NOT REACH
+    # THAT CLAUSE: the record is not exhaustive, so the mirror's first clause fires. The
+    # clause is DRIVEN both ways, with breadth and the seal pinned TRUE, by
+    # tests/test_gate_yield.py::TC-ArgusAgent-PRECISION-001-97.
+    live_population = len(record.live_rows())
+    assert live_population > 0, (
+        "non-vacuity: the committed record carries ZERO live rows, so the yield term below "
+        "would be about an empty population and the mirror would be answering a different "
+        "question than the decision"
+    )
     expected = expected_section_5_outcome(
         fold,
         breadth_holds=breadth.holds,
         seal_holds=len(sealed_contributing) >= sealed_member_floor(fold.floor_n),
+        yield_holds=live_population
+        >= verdict_eligible_population_floor(PRECISION_GATE_THRESHOLD),
     )
 
     payload = _decision_payload()

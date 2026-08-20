@@ -350,6 +350,19 @@ _MODULES_NAMING_THE_TEST_TREE_IMPORT: frozenset[str] = frozenset(
         # a tuple of repository-relative STRINGS the caller resolves, the same treatment
         # gate_decision.DECISION_RECORD_PATH gets and for the same DF-9-2-A reason.
         "argus/precision/gate_seal.py",
+        # ADDED 2026-08-20 (Story 16.3). §5's SEVENTH condition — the YIELD floor. It joins
+        # TRANSITIVELY through gate_disclosure / replay_harness, exactly as its siblings do,
+        # and it resolves NO path at module level (``DF-9-2-A``): the threshold it derives
+        # the floor from arrives as an ARGUMENT, and the module performs no I/O at all. That
+        # is asserted STRUCTURALLY, by an AST walk of the module's own imports and names, in
+        # tests/test_gate_yield.py::TC-ArgusAgent-PRECISION-001-99 — a walk that additionally
+        # forbids any recall / FN / bench-content reference, because a floor derived from
+        # those would be a recall gate and re-opening the OI1 lock is an operator act. The
+        # dated figures it publishes (the 2026-08-18 set's 4284/0 and the 2026-08-16 set's
+        # 31) are STRINGS the module cannot read for itself; they are re-derived from the
+        # committed artifacts by TC-ArgusAgent-PRECISION-001-100. This addition is
+        # DELIBERATE, which is what this registry exists to force someone to say.
+        "argus/precision/gate_yield.py",
         "argus/precision/gate_disclosure.py",
         "argus/precision/replay_harness.py",
         "argus/dogfood/proof_types.py",

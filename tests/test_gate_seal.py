@@ -815,10 +815,20 @@ def test_TC_ArgusAgent_PRECISION_001_91_the_measured_sentence_discriminates_and_
         "reason it was blocked for before (AC3.5)."
     )
     assert section_5_condition(decision.conditions, SEAL_CONDITION_ID).verdict == "FAILED"
-    assert len(decision.conditions) == len(SECTION_5_CONDITIONS) == 6, (
-        "§5 must now carry exactly six conditions: the five historical ones in their "
-        "historical positions, plus the appended seal condition (DN-16-1-2's rule, inherited)"
+    # ⛔ RE-AUTHORED 2026-08-20 (Story 16.3 / AC4.4) — INTENDED BEHAVIOUR CHANGE, annotated
+    # as one. §5 gained a SEVENTH condition by a THIRD dated addition on the same day, under
+    # the same DN-16-1-2 rule: the six historical ids keep their historical positions and the
+    # new one is APPENDED. ⛔ This guard was NOT in Story 16.3 §2.4's enumeration of pinned
+    # condition counts — it was found by EXECUTING the suite against the appended id, and the
+    # deviation is recorded in the story's Dev Agent Record rather than fixed silently. The
+    # seal id's own position is asserted below, so an INSERTION reddens this even at the
+    # right count.
+    assert len(decision.conditions) == len(SECTION_5_CONDITIONS) == 7, (
+        "§5 must now carry exactly seven conditions: the four original ones in their "
+        "historical positions, plus the appended breadth (16.1), seal (16.2) and yield "
+        "(16.3) conditions (DN-16-1-2's rule, inherited twice)"
     )
+    assert SECTION_5_CONDITIONS[5] == SEAL_CONDITION_ID, SECTION_5_CONDITIONS
 
 
 # ─────────────────────────────────────────────────────────────────────────────

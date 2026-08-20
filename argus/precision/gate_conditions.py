@@ -45,6 +45,7 @@ from typing import Any
 
 from argus.precision.gate_breadth import BREADTH_CONDITION_ID
 from argus.precision.gate_seal import SEAL_CONDITION_ID
+from argus.precision.gate_yield import YIELD_CONDITION_ID
 
 __all__ = [
     "CONDITION_VERDICTS",
@@ -122,6 +123,19 @@ SECTION_5_CONDITIONS: tuple[str, ...] = (
     # judgements made under V1.3 and re-stamping them would re-interpret judgements nobody
     # re-made (locked operator decision, XAgent007, 2026-08-20).
     SEAL_CONDITION_ID,
+    # AMENDED 2026-08-20 (Story 16.3; protocol §5's THIRD dated block of the same date).
+    # APPENDED under the rule DN-16-1-2 set and DN-16-2-2 reused: the six historical ids keep
+    # their historical positions and the regenerated record's condition list is a clean
+    # prefix-plus-one diff a reviewer can actually read. Still no V1.4 row and still no
+    # re-version — the committed record's 31 human judgements were made under V1.3 and this
+    # amendment touches no §4 rule, no golden-key semantics and no TP/FP definition, so not
+    # one judgement's meaning moves (locked operator decision, XAgent007, 2026-08-20).
+    #
+    # ⛔ It is the SEVENTH and it is a floor on the DENOMINATOR of the precision ratio, not on
+    # recall: `argus/precision/gate_yield.py` derives it from PRECISION_GATE_THRESHOLD alone,
+    # carries no FN term, and a guard walks that module's own AST to keep it that way. Recall
+    # stays ungated and diagnostic under the OI1 lock.
+    YIELD_CONDITION_ID,
 )
 
 

@@ -143,6 +143,14 @@ from argus.precision.gate_seal import (
     seal_closure_path,
     sealed_precision_gate_status,
 )
+from argus.precision.gate_yield import (
+    YIELD_CONDITION_ID,
+    YieldAssessment,
+    assess_yield,
+    yield_blocked_reason,
+    yield_closure_path,
+    yielded_precision_gate_status,
+)
 from argus.precision.replay_harness import PRECISION_GATE_THRESHOLD, ratio_string
 from argus.store.canonical import dumps, dumps_bytes
 
@@ -150,6 +158,7 @@ __all__ = [
     "BREADTH_CONDITION_ID",
     "CONDITION_VERDICTS",
     "SEAL_CONDITION_ID",
+    "YIELD_CONDITION_ID",
     "DECISION_RECORD_PATH",
     "GATE_OUTCOMES",
     "RECORDED_CLEARED_CONDITION_ID",
@@ -285,6 +294,12 @@ class GateDecision:
     #: site moved; a decision built without it reports evaluability unchanged. Defaulted
     #: last, the ``corpus_read_proof`` / ``breadth`` precedent.
     seal: SealAssessment | None = None
+    #: Story 16.3. §5's YIELD arm, MEASURED over the same ``ConcentrationDisclosure`` this
+    #: decision publishes and the breadth and seal arms read. ``None`` is the pre-16.3 shape
+    #: and stays constructible, so no existing construction site moved; a decision built
+    #: without it reports evaluability unchanged. Defaulted last, the ``corpus_read_proof`` /
+    #: ``breadth`` / ``seal`` precedent. Named ``yield_`` because ``yield`` is a keyword.
+    yield_: YieldAssessment | None = None
     #: Story 13.5 / AC9. Whether ``commit_sha`` describes the tree the measurement ran over.
     #: ``build_gate_decision.py`` stamped ``git rev-parse HEAD`` with NO dirty check, so on a
     #: dirty tree the recorded sha named a tree that was not the one measured. The state is
@@ -335,16 +350,18 @@ class GateDecision:
     def precision_evaluable(self) -> bool:
         """The EFFECTIVE evaluability the payload publishes — ONE value, computed once.
 
-        ``fold.evaluable AND breadth holds AND the seal holds`` (Story 16.1 / AC3.3,
-        DN-16-1-1; Story 16.2 / AC3.2 added the third conjunct). Publishing the fold's answer
-        while §5's precision condition reads ``UNEVALUABLE`` would be a true status carrying
-        a false subject (``DF-9-2-B``) on the surface that publishes the gate, so the three
-        are ONE derivation and ``-84`` / ``-90`` assert they cannot be separated.
+        ``fold.evaluable AND breadth holds AND the seal holds AND the yield floor holds``
+        (Story 16.1 / AC3.3, DN-16-1-1; Story 16.2 / AC3.2 added the third conjunct; Story
+        16.3 / AC1.6 the fourth). Publishing the fold's answer while §5's precision condition
+        reads ``UNEVALUABLE`` would be a true status carrying a false subject (``DF-9-2-B``)
+        on the surface that publishes the gate, so the four are ONE derivation and ``-84`` /
+        ``-90`` / ``-97`` assert they cannot be separated.
         """
         return (
             self.fold.evaluable
             and (self.breadth is None or self.breadth.holds)
             and (self.seal is None or self.seal.holds)
+            and (self.yield_ is None or self.yield_.holds)
         )
 
     @property
@@ -355,9 +372,10 @@ class GateDecision:
         each amendment is provably inert on a population it does not bind.
 
         **The FIRST binding reason is the one a reader is told**, in protocol §5's own
-        condition order: breadth is §5(5) and the seal is §5(6), so a population that fails
-        both is told about breadth. Reporting the later reason would tell a reader the
-        evidence was un-sealed when in fact there was not enough of it to ask.
+        condition order: breadth is §5(5), the seal is §5(6) and the yield floor is §5(7), so
+        a population that fails all three is told about breadth. Reporting a later reason
+        would tell a reader the evidence was un-sealed — or the detector quiet — when in fact
+        there was not enough of it to ask.
         """
         if self.breadth is None:
             breadth_status = self.fold.gate_status
@@ -365,11 +383,17 @@ class GateDecision:
             breadth_status = effective_precision_gate_status(
                 fold=self.fold, breadth=self.breadth, protocol_path=self.protocol_path
             )
-        if self.seal is None or self.seal.holds or breadth_status != self.fold.gate_status:
+        if breadth_status != self.fold.gate_status:
             return breadth_status
-        return sealed_precision_gate_status(
-            fold=self.fold, seal=self.seal, protocol_path=self.protocol_path
-        )
+        if self.seal is not None and not self.seal.holds:
+            return sealed_precision_gate_status(
+                fold=self.fold, seal=self.seal, protocol_path=self.protocol_path
+            )
+        if self.yield_ is not None and not self.yield_.holds:
+            return yielded_precision_gate_status(
+                fold=self.fold, detector_yield=self.yield_, protocol_path=self.protocol_path
+            )
+        return breadth_status
 
     @property
     def failed_conditions(self) -> tuple[ConditionResult, ...]:
@@ -411,11 +435,13 @@ class GateDecision:
                 "fold_evaluable": self.fold.evaluable,
                 "breadth_holds": None if self.breadth is None else self.breadth.holds,
                 "seal_holds": None if self.seal is None else self.seal.holds,
+                "yield_holds": None if self.yield_ is None else self.yield_.holds,
                 "provisional": self.fold.provisional,
                 "gate_status": self.precision_gate_status,
             },
             "breadth": None if self.breadth is None else self.breadth.to_payload(),
             "seal": None if self.seal is None else self.seal.to_payload(),
+            "yield": None if self.yield_ is None else self.yield_.to_payload(),
             "preconditions": {
                 "determinism": (
                     "SATISFIED" if self.fold.determinism is None else str(self.fold.determinism)
@@ -461,6 +487,7 @@ def _precision_condition(
     bound: ResidualCompletionBound,
     breadth: BreadthAssessment,
     seal: SealAssessment,
+    detector_yield: YieldAssessment,
 ) -> ConditionResult:
     """§5(1) — precision >= 80%, as the EXACT ``Fraction`` comparison and nothing else.
 
@@ -474,6 +501,15 @@ def _precision_condition(
     fourth branch, appended BELOW breadth so §5's own condition order decides which reason
     a reader is told, with every clause above it byte-unchanged. Composition, not
     replacement — three independent ways to be unevaluable, each naming itself.
+
+    **Story 16.3 / AC1.6.** A ratio over a VERDICT-ELIGIBLE POPULATION smaller than §5's
+    yield floor is unevaluable for the same registered reason and by the same shape: a fifth
+    branch, appended BELOW the seal, with every clause above it byte-unchanged. It is the
+    one that closes the *tiny*-denominator hole ``UNEVALUABLE`` left open for the *empty*
+    one — a population of three findings, all TP, currently reports ``precision = 1/1`` MET
+    against a bar it never faced. Four independent ways to be unevaluable, each naming
+    itself; and this one says in its own sentence that it is a claim about the RESOLUTION of
+    the measurement that was taken, never about defects that were missed (the OI1 lock).
     """
     if not fold.evaluable:
         verdict = "UNEVALUABLE"
@@ -504,6 +540,16 @@ def _precision_condition(
             f"SEAL condition (as amended 2026-08-20) does not hold: {seal.measured}"
         )
         closes = seal.what_would_close_it
+    elif not detector_yield.holds:
+        verdict = "UNEVALUABLE"
+        measured = (
+            f"NOT A MEASUREMENT OF THE TOOL — the ratio "
+            f"{fold.precision_ratio} was computable over "
+            f"{fold.total_tp + fold.total_fp} adjudicated finding(s), and protocol §5's "
+            f"YIELD condition (as amended 2026-08-20) does not hold: "
+            f"{detector_yield.measured}"
+        )
+        closes = detector_yield.what_would_close_it
     elif fold.meets_threshold:
         verdict = "MET"
         measured = (
@@ -679,6 +725,26 @@ def _seal_condition(seal: SealAssessment) -> ConditionResult:
     )
 
 
+def _yield_condition(detector_yield: YieldAssessment) -> ConditionResult:
+    """§5(7) — the verdict-eligible population is deep enough to resolve the ratio (16.3).
+
+    Its OWN verdict is ``MET`` or ``FAILED`` and never ``UNEVALUABLE`` (DN-16-3-4): the
+    population WAS counted, over a named corpus, and recording it unevaluable would tell a
+    reader its size was unknown — a different and false claim. Every sentence it publishes
+    was derived by :mod:`argus.precision.gate_yield` from the SAME concentration disclosure
+    the breadth and seal arms read and this decision serializes; that module documents why,
+    and documents at length why a floor on the ratio's DENOMINATOR is not a recall gate.
+    """
+    return ConditionResult(
+        condition_id=YIELD_CONDITION_ID,
+        requirement=detector_yield.requirement,
+        corpus=detector_yield.population_source,
+        measured=detector_yield.measured,
+        verdict="MET" if detector_yield.holds else "FAILED",
+        what_would_close_it=detector_yield.what_would_close_it,
+    )
+
+
 def decide_gate(
     record: AdjudicationRecord,
     *,
@@ -801,8 +867,19 @@ def decide_gate(
         validation_set_floor_n=fold.floor_n,
         population_source=record_path,
     )
+    # Story 16.3 / AC1.5. The SAME concentration instance the breadth and seal arms read and
+    # the decision publishes — the population is COUNTED ONCE and the three thresholds
+    # derived from it cannot disagree about how big it was. The threshold arrives as an
+    # ARGUMENT rather than being resolved inside the yield module (AR8 / DF-9-2-A), and it is
+    # the SAME `PRECISION_GATE_THRESHOLD` object §5(1) compares against, so the floor and the
+    # bar it exists to make meaningful can never fork.
+    detector_yield = assess_yield(
+        concentration,
+        threshold=PRECISION_GATE_THRESHOLD,
+        population_source=record_path,
+    )
     conditions = (
-        _precision_condition(fold, bound, breadth, seal),
+        _precision_condition(fold, bound, breadth, seal, detector_yield),
         clean_repo_evidence.condition(),
         _floor_condition(fold),
         _recorded_cleared_condition(
@@ -814,6 +891,7 @@ def decide_gate(
         ),
         _breadth_condition(breadth),
         _seal_condition(seal),
+        _yield_condition(detector_yield),
     )
     # BY ID, never by position (AC1.3). See :func:`section_5_condition`: an index into a
     # condition set that §5 amends by dated ADDITION is a latent false green — it returns
@@ -926,6 +1004,21 @@ def decide_gate(
         outcome = "BLOCKED"
         reason = seal_blocked_reason(seal)
         closure = seal_closure_path(seal)
+    elif not detector_yield.holds:
+        # Story 16.3 / AC1.7, reasoned in argus/precision/gate_yield.py. It sits AFTER the
+        # seal branch deliberately, and the reason is the same shape as the two orderings
+        # above it. Yield is a claim about HOW MUCH WAS FOUND; breadth and the seal are
+        # claims about WHERE THE EVIDENCE CAME FROM, and provenance is prior — a population
+        # that fails both has the earlier thing wrong with it. Reporting the yield first
+        # would tell a reader THE DETECTOR WAS QUIET when in fact the evidence was
+        # misprovenanced or drawn from too few repositories, which is a different diagnosis
+        # pointing at a different remedy: DF-13-5-A routes a low-yield round to "a materially
+        # better detector — NOT a bigger bench", and sending a reader there over what is
+        # actually a corpus problem would spend the one pre-registered round on the wrong
+        # question.
+        outcome = "BLOCKED"
+        reason = yield_blocked_reason(detector_yield)
+        closure = yield_closure_path(detector_yield)
     elif all(condition.verdict == "MET" for condition in conditions):
         outcome = "CLEARED"
         reason = (
@@ -939,7 +1032,11 @@ def decide_gate(
             f"{breadth.contributing_member_floor}, of which "
             f"{seal.sealed_contributing_member_count} lie in the SEALED partition against "
             f"a seal floor of {seal.sealed_member_floor} — evidence frozen, in code and "
-            f"in git, before any Argus output over it existed. Clearing authorises "
+            f"in git, before any Argus output over it existed; and the ratio was computed "
+            f"over {detector_yield.adjudicated_population} verdict-eligible finding(s) "
+            f"against a yield floor of {detector_yield.yield_floor} — the smallest "
+            f"denominator at which '>= {ratio_string(PRECISION_GATE_THRESHOLD)}' is not "
+            f"silently '100%'. Clearing authorises "
             f"ATTESTED externalization and NOTHING ELSE."
         )
     else:
@@ -965,6 +1062,7 @@ def decide_gate(
         concentration=concentration,
         breadth=breadth,
         seal=seal,
+        yield_=detector_yield,
         completion_bound=bound,
         clean_repo_evidence=clean_repo_evidence,
         fold=fold,
