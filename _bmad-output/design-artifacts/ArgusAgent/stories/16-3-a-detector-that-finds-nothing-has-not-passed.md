@@ -4,7 +4,7 @@ baseline_commit: 1ecf618
 
 # Story 16.3: A detector that finds nothing has not passed
 
-Status: review
+Status: done
 
 | | |
 |---|---|
@@ -882,6 +882,99 @@ so the ordering constraint is intact entering this story and must be intact leav
 - [x] Record the landing shas in a second commit (a commit cannot cite itself).
 - [x] Record deviations (AC7.5) and confirm nothing in AC7.1/AC7.2 was taken.
 
+### Review Findings
+
+**Adversarial code review, iteration 1, 2026-08-20 — VERDICT: PASS. Zero decision-needed, zero
+patch, zero defer.** Every claim in the Dev Agent Record was independently re-derived by
+execution rather than trusted from prose; nothing below is quoted from the story without having
+been re-run.
+
+- **Task 1 split, re-verified independently.** Re-extracted the six moved guards
+  (`-59`..`-64`) from `1ecf618:tests/test_gate_decision.py` and from
+  `HEAD:tests/test_gate_decision_artifact.py` by my own AST walk and compared them as raw source
+  strings (not just sha256 prefixes): **byte-identical, all six**. The old file's 20 top-level
+  defs partition exactly into the 14 that stayed and the 6 that moved, zero overlap. Full suite
+  collection confirmed at **1,673** (see below) = the 1,667 baseline + the six new
+  `-95`..`-100` guards, consistent with the split changing nothing.
+- **The floor, re-derived and stress-tested.** `verdict_eligible_population_floor` reproduces
+  the documented table exactly (`d=1..4 -> 0` FPs affordable, `d=5 -> 1`). Mutated
+  `return -(-q // (q - p))` to `return q` (the `.denominator` trap, M5): **RED**
+  (`test_...-95` fails exactly where `5/7`/`7/9` diverge). Mutated the floor to a hardcoded `3`
+  (M2): **RED** across all six new guards. Ran the inverse the task specifically asked for:
+  temporarily mutated `PRECISION_GATE_THRESHOLD` in `replay_harness.py` to `Fraction(5, 7)` and
+  confirmed the floor **moves to 4** rather than staying pinned at 5 — the general form is real,
+  not a disguised constant.
+- **Sizes 3 and 4, measured at both ends myself.** Checked out `1ecf618`'s tree into the working
+  directory (HEAD unmoved) and drove `decide_gate` directly: sizes 3–6 all `CLEARED` with all
+  six §5 conditions `MET`, reproducing §0.1 exactly. Restored to `HEAD` and re-ran the same
+  populations: sizes 3 and 4 now `BLOCKED` (`precision-at-least-80-percent: UNEVALUABLE`,
+  yield condition `FAILED`), sizes 5/6 still `CLEARED`. Tree confirmed clean
+  (`git status --porcelain` empty) after the round-trip.
+- **AC3 composition, both directions, driven directly.** 40 findings from 1 sealed member:
+  `BLOCKED`, breadth `FAILED`, yield `MET`, and the outcome reason names BREADTH not yield —
+  confirmed the yield floor cannot rescue a breadth-rejected population. The converse (breadth
+  and seal pinned `MET`, size below the floor) is `BLOCKED` on yield alone. Mutated the
+  dispatch branch out of `decide_gate` entirely (M8/AC3.4 decisiveness): **RED** — the clause is
+  decisive, not lockstep. Mutated `precision_evaluable`'s fourth conjunct away (M14): **RED**.
+- **AC2 / OI1, verified structurally and by direct attack.** Read `gate_yield.py`'s full source:
+  no `FN`, `recall`, or co-occurrence term anywhere in its arithmetic — its only inputs are the
+  published `ConcentrationDisclosure.adjudicated_population` and the threshold. Drove the AC2.4
+  AST guard red **against the actual production file**, not just the test's internal
+  string-patched variants: inserted `total_fn = 431` into `verdict_eligible_population_floor`'s
+  body and re-ran `-99` — **RED**, confirming M13 is real. Confirmed via `git diff` that the
+  protocol amendment touches **only line 313** (the exact hunk boundaries are the two hunks in
+  the whole file's diff): line 312 (cartridge Recall row) and §7 (no hunk touches it) are
+  untouched, and the amendment is a byte-for-byte append after the pre-existing sentence
+  (verified line-by-line against the base file: 1,408 lines both sides, exactly one line
+  differs, and the new line `.startswith()` the old line's full text).
+- **"Can only make clearing harder", checked for a counter-path.** Read the refactored
+  `precision_gate_status` property line by line against the pre-16.3 version: the new
+  `yield_`-check branch only fires when breadth and seal already hold and yield does not —
+  every other path is provably identical to before. Mutated `holds = population >= floor` to
+  `holds = True` (M6): **RED** across five of the six new guards, confirming the predicate is
+  load-bearing in both directions.
+- **Byte-unchanged surfaces, verified via `git diff`, not the story's assertion of it**:
+  `argus/precision/gate_breadth.py`, `gate_seal.py`, `argus/detectors/**`,
+  `tests/test_vacuous_density.py`, `tests/corpus/_manifest.py`, `replay_harness.py`, and
+  `validation-corpus/adjudication-record.json` all show **zero diff** against `1ecf618`.
+  `architecture.md`'s registration edit is a single-line diff that is a pure append (old line is
+  a strict prefix of the new one); `deferred-work.md`'s `DF-16-3-A` entry is `+47/-0`.
+- **The pre-round disclosure is re-derived, not asserted**: `test_...-100` reads
+  `adjudication-set-13-5.json` and `adjudication-record.json` from disk and asserts the exact
+  figures (`4284`, `0`/`0`, `31`, `0 TP / 26 FP / 5 BORDERLINE`) appear in
+  `YIELD_PROVENANCE_DISCLOSURE`, plus a **live leg** that drives `assess_yield` directly (not
+  through the committed JSON) on both sides of the floor — the M15 repair the dev found in its
+  own round is present and does what it claims.
+- **Gates, all reproduced independently**: full suite **1,673 passed, 0 failed, 0 skipped, exit
+  0** (counted from the raw dot-stream: 1,673 `.` characters, zero `F`/`E`) with
+  `ARGUS_REQUIRE_LANGUAGE_GRAMMARS=1`, `PYTHONDONTWRITEBYTECODE=1`, `-p no:cacheprovider`,
+  `__pycache__` cleared before the run; `mypy argus` — Success, 92 source files; `bandit -r argus
+  --severity-level medium` — no issues; `tests/test_module_size_ceiling.py` — 6 passed, no new
+  exemption; `scripts/build_gate_decision.py --check` and
+  `scripts/build_adjudication_record.py --check` — both exit 0. Physical line counts
+  (`wc -l`) match the claimed figures exactly for every touched/adjacent module
+  (`gate_yield.py` 560, `gate_decision.py` 1084, `gate_conditions.py` 234, `test_gate_yield.py`
+  839, `test_gate_decision.py` 865, `test_gate_decision_artifact.py` 451, `test_gate_breadth.py`
+  747, `test_gate_seal.py` 1145, `test_release_preflight.py` 1000). `sprint-status.yaml`
+  preserves all **107** `development_status` keys and all **7** STATUS DEFINITIONS blocks.
+- **Deviations judged.** The two undeclared re-pins (`test_gate_breadth.py`,
+  `test_gate_seal.py:818`, both `6 -> 7`) and the `README.md`/`CHANGELOG.md` module-count edits
+  are disclosed exactly where they occur, are the minimum edit needed, and are consistent with
+  the project's established annotate-rather-than-silently-bump convention. They will need
+  re-pinning again at an eighth condition — a known, disclosed, accepted cost of the project's
+  own "derive nothing that would hide an insertion" design, not a defect. `DN-16-3-8` (third
+  sibling status renderer, `gate_breadth.py` left byte-unchanged) correctly follows the
+  `DN-16-2-8` precedent within the story's authority; verified the renderer's predicate against
+  `effective_precision_gate_status` / `sealed_precision_gate_status` line by line — same
+  NFR-P1 byte-stability shape, no fork. `DF-16-3-A` is a pure append (`+47/-0`, confirmed via
+  `git diff --numstat`) with a concrete, non-arithmetic trigger boundary; `gate_decision.py`'s
+  own headroom (1,084/1,200, 116 lines) is comfortably above the project's own established
+  ~20-line trigger margin, so the absence of a matching ledger entry for it is correct, not an
+  omission.
+- **No finding rises to Medium or High.** No unresolved `decision-needed` or `patch` item.
+  Tree confirmed `git status --porcelain` clean and `git diff` empty at the end of this review's
+  own mutation testing.
+
 ---
 
 ## Dev Agent Record
@@ -1327,3 +1420,4 @@ run covers these shas*.
 |---|---|---|
 | 2026-08-20 | Story contexted at HEAD `1ecf618`. Premises re-measured by execution: the three-finding hole **proved real** (size 3 and 4 return `CLEARED`); the floor **derived** as `ceil(q/(q−p))` = **5** from `PRECISION_GATE_THRESHOLD`, with the vacuity boundary independently measured at 3; the shutdown check **answered as far as it can be** (corrected detector's yield over the gating corpus = **0 of 4,284**) and its unmeasurable remainder recorded as a pre-round disclosure rather than a halt; the OI1 question **answered** (not recall — no `FN` term — conditional on the number's source, made mechanically checkable by AC2.4); the undocumented **9-line SPLIT-FIRST trigger** on `tests/test_gate_decision.py` found and made Task 1. `backlog` → `ready-for-dev`. | create-story (Scrum Master) |
 | 2026-08-20 | **Implemented (dev-story).** §0 re-measured by execution and reproduced without deviation on all four premises: sizes 3 and 4 `CLEARED` at `1/1` with six `MET`; the floor **5** re-derived twice (brute force + closed form) over eight thresholds, diverging from `q` at `5/7` and `7/9`; `verdict_eligible: 0` of **4,284** re-counted; §0.5's ten line counts reproduced to the line. **AC7.4's structural-cap search run: NONE found** — unmeasured, not bounded by construction, so no escalation. **Task 1 split taken FIRST and alone** (`01a2f48`), proved a pure restructuring: six definitions byte-identical by sha256, partition of the original 20 exact with no function split, collection 1,667 unchanged. §5's **SEVENTH** condition landed (`48e8ea6`) with `argus/precision/gate_yield.py`; the OI1 Recall row amended explicitly, struck-not-erased, at §5:313 only; §5 gained a **THIRD dated block under V1.3** with **no `V1.4` row**; `adjudication-record.json` byte-unchanged (md5 verified). **15 mutations EXECUTED, 15 observed RED**, bytecode caching disabled, tree restored byte-exact — ⛔ **M15 caught one of my own guards UNREAL** (it read the committed JSON, not the live sentence); `-100` gained a live leg and the whole set was re-run (`a0c74ae`). Artifacts regenerated on a clean tree (`d26ffb6`); no detector ran over any bench member. Full suite **1,673 · exit 0**, mypy 92 files, bandit clean, both builders `--check` 0, ceiling green with no new exemption. `DF-16-3-A` filed (pure append, 0 deletions). AC8.3 recorded **OPEN** — not pushed, so no CI run covers these shas. `in-progress` → `review`. | dev-story (Amelia) |
+| 2026-08-20 | **Adversarial code review, iteration 1 — PASS, zero decision-needed/patch/defer.** Every load-bearing claim re-derived by independent execution rather than trusted from prose: the Task 1 byte-identity re-extracted and diffed from both commits (exact match, not just hash comparison); the floor re-derived, and its inverse specifically probed by mutating `PRECISION_GATE_THRESHOLD` itself in a scratch edit (floor moved to 4, confirming the general form is real); sizes 3/4 driven `CLEARED` at a checked-out `1ecf618` tree and `BLOCKED` at `HEAD` in the same process, tree restored clean; AC3's both directions driven directly through `decide_gate`; the AC2.4 AST guard driven RED against the **actual production file** (an inserted `total_fn` reference), not only the test's internal string-patched variants; the OI1 protocol amendment confirmed to touch line 313 only (exactly one of two hunks in the whole-file diff) with a byte-for-byte prefix-preserving append; five independent mutations across `gate_yield.py`, `gate_decision.py` and `gate_conditions.py` (floor forked/stuck, `holds` stuck, dispatch branch removed, `precision_evaluable` conjunct dropped, seventh id dropped) each observed RED with my own eyes; full suite re-run with bytecode caching disabled — **1,673 passed, 0 failed** (counted from the raw dot-stream), mypy 92 files, bandit clean, ceiling 6 passed, both builders `--check` 0; every physical line count and the 107-key/7-STATUS-DEFINITIONS sprint-status shape confirmed by direct measurement. Tree left `git status --porcelain` clean. `review` → `done`. | code-review (QA gate) |
