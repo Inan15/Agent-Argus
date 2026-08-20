@@ -818,7 +818,7 @@ to block, and flipping the default here would pre-empt a policy decision that be
 ### Packaging: what the distribution contains
 
 `[tool.flit.module] name = "argus"` packages the `argus` Python package and nothing else. Measured on the
-built artifacts: the wheel holds 91 modules plus the packaged command assets and metadata; the sdist adds
+built artifacts: the wheel holds 92 modules plus the packaged command assets and metadata; the sdist adds
 `pyproject.toml`, `README.md`, `LICENSE` and `PKG-INFO`. The RAM workflow directories (`audit/`,
 `phases/`, `templates/`) and the installer scripts are **repository-only** — see README.md for the full
 capability split. *(Amended 2026-08-15 by Story 12.7: the module figure moved with the tree, ~~`adapters/`~~
@@ -827,9 +827,11 @@ zero data assets — `flit_core` ships every file under `argus/`, so the command
 with no build-backend change and reach the sdist because they are tracked.)*
 
 Measured on the built wheel with this repository removed from `sys.path`, one clean subprocess per module:
-**91 of the 91 shipped modules import.** None fail. (The figure read 73 of 73 when `0.1.0` was
+**92 of the 92 shipped modules import.** None fail. (The figure read 73 of 73 when `0.1.0` was
 written; it is DERIVED from the freshly built artifact by `TC-ArgusAgent-DOCS-001-54` — *the artifact
-is the fact* — and moved to 91 on 2026-08-20 when Story 16.2 added
+is the fact* — and moved to 92 on 2026-08-20 when Story 16.3 added
+`argus/precision/gate_yield.py`, protocol §5's SEVENTH condition — the YIELD floor under the
+precision ratio's denominator — and to 91 the same day when Story 16.2 added
 `argus/precision/gate_seal.py`, protocol §5's SEAL condition and the pure partition rule it rests
 on, and to 90 the same day when that story split
 `argus/precision/gate_decision.py` into `argus/precision/gate_conditions.py` and

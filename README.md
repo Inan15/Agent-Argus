@@ -189,8 +189,8 @@ graded, but has no definition for the depth gate to stand on. Pinned language-by
 
 ### What the distribution contains, and what needs the git repository
 
-MEASURED from the built wheel (`argus_agent-0.1.0-py3-none-any.whl`, 99 entries) and sdist
-(`argus_agent-0.1.0.tar.gz`, 98 files), not inferred: `[tool.flit.module] name = "argus"`
+MEASURED from the built wheel (`argus_agent-0.1.0-py3-none-any.whl`, 100 entries) and sdist
+(`argus_agent-0.1.0.tar.gz`, 99 files), not inferred: `[tool.flit.module] name = "argus"`
 packages **the `argus` Python package and nothing else** — which, since Story 12.7, includes
 the command assets under `argus/assets/commands/`: `flit_core` walks the whole `argus/`
 directory and ships every file in it, so a `.md` there reaches the wheel with **no**
@@ -218,7 +218,12 @@ to contradict each other (see the struck sentence under [Slash Commands](#-slash
 
 > **Measured limitation, stated rather than discovered later — and now measured away.** On a
 > freshly built wheel, with this repository removed from `sys.path` and one clean subprocess
-> per module, **91 of the 91 shipped modules import**. None fail. (91, not 90, since
+> per module, **92 of the 92 shipped modules import**. None fail. (92, not 91, since
+> 2026-08-20: Story 16.3 added `argus/precision/gate_yield.py`, protocol §5's SEVENTH
+> condition — the YIELD floor under the precision ratio's denominator, which is what stops a
+> ratio over three findings being published as a cleared 80% gate — pure, resolving no
+> repository path at module level, and structurally asserted to reference no recall term and
+> no bench-content quantity. 91, not 90, since
 > 2026-08-20: Story 16.2 added `argus/precision/gate_seal.py`, protocol §5's SEAL condition
 > and the partition rule it rests on — pure, and resolving no repository path at module
 > level. 90, not 88, since
