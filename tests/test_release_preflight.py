@@ -331,6 +331,18 @@ _MODULES_NAMING_THE_TEST_TREE_IMPORT: frozenset[str] = frozenset(
         # locked floor it derives from arrives as an ARGUMENT. The wheel-importability claim
         # is TC-ArgusAgent-RELEASE-001-20's, and it is asserted there, not here.
         "argus/precision/gate_breadth.py",
+        # ADDED 2026-08-20 (Story 16.2). The two halves of ``DF-16-1-B``'s cohesion split of
+        # ``gate_decision.py``: what a §5 condition IS, and what one is MEASURED FROM. Both
+        # join the set TRANSITIVELY and for the same reason ``gate_decision.py`` itself is in
+        # it — ``gate_conditions`` imports ``gate_breadth``, ``gate_evidence`` imports
+        # ``gate_disclosure``, and both of those already name the repository-only tree in
+        # prose. Neither resolves a path at module level (``DF-9-2-A``); neither performs any
+        # I/O at all. This addition is DELIBERATE, which is what this registry exists to force
+        # someone to say, and it is a consequence of a PURE MOVE: no symbol changed, no import
+        # line anywhere in the repository moved, and the reach was already present in the
+        # module these two were cut out of.
+        "argus/precision/gate_conditions.py",
+        "argus/precision/gate_evidence.py",
         "argus/precision/gate_disclosure.py",
         "argus/precision/replay_harness.py",
         "argus/dogfood/proof_types.py",

@@ -106,6 +106,26 @@ from argus.precision.gate_breadth import (
     breadth_closure_path,
     effective_precision_gate_status,
 )
+
+# ── RE-EXPORTED, not re-implemented (Story 16.2 / DF-16-1-B, 2026-08-20) ──────────────
+# The §5 condition vocabulary and the two evidence objects were MOVED to sibling modules
+# to bring this file back under NFR-M1's 1200-line ceiling before a sixth condition landed
+# in it. Every name below is re-exported here and appears in ``__all__``, so every import
+# line in the repository — scripts/build_gate_decision.py, tests/test_gate_decision.py,
+# tests/test_gate_breadth.py, tests/test_gate_condition_lookup.py — is BYTE-UNCHANGED and
+# the split reads as a pure move. ``tests/test_module_size_ceiling.py::_REMEDY`` requires
+# exactly this: *"a module docstring naming why the module exists, no function split
+# across the boundary, ``__all__`` and every import path unchanged"*.
+from argus.precision.gate_conditions import (
+    CONDITION_VERDICTS,
+    RECORDED_CLEARED_CONDITION_ID,
+    SECTION_5_CONDITIONS,
+    ConditionResult,
+    MissingSection5Condition,
+    UnregisteredConditionVerdict,
+    condition_verdict_meaning,
+    section_5_condition,
+)
 from argus.precision.gate_disclosure import (
     ConcentrationDisclosure,
     ResidualCompletionBound,
@@ -113,6 +133,7 @@ from argus.precision.gate_disclosure import (
     derive_concentration,
     derive_residual_completion_bound,
 )
+from argus.precision.gate_evidence import CleanRepoEvidence, CorpusReadProof
 from argus.precision.replay_harness import PRECISION_GATE_THRESHOLD, ratio_string
 from argus.store.canonical import dumps, dumps_bytes
 
@@ -158,20 +179,6 @@ class UnregisteredGateOutcome(ValueError):
     """
 
 
-class UnregisteredConditionVerdict(ValueError):
-    """Raised on a per-condition verdict outside :data:`CONDITION_VERDICTS`."""
-
-
-class MissingSection5Condition(ValueError):
-    """Raised when a §5 condition is looked up BY ID and the decision does not carry it.
-
-    A ``ValueError`` subclass (AR10) whose message says what a reader must do. This is the
-    typed replacement for a POSITIONAL index into
-    :attr:`GateDecision.conditions` — see :func:`section_5_condition` for why an index was
-    a latent false green rather than a style preference.
-    """
-
-
 class VacuousDecisionError(VacuousDisclosureError):
     """Raised when a decision was requested over an empty record or empty population.
 
@@ -208,50 +215,6 @@ GATE_OUTCOMES: dict[str, str] = {
     ),
 }
 
-#: The CLOSED per-condition verdict vocabulary (DN-3). ``NOT_APPLICABLE`` is a member
-#: because protocol §5's clean-repo condition genuinely is not applicable over the corpus
-#: that gates externalization, and the amendment 13.2 wrote forbids counting it met by
-#: default. It is deliberately NOT a synonym for ``MET``.
-CONDITION_VERDICTS: dict[str, str] = {
-    "MET": "the condition was evaluated over a named corpus and holds.",
-    "FAILED": "the condition was evaluated over a named corpus and does NOT hold.",
-    "NOT_APPLICABLE": (
-        "the condition cannot fail over this corpus for any possible input, so evaluating "
-        "it here measures nothing. RECORDED with its reason and its corpus — never "
-        "counted as met. A §5 condition that cannot fail is not a threshold."
-    ),
-    "UNEVALUABLE": (
-        "the condition could not be evaluated at all: a protocol §4 precondition "
-        "(byte-reproducibility, exhaustive adjudication) does not hold, so any value "
-        "reported here would rest on nothing. Recorded with the residual, never as a "
-        "failure and never as a pass."
-    ),
-}
-
-#: §5(4)'s id, named ONCE. :func:`decide_gate` reads this condition's verdict back out to
-#: populate :attr:`GateDecision.adjudication_run_recorded_cleared`, and
-#: :func:`_recorded_cleared_condition` writes it — so the id is a constant rather than two
-#: string literals that can drift apart without anything noticing.
-RECORDED_CLEARED_CONDITION_ID = "adjudication-run-recorded-cleared"
-
-#: §5's four conditions, in §5's own order. The ids are stable and the record is keyed by
-#: them, so a condition cannot be dropped from the report without the schema noticing.
-#: §5 is amended by dated ADDITION, so a future condition is APPENDED and the historical
-#: ids keep their historical positions — which is exactly why nothing may read this tuple
-#: by POSITION (:func:`section_5_condition`).
-SECTION_5_CONDITIONS: tuple[str, ...] = (
-    "precision-at-least-80-percent",
-    "clean-repo-blocking-false-positives-zero",
-    "corpus-floor-n-at-least-5",
-    RECORDED_CLEARED_CONDITION_ID,
-    # AMENDED 2026-08-20 (Story 16.1; protocol §5's dated block of the same date). APPENDED,
-    # never inserted next to precision: §5 is amended by dated ADDITION, the four historical
-    # ids keep their historical positions, and the regenerated record's condition list is a
-    # clean prefix-plus-one diff a reviewer can actually read. Nothing reads this tuple by
-    # POSITION (:func:`section_5_condition`), which is what makes appending safe at all.
-    BREADTH_CONDITION_ID,
-)
-
 
 def gate_outcome_meaning(outcome: str) -> str:
     """The registered meaning of *outcome* — RAISES on an unregistered member."""
@@ -264,278 +227,6 @@ def gate_outcome_meaning(outcome: str) -> str:
             f"decision, not an implementation detail — an unregistered outcome would let "
             f"the externalization gate terminate in a state nobody defined."
         ) from None
-
-
-def condition_verdict_meaning(verdict: str) -> str:
-    """The registered meaning of a per-condition *verdict* — RAISES on an unregistered one."""
-    try:
-        return CONDITION_VERDICTS[verdict]
-    except KeyError:
-        raise UnregisteredConditionVerdict(
-            f"{verdict!r} is not a registered condition verdict. The closed vocabulary is "
-            f"{sorted(CONDITION_VERDICTS)!r}."
-        ) from None
-
-
-def section_5_condition(
-    conditions: Sequence["ConditionResult"], condition_id: str
-) -> "ConditionResult":
-    """The §5 condition with *condition_id* — BY ID, and RAISES when it is absent.
-
-    **Why this exists at all.** :func:`decide_gate` used to read its own derived
-    recorded-cleared verdict back out as ``conditions[3].verdict == "MET"``. That index was
-    correct for §5's four conditions in §5's order and it is a LATENT FALSE GREEN, not a
-    style question: §5 is amended by dated addition, the ``ConditionResult`` type is
-    structurally identical for every condition, and an index that lands on the wrong
-    condition returns a perfectly well-formed ``bool``. There is no shape for a reader —
-    or a guard — to notice. Reading position 3 of a re-ordered tuple would publish one
-    condition's verdict under another condition's name, on the record that gates attested
-    externalization.
-
-    Looking up by id converts that silent misread into a typed failure
-    (:class:`MissingSection5Condition`), and the failure is DRIVEN rather than asserted:
-    the lookup is exercised over a condition set with the id removed, which is the only
-    way to know the raise is real.
-
-    PURE (AR8): a lookup over a sequence, with no I/O and no clock.
-
-    Raises:
-        MissingSection5Condition: *condition_id* is carried by none of *conditions*.
-    """
-    for condition in conditions:
-        if condition.condition_id == condition_id:
-            return condition
-    raise MissingSection5Condition(
-        f"no §5 condition carries the id {condition_id!r}. The decision reported "
-        f"{tuple(c.condition_id for c in conditions)!r} and §5 registers "
-        f"{SECTION_5_CONDITIONS!r}. This lookup is BY ID and never by position, because a "
-        f"positional index into a condition set that §5 amends by ADDITION silently "
-        f"returns another condition's verdict under this condition's name. Re-check the "
-        f"condition set the decision was built from; do NOT re-introduce an index."
-    )
-
-
-@dataclass(frozen=True)
-class ConditionResult:
-    """ONE protocol §5 condition, with its own measured value and its own verdict (DN-3).
-
-    Reported individually and never collapsed into a conjunction. §5's clean-repo
-    condition is currently ``NOT_APPLICABLE`` over the corpus that gates externalization;
-    a single boolean would swallow that into a ``False`` — or, far worse, into a vacuous
-    ``True`` — and the protocol amendment 13.2 wrote forbids exactly that.
-    """
-
-    condition_id: str
-    requirement: str
-    corpus: str
-    measured: str
-    verdict: str
-    what_would_close_it: str
-
-    def __post_init__(self) -> None:
-        if self.condition_id not in SECTION_5_CONDITIONS:
-            raise ValueError(
-                f"{self.condition_id!r} is not one of protocol §5's conditions "
-                f"{SECTION_5_CONDITIONS!r}. §5 enumerates {len(SECTION_5_CONDITIONS)} and "
-                f"the record is keyed by them, so a further condition — or a renamed one — "
-                f"is a protocol amendment, taken by a dated addition to §5 and never by an "
-                f"edit here alone."
-            )
-        condition_verdict_meaning(self.verdict)
-        if not self.what_would_close_it.strip():
-            raise ValueError(
-                f"{self.condition_id!r} carries no 'what would close it' clause. AC5 "
-                f"requires every condition to name, in countable terms, what would move "
-                f"it — a verdict with no closure path is a status, not a result."
-            )
-
-    def to_payload(self) -> dict[str, Any]:
-        return {
-            "condition_id": self.condition_id,
-            "requirement": self.requirement,
-            "corpus": self.corpus,
-            "measured": self.measured,
-            "verdict": self.verdict,
-            "verdict_meaning": condition_verdict_meaning(self.verdict),
-            "what_would_close_it": self.what_would_close_it,
-        }
-
-
-@dataclass(frozen=True)
-class CleanRepoEvidence:
-    """§5's clean-repo blocking-FP condition, over the corpus it was MEASURED on (AC2.2).
-
-    Protocol §5 as amended 2026-08-16 names Story 13.3 by name: *"Story 13.3 must
-    therefore evaluate this condition against the cartridge corpus explicitly, or record
-    it not-applicable — it may not count it as met by default."* Both branches are
-    expressible here and neither of them is "assume zero":
-
-    * ``applicable=False`` — the repository corpus. ``_is_clean_repo`` needs an empty
-      golden key **AND** ``max_blocking == 0`` and no repository member has either, so the
-      condition is satisfied by construction for every possible input.
-    * ``applicable=True`` — the cartridge corpus, where ``compute_precision`` measures a
-      real ``clean_repo_fp`` and NAMES the clean members it folded.
-
-    The caller supplies this because measuring the cartridge branch requires STAGING and
-    AUDITING repositories, which is the impure test shell (§3.3) and must not happen
-    inside a pure fold.
-    """
-
-    corpus: str
-    applicable: bool
-    clean_repo_fp: int | None
-    clean_member_ids: tuple[str, ...]
-    note: str
-
-    def __post_init__(self) -> None:
-        if self.applicable and self.clean_repo_fp is None:
-            raise ValueError(
-                "clean-repo evidence is marked applicable but carries no measured "
-                "blocking-FP count. 'Applicable' means a number was measured; a missing "
-                "number is NOT_APPLICABLE with its reason, never an implied zero."
-            )
-        if self.applicable and not self.clean_member_ids:
-            raise ValueError(
-                "clean-repo evidence is marked applicable over ZERO clean members. A "
-                "false-positive ceiling folded over an empty clean population passes "
-                "forever (non-vacuity floor, AI-E11-1)."
-            )
-        if not self.applicable and self.clean_repo_fp is not None:
-            raise ValueError(
-                "clean-repo evidence is marked NOT applicable yet carries a count. A "
-                "number beside 'not applicable' is the shape a reader counts as met."
-            )
-
-    def condition(self) -> ConditionResult:
-        """This evidence as §5's second condition — MET, FAILED or NOT_APPLICABLE."""
-        if not self.applicable:
-            verdict = "NOT_APPLICABLE"
-            measured = "NOT MEASURED over this corpus — the condition cannot fail here"
-            closes = (
-                "evaluate the condition over the CARTRIDGE corpus, where "
-                "compute_precision reports clean_repo_fp_applicable=True and names the "
-                "clean members it folded; or amend protocol §5 to define a clean member "
-                "of the repository corpus. Neither is this story's act."
-            )
-        elif self.clean_repo_fp == 0:
-            verdict = "MET"
-            measured = (
-                f"{self.clean_repo_fp} blocking false positive(s) over "
-                f"{len(self.clean_member_ids)} clean member(s): "
-                f"{', '.join(self.clean_member_ids)}"
-            )
-            closes = "already met; it re-opens the moment any clean member emits a blocking finding"
-        else:
-            verdict = "FAILED"
-            measured = (
-                f"{self.clean_repo_fp} blocking false positive(s) over "
-                f"{len(self.clean_member_ids)} clean member(s): "
-                f"{', '.join(self.clean_member_ids)}"
-            )
-            closes = (
-                f"{self.clean_repo_fp} blocking finding(s) on a clean member would have to "
-                f"stop being emitted. The ceiling is ZERO and it is not negotiable: a "
-                f"blocking finding on a repository with an empty golden key is a false "
-                f"ACCUSATION (R6)."
-            )
-        return ConditionResult(
-            condition_id="clean-repo-blocking-false-positives-zero",
-            requirement=(
-                "protocol §5: the clean-repo blocking false-positive count is 0 "
-                "(clean_repo_fp == 0 for blocking findings)"
-            ),
-            corpus=self.corpus,
-            measured=measured,
-            verdict=verdict,
-            what_would_close_it=closes,
-        )
-
-    def to_payload(self) -> dict[str, Any]:
-        return {
-            "corpus": self.corpus,
-            "applicable": self.applicable,
-            "clean_repo_fp": self.clean_repo_fp,
-            "clean_member_ids": list(self.clean_member_ids),
-            "note": self.note,
-        }
-
-
-@dataclass(frozen=True)
-class CorpusReadProof:
-    """PROOF that the corpus was READ — the evidence an EMPTY finding population needs (13.5).
-
-    **Why this type exists.** :func:`decide_gate`'s non-vacuity floor refused an empty emitted
-    population outright, with the message *"That means the corpus could not be read, not that
-    everything in it was judged"*. That was correct for the world it was written in: Story
-    13.3 could not distinguish the two cases, so it chose the safe refusal. Epic 14 corrected
-    ``vacuous_test_ast`` and created a third world — a corpus that **was** read, was scanned
-    file by file, had its test functions scored, emitted thousands of advisory findings, and
-    promoted **none** of them to verdict-eligible. As shipped, that outcome was
-    **inexpressible by the instrument that is supposed to record it**.
-
-    The floor is therefore NARROWED, never removed. This object is the evidence that
-    discriminates, and every field on it is measured by
-    ``scripts/audit_validation_corpus.py`` on the run being decided:
-
-    * ``members_audited`` / ``source_file_count`` — something was enumerated;
-    * ``scored_population_count`` — the DETECTOR's own scored population was non-empty. This
-      is the field that separates *"read and clean"* from *"unparsed"*: an unparsed file and
-      a well-asserted file both emit nothing, and only a scored count tells them apart;
-    * ``every_member_pin_verified`` — each staged file was proved, by git's own blob hash, to
-      be the byte the manifest pins. Reproducibility is not provenance: two runs over the
-      same WRONG bytes are reproducible;
-    * ``every_member_byte_reproducible`` — protocol §4's determinism precondition.
-
-    ``flagged_file_count`` and ``advisory_finding_count`` are RECORDED but deliberately NOT
-    part of :attr:`proves_corpus_was_read`: requiring a flag would make a genuinely clean
-    corpus unprovable, which is the opposite failure and would reward a noisier detector.
-
-    PURE (AR8): a frozen value object with no I/O and no clock. The producer measures; this
-    only says what the measurement has to contain before an absence may be called a result.
-    """
-
-    statement: str
-    members_audited: int
-    source_file_count: int
-    scored_population_count: int
-    flagged_file_count: int
-    advisory_finding_count: int
-    blocking_finding_count: int
-    every_member_pin_verified: bool
-    every_member_byte_reproducible: bool
-
-    def __post_init__(self) -> None:
-        if not self.statement.strip():
-            raise VacuousDisclosureError(
-                "a corpus-read proof carries no statement. The statement is what a stranger "
-                "reads to tell a measured absence from an unread corpus; a proof nobody can "
-                "read is a flag, and a flag is what this type exists to replace."
-            )
-
-    @property
-    def proves_corpus_was_read(self) -> bool:
-        """Every conjunct, measured — never a caller's assertion, never a default."""
-        return (
-            self.members_audited > 0
-            and self.source_file_count > 0
-            and self.scored_population_count > 0
-            and self.every_member_pin_verified
-            and self.every_member_byte_reproducible
-        )
-
-    def to_payload(self) -> dict[str, Any]:
-        return {
-            "statement": self.statement,
-            "members_audited": self.members_audited,
-            "source_file_count": self.source_file_count,
-            "scored_population_count": self.scored_population_count,
-            "flagged_file_count": self.flagged_file_count,
-            "advisory_finding_count": self.advisory_finding_count,
-            "blocking_finding_count": self.blocking_finding_count,
-            "every_member_pin_verified": self.every_member_pin_verified,
-            "every_member_byte_reproducible": self.every_member_byte_reproducible,
-            "proves_corpus_was_read": self.proves_corpus_was_read,
-        }
 
 
 @dataclass(frozen=True)
