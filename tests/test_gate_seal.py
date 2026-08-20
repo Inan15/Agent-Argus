@@ -47,6 +47,7 @@ from __future__ import annotations
 
 import ast
 import json
+import subprocess
 import sys
 from dataclasses import replace
 from pathlib import Path
@@ -973,3 +974,162 @@ def test_the_seal_module_ships_no_repository_only_path() -> None:
             f"{declared!r} does not exist in this repository, so the rule that governs it "
             f"governs nothing — a misspelled pathspec reads exactly like a clean history"
         )
+
+
+# ─────────────────────────────────────────────────────────────────────────────
+# AC1.5 / AC4.1 / AC4.2 — the ORDERING, checked against real git history
+# ─────────────────────────────────────────────────────────────────────────────
+
+#: AC1.5 — THE SEAL COMMIT. The commit that froze the partition rule, the frozen table and
+#: the pre-seal set. Recorded as a full 40-character lowercase hex sha because a short sha is
+#: ambiguous and this is the story's central citation, and recorded in a LATER commit than the
+#: one it names, for the reason Story 15.1's ``CRITERIA_COMMIT_SHA`` was (``16d7100d`` froze,
+#: ``4f4db78`` recorded): **a commit cannot cite itself.**
+#:
+#: ⛔ Story 16.4's deliverable is the ANCESTRY GUARD that ties this sha to every commit
+#: carrying Argus output over a bench member. Story 16.2's obligation was to LAND FIRST and to
+#: record this sha for 16.4 to cite; ``-94`` below discharges the half that is checkable
+#: today — that this sha resolves, that it is an ancestor of HEAD, and that no commit
+#: reachable from it touches a declared candidate-output path.
+SEAL_COMMIT_SHA = "f89f028038dcd9881204f36bc404267c876b18f7"
+
+#: A path KNOWN to carry commits. Without it a misspelled pathspec returns empty and reads
+#: exactly like a clean history — the single most likely way ``-94`` could pass vacuously.
+#: The ``TC-ArgusAgent-PRECISION-001-75`` template, reused rather than re-invented.
+_CONTROL_PATH_WITH_COMMITS = "tests/corpus/_manifest.py"
+
+
+def _git(*args: str) -> subprocess.CompletedProcess[str]:
+    """A pure READ of this repository's history. Never mutates: no checkout, no commit."""
+    return subprocess.run(
+        ["git", "-C", str(_REPO_ROOT), *args],
+        capture_output=True,
+        text=True,
+        timeout=120,
+    )
+
+
+def _candidate_output_paths() -> tuple[str, ...]:
+    """Story 15.1's declared candidate-output paths, IMPORTED rather than re-typed.
+
+    A prose copy of a pinned constant is how two orderings come to disagree about what
+    "candidate output" means (``AI-E9-7``). The import is function-local because
+    ``tests/test_candidate_selection.py`` manipulates ``sys.path`` at import time and this
+    module must not depend on the order pytest happens to collect them in.
+    """
+    from tests.test_candidate_selection import CANDIDATE_OUTPUT_PATHS
+
+    return tuple(CANDIDATE_OUTPUT_PATHS)
+
+
+def test_TC_ArgusAgent_PRECISION_001_94_the_seal_precedes_every_candidate_output() -> None:
+    """TC-ArgusAgent-PRECISION-001-94 — AC1.5/AC4.1/AC4.2: the ordering, read from git.
+
+    Story 16.2's central evidentiary claim is a claim about **git history**: the partition was
+    frozen in a commit that precedes every commit containing Argus output over any member of
+    it. An asserted intention is not evidence of it, so this reads the real object database.
+
+    **Three non-vacuity preconditions, each asserted BEFORE the absence it protects**, copied
+    from ``TC-ArgusAgent-PRECISION-001-75``, which already gets this right:
+
+    1. the declared candidate-output path set and the declared detector-tuning path set are
+       both **non-empty**, and every declared tuning path **exists** — a rule over a
+       misspelled pathspec governs nothing;
+    2. ``git log`` over a **control path known to carry commits** returns **non-empty** — a
+       misspelled or moved pathspec returns empty and is **indistinguishable from a clean
+       ordering**, which is the one way this guard could pass while seeing nothing;
+    3. the seal sha **resolves** (``git cat-file -t`` -> ``commit``), is a full 40-character
+       lowercase hex sha, and the ancestry predicate is driven to **BOTH** outcomes —
+       ``True`` for seal->HEAD and ``False`` for HEAD->seal — so it is watched **failing**,
+       not only passing.
+
+    ⛔ **AC4.1's citation rule is enforced here over the REAL post-seal population, and that
+    population is EMPTY on the day this lands.** That is stated rather than hidden: an empty
+    iteration proves nothing, which is exactly why the citation PREDICATE is driven to both
+    outcomes over synthetic messages by ``-93``, independently of any population. The loop
+    below is the half that starts biting the moment somebody touches a detector, and it
+    reports the remedy verbatim from ``SEAL_CITATION_RULE`` when it does.
+    """
+    from argus.precision.gate_seal import DETECTOR_TUNING_PATHS
+
+    candidate_output_paths = _candidate_output_paths()
+
+    # ── Precondition 1: both declared path sets are non-empty and REAL. ──
+    assert candidate_output_paths, (
+        "CANDIDATE_OUTPUT_PATHS is empty, so the absence asserted below is an absence over "
+        "nothing. Declare where candidate output would land, or this guard forbids nothing."
+    )
+    assert DETECTOR_TUNING_PATHS, (
+        "DETECTOR_TUNING_PATHS is empty, so the citation rule governs no path at all and the "
+        "loop at the end of this guard iterates nothing by construction."
+    )
+    for declared in DETECTOR_TUNING_PATHS:
+        assert (_REPO_ROOT / declared).exists(), (
+            f"the declared detector-tuning path {declared!r} does not exist in this "
+            f"repository. A rule over a path nobody has is a rule over nothing, and a "
+            f"misspelled pathspec reads exactly like a clean history."
+        )
+
+    # ── Precondition 3a: the sha RESOLVES and is a full lowercase hex sha. ──
+    assert len(SEAL_COMMIT_SHA) == 40 and SEAL_COMMIT_SHA.islower(), SEAL_COMMIT_SHA
+    assert set(SEAL_COMMIT_SHA) <= set("0123456789abcdef"), SEAL_COMMIT_SHA
+    kind = _git("cat-file", "-t", SEAL_COMMIT_SHA)
+    assert kind.returncode == 0 and kind.stdout.strip() == "commit", (
+        f"the recorded seal sha {SEAL_COMMIT_SHA} does not resolve to a commit in this "
+        f"repository (git said {kind.stdout.strip()!r} / {kind.stderr.strip()!r}). Story "
+        f"16.2's ordering claim is a claim about git history and cannot be established "
+        f"against a sha that is not in it."
+    )
+
+    # ── Precondition 2: prove the invocation can FIND something. ──
+    control = _git("log", "--format=%H", SEAL_COMMIT_SHA, "--", _CONTROL_PATH_WITH_COMMITS)
+    assert control.returncode == 0, f"control `git log` failed: {control.stderr.strip()!r}"
+    assert [line for line in control.stdout.splitlines() if line.strip()], (
+        f"`git log {SEAL_COMMIT_SHA} -- {_CONTROL_PATH_WITH_COMMITS}` returned NOTHING. That "
+        "path is known to carry commits, so this invocation is not capable of finding "
+        "anything — and an invocation that finds nothing reports a clean ordering for a "
+        "dirty one. Fix the invocation, never the assertion."
+    )
+
+    # ── THE CLAIM: no commit reachable from the seal touches candidate output. ──
+    touching = _git("log", "--format=%H", SEAL_COMMIT_SHA, "--", *candidate_output_paths)
+    assert touching.returncode == 0, f"`git log` failed: {touching.stderr.strip()!r}"
+    offenders = [line for line in touching.stdout.splitlines() if line.strip()]
+    assert not offenders, (
+        f"{len(offenders)} commit(s) reachable from the seal sha touch a declared "
+        f"candidate-output path {list(candidate_output_paths)}: {offenders[:5]}. The "
+        f"partition would then have been frozen with Argus's verdicts over the bench already "
+        f"in hand, which is the whole failure this seal exists to prevent."
+    )
+
+    # ── Precondition 3b: the ancestry predicate, driven to BOTH outcomes. ──
+    forward = _git("merge-base", "--is-ancestor", SEAL_COMMIT_SHA, "HEAD")
+    assert forward.returncode == 0, (
+        f"the seal commit {SEAL_COMMIT_SHA} is NOT an ancestor of HEAD. It is on a detached "
+        "or abandoned line of history, so it establishes no ordering on the branch that ships."
+    )
+    backward = _git("merge-base", "--is-ancestor", "HEAD", SEAL_COMMIT_SHA)
+    assert backward.returncode != 0, (
+        "HEAD reports as an ancestor of the seal commit, which cannot be true while the seal "
+        "commit is also an ancestor of HEAD unless they are the same commit. The ancestry "
+        "predicate is returning the same answer to both questions and discriminates nothing."
+    )
+
+    # ── AC4.1: every POST-SEAL detector-tuning commit CITES its partition. ──
+    # ⛔ The population is EMPTY the day this lands, and that is recorded rather than hidden:
+    # an empty iteration proves nothing, which is why -93 drives the predicate itself.
+    listed = _git(
+        "log", "--format=%H", f"{SEAL_COMMIT_SHA}..HEAD", "--", *DETECTOR_TUNING_PATHS
+    )
+    assert listed.returncode == 0, f"`git log` failed: {listed.stderr.strip()!r}"
+    post_seal = [line for line in listed.stdout.splitlines() if line.strip()]
+    uncited = []
+    for sha in post_seal:
+        message = _git("log", "-1", "--format=%B", sha)
+        assert message.returncode == 0, message.stderr
+        if not cites_partition(message.stdout):
+            uncited.append(sha)
+    assert not uncited, (
+        f"{len(uncited)} post-seal commit(s) touching a declared detector-tuning path do not "
+        f"cite the partition their evidence came from: {uncited[:5]}. {SEAL_CITATION_RULE}"
+    )
