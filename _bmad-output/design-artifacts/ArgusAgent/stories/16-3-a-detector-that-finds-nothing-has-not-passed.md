@@ -1,0 +1,911 @@
+---
+baseline_commit: 1ecf618
+---
+
+# Story 16.3: A detector that finds nothing has not passed
+
+Status: in-progress
+
+| | |
+|---|---|
+| **Epic** | 16 — Spend the Round Well — strengthen the gate, then measure once |
+| **Story key** | `16-3-a-detector-that-finds-nothing-has-not-passed` |
+| **Source** | [sprint-change-proposal-2026-08-20.md](../sprint-change-proposal-2026-08-20.md) §4.3(3), **✅ APPROVED by XAgent007 (Engineering Lead) 2026-08-20** · [epics.md](../epics.md) §Epic 16 (`epics.md:3019`), §Story 16.3 (`epics.md:3127`) |
+| **Contexted on** | HEAD `1ecf618` (`docs(16-2): record the passing review — the seal story closes`), working tree **CLEAN**, **20 ahead of `origin/master`, 0 behind** |
+| **Baseline gates (measured, this tree)** | full suite **1,667 collected · exit 0 · 0 failed · 0 skipped** with `ARGUS_REQUIRE_LANGUAGE_GRAMMARS=1` · `mypy argus` **Success, 91 source files** · `bandit -r argus --severity-level medium` **No issues identified** · `build_gate_decision.py --check` exit **0** · `build_adjudication_record.py --check` exit **0** |
+| **Authorisation** | The 2026-08-20 approval unblocks **16.1, 16.2 and 16.3 only**, each deriving and recording its **own** constants. This is the **LAST of the three**. It does **not** unblock 16.4, does **not** authorise ratification (protocol §6 **R2**), a fetch, a stage, an adjudication, or spending `DF-13-5-A`'s ONE round. |
+| **Ordering** | 🔒 **BINDING.** This story's commits must **precede** every commit containing Argus output over any bench member. The ancestry *guard* is 16.4's deliverable; this story's obligation is to **land first** and to **record its own landing shas** for 16.4 to cite — the Story 15.1 `CRITERIA_COMMIT_SHA` / Story 16.2 `SEAL_COMMIT_SHA` pattern, in two commits. |
+| **Direction** | ⛔ **STRENGTHENING ONLY.** Every change here makes clearing **harder** — measurably: a population that clears today at **3 findings** is `BLOCKED` after it. It touches neither the ≥80% `Fraction`, `VALIDATION_SET_FLOOR_N`, the five ratified members, `MANIFEST_FIELDS`, nor the sealed partition. |
+
+---
+
+## Story
+
+As the Argus maintainer,
+I want **the gate to distinguish "accurate" from "silent"**,
+So that a detector emitting three ultra-safe findings cannot score 100% and be called validated.
+
+### What this story IS
+
+**One new protocol §5 condition — the SEVENTH — that puts a floor under the size of the
+verdict-eligible population the precision ratio is computed over.** `UNEVALUABLE` (Story 13.2) closed
+the hole for an **empty** denominator and Story 13.5 made *"the corpus was read and nothing was
+promoted"* expressible. Neither closes the **tiny** one. §0.1 proves by execution, on the shipped
+code at HEAD, that a population of **exactly three findings, one per sealed member, all true
+positives, returns `CLEARED`** with all six §5 conditions `MET` and an outcome sentence reading
+*"Clearing authorises ATTESTED externalization."* That is the story title, reproduced as a
+measurement rather than argued as a risk.
+
+The floor is **derived from the ONE locked threshold** and not typed, it **composes** with 16.1's
+breadth arm and 16.2's seal arm rather than replacing either, and it is **frozen before 16.4 runs**.
+
+### What it is NOT
+
+- **NOT a recall condition, and this is the delicate one.** Recall is diagnostic-only by the **OI1
+  lock**. §0.4 establishes by measurement *where the number comes from*, which is the only thing
+  that decides the question: a floor derived from **the threshold's own arithmetic** contains no
+  `FN` term and makes no claim about undetected defects; a floor derived from **how much of the
+  defect class the bench carries** is recall with an estimated denominator, and would be an
+  operator escalation rather than something to paper over. This story takes the first and
+  **forbids the second by a structural guard** (AC2.4).
+- **NOT a replacement for the breadth condition.** AC3 makes *"quantity without breadth still
+  fails"* a driven guard, not prose. Measured today: 40 findings from one sealed member is
+  `BLOCKED` and must stay `BLOCKED`.
+- **NOT a change to what is REPORTED.** Like the seal, the yield floor governs what may **GATE**.
+  Every finding from every member stays recorded and stays disclosed.
+- **NOT a narrowing.** `VALIDATION_SET_FLOOR_N` stays **5**, `eligible_member_count()` stays **5**,
+  no member is dropped, re-weighted or made ineligible, `MANIFEST_FIELDS` stays **CLOSED at 9**, the
+  partition table is byte-unchanged.
+- **NOT a protocol re-version.** ⛔ **No `V1.4` row.** This is the **THIRD dated block under V1.3**.
+  See §2.3 — a **locked operator decision of 2026-08-20**, not a preference.
+- **NOT the rule-class arm.** `DF-16-1-A` stays **OPEN and unlanded**. Do not reopen it.
+- **NOT a run, a ratification, a fetch, a stage or an adjudication.** All 16 candidate rows keep
+  `eligible_for_n=False`; no detector executes over any repository, ratified or candidate;
+  `DF-13-5-A`'s ONE round stays **UNSPENT**.
+- **NOT 16.4, and not a step into it.** 16.4 opens by HALTING on the protocol §6 **R2** operator
+  act. This story does not start it, prepare a ratification, or pre-select a member.
+- **NOT an approval of anything.** [sprint-change-proposal-2026-08-20-amendment-A.md](../sprint-change-proposal-2026-08-20-amendment-A.md)
+  is **registered and UNAPPROVED**; nothing in it is in scope, and this story does not approve,
+  apply, cite as authority, or act on any part of it.
+
+---
+
+## §0 — PREMISES RE-MEASURED BY EXECUTION at HEAD `1ecf618`
+
+> ⛔ **Read this section before anything else.** Every prior worker in this epic found at least one
+> stated premise FALSE by executing it. 16.1 escalated because its second arm was a shutdown;
+> 16.2 found its "obvious" partition rule re-derivable and its `MANIFEST_FIELDS` premise wrong.
+> Everything below was **run**, on this tree, at this HEAD. Re-derive it yourself; do not trust
+> this text over your own execution.
+
+### §0.1 ⛔ THE HOLE IS REAL — PROVED, not argued
+
+Driven through the **shipped** `decide_gate` using `tests/test_gate_seal.py::mixed_population` and
+`tests/test_gate_breadth.py::_decide`, over synthetic populations spread across **sealed** members:
+
+| population size | outcome | precision | contributing | sealed contributing | breadth | seal |
+|---|---|---|---|---|---|---|
+| **3** | **`CLEARED`** | `1/1` | 3 | 3 | `True` | `True` |
+| **4** | **`CLEARED`** | `1/1` | 3 | 3 | `True` | `True` |
+| 5 | `CLEARED` | `1/1` | 3 | 3 | `True` | `True` |
+| 6 | `CLEARED` | `1/1` | 3 | 3 | `True` | `True` |
+
+At size 3 all six §5 conditions report `MET`:
+
+```
+[('precision-at-least-80-percent', 'MET'),
+ ('clean-repo-blocking-false-positives-zero', 'MET'),
+ ('corpus-floor-n-at-least-5', 'MET'),
+ ('adjudication-run-recorded-cleared', 'MET'),
+ ('denominator-breadth-contributing-members', 'MET'),
+ ('gate-evidence-drawn-from-the-sealed-partition', 'MET')]
+```
+
+and the record's own outcome sentence reads *"all 6 protocol §5 conditions hold … Clearing
+authorises ATTESTED externalization and NOTHING ELSE."*
+
+**Three findings. One per sealed member. All correct. `CLEARED`.** That is exactly the epic's
+sentence — *"a detector emitting three ultra-safe findings cannot score 100% and be called
+validated"* — and it is currently false. This is the single premise the whole story rests on and it
+is the first thing the dev must reproduce.
+
+### §0.2 ⛔ THE FLOOR — DERIVED from the locked threshold, then CHECKED FOR VACUITY
+
+**The derivation, and it is a property of the RATIO, not of the corpus.** The gate threshold is
+`PRECISION_GATE_THRESHOLD = Fraction(4, 5)`. At a denominator `d`, the largest number of false
+positives a population can carry and still clear is `max{ k : (d−k)/d ≥ 4/5 }`. Executed:
+
+| `d` | FPs affordable at ≥ 80% | what "≥ 80%" actually demands |
+|---|---|---|
+| 1 | **0** | 100% |
+| 2 | **0** | 100% |
+| 3 | **0** | 100% |
+| 4 | **0** | 100% |
+| **5** | **1** | **80%** |
+| 6 | 1 | 80% |
+
+**Below a denominator of five, the ≥ 80% gate is silently a 100% gate.** A detector that emits three
+findings and gets all three right has not cleared an 80% bar — it has cleared a bar it never faced,
+and the record publishes the figure as though it had. The floor is the smallest denominator at
+which the threshold means the thing it is written as.
+
+**The GENERAL FORM, stated correctly the first time.** For a threshold `T = p/q` in lowest terms,
+`(d−1)/d ≥ p/q ⟺ d ≥ q/(q−p)`, so the floor is **`ceil(q / (q − p))`** — verified against brute
+force over eight thresholds, and it **diverges from `q`**: at `5/7` it is 4 and at `7/9` it is 5,
+not 7 and 9.
+
+> ⛔ **This is 16.1's correction, pre-applied.** 16.1's dev wrote the floor as
+> `(VALIDATION_SET_FLOOR_N + 1) // 2` and *described* it as "a strict majority", then corrected
+> itself under review: half-rounded-up is a strict majority **only at odd floors**. The identical
+> trap is here — at `4/5` the floor equals `q` (5), and writing `threshold.denominator` would be a
+> derivation describing something it does not compute, correct by coincidence at exactly the one
+> threshold shipped. **Express it as `ceil(q / (q − p))`. Do not write `.denominator`.**
+
+**AT THE SHIPPED THRESHOLD THE FLOOR IS 5.** Derived, executed, not typed.
+
+**⚠️ A COINCIDENCE THAT MUST BE DISCLOSED, NOT LEANED ON.** `VALIDATION_SET_FLOOR_N` is also **5**.
+The two are independent locked quantities that happen to be equal today: one counts members that
+must EXIST, the other is the smallest denominator at which a ratio threshold is the threshold it
+is written as. **Deriving the yield floor from `VALIDATION_SET_FLOOR_N` is REJECTED** (DN-16-3-2) —
+it would fork the meaning of that floor a third time and would move the yield floor as a side
+effect of a change to the corpus floor. The equality is stated in the derivation string so nobody
+later "simplifies" one into the other.
+
+**THE VACUITY CHECK, executed — and it rules out the obvious numbers.** A §5 condition that cannot
+fail is not a threshold (this protocol's own words). Two separate vacuity tests:
+
+1. **Against any admissible population.** `derive_concentration` **raises** `VacuousDisclosureError`
+   on an empty population, so `adjudicated_population ≥ 1` for every population the decision
+   accepts. **A yield floor of 1 could not fail** — 16.1's rule-class arm died on exactly this.
+2. **Against the populations that can REACH the branch.** Measured: the smallest population that
+   passes **both** breadth and seal is **3** (three sealed members, one finding each). So a yield
+   floor of **2 or 3 can never fire** — every population it would block is already blocked by
+   breadth or seal, and the dispatch branch would be an unreachable guard. **The floor must exceed
+   3.** A floor of 4 fires on exactly one population size; **the derived floor of 5 fires on sizes 3
+   and 4**, which is precisely the pair §0.1 measured as wrongly `CLEARED`.
+
+The derivation and the vacuity floor agree, from two directions that share no reasoning. That
+agreement is the reason this number is defensible rather than convenient.
+
+### §0.3 ⛔ THE SHUTDOWN CHECK — and the honest answer, which is NOT the same shape as 16.1's or 16.2's
+
+16.1 escalated because a rule-class floor of ≥2 was **unachievable by construction** (max
+verdict-eligible rule classes = 1). 16.2 answered its equivalent by measurement (six sealed
+candidates against a floor of three, slack three). **16.3's cannot be answered the same way, and
+saying so is the point of this subsection.**
+
+**What IS measured, at this HEAD:**
+
+- **The corrected detector's verdict-eligible yield over the gating corpus is ZERO.** Counted
+  directly out of `adjudication-set-13-5.json` (2026-08-18, post-Epic-14): **4,284 findings across
+  all five ratified members — `verdict_eligible: 0`, `blocking: 0`.** Rule classes emitted:
+  `orphan_code` 1,675 · `hardcoded_secret` 1,330 · `vacuous_test_heuristic` 1,032 ·
+  `cross_partition` 231 · `traceability_not_establishable` 16. **Not one promotion.**
+- `argus/detectors/vacuous_test.py` records the same thing from the other side, in its own comment:
+  *"0 of 4,673 are corroborated at all after 14.1 — an EMPTY DENOMINATOR."*
+- **The only population that ever exceeded a yield of five was produced by the REFUTED
+  corroboration rule.** The 2026-08-16 run promoted **31** — under the pre-Epic-14 rule where
+  `ast_corroborated` was equivalent to `mock_sites >= 1` in 1,835 of 1,836 flagged tests — and those
+  31 adjudicated **0 TP / 26 FP / 5 BORDERLINE**. Yield ≥ 5 has been achieved exactly once, and it
+  was achieved entirely by false positives.
+- **The bench's defect-class content, per partition** (derived from the manifest, not typed):
+  **sealed = 6 members / 431 co-occurrence files**; open = 10 members / 183; **pre-seal (the five
+  ratified) = 1 co-occurrence file across 315 Python test files.**
+
+**What CANNOT be measured, and why that is not a dodge.** The achievable yield over the sealed
+partition is a function of what the corrected detector promotes over six repositories **nobody has
+run it over, and nobody may run it over**: fetching third-party source is a §6 **R2** operator act
+and no sealed member is staged. `scripts/candidate_selection.py` states in its own words that
+co-occurrence is *"a TEXT PROXY … It cannot see whether the SUT result is DISCARDED versus
+CONSUMED, which is what actually decides eligibility … a proxy for the DEFINITION, never for the
+VERDICT."* **431 co-occurrence files is therefore not a yield prediction and may not be used as
+one.**
+
+**THE DISPOSITION — decided here, so it cannot surface mid-round in 16.4.**
+
+> **This is NOT a shutdown, and the distinction is arithmetic rather than optimistic.** 16.1's test
+> was *"`CLEARED` unreachable **by construction** with the shipped detector set"* — an impossibility
+> independent of any corpus. A yield floor is not impossible by construction; it is **unmeasured**.
+> Recording an unmeasured outcome as an impossible one would itself be the false-subject class this
+> project files against, applied in the direction of not doing the work.
+>
+> **It is also NOT vacuous** — §0.2's second test proves the branch fires on real populations.
+>
+> **⚠️ THE PRE-ROUND DISCLOSURE, owed to the operator BEFORE the round is spent, not after.** On the
+> only evidence that exists — a promotion rate of **0 of 4,284** over the ratified corpus — the
+> likely 16.4 outcome is `BLOCKED` on **yield**, and `DF-13-5-A`'s ONE round is spent producing a
+> finding about the detector rather than a precision figure. **That outcome is already
+> pre-registered and is already the answer:** `DF-13-5-A`, answered 2026-08-17 before any number
+> existed, says a round producing zero blocking findings takes option **(b)** — *"the FR34
+> disclosure stands for V1.5 … the next attempt requires a materially better detector — NOT a
+> bigger bench."* The epic header says the same thing in its own words: *"this epic may not clear
+> the gate, and that is a permitted outcome."*
+>
+> **So the yield floor is not a new hurdle — it is `DF-13-5-A`'s own stopping rule made
+> arithmetic.** The pre-registered rule already routes a **zero**-yield round to option (b). Without
+> this condition, a round yielding **three** would route to `CLEARED` instead, which is a different
+> destination for a materially identical result. Closing that gap is the whole of this story.
+
+**⛔ THE ONE CONDITION UNDER WHICH THE DEV MUST ESCALATE RATHER THAN LAND (AC7.4).** If the dev's own
+re-measurement finds that the achievable verdict-eligible yield is bounded above by something
+**below the derived floor for a STRUCTURAL reason** — a cap in the pipeline, a budget ceiling, a
+promotion path that admits at most *k* findings by construction — that is 16.1's shutdown shape and
+it must be **escalated to the operator, not landed**. *Unmeasured* is not *impossible*; *bounded by
+construction* is. Search for such a bound and record the result either way.
+
+### §0.4 ⛔ IS A "YIELD FLOOR" RECALL BY ANOTHER NAME? — measured, and answered honestly
+
+**The OI1 text, located exactly.** `precision-validation-protocol.md`:
+
+- **line 313** — §5's table row: `| **Recall** (TP / (TP + FN)) | reported as a **diagnostic** (not
+  gated in V1) — a low recall is a coverage signal, but the externalization gate is **precision**
+  (the OI1 lock) | PrecisionResult.recall_ratio |` ← **THIS is the bullet AC2 names.**
+- line 312 — §5's *"Recall over planted defects"* row, which is the **cartridge** corpus's FR20
+  instrument. **Do not touch it.** It governs a different corpus and this condition does not.
+- line 8 and §7 (lines 562–582) — the OI1 lock's own statement. §7 carries **no** recall bullet;
+  its four invariants are N-locked-at-5, phased 3→5, precision-over-findings, and
+  provisional-below-N=5. **§7 is not edited.** Confirmed by reading; do not "find" a §7 recall
+  bullet that is not there.
+
+**THE ANSWER, and it turns entirely on where the NUMBER comes from.**
+
+`recall = TP / (TP + FN)`. It requires `FN` — the defects that exist and were missed. Over the
+repository corpus `FN` is **unknowable**: protocol V1.1 records that *"a real repository has no
+golden key"*, and `replay_harness` computes `recall_den = total_tp + total_fn` with `total_fn`
+sourced from cartridge golden keys, so over the gating corpus it degenerates to `1/1` vacuously.
+
+The condition this story lands has **no `FN` term, no estimate of one, and no reference to how many
+defects the bench contains.** Its two inputs are (i) the count of verdict-eligible findings that
+reached adjudication and (ii) the gate threshold. It says: *the denominator must be large enough
+that the ≥80% threshold is a ≥80% threshold.* **That is a statement about the resolution of the
+measurement that was taken — not a claim about what was missed.** It is precision-side arithmetic
+end to end, and it does not re-open OI1.
+
+**⛔ THE FRAMING THAT WOULD MAKE IT RECALL, named so it is refused rather than stumbled into.** The
+epic's clause *"over a bench selected **because** it carries the defect class"* is the **motivation**
+for why a low yield is informative. It is **not** a calibration input. Any derivation of the form
+*"the sealed partition holds 431 co-occurrence files, so expect at least X"* estimates `FN` from a
+text proxy and gates on it — **that IS recall by another name**, it re-opens OI1, and it is an
+**operator escalation**, not a story decision. This story's floor comes from `PRECISION_GATE_THRESHOLD`
+and from nowhere else, and **AC2.4 makes that mechanically checkable** rather than promised: the new
+module must import no recall symbol and reference no `FN`/`recall`/co-occurrence term, asserted by
+an **AST walk of the module's own names and imports** — the same structural technique
+`gate_seal.py`'s purity assertion already uses.
+
+**What the amendment to line 313 therefore says.** Not a softening and not a contradiction: recall
+stays ungated and diagnostic, **and** the amendment states explicitly what the yield floor is and
+is not, so no future reader can mistake a floor on the ratio's denominator for a quietly-landed
+recall gate. **Struck-not-erased, by dated addition (§3.4).** That is a *strengthening of the lock's
+legibility*.
+
+### §0.5 ⛔ MODULE HEADROOM — measured with the ceiling guard's own `_physical_line_count` (`_CEILING = 1200`)
+
+| file | lines | headroom | |
+|---|---|---|---|
+| **`tests/test_gate_decision.py`** | **1,191** | **9** | ⛔ **SPLIT-FIRST. THIS IS TASK 1.** |
+| `tests/test_gate_seal.py` | 1,135 | 65 | tight — put this story's guards in a NEW module |
+| `argus/precision/gate_decision.py` | 986 | 214 | fine (16.2 discharged `DF-16-1-B`) |
+| `argus/precision/gate_seal.py` | 777 | 423 | not touched |
+| `argus/precision/gate_breadth.py` | 436 | 764 | mirror lives in its test module |
+| `argus/precision/gate_conditions.py` | 220 | 980 | `SECTION_5_CONDITIONS` grows by one id |
+| `tests/corpus/_manifest.py` | 1,029 | 171 | **not touched** |
+| `tests/test_gate_breadth.py` | 704 | 496 | the dispatch mirror lives here |
+| `argus/detectors/vacuous_test.py` | 1,196 | **4** | ⛔ `DF-15-2-D` — **NOT in the write set. Do not touch.** |
+| `tests/test_vacuous_density.py` | 1,159 | **41** | ⛔ `DF-15-2-E` — **NOT in the write set. Do not touch.** |
+
+> ⛔ **`tests/test_gate_decision.py` HAS NINE LINES OF HEADROOM AND NO LEDGER ENTRY AT ALL.**
+> 16.2's contexted story flagged it at 1,193 and said it "gets the same rule"; 16.2 split the
+> *production* module (`DF-16-1-B`), left this one, and **filed no `DF-16-2-*` entry** — verified:
+> `deferred-work.md` has zero `DF-16-2` ids and 16.2's review recorded *"zero defer findings."* So
+> this trigger is real, is undocumented, and lands on this story.
+>
+> **The edit is UNAVOIDABLE, not a judgement call.** `expected_section_5_outcome` — §5's dispatch
+> mirror, in `tests/test_gate_breadth.py` — is called from
+> `tests/test_gate_decision.py::TC-…-001-55` (lines 339–451). 16.2 set the rule in that function's
+> own docstring: *"Both terms are REQUIRED keyword arguments — no default — so every existing caller
+> had to state what it believes … which is how 16.1's breadth clause came to be unreachable."* A
+> seventh condition adds a seventh dispatch branch and therefore a third required term, so `-55`
+> **must** be edited — with this project's comment discipline, inside nine lines. It does not fit,
+> and `MAINT-001-04` forbids the exemption that would be tempting at that moment.
+>
+> **The boundary, measured by AST rather than suggested.** `test_gate_decision.py` is six shared
+> fixtures (lines 123–236: `_record`, `_decision_payload`, `_judged`, `_clean_evidence`,
+> `_read_proof`, `_decide`) followed by fourteen guards. There is a clean contiguous cohesion
+> boundary at **`-59`..`-64`, lines 704–1056 (353 lines)** — the guards over the **ARTIFACT the
+> decision publishes** (the concentration disclosure, the completion bound, locators-and-counts, the
+> disclosure's persistence, no-threshold-moved, the unevaluable sentence) as against the guards over
+> the **decision function itself** (`-53`..`-58`, `-69`, `-70`). That is the *test-side mirror of the
+> split 16.2 already made in production* — `gate_conditions.py` (what a condition IS) /
+> `gate_evidence.py` (what one is MEASURED FROM). **Confirm it with your own AST walk before moving
+> a line**; do not take this table on trust. No function may be split across the boundary; the
+> shared fixtures are **imported, not copied** (`tests/invocation_sources.py` precedent,
+> `architecture.md:1045`); moved definitions are **byte-for-byte**.
+
+### §0.6 What is already true and must NOT be re-done
+
+- **§5 carries SIX conditions**, ids and order verified: `precision-at-least-80-percent`,
+  `clean-repo-blocking-false-positives-zero`, `corpus-floor-n-at-least-5`,
+  `adjudication-run-recorded-cleared`, `denominator-breadth-contributing-members`,
+  `gate-evidence-drawn-from-the-sealed-partition`. **Append the seventh; never insert.**
+- **`decide_gate` reads conditions BY ID** (`section_5_condition`), never by position. 16.1 repaired
+  the positional read. **Do not re-introduce an index.**
+- **`derive_concentration` is HOISTED** above the conditions tuple (16.1 / AC1.2), so threshold and
+  disclosure read ONE set of counts. **The yield arm reads that SAME instance.**
+- **The seal floor is RESOLVED from 16.1's, not forked** — `sealed_member_floor` calls
+  `contributing_member_floor`. Both = **3**. The yield floor is a **different quantity** with a
+  **different source**; it is not resolved from those two and must not be (DN-16-3-2).
+- **`MANIFEST_FIELDS` is CLOSED at 9**; the partition is a derived `@property`. **Untouched here.**
+- **The 40-hex pin check is hoisted** to every row (16.2). Untouched.
+- **`SEAL_COMMIT_SHA` / `PRE_SEAL_MEMBER_IDS` / `SEALED_PARTITION_TABLE`** are frozen. Untouched.
+- **`GATE_OUTCOMES` is closed at three; `CONDITION_VERDICTS` at four.** This story invents **no**
+  terminal state and **no** verdict. The states it needs already exist.
+- **The highest allocated verification id is `TC-ArgusAgent-PRECISION-001-94`.** This story starts
+  at **`-95`**.
+
+---
+
+## §1 — WHY THIS STORY EXISTS
+
+### §1.1 The three holes, and which one is left
+
+| hole | closed by | state |
+|---|---|---|
+| the corpus was never read | 13.5 — `CorpusReadProof` | ✅ closed |
+| the corpus was read and **nothing** was promoted | 13.5 — `BLOCKED` + `UNEVALUABLE` | ✅ closed |
+| the ratio is drawn from **one repository** | 16.1 — breadth condition | ✅ closed |
+| the evidence is one the tool was **tuned against** | 16.2 — seal condition | ✅ closed |
+| **the corpus was read and a HANDFUL was promoted, and it scored 100%** | **16.3 — this story** | ⛔ **OPEN, and measured open in §0.1** |
+
+### §1.2 The failure mode, stated concretely
+
+Ratify three sealed members. Run. The detector — conservative by design, and `argus/detectors/vacuous_test.py`
+says so in terms (*"the conservative default IS the moat"*) — promotes three findings, one per
+member, each an unmistakable case. The named human adjudicates all three TP. `decide_gate` returns
+`CLEARED` at precision `1/1`. The record says *"all 6 protocol §5 conditions hold"* and *"Clearing
+authorises ATTESTED externalization."* Every guard is green, every disclosure is honest, every
+number is derived — **and the claim being published is that a tool was validated at ≥80% precision
+by three observations, against a bar it never faced.** §0.1 is that scenario, executed.
+
+### §1.3 What this story does NOT fix, named so it is not mistaken for fixed
+
+- **It does not make the detector yield more.** It makes a low yield say so. That work is
+  `DF-16-1-A`'s neighbourhood and is out of the 2026-08-20 authorisation.
+- **It does not close the population divergence** between the committed record's LIVE rows and the
+  most recent adjudication set's EMITTED population — 16.1 named that as pre-existing and out of
+  scope, and it stays out of scope. What is in scope is that the yield sentence, like breadth's,
+  **names which population it counted** (AC1.5).
+- **It does not gate on rule-class breadth.** `DF-16-1-A` stays unlanded.
+- **It does not decide 16.4's outcome.** It decides what a given outcome is allowed to be called.
+
+---
+
+## §2 — THE COUPLINGS THAT WILL BITE
+
+### §2.1 ⛔ `tests/test_gate_decision.py` IS AT 1,191 / 1,200 — SPLIT FIRST. THIS IS TASK 1.
+
+See §0.5. Own commit, before any §5 change, on the `95819bc` (16.2) precedent: a restructuring
+inside a story that also amends the protocol makes the one change a reviewer most needs to read
+unreviewable. Prove it a pure restructuring — byte-identical moved definitions, collection count
+unchanged, suite exit 0 — and record the before/after line counts with `_physical_line_count`.
+
+### §2.2 A seventh §5 condition invalidates the committed gate-decision record
+
+`GateDecision.__post_init__` raises unless the condition ids are **exactly** `SECTION_5_CONDITIONS`
+in order. Appending the seventh id makes the committed `gate-decision-record.json` stale, so
+`scripts/build_gate_decision.py` must be re-run and `--check` must exit 0 afterwards. Regenerating
+it **executes no detector, stages no repository and touches no candidate** — 16.2 verified that and
+recorded it; verify it again rather than inheriting the claim.
+
+### §2.3 ⛔ THE AMENDMENT IS ADDITIVE, UNDER V1.3 — NO `V1.4` ROW
+
+A **locked operator decision of 2026-08-20**, already applied twice. The committed
+`adjudication-record.json` carries **31 human judgements** (26 FP / 5 BORDERLINE,
+`XAgent007 (Engineering Lead)`, 2026-08-17) made under V1.3. A `V1.4` row would re-stamp
+`protocol_version` across all 31 — *"a decision folded across an amendment is a re-interpretation of
+judgements nobody re-made."* This amendment is additive to §5, touches no §4 rule, no golden-key
+semantics and no TP/FP definition, so no judgement's meaning moves. `TC-ArgusAgent-PRECISION-001-45`
+/ `-63` stay green and **`adjudication-record.json` is NOT regenerated.**
+
+### §2.4 ⛔ EVERY GUARD THAT ASSERTS A §5 CONDITION COUNT OR POSITION
+
+Enumerated by search at this HEAD; audit each and record one line per guard, none silent:
+
+- `tests/test_gate_breadth.py:590` — `len(decision.conditions) == len(SECTION_5_CONDITIONS) == 6`
+  ⛔ **a pinned literal `6`.** It goes to **7**. This is an *intended behaviour change* and must be
+  annotated as 16.2 annotated it, not silently bumped.
+- `tests/test_gate_breadth.py:595` — `SECTION_5_CONDITIONS[4] == BREADTH_CONDITION_ID`. Must stay
+  true (append, never insert) and should be joined by the seal's and the yield's positions.
+- `tests/test_gate_condition_lookup.py:161,254,278` — all **derived** from `len(SECTION_5_CONDITIONS)`;
+  re-run to confirm, do not edit speculatively.
+- `tests/test_gate_decision.py:314,465,489` — all **derived**. Confirm by execution.
+- `tests/test_gate_decision.py::-55` (339–451) — ⛔ **must gain the third mirror term.** See §0.5.
+- `argus/precision/gate_decision.py:299,314,318,932,955` — counts **derived** from
+  `SECTION_5_CONDITIONS`; 16.1 made them so deliberately. Do not re-type any.
+
+### §2.5 The dispatch order is load-bearing and its reason must be written down
+
+16.1 put breadth **after** the empty-denominator branch (*an empty denominator is a stronger, more
+specific claim than a narrow one*). 16.2 put the seal **after** breadth (*not enough evidence* is a
+different claim from *evidence from the wrong place*, and a population failing both has the first
+thing wrong with it). **The yield branch goes AFTER the seal branch**, and the reason is the same
+shape and must be stated in the code: yield is a claim about **how much was found**; a population
+that fails breadth or seal has something wrong with **where it came from**, which is prior. Reporting
+yield first would tell a reader the detector was quiet when in fact the evidence was misprovenanced.
+
+### §2.6 The published figures and the dogfood artifact currency move on any `argus/**` delta
+
+Adding `argus/precision/gate_yield.py` changes the module count and LOC totals that
+`tests/test_dogfood_artifact_currency.py` and the dogfood proof assert. Re-run
+`scripts/regenerate_dogfood_artifacts.py` in its own declared step and confirm it executes no
+detector over any corpus member.
+
+---
+
+## Acceptance Criteria
+
+### AC1 — THE YIELD FLOOR IS A §5 CONDITION, DERIVED AND FROZEN BEFORE 16.4 RUNS
+
+**Given** `UNEVALUABLE` closed the emit-nothing hole for an **empty** denominator, but §0.1 proves
+by execution that a **tiny** one clears at 100%
+**When** this story completes
+**Then**:
+
+1. **AC1.1** A new module `argus/precision/gate_yield.py` carries the constants, the pure predicate,
+   and the `requirement` / `measured` / `what_would_close_it` / `unevaluable_reason` /
+   `blocked_reason` / `closure_path` **sentences** — the `gate_breadth.py` / `gate_seal.py` shape
+   exactly. `gate_decision.py` builds the `ConditionResult` (one direction only; `ConditionResult`
+   lives there and the import would otherwise be circular).
+2. **AC1.2** The floor is **DERIVED, never typed**, as `ceil(q / (q − p))` over
+   `PRECISION_GATE_THRESHOLD = p/q` — *the smallest denominator at which the ≥80% threshold admits a
+   single false positive, i.e. at which "80%" is not silently "100%"*. It is a **function of the
+   threshold**, taking the threshold as an **argument** (never resolved at module level — `AR8` /
+   `DF-9-2-A`). ⛔ **It is NOT written as `threshold.denominator`** (§0.2). The derivation string
+   lives beside the function, states the general form, states that it equals `q` only when
+   `q − p == 1`, and **discloses the coincidence with `VALIDATION_SET_FLOOR_N = 5` as a coincidence**.
+3. **AC1.3** A typed failure (`VacuousYieldFloor`, an `AR10` `ValueError` subclass whose message says
+   what a reader must do) is raised when the threshold admits no false positive at any denominator
+   (`q − p ≤ 0`), because a floor derived from such a threshold is meaningless.
+4. **AC1.4** The condition is **APPENDED** to `SECTION_5_CONDITIONS` as the **seventh** id — the six
+   historical ids keep their historical positions — under a dated comment matching the fifth and
+   sixth. Id: **`detector-yield-verdict-eligible-population-floor`**.
+5. **AC1.5** The count is **READ from the SAME `ConcentrationDisclosure` instance** the decision
+   publishes and the breadth and seal arms read (`adjudicated_population`) — **never recounted**,
+   never derived from a second source. The `measured` sentence **names which population it counted**
+   and carries breadth's divergence caveat verbatim in substance (*counted over the record's LIVE
+   rows, NOT over the most recent adjudication set's emitted blocking population, which is a
+   different and possibly empty set*).
+6. **AC1.6** Below the floor, §5's **precision** condition is `UNEVALUABLE` with the counts that made
+   it so and the outcome is `BLOCKED` with a countable closure path. The **yield condition's own
+   verdict is `MET` or `FAILED`, never `UNEVALUABLE`** — it *was* counted. `GATE_OUTCOMES` stays
+   closed at three, `CONDITION_VERDICTS` at four; **no terminal state and no verdict is invented.**
+7. **AC1.7** The dispatch branch sits **after** the seal branch, with §2.5's reason written in the
+   code.
+8. **AC1.8** ⛔ **The number is frozen in a commit that precedes every commit containing Argus output
+   over any bench member**, and this story's landing shas are recorded for 16.4 to cite. It is
+   **not** reverse-engineered from any result: no run occurs in this story, and §4.3 of the change
+   proposal — *"Numbers to be fixed by the story that implements each, derived and recorded — never
+   typed"* — is satisfied by §0.2's executed derivation, which is reproduced in the Dev Agent Record.
+
+> ⚖️ **A wording discrepancy, resolved and recorded.** Change proposal §4.3(3) says *"a run that
+> promotes **nothing**"*; the epic's AC1 says *"fewer than **a stated number**"*. **The epic
+> governs**: *promotes nothing* is already closed by Story 13.5's empty-emitted-population branch, so
+> implementing §4.3's literal wording would produce a condition that cannot fire — the vacuity §0.2
+> and this protocol both refuse. Recorded here rather than silently resolved.
+
+### AC2 — ⛔ THE OI1 BULLET IS AMENDED EXPLICITLY, STRUCK-NOT-ERASED, AND NEVER CONTRADICTED IN PASSING
+
+**Given** recall is diagnostic-only by the **OI1 lock**, and a yield floor is adjacent to recall
+**Then**:
+
+1. **AC2.1** The **§5 Recall row at `precision-validation-protocol.md:313`** — *"reported as a
+   **diagnostic** (not gated in V1) … the externalization gate is **precision** (the OI1 lock)"* — is
+   amended **EXPLICITLY**, by **dated addition, struck-not-erased (§3.4)**. The existing sentence is
+   **not** rewritten and **not** softened: recall stays ungated and diagnostic. The addition states
+   in terms **what the yield floor is** (a floor on the DENOMINATOR of the precision ratio, derived
+   from the threshold) and **what it is not** (a floor on recall, on coverage, or on any estimate of
+   `FN`), so no future reader can read a recall gate into it.
+2. **AC2.2** ⛔ **Line 312's *"Recall over planted defects"* row is NOT touched** — it governs the
+   cartridge corpus. ⛔ **§7 is NOT edited** — it carries no recall bullet (§0.4).
+3. **AC2.3** The question *"is a yield stated over the gating corpus genuinely not recall, or is it
+   recall by another name?"* is **answered in the Dev Agent Record with the measurement behind the
+   answer**, not asserted. §0.4 gives the answer and the reasoning; the dev **re-derives it** and
+   records agreement or disagreement.
+4. **AC2.4** ⛔ **The answer is made MECHANICALLY CHECKABLE, not promised.** A guard asserts —
+   **structurally, by an AST walk of `gate_yield.py`'s own imports and names**, on the
+   `gate_seal.py` purity-assertion precedent — that the module imports **no** recall symbol
+   (`recall`, `recall_ratio`, `recall_den`, `total_fn`, `PrecisionResult`), references **no** `FN`
+   term, and references **no** co-occurrence / bench-content quantity. The guard is **driven to red**
+   by an adversarial variant that adds such a reference.
+5. **AC2.5** ⛔ **ESCALATION, not papering over.** If the dev's own analysis concludes the floor
+   **cannot** be stated without an `FN` estimate — i.e. that it *is* recall by another name — the dev
+   **HALTS and escalates to the operator** with options, rather than landing it. Re-opening OI1 is an
+   operator act.
+
+### AC3 — IT COMPOSES WITH 16.1's BREADTH CONDITION; IT DOES NOT REPLACE IT
+
+**Given** the floor could be satisfied by noise
+**Then**:
+
+1. **AC3.1** Both conditions are evaluated independently and **both** appear in the condition set
+   with their **own** verdicts. Neither is folded into the other; neither short-circuits the other.
+2. **AC3.2** ⛔ **A driven guard, not prose: QUANTITY WITHOUT BREADTH STILL FAILS.** A generated
+   population with **yield well above the floor** and **contributing members below the breadth
+   floor** is asserted `BLOCKED`, with the breadth condition `FAILED` **and** the yield condition
+   `MET` — proving the two are independent terms rather than one wearing the other's name.
+   Measured today for the fixture: 40 findings from 1 sealed member → `BLOCKED`, `breadth=False`.
+3. **AC3.3** ⛔ **And the converse, which is the story's actual subject: BREADTH WITHOUT QUANTITY
+   FAILS TOO.** A generated population with **breadth and seal both MET** and **yield below the
+   floor** (sizes **3** and **4**, the two §0.1 measured as wrongly `CLEARED`) is asserted `BLOCKED`
+   on **yield**, with breadth `MET` and seal `MET`. This is the guard that would have caught §0.1.
+4. **AC3.4** ⛔ **The yield term must be DECISIVE, not lockstep** — the `mixed_population` lesson from
+   16.2 and the unreal-guard finding from 16.1's round 2. At least one guard must use a population
+   where **breadth and seal are pinned TRUE while yield alone moves**, so a mutation deleting the
+   yield clause entirely goes RED. Verify by executing that mutation.
+5. **AC3.5** The floor is **not resolved from** `contributing_member_floor` / `sealed_member_floor`
+   and does **not** fork them either: it is a different quantity from a different source, and
+   `gate_yield.py` states why (DN-16-3-2). The two existing floors are **byte-unchanged** and still
+   resolve through one function.
+
+### AC4 — DRIVEN TO BOTH OUTCOMES BY EXECUTED MUTATION, EACH OBSERVED RED
+
+**Given** this project shipped 4 of 35 unreal guards in Epic 14, and 16.1's round 2 shipped a
+breadth clause that was unreachable
+**Then**:
+
+1. **AC4.1** The new condition is driven to **both** verdicts over **GENERATED** populations — one
+   per yield count across the boundary — asserting **where the verdict flips**, not merely that it
+   has two values (the `-82`..`-85` / `-87`..`-94` precedent).
+2. **AC4.2** Every one of these mutations is **executed** on the shipped code and **observed RED**,
+   with the tree restored byte-exact afterwards (`git status --porcelain` clean,
+   `PYTHONDONTWRITEBYTECODE=1`, `__pycache__` cleared):
+   - the floor forked to a typed literal instead of derived
+   - the floor stuck at the breadth/seal floor (3) — must go RED via AC3.3
+   - the floor off-by-one in each direction
+   - `holds` stuck `True`; `holds` stuck `False`
+   - the yield dispatch branch **removed** (must be decisive — AC3.4)
+   - the yield term removed from `_precision_condition`
+   - the count read from a **second** source instead of the published disclosure
+   - the seventh condition id dropped from `SECTION_5_CONDITIONS`
+   - AC2.4's AST guard defeated by adding a recall reference
+3. **AC4.3** Non-vacuity is asserted, not assumed: every generated population is asserted non-empty
+   and asserted to actually straddle the boundary before anything is concluded from it.
+4. **AC4.4** Guards live in a **NEW** `tests/test_gate_yield.py` (`tests/test_gate_seal.py` has 65
+   lines of headroom — AC8's rule is *"do not shave a file to fit"*), verification ids
+   **`TC-ArgusAgent-PRECISION-001-95`..**, registered in the module docstring in this project's
+   established form.
+
+### AC5 — IT MAKES CLEARING HARDER, AND TOUCHES NOTHING ELSE
+
+**Given** §5 and Story 13.3 / AC5 forbid any change that makes clearing EASIER
+**Then**:
+
+1. **AC5.1** The story records **explicitly** that it makes clearing **harder**, with the executed
+   evidence: a population that returns `CLEARED` today at size 3 and 4 returns `BLOCKED` after.
+   Every population that cleared before either still clears or is now `BLOCKED`; **no** population
+   that failed before can pass because of this condition.
+2. **AC5.2** ⛔ **Byte-unchanged, verified by execution:** the ≥80% `Fraction`,
+   `VALIDATION_SET_FLOOR_N = 5`, `eligible_member_count() == 5`, the five ratified members,
+   `MANIFEST_FIELDS` (**closed at 9**), `GATE_OUTCOMES` (closed at three), `CONDITION_VERDICTS`
+   (closed at four), `SEAL_COMMIT_SHA`, `PRE_SEAL_MEMBER_IDS`, `SEALED_PARTITION_TABLE`,
+   `contributing_member_floor`, `sealed_member_floor`, and `adjudication-record.json`.
+3. **AC5.3** No member is dropped, re-weighted, made ineligible, or re-partitioned. No
+   `adjudication_caveat` is edited. **Every finding from every partition stays recorded and stays
+   disclosed** — the yield floor governs what may **GATE**, never what is **REPORTED**.
+4. **AC5.4** ⛔ **A CONDITION REQUIRES; A FILTER NARROWS.** If any design considered would *filter*
+   the population (e.g. counting only sealed rows toward yield), test it by execution, record that
+   it `raise`s or that it narrows, and **reject it on that ground** — 16.2's precedent.
+5. **AC5.5** The amendment is **INERT ON THE LIVE TREE**, verified **at the producing seam** (16.2 /
+   AC6.3): the committed record's population is 31, above the floor of 5, so the yield condition
+   reads **`MET`** and the committed decision must still be `BLOCKED` **for the Story 13.5 reason**
+   and not for a yield reason. ⛔ **Say so in the `measured` sentence**: 31 is the 2026-08-16
+   population produced by the *refuted* pre-Epic-14 corroboration rule; the corrected detector's
+   yield over the same corpus is **0**. A reader must not take `MET` as *"the detector currently
+   yields 31."*
+
+### AC6 — THE ARTIFACTS ARE CURRENT, ADDITIVE, AND THE ORDERING IS NOT BROKEN
+
+1. **AC6.1** `precision-validation-protocol.md` §5 gains a **THIRD dated block under V1.3** — the
+   conjunction sentence is **not** re-wrapped, the fifth and sixth blocks are **byte-unchanged**, and
+   the new conjunct is **APPENDED**. ⛔ **No `V1.4` row** (§2.3). Plus AC2's amendment to line 313.
+2. **AC6.2** `architecture.md`'s *"Gate-decision enforcement"* registration gains its dated
+   `⚖️ AMENDED 2026-08-20 by Story 16.3` addition, **struck-never-erased**, on the 16.1 and 16.2
+   precedent (`~~a set that is now SIX~~ **is now SEVEN**`). `TC-ArgusAgent-DOCS-001-77` stays green.
+3. **AC6.3** `scripts/build_gate_decision.py` is re-run, `gate-decision-record.json` regenerated,
+   `--check` exits 0. ⛔ **`adjudication-record.json` is NOT regenerated** and is asserted
+   byte-unchanged. Regeneration is verified to execute **no** detector, stage **no** repository and
+   touch **no** candidate.
+4. **AC6.4** `scripts/regenerate_dogfood_artifacts.py` re-run in its own declared step; dogfood
+   currency guards green.
+5. **AC6.5** ⛔ **The BINDING ORDERING CONSTRAINT holds by git ancestry**: this story's commits touch
+   **zero** candidate-output paths, and its landing shas are recorded in the story for 16.4's
+   ancestry guard to cite — the two-commit pattern 15.1 and 16.2 both used, because a commit cannot
+   cite itself.
+6. **AC6.6** ⛔ **`DF-16-1-A`'s rule-class arm stays UNLANDED**; no rule-class threshold is written
+   anywhere. `DF-13-5-A`'s ONE round stays **UNSPENT**. No ledger entry is disposed of.
+
+### AC7 — SCOPE, ESCALATION AND WHAT MAY NOT BE TOUCHED
+
+1. **AC7.1** ⛔ **NOT AUTHORISED and NOT TAKEN:** running Argus over any bench member; ratifying,
+   fetching or staging any candidate; adjudicating any row; spending `DF-13-5-A`'s round; starting or
+   preparing **16.4**; acting on, applying or citing as authority
+   `sprint-change-proposal-2026-08-20-amendment-A.md` (**registered, UNAPPROVED**).
+2. **AC7.2** ⛔ **Locked and not reopenable** (both operator decisions, 2026-08-20): `DF-16-1-A`'s
+   rule-class arm stays unlanded; no protocol re-version and no `V1.4` row (the 31 human judgements
+   of 2026-08-17 keep V1.3 provenance); set-relative partition rules were rejected on a recorded
+   ground.
+3. **AC7.3** ⛔ **Out of the write set entirely:** `argus/detectors/**` (in particular
+   `vacuous_test.py`, 4 lines of headroom, `DF-15-2-D`), `tests/test_vacuous_density.py`
+   (`DF-15-2-E`), `tests/corpus/_manifest.py`, `argus/precision/gate_seal.py`'s rule and table,
+   `argus/precision/gate_breadth.py`'s floor.
+4. **AC7.4** ⛔ **ESCALATE, do not land, if** (a) §0.3's structural-bound test finds the achievable
+   yield capped below the floor **by construction**; or (b) AC2.5's condition fires; or (c) the
+   derivation cannot be stated without reference to bench content. Each is an operator decision.
+5. **AC7.5** Any deviation from the declared write set is **recorded with its rationale** in the Dev
+   Agent Record (16.2 / AC8.5).
+
+### AC8 — GATES AND HAND-OFF
+
+1. **AC8.1** Full suite exit **0** with `ARGUS_REQUIRE_LANGUAGE_GRAMMARS=1` (baseline **1,667**
+   collected; the new count is recorded and the delta explained); `mypy argus` Success;
+   `bandit -r argus --severity-level medium` clean; module-size ceiling green with **no new
+   `_EXEMPT_BY_DESIGN` entry**; both builders `--check` exit 0.
+2. **AC8.2** NFR-M1 before/after recorded for **every** touched and adjacent module using
+   `_physical_line_count`. ⛔ **No shaving a file to fit** — the remedy is a cohesion split.
+3. **AC8.3** Local gates are **Windows-only**; CI runs an ubuntu matrix. If not pushed, record that
+   **no CI run covers these shas** as an OPEN item rather than claiming green.
+4. **AC8.4** A hand-off section for **16.4** stating: the landing shas, the seventh condition's id,
+   the floor and its derivation, the yield condition's verdict on the committed population and why,
+   and §0.3's pre-round disclosure **restated in countable terms** so the operator reads it before
+   the round is spent.
+
+---
+
+## Dev Notes
+
+### Decisions this story TAKES, each with its rejected alternative
+
+| id | decision | rejected, and why |
+|---|---|---|
+| **DN-16-3-1** | **The yield floor is `ceil(q/(q−p))` over `PRECISION_GATE_THRESHOLD`** — the smallest denominator at which the ≥80% gate admits one false positive. **= 5.** | **`threshold.denominator`** — equal at `4/5` only because `q−p == 1`; diverges at `5/7` and `7/9` (executed). Writing it that way is a derivation describing something it does not compute — 16.1's *"strict majority"* correction, repeated. |
+| **DN-16-3-2** | **NOT derived from `VALIDATION_SET_FLOOR_N`,** though both equal 5 today. The coincidence is **disclosed** in the derivation string. | Deriving from `N_floor` forks the meaning of the one locked floor a **third** time (`N` counts members that EXIST; breadth counts members that CONTRIBUTED; yield counts FINDINGS) and would move a §5 threshold as a side effect of a corpus-floor change. DN-3's one-floor rule is about **not forking one quantity**, not about collapsing three different ones into it. |
+| **DN-16-3-3** | **The subject is `ConcentrationDisclosure.adjudicated_population`** — the SAME instance breadth and seal read. | **The most recent adjudication set's emitted count** — a fourth population, forked from the three the decision already reads, and the *entirely*-empty case it would cover is **already closed** by 13.5's branch. **`total_tp + total_fp`** — excludes BORDERLINE rows and would let the yield term disagree with breadth's over one population (26 vs 31 today); the exhaustiveness branch already blocks on residuals, upstream. |
+| **DN-16-3-4** | **Own verdict is `MET`/`FAILED`, never `UNEVALUABLE`.** | `UNEVALUABLE` would tell a reader the population's size was **unknown**, when it was counted. 16.1's and 16.2's identical ruling. |
+| **DN-16-3-5** | **Dispatch branch AFTER the seal branch.** | Before it: reports *"the detector was quiet"* over a population whose real defect is misprovenanced or too narrow evidence. §2.5. |
+| **DN-16-3-6** | **A new `tests/test_gate_yield.py`; the `-55` mirror gains a third REQUIRED keyword term.** | Adding guards to `test_gate_seal.py` (65 headroom) or `test_gate_decision.py` (9) — shaving to fit is what `MAINT-001`'s remedy forbids. A **defaulted** mirror term is how 16.1's breadth clause became unreachable in `-55`. |
+| **DN-16-3-7** | **OI1 amended at §5:313 only, by dated addition, struck-not-erased; §7 and line 312 untouched.** | Editing §7 — it carries no recall bullet, and inventing an amendment target is worse than none. Editing line 312 — it governs the **cartridge** corpus, which this condition does not touch. Saying nothing — AC2 forbids contradiction-in-passing. |
+
+### Locked decisions this story CITES rather than reopens
+
+- **`DF-16-1-A`'s rule-class arm stays unlanded** (XAgent007, 2026-08-20). Max verdict-eligible rule
+  classes = 1; ≥2 is a shutdown, 1 is vacuous.
+- **No protocol re-version, no `V1.4` row** (XAgent007, 2026-08-20).
+- **Set-relative partition rules rejected** on the recorded ground that they re-derive to a different
+  answer under partial ratification (16.2).
+- **`DF-13-5-A`'s pre-registered rule** (XAgent007, 2026-08-17, before any number existed): ONE
+  round; zero blocking findings **or** precision below 80% → option (b), FR34 disclosure stands for
+  V1.5, *"a materially better detector — NOT a bigger bench."*
+- **The 2026-08-20 approval** unblocks 16.1/16.2/16.3 only, authorises **making clearing harder and
+  nothing else**, and is **not** approval to ratify, fetch, or spend the round.
+
+### Open ledger entries bearing on this story — verified against `deferred-work.md` on disk, 2026-08-20
+
+| id | bearing |
+|---|---|
+| `DF-16-1-A` | 🟠 open. **Do not land a rule-class floor.** The count stays disclosed and ungated. |
+| `DF-16-1-B` | **Discharged by 16.2** (`95819bc`). `gate_decision.py` is at 986/1200. |
+| `DF-15-2-D` | `argus/detectors/vacuous_test.py` at **1,196/1,200**. ⛔ Out of the write set. |
+| `DF-15-2-E` | `tests/test_vacuous_density.py` at **1,159/1,200**. ⛔ Out of the write set. |
+| `DF-13-5-A` | 🟠 open, ONE round **UNSPENT**. This story neither spends nor prepares it. |
+| `DF-12-1-A/B/C` | the three `_EXEMPT_BY_DESIGN` entries; the registry may only **shrink**. |
+| **none for `test_gate_decision.py`** | ⛔ **The 9-line trigger is UNFILED.** §0.5. If the split is taken, no entry is needed; if any residual remains, **file it**. |
+
+#### ⛔ Writing rule — `TC-ArgusAgent-DOCS-001-78`
+
+The story record and the ledger must agree. Every ledger edit is an **append** with a date and a
+reason; historical text is **struck, never erased** (§3.4). 16.1's review caught an undisclosed
+byte-level edit to a Story-15.x ledger entry — verify with
+`git diff 1ecf618 -- .../deferred-work.md` that your change is a **pure append, zero deletions**.
+
+### Guard vacuity — this project's signature defect, and the specific obligation here
+
+Epic 14 shipped **4 of 35** unreal guards. 16.1 shipped a breadth clause that no fixture reached and
+the review proved it by disabling both branches and observing GREEN. 16.2's `mixed_population` exists
+because a sealed-only population makes breadth and seal move in **lockstep**, so deleting the seal
+clause left everything green. **The identical trap is here in a third form**: over a population
+built only from sealed members, breadth, seal **and** yield all rise together with the fixture size.
+AC3.4 is the answer — pin breadth and seal TRUE and move yield alone — and it must be verified by
+actually deleting the yield clause and watching it go red.
+
+### Dependencies — none are added, and that is a requirement
+
+No new third-party dependency. `argus` declares its own; a §5 condition is integer and `Fraction`
+arithmetic over data the decision already carries. `math.ceil` over integers is exact; **`AR4`
+forbids float arithmetic at a threshold boundary** — prefer integer ceiling division
+(`-(-q // (q - p))`) or `Fraction`-exact arithmetic to `math.ceil` on a float quotient.
+
+### Standing rules (non-negotiable)
+
+- **`AR4`** exact arithmetic, never a float. **`AR7`** reuse, never fork. **`AR8`** pure — no I/O, no
+  clock, no network, no repository-only module-level path (`DF-9-2-A`: this module ships in a wheel).
+  **`AR10`** typed failures whose messages say what a reader must do. **`NFR-M1`** ≤1200 lines.
+  **`NFR-S1`** no source or secret bytes — counts, ids and ratio strings only. **`NFR-P1`** byte
+  stability: when the new term cannot change the answer, return the existing string **byte-for-byte**
+  rather than re-rendering (`effective_precision_gate_status` precedent).
+- **§3.4 evidence immutability**: amend by dated addition; strike, never erase.
+- **Non-vacuity floor** (`AI-E11-1`): assert `> 0` rows before asserting anything about them.
+
+### Files to touch — and the ones that must not move
+
+**Task 1 (own commit) — the split:**
+- `tests/test_gate_decision.py` — **UPDATE**, 1,191 → target ≈ 840
+- `tests/test_gate_decision_artifact.py` (or a name the AST boundary justifies) — **NEW**
+
+**Then, the story:**
+- `argus/precision/gate_yield.py` — **NEW**
+- `argus/precision/gate_conditions.py` — **UPDATE** (the seventh id, appended, dated comment)
+- `argus/precision/gate_decision.py` — **UPDATE** (`assess_yield` call, `_yield_condition`, the
+  dispatch branch, the yield term in `_precision_condition`, the `GateDecision.yield_` field, the
+  `CLEARED` sentence)
+- `argus/precision/gate_breadth.py` — **UPDATE**, minimal: `effective_precision_gate_status` must
+  account for the yield term the same way it accounts for breadth, or an equivalent is added in
+  `gate_yield.py` — **decide and record which**, and do not fork the status function (`AR7`)
+- `tests/test_gate_yield.py` — **NEW** (`-95`..)
+- `tests/test_gate_breadth.py` — **UPDATE** (the mirror's third required term; the pinned `6` → `7`
+  with an annotation; the positional assertions extended)
+- `tests/test_gate_decision.py` — **UPDATE** (`-55`'s third mirror term)
+- `_bmad-output/design-artifacts/ArgusAgent/precision-validation-protocol.md` — **UPDATE** (§5 third
+  dated block; the line-313 OI1 amendment)
+- `_bmad-output/design-artifacts/ArgusAgent/architecture.md` — **UPDATE** (registration addition)
+- `_bmad-output/design-artifacts/ArgusAgent/validation-corpus/gate-decision-record.json` —
+  **REGENERATED**
+- dogfood artifacts — **REGENERATED**
+- `_bmad-output/design-artifacts/ArgusAgent/deferred-work.md` — **APPEND ONLY**, if anything is filed
+
+**⛔ MUST NOT MOVE:** `argus/detectors/**` · `tests/corpus/_manifest.py` · `argus/precision/gate_seal.py`'s
+rule, table and floor · `argus/precision/gate_breadth.py`'s floor · `adjudication-record.json` ·
+`argus/precision/replay_harness.py`'s threshold, fold and recall fields · every candidate-output path.
+
+### Previous-story intelligence — 16.1 and 16.2 (both `done`, 2026-08-20)
+
+**From 16.1** (`a20a0ef`, `7323f61`, `0733a33`, `6128466`): the breadth condition in a **separate
+module** with `gate_decision` building the `ConditionResult`; `derive_concentration` **hoisted** so
+one set of counts serves threshold and disclosure; the positional condition read **repaired** to
+`section_5_condition`. Its two hard lessons: **(a)** it escalated rather than landing a shutdown
+floor — the disposition is `DF-16-1-A`; **(b)** its round-2 breadth clause was **unreachable** and
+its derivation prose **overstated** what the arithmetic computed, both caught by review. §0.2 and
+AC3.4 exist because of exactly those two.
+
+**From 16.2** (`95819bc`, `f89f028`, `fd20c32`, `9d7f8b5`, `3243a4a`): the seal condition resolving
+its floor **through 16.1's function** rather than forking it; the **SPLIT-FIRST** discipline in its
+own commit; the **second dated block under V1.3** with no `V1.4` row; `mixed_population` to make a
+clause **decisive** rather than lockstep; the two-commit sha-recording pattern; and the up-front
+countable consequence for 16.4 (*sealed ∩ ratified is empty — R2 must ratify ≥3 of six named
+sealed candidates*). Its review was a **PASS with zero decision-needed, zero patch, zero defer**
+findings — the bar this story is held to.
+
+**From 15.1**: pick-before-you-look; `CRITERIA_COMMIT_SHA`; and the explicit refusal, recorded in
+`candidate_selection.py`, to derive a bench floor from the gate arithmetic — *"that reasons backwards
+from the number the round is supposed to measure."* ⛔ **That refusal does NOT bar DN-16-3-1, and the
+distinction must be recorded:** 15.1 refused to shape the **CORPUS** to the number. This shapes the
+minimum **RESOLUTION** below which the number is not the number it claims to be. The directions are
+opposite — corpus-shopping moves a number to *produce* a result; this refuses a result of
+insufficient resolution — and the discriminator is 16.1's *direction of travel* test, which this
+passes: it makes clearing **strictly harder** and is the **highest** of the three floors in §5.
+
+### Git intelligence
+
+Last five commits are all 16.2's record and its landing. `1ecf618` closes 16.2. Working tree clean,
+20 ahead of `origin/master`, 0 behind. **No commit in this range touches any candidate-output path**,
+so the ordering constraint is intact entering this story and must be intact leaving it.
+
+### References
+
+- `epics.md:3019` (epic header, **binding ordering constraint** and **permitted-failure clause**),
+  `epics.md:3127` (Story 16.3)
+- `sprint-change-proposal-2026-08-20.md` §4.3(3), §6 (approval and its limits)
+- `precision-validation-protocol.md` §5 (lines 305–511: the table, the conjunction, the fifth and
+  sixth dated blocks), **line 313 (the OI1 recall bullet)**, §6 (R2), §7 (the OI1 lock)
+- `architecture.md` — *Gate-decision enforcement* registration; `NFR-M1` (line 1124)
+- `deferred-work.md` — `DF-13-5-A` (the pre-registered rule), `DF-16-1-A`, `DF-16-1-B`, `DF-15-2-D`,
+  `DF-15-2-E`
+- `validation-corpus/gate-decision-record.json`, `adjudication-set-13-5.json`
+- stories `16-1-…`, `16-2-…`, `15-1-…`
+- `argus/precision/gate_breadth.py`, `gate_seal.py`, `gate_conditions.py`, `gate_decision.py`
+- `scripts/candidate_selection.py` (the co-occurrence proxy and its stated limits)
+
+---
+
+## Tasks & Subtasks
+
+### ⛔ Task 0 — REPRODUCE §0 BEFORE WRITING ANY CODE
+
+- [ ] Re-run §0.1's execution and confirm size-3 and size-4 populations return **`CLEARED`**. If they
+      do not, **STOP** — the story's premise is false and that is an escalation.
+- [ ] Re-derive §0.2's floor independently (brute force **and** closed form) and confirm **5**.
+- [ ] Re-count §0.3's `verdict_eligible: 0` out of `adjudication-set-13-5.json` yourself.
+- [ ] Re-measure §0.5's line counts with `_physical_line_count`.
+- [ ] Search for a **structural** cap on promoted findings (AC7.4). Record the result either way.
+- [ ] Record every re-derivation in the Dev Agent Record, including any disagreement with §0.
+
+### ⛔ Task 1 — SPLIT `tests/test_gate_decision.py` FIRST, IN ITS OWN COMMIT
+
+- [ ] Confirm the cohesion boundary by your **own** AST walk; do not take §0.5's table on trust.
+- [ ] Move byte-for-byte; no function split across the boundary; shared fixtures **imported**.
+- [ ] Prove a pure restructuring: collection count unchanged, suite exit 0, line counts recorded.
+- [ ] Commit alone, before any §5 change.
+
+### Task 2 — `argus/precision/gate_yield.py`
+
+- [ ] Constants, derivation string, `VacuousYieldFloor`, the pure floor function (AC1.2/AC1.3).
+- [ ] `YieldAssessment` + `assess_yield` reading the published disclosure (AC1.5), with the sentences.
+- [ ] `yield_blocked_reason` / `yield_closure_path`, including the *"NOT closable by amending the
+      floor"* leg.
+- [ ] Module docstring: the derivation, the rejected alternatives, the OI1 analysis, the
+      `VALIDATION_SET_FLOOR_N` coincidence, and the direction-of-travel statement.
+
+### Task 3 — wire it into the decision
+
+- [ ] Append the id to `SECTION_5_CONDITIONS` with its dated comment (AC1.4).
+- [ ] `assess_yield` call beside `assess_breadth` / `assess_seal`, on the SAME concentration.
+- [ ] `_yield_condition`, the dispatch branch after the seal branch with §2.5's reason, the yield
+      term in `_precision_condition`, the `GateDecision.yield_` field, the `CLEARED` sentence.
+- [ ] Decide and record the `effective_precision_gate_status` treatment (AR7 — do not fork).
+
+### Task 4 — guards
+
+- [ ] `tests/test_gate_yield.py`, `-95`.. : generated populations across the boundary; AC3.2, AC3.3,
+      AC3.4; AC2.4's AST guard driven red; non-vacuity assertions throughout.
+- [ ] `tests/test_gate_breadth.py`: third required mirror term; `6` → `7` **annotated**; positions.
+- [ ] `tests/test_gate_decision.py`: `-55`'s third mirror term.
+- [ ] Audit §2.4's guard list, one recorded line each, none silent.
+
+### Task 5 — executed mutations (AC4.2)
+
+- [ ] Every mutation in AC4.2, each observed RED, tree restored byte-exact after each.
+
+### Task 6 — protocol and architecture
+
+- [ ] §5's **third dated block under V1.3**; the fifth and sixth blocks byte-unchanged; **no `V1.4`**.
+- [ ] The **line-313 OI1 amendment**, struck-not-erased, saying what the floor is and is not.
+- [ ] `architecture.md` registration addition, struck-never-erased.
+
+### Task 7 — artifacts, in this order
+
+- [ ] `build_gate_decision.py` regenerate → `--check` exit 0; `adjudication-record.json` asserted
+      byte-unchanged; verify no detector ran and no candidate was touched.
+- [ ] `regenerate_dogfood_artifacts.py`; currency guards green.
+
+### Task 8 — gates, record, hand-off
+
+- [ ] AC8.1's gates; AC8.2's line counts; AC8.3's CI honesty; AC8.4's hand-off to 16.4 including
+      §0.3's pre-round disclosure in countable terms.
+- [ ] Record the landing shas in a second commit (a commit cannot cite itself).
+- [ ] Record deviations (AC7.5) and confirm nothing in AC7.1/AC7.2 was taken.
+
+---
+
+## Dev Agent Record
+
+### Agent Model Used
+
+_To be completed by the dev agent._
+
+### Debug Log References
+
+_To be completed by the dev agent._
+
+### Completion Notes List
+
+_To be completed by the dev agent._
+
+### File List
+
+_To be completed by the dev agent._
+
+---
+
+## Change Log
+
+| Date | Change | By |
+|---|---|---|
+| 2026-08-20 | Story contexted at HEAD `1ecf618`. Premises re-measured by execution: the three-finding hole **proved real** (size 3 and 4 return `CLEARED`); the floor **derived** as `ceil(q/(q−p))` = **5** from `PRECISION_GATE_THRESHOLD`, with the vacuity boundary independently measured at 3; the shutdown check **answered as far as it can be** (corrected detector's yield over the gating corpus = **0 of 4,284**) and its unmeasurable remainder recorded as a pre-round disclosure rather than a halt; the OI1 question **answered** (not recall — no `FN` term — conditional on the number's source, made mechanically checkable by AC2.4); the undocumented **9-line SPLIT-FIRST trigger** on `tests/test_gate_decision.py` found and made Task 1. `backlog` → `ready-for-dev`. | create-story (Scrum Master) |
