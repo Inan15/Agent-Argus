@@ -4,12 +4,24 @@ baseline_commit: 0a6e121641acbffe56697873654ba31efef3a9cd
 
 # Story 16.1: A score drawn from one repository is not a score
 
-Status: **review** — ✅ the iteration-1 review finding is FIXED and re-verified by executed
-mutation (round 3, 2026-08-20): §5's dispatch mirror is written once, `-55` no longer claims a
-clause its own fixture cannot reach, and the clause itself is driven in BOTH directions by the new
-`TC-ArgusAgent-PRECISION-001-86` — the reviewer's own two mutations now turn it RED. The deferred
-`deferred-work.md` byte-edit is reverted to its `0a6e121` bytes and disclosed. See *Dev Agent
-Record — ROUND 3*.
+Status: **done** — ✅ **code review iteration 2 (2026-08-20, Sonnet) PASSED.** Both of
+iteration-1's exact mutations were re-run independently and now turn `TC-ArgusAgent-PRECISION-001-86`
+RED where they previously left `-55` GREEN; a third, reviewer-authored mutation (an off-by-one at
+the floor) also turned `-86` RED, confirming the shared `expected_section_5_outcome()` mirror is a
+genuine independent oracle rather than a tautology. `-55`'s exhaustiveness tripwire was
+independently driven RED. No production line moved (`argus/`, `scripts/`, `README.md`,
+`CHANGELOG.md` byte-unchanged over `6766df7..HEAD`); `deferred-work.md`'s restoration confirmed
+byte-exact against `0a6e121` (121 insertions / 0 deletions, single end-of-file hunk). Full suite
+1,658 passed / 0 failed / 0 skipped, exit 0; mypy Success 88 files; bandit 0 medium / 0 high; both
+builders `--check` exit 0. See *Review Findings* (iteration 2) below.
+
+> ~~Status: **review** — ✅ the iteration-1 review finding is FIXED and re-verified by executed
+> mutation (round 3, 2026-08-20): §5's dispatch mirror is written once, `-55` no longer claims a
+> clause its own fixture cannot reach, and the clause itself is driven in BOTH directions by the new
+> `TC-ArgusAgent-PRECISION-001-86` — the reviewer's own two mutations now turn it RED. The deferred
+> `deferred-work.md` byte-edit is reverted to its `0a6e121` bytes and disclosed. See *Dev Agent
+> Record — ROUND 3*.~~ Struck, not erased (§3.4): true record of round 3's own claim, independently
+> re-verified and confirmed by code review iteration 2.
 
 > ~~Status: **in-progress** — ⛔ code review (2026-08-20, iteration 1) found `TC-ArgusAgent-PRECISION-001-55`'s
 > re-authored breadth clause cannot be driven RED by any executed mutation (AC1.5 / AC4.1 not
@@ -841,6 +853,85 @@ the reviewed commits, tree restored to clean after each mutation):**
   `decide_gate` — the `elif not expected:` (empty emitted population) branch sits strictly
   before the `elif not breadth.holds:` branch, so the live record's `BLOCKED` outcome and
   reason are unaffected by this amendment, matching the story's claim.
+
+> **Code review (bmad-code-review, adversarial, RE-REVIEW iteration 2, 2026-08-20, Sonnet).**
+> Scope: judged the story as a whole — all six commits `2ac1078`..`0733a33` (base `0a6e121`) — per
+> the orchestrator's instruction, with the fix under review being round 3's response
+> (`7323f61`/`a20a0ef`/`0733a33`) to iteration 1's ONE Med finding. **VERDICT: PASS.**
+
+- [x] [Review] ✅ **VERIFIED BY EXECUTION — iteration-1's Med finding is genuinely fixed, not
+      reworded.** Both of iteration 1's exact mutations were re-run against the current tree,
+      independently: (1) forcing `assess_breadth`'s `holds = True` unconditionally, and (2)
+      disabling both `elif not breadth.holds:` branches in `gate_decision.py` (`_precision_condition`
+      and the outcome dispatch). Both now turn `TC-ArgusAgent-PRECISION-001-86` RED — the guard
+      that previously left `-55` GREEN under the identical mutations. `-83`, `-84` and `-58` also
+      correctly went RED under mutation (1); `-83` and `-58` under mutation (2). `-55` itself was
+      confirmed to remain GREEN under both mutations, exactly as its own docstring now discloses:
+      its only fixture is the committed `adjudication-record.json` (5 `BORDERLINE` rows, never
+      `Exhaustive`), so the mirror's first dispatch clause fires before the breadth clause is
+      reached, and `-55` no longer claims otherwise.
+- [x] [Review] ✅ **The shared `expected_section_5_outcome()` mirror is a genuine independent
+      oracle, not a tautology at one remove.** A third mutation this review authored and the dev
+      did not try — changing `assess_breadth`'s predicate from `contributing >= floor` to
+      `contributing > floor` (an off-by-one at the exact boundary) — also turned `-86` RED. Because
+      `-86` derives its own `breadth_holds` term from the fixture's asserted contributing-member
+      count and `contributing_member_floor()`, never by reading `assess_breadth`'s own answer back,
+      an independent boundary bug in production is caught rather than silently absorbed by a mirror
+      that would otherwise move in lockstep with it. `-83` independently corroborates the same
+      flip point without going through the mirror at all (it asserts directly against
+      `decide_gate`'s live outcome), which is a second, structurally different confirmation of the
+      same boundary. **Residual note, not a blocking finding:** `expected_section_5_outcome` is
+      still a hand-authored second copy of a prefix of §5's dispatch order (DRY / AR7 tension); the
+      story's own hand-off addendum (points 10–11) already obligates 16.2/16.3 to extend this same
+      function rather than fork it, which is the correct mitigation and is accepted as such.
+- [x] [Review] ✅ **No other guard inherits a weakened oracle.** `expected_section_5_outcome` is
+      imported by exactly two guards — `-55` (`tests/test_gate_decision.py`) and `-86`
+      (`tests/test_gate_breadth.py`, where it is defined) — confirmed by search across
+      `tests/**`. No other guard's correctness was affected by this round's refactor.
+- [x] [Review] ✅ **`-55`'s exhaustiveness tripwire is genuinely reachable, not decorative.**
+      Verified by constructing (out-of-tree, in a throwaway Python session, nothing written to
+      disk) an all-`FP` resolution of the committed record's 5 `BORDERLINE` rows and confirming
+      `fold.exhaustiveness` becomes `Exhaustive`, at which point `-55`'s own
+      `assert not isinstance(fold.exhaustiveness, Exhaustive)` fires RED exactly as its docstring
+      promises — proving the tripwire would actually catch the record changing under it, not just
+      assert something already known to be true.
+- [x] [Review] ✅ **No production change, verified by execution.**
+      `git diff 6766df7..HEAD --stat -- argus/ scripts/ README.md CHANGELOG.md` is empty. The
+      only files in `git diff 6766df7..HEAD --name-only` are `tests/test_gate_breadth.py`,
+      `tests/test_gate_decision.py`, `deferred-work.md`, `sprint-status.yaml` and the story file.
+- [x] [Review] ✅ **The `deferred-work.md` restoration is byte-exact, verified by execution.**
+      `git diff 0a6e121 --numstat -- deferred-work.md` reports **121 insertions, 0 deletions** —
+      matching the story's claim precisely — and the previously-flagged Story-15.x entry
+      (`:5205-5206`) was byte-compared against the `0a6e121` blob directly (`git show
+      0a6e121:...deferred-work.md`): the literal CR and literal CRLF spans are restored exactly,
+      confirming the iteration-1 [Low] Defer finding is resolved by restoration, not merely by
+      disclosure.
+- [x] [Review] ✅ **Iteration-1's other conclusions re-confirmed on the current tree:** no `V1.4`
+      row in `precision-validation-protocol.md`; the committed `adjudication-record.json`'s
+      `protocol_version` is still `"V1.3"` and all 31 rows carry their original 2026-08-17
+      `XAgent007 (Engineering Lead)` provenance (read directly from the artifact, not from the
+      story's prose); no rule-class threshold anywhere in `argus/precision/**`; the ≥80%
+      `Fraction`, `VALIDATION_SET_FLOOR_N`, the five ratified members and `MANIFEST_FIELDS`
+      untouched; `gate_decision.py` still `wc -l` **1,197**.
+
+**Independent verification performed for this re-review (all executed on the working tree, tree
+restored to clean after every mutation — `git status --porcelain` empty before and after):**
+
+- `ARGUS_REQUIRE_LANGUAGE_GRAMMARS=1 python -m pytest`: **1,658 passed, 0 failed, 0 skipped, 0
+  errors**, exit 0 (235.26s) — matches the story's ROUND 3 figure exactly.
+- `mypy argus`: **Success: no issues found in 88 source files.**
+- `bandit -r argus --severity-level medium`: **0 medium, 0 high** (20 low, unchanged).
+- `python scripts/build_gate_decision.py --check`: exit **0**.
+- `python scripts/build_adjudication_record.py --check`: exit **0** — `OK — the adjudication
+  record is current (31 row(s))`.
+- Three hand mutations, each observed RED then restored and re-verified clean: (1) `holds = True`
+  in `assess_breadth`, (2) both `elif not breadth.holds:` branches in `gate_decision.py` disabled,
+  (3) `assess_breadth`'s predicate changed to `contributing > floor` (reviewer-original, off-by-one
+  at the boundary). All three reddened `-86`; none reddened `-55`, consistent with `-55`'s own
+  disclosed scope.
+- Tripwire reachability: an all-`FP` resolution of the committed record's `BORDERLINE` rows was
+  constructed in-memory and shown to flip `fold.exhaustiveness` to `Exhaustive`, at which point
+  `-55`'s tripwire assertion fails as documented.
 
 ---
 
