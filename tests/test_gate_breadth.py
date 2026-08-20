@@ -49,6 +49,7 @@ from pathlib import Path
 import pytest
 
 from argus.precision.adjudication import (
+    AdjudicatedPrecision,
     AdjudicationRecord,
     AdjudicationRow,
     Exhaustive,
@@ -163,6 +164,38 @@ def _decide(record: AdjudicationRecord) -> GateDecision:
         commit_sha="0" * 40,
         decided_on="2026-08-17",
     )
+
+
+def expected_section_5_outcome(fold: AdjudicatedPrecision, *, breadth_holds: bool) -> str:
+    """Protocol §5's three-way dispatch, RECOMPUTED from its preconditions — ONE mirror.
+
+    Shared by ``TC-ArgusAgent-PRECISION-001-55``, which drives it over the COMMITTED
+    artifact, and by ``-86``, which drives it over GENERATED populations in BOTH directions.
+    A second copy would be a second thing that can drift from the dispatch it mirrors, and
+    the drift would be invisible to a reader of either (AR7 — reuse, never fork; the same
+    reason ``tests/test_gate_decision.py`` already IMPORTS its analyzer rather than copying
+    it).
+
+    **It lives in the breadth module deliberately**, and the reason is recorded rather than
+    left to be guessed: ``breadth_holds`` is the only term in this dispatch whose truth this
+    project had to CONSTRUCT a population to observe, every such population lives here, and
+    ``tests/test_gate_decision.py`` is full at this project's guard density — AC8.5's rule is
+    *"do not shave a file to fit"*.
+
+    *breadth_holds* is an ARGUMENT rather than something derived inside, so one caller can
+    drive the clause both ways over the SAME fold. That is what makes the clause a guard
+    instead of a comment: see ``-86``, and the 2026-08-20 review finding that made it
+    necessary.
+
+    PURE (AR8): a frozen fold and a bool in, a registered outcome name out. No I/O, no clock.
+    """
+    if fold.determinism is not None or not isinstance(fold.exhaustiveness, Exhaustive):
+        return "BLOCKED"
+    if fold.precision is None:
+        return "BLOCKED"
+    if not breadth_holds:
+        return "BLOCKED"
+    return "CLEARED" if fold.meets_threshold else "NOT_CLEARED"
 
 
 def test_TC_ArgusAgent_PRECISION_001_82_the_breadth_floor_is_derived_from_the_one_locked_floor() -> None:
@@ -493,3 +526,97 @@ def test_TC_ArgusAgent_PRECISION_001_85_the_measured_sentence_names_its_populati
         "§5 must now carry exactly five conditions: the four historical ones in their "
         "historical positions, plus the appended breadth condition (DN-16-1-2)"
     )
+
+
+def test_TC_ArgusAgent_PRECISION_001_86_the_outcome_recomputation_carries_a_live_breadth_term() -> None:
+    """TC-ArgusAgent-PRECISION-001-86 — AC1.5/AC4.1: ``-55``'s breadth clause, actually DRIVEN.
+
+    **Why this guard exists, recorded rather than glossed.** Story 16.1's round 2 taught the
+    §5 dispatch mirror a breadth term and marked AC1.5 discharged for
+    ``TC-ArgusAgent-PRECISION-001-55``. The 2026-08-20 code review proved by EXECUTION that
+    the claim was not supported: ``-55`` recomputes over the COMMITTED adjudication record,
+    which carries 5 ``BORDERLINE`` rows and is therefore never :class:`Exhaustive`, so the
+    first clause always fires and the breadth clause is unreachable for that fixture. Forcing
+    ``holds = True`` in the shipped :func:`assess_breadth` left ``-55`` GREEN; disabling both
+    breadth branches in ``gate_decision`` left it GREEN. **A clause no executed mutation can
+    redden is the ``DF-15-2-A`` unreal-guard class** — here on the guard whose entire subject
+    is *"the outcome is DERIVED, not chosen."* This guard is the repair, and it is the
+    generated-fixture half of it; ``-55``'s docstring now states plainly which clause its own
+    fixture reaches.
+
+    **Observable:** the LIVE :func:`decide_gate` outcome over generated populations, compared
+    against the SAME :func:`expected_section_5_outcome` recomputation ``-55`` uses.
+
+    **The recomputation's breadth term is derived HERE from the fixture's own contributing
+    member count and the derived floor — never from :func:`assess_breadth`.** That is the
+    load-bearing detail: a guard that fed the shipped predicate's own answer back into its
+    expectation would move in lockstep with the defect it hunts and would stay green through
+    exactly the mutation the review ran.
+
+    **The defect MOVES the observable at the real seam, in BOTH directions:** below the floor
+    the recomputation says ``BLOCKED`` while a decision that ignored breadth says ``CLEARED``;
+    at or above the floor it says ``CLEARED`` while a predicate stuck at ``FAILED`` says
+    ``BLOCKED``. Both are asserted to have actually been observed.
+
+    **Adversarial variants GENERATED with their count:** one population per contributing
+    member count in ``1..len(ratified)``, each one asserted reproducible, exhaustive, over
+    threshold and carrying exactly the member count it claims — so breadth is the ONLY term
+    that can move the answer. On every below-floor population the clause is additionally
+    asserted **decisive**, by flipping its argument over the identical fold.
+
+    **Non-vacuity first** (``DF-15-2-A`` arm (b)): the generated range is asserted to straddle
+    the floor, and the two observed directions are asserted to be different answers.
+    """
+    members = _ratified()
+    floor = _floor()
+    assert 1 < floor <= len(members), (
+        f"non-vacuity: the derived floor {floor} does not lie strictly inside the generated "
+        f"range 1..{len(members)}, so this guard could not observe the clause both ways"
+    )
+    size = max(len(members) * 3, 6)
+
+    observed: dict[int, str] = {}
+    decisive = 0
+    for contributing in range(1, len(members) + 1):
+        record = _population(contributing_members=contributing, size=size)
+        decision = _decide(record)
+        fold = decision.fold
+        # NON-VACUITY, asserted BEFORE anything is compared: every clause ABOVE the breadth
+        # clause must be false, or the recomputation would answer BLOCKED for a reason that
+        # has nothing to do with breadth — which is precisely the defect this repairs.
+        assert fold.determinism is None, fold.determinism
+        assert isinstance(fold.exhaustiveness, Exhaustive), fold.exhaustiveness
+        assert fold.precision is not None and fold.meets_threshold, (
+            f"the generated population must be over threshold before breadth is asked "
+            f"anything; got precision={fold.precision_ratio!r}"
+        )
+        # The breadth term, derived from the FIXTURE and the derived floor — never read back
+        # out of the predicate under test.
+        holds = contributing >= floor
+        expected = expected_section_5_outcome(fold, breadth_holds=holds)
+        assert expected == ("CLEARED" if holds else "BLOCKED"), expected
+        assert decision.outcome == expected, (
+            f"{contributing} contributing member(s) against a floor of {floor}: the "
+            f"preconditions dictate {expected!r} and the live decision recorded "
+            f"{decision.outcome!r}. §5's breadth condition is "
+            f"{section_5_condition(decision.conditions, BREADTH_CONDITION_ID).verdict!r}"
+        )
+        observed[contributing] = decision.outcome
+        if not holds:
+            # THE CLAUSE IS DECISIVE over this identical fold: flip the one argument and the
+            # recomputation answers the opposite. This is what "unreachable branch" looked
+            # like before, and what makes it a driven branch now.
+            assert expected_section_5_outcome(fold, breadth_holds=True) == "CLEARED", (
+                "the breadth clause is not what refused this population — some other "
+                "precondition is, so the clause is still undriven"
+            )
+            decisive += 1
+
+    assert decisive >= 1, "no below-floor population was generated; the clause was never taken"
+    assert len(observed) == len(members) > 1, observed
+    assert set(observed.values()) == {"BLOCKED", "CLEARED"}, (
+        f"the generated family observed only {sorted(set(observed.values()))} — a guard that "
+        f"never saw the verdict flip cannot notice a predicate that stopped flipping"
+    )
+    assert all(observed[n] == "BLOCKED" for n in range(1, floor)), observed
+    assert all(observed[n] == "CLEARED" for n in range(floor, len(members) + 1)), observed

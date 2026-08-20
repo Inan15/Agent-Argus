@@ -5203,8 +5203,7 @@ disposed and three new ones are filed, one of which bounds Epic 15.
   never an exemption. The contract docstring was condensed twice during implementation and was
   deliberately **not** shaved below the content `AC2.2` / `AC2.4` / `AC10.1` / `AC10.2` require to
   be **in the code**: the index named as the counterparty, `argus/pipeline_stages.py:124` named as
-  the reason `
-` / `
+  the reason `` / `
 ` are not part of the problem, the adoptability statement a second
   detector would read, the `DF-15-2-B` price, and the `DF-14-3-A` / `-B` / `-C` statement of what
   stays broken. ⛔ **The trigger, stated so it is not a judgement call at the moment it is
@@ -5353,3 +5352,28 @@ disposed and three new ones are filed, one of which bounds Epic 15.
     ceiling guard fails loudly at 1,201 and never silently, but it would fail in the middle of the
     story that must not stall, and the tempting answer at that moment is the exemption
     `MAINT-001-04` forbids.
+
+## Deferred from: code review of 16-1-a-score-drawn-from-one-repository-is-not-a-score (2026-08-20, iteration 1)
+
+- **Undisclosed byte-level edit to a pre-existing (Story 15.x-era) `deferred-work.md` entry,
+  outside this story's declared write set.** `_bmad-output/design-artifacts/ArgusAgent/deferred-work.md:5205-5206`
+  (the `argus/detectors/vacuous_test.py` NFR-M1 entry): the pre-existing sentence fragment
+  `` the reason `` / ` `` was silently changed to `` the reason `\n` / `\n` `` by this story's
+  commits, with no mention in the Dev Agent Record and despite the story's own File List
+  claiming only `DF-16-1-A` / `DF-16-1-B` were added and "nothing is disposed of." Content
+  impact is negligible (an unprintable example value in a backtick span), but it is an edit to
+  historical ledger text made without the append-only / strike-not-erase annotation this
+  project's own writing rules require for exactly this file. Cosmetic — not a functional or
+  correctness issue; no assertion or guard is affected. Owner: unassigned. No target story —
+  revert the one line, or annotate it properly, alongside the next edit to that entry.
+
+  - **RESOLVED 2026-08-20 (Story 16.1, review-fix round), by RESTORATION rather than by
+    annotation.** The finding is correct and the remedy taken is the first of the two it names:
+    the pre-existing sentence's bytes were restored to their `0a6e121` state — the two backtick
+    spans hold a literal CR and a literal CRLF again, which is the example the Story-15.x entry
+    was making — so no historical ledger text carries an undisclosed edit. Verified by execution:
+    `git diff 0a6e121 -- _bmad-output/design-artifacts/ArgusAgent/deferred-work.md` is now a
+    SINGLE hunk at the end of the file with **zero deletions**, i.e. a pure append. The edit is
+    also now disclosed in the story's own File List and Dev Agent Record, so the entry above is
+    left standing, unedited, as the record that the review caught it. This bullet is the dated
+    append §3.4 asks for; nothing above it was rewritten.

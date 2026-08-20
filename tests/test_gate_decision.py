@@ -94,7 +94,9 @@ from argus.verdict.negative_assurance import INSTRUMENT_STATUS, InstrumentStatus
 
 # The analyzer is IMPORTED, never copied (12.6 / DN-7 — a second copy is a second thing to
 # keep true, and this one is the only mechanism tying the declared instrument status to the
-# harness).
+# harness). §5's dispatch MIRROR is imported for the same reason and is driven to its breadth
+# branch, in both directions, by -86 in the module it lives in.
+from tests.test_gate_breadth import expected_section_5_outcome
 from tests.test_instrument_disclosure import protocol_cleared_call_sites
 
 _REPO_ROOT = Path(__file__).resolve().parents[1]
@@ -363,12 +365,21 @@ def test_TC_ArgusAgent_PRECISION_001_54_the_decision_is_committed_derived_and_re
 def test_TC_ArgusAgent_PRECISION_001_55_the_live_outcome_is_derived_not_chosen() -> None:
     """TC-ArgusAgent-PRECISION-001-55 — AC1/AC5: the outcome equals what the preconditions dictate.
 
-    **Observable:** the committed outcome, versus the three-way dispatch recomputed here
-    from the fold's own preconditions. This is the guard that would catch a story writing
-    down the answer it preferred: the expected outcome is DERIVED from
-    ``determinism`` / ``exhaustiveness`` / ``precision`` rather than pinned as a literal, so
-    it stays correct when the adjudication moves and it fails the moment the recorded
-    outcome and the measured state disagree.
+    **Observable:** the committed outcome, versus §5's three-way dispatch recomputed from
+    the fold's own preconditions by the shared :func:`expected_section_5_outcome` mirror.
+    This is the guard that would catch a story writing down the answer it preferred: the
+    expected outcome is DERIVED from ``determinism`` / ``exhaustiveness`` / ``precision`` /
+    breadth rather than pinned as a literal, so it stays correct when the adjudication moves
+    and it fails the moment the recorded outcome and the measured state disagree.
+
+    ⛔ **WHICH CLAUSE THIS FIXTURE REACHES, stated plainly** (2026-08-20 code review). The
+    COMMITTED record carries 5 ``BORDERLINE`` rows, is therefore never :class:`Exhaustive`,
+    and the mirror's FIRST clause always fires here. The breadth clause is **not** exercised
+    by this fixture and is not claimed to be: round 2 claimed it and the review disproved it
+    by execution (``holds = True``, and separately both breadth branches disabled, left this
+    guard GREEN). The term is passed in so this guard cannot expect ``CLEARED`` over a narrow
+    denominator should the record ever become exhaustive; the clause itself is DRIVEN both
+    ways by ``tests/test_gate_breadth.py::TC-ArgusAgent-PRECISION-001-86``.
     """
     record = _record()
     assert len(record.rows) > 0, "non-vacuity: the adjudication record is EMPTY"
@@ -380,28 +391,23 @@ def test_TC_ArgusAgent_PRECISION_001_55_the_live_outcome_is_derived_not_chosen()
         population_n=validation_set_population_n(),
         floor_n=int(registry_module().VALIDATION_SET_FLOOR_N),
     )
-    # RE-AUTHORED 2026-08-20 (Story 16.1 / AC1.5) as an INTENDED BEHAVIOUR CHANGE. This
-    # recomputation carried NO breadth term and was GREEN only because the live fold is
-    # non-exhaustive: a fold that is reproducible, exhaustive and over threshold with a
-    # one-member denominator would make it expect CLEARED while the decision correctly
-    # records BLOCKED. The divergence would first appear in the middle of the one permitted
-    # measurement round, on a guard nobody edited. The term is DERIVED from the same
-    # concentration the decision publishes — never recounted here.
+    # RE-AUTHORED 2026-08-20 (Story 16.1 / AC1.5), and REPAIRED the same day after the code
+    # review proved the re-authoring had not been driven. The dispatch mirror is now written
+    # ONCE, in tests/test_gate_breadth.py, and its breadth clause is driven in both
+    # directions by -86 over GENERATED populations. Here the breadth term is DERIVED from the
+    # same concentration the decision publishes — never recounted — and over THIS fixture the
+    # mirror's first clause fires, because the committed record is not exhaustive. That is
+    # recorded in the docstring rather than papered over.
     breadth = assess_breadth(
         derive_concentration(record, ratified_member_ids=ratified),
         validation_set_floor_n=int(registry_module().VALIDATION_SET_FLOOR_N),
         population_source=_RECORD_PATH.name,
     )
-    if fold.determinism is not None or not isinstance(fold.exhaustiveness, Exhaustive):
-        expected = "BLOCKED"
-    elif fold.precision is None:
-        expected = "BLOCKED"
-    elif not breadth.holds:
-        expected = "BLOCKED"
-    elif fold.meets_threshold:
-        expected = "CLEARED"
-    else:
-        expected = "NOT_CLEARED"
+    assert not isinstance(fold.exhaustiveness, Exhaustive), (
+        "the committed record became EXHAUSTIVE. This guard's fixture now reaches clauses it "
+        "did not before: re-read its docstring, and check -86 still covers the breadth clause."
+    )
+    expected = expected_section_5_outcome(fold, breadth_holds=breadth.holds)
 
     payload = _decision_payload()
     assert payload["outcome"] == expected, (
