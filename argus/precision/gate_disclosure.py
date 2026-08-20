@@ -143,6 +143,14 @@ def ratified_corpus_members() -> tuple[dict[str, str], ...]:
     typed: the member ids and the pinned shas the decision record publishes are the
     manifest's own, so a ratification or an exclusion moves the record rather than
     contradicting it (``AI-E9-7``).
+
+    **``partition`` added 2026-08-20 (Story 16.2 / AC3.3)** — the member's SEAL partition,
+    ``sealed`` | ``open`` | ``pre-seal``. It arrives through the SAME existing lazy edge and
+    creates no second one: it is read off ``spec.partition``, which the manifest derives
+    from that row's own pin through ``argus.precision.gate_seal.partition_of``. It is not
+    re-derived here, because a second derivation is a second answer to one question. This
+    is what carries the partition into ``decide_gate``, which may not resolve the manifest
+    itself (AR8).
     """
     members = corpus_manifest_module().eligible_members()
     return tuple(
@@ -151,6 +159,7 @@ def ratified_corpus_members() -> tuple[dict[str, str], ...]:
             "commit_sha": str(spec.commit_sha),
             "primary_language": str(spec.primary_language),
             "provenance": str(spec.provenance),
+            "partition": str(spec.partition),
         }
         for spec in members
     )

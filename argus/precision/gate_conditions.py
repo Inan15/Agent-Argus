@@ -44,6 +44,7 @@ from dataclasses import dataclass
 from typing import Any
 
 from argus.precision.gate_breadth import BREADTH_CONDITION_ID
+from argus.precision.gate_seal import SEAL_CONDITION_ID
 
 __all__ = [
     "CONDITION_VERDICTS",
@@ -113,6 +114,14 @@ SECTION_5_CONDITIONS: tuple[str, ...] = (
     # clean prefix-plus-one diff a reviewer can actually read. Nothing reads this tuple by
     # POSITION (:func:`section_5_condition`), which is what makes appending safe at all.
     BREADTH_CONDITION_ID,
+    # AMENDED 2026-08-20 (Story 16.2; protocol §5's SECOND dated block of the same date).
+    # APPENDED under the same rule DN-16-1-2 set: the five historical ids keep their
+    # historical positions and the regenerated record's condition list is a clean
+    # prefix-plus-one diff. §5 is amended by dated ADDITION and by nothing else — there is
+    # no V1.4 row and there was no re-version, because the committed record carries 31 human
+    # judgements made under V1.3 and re-stamping them would re-interpret judgements nobody
+    # re-made (locked operator decision, XAgent007, 2026-08-20).
+    SEAL_CONDITION_ID,
 )
 
 

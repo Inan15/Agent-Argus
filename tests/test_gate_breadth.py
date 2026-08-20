@@ -76,6 +76,13 @@ from argus.precision.gate_decision import (
 from argus.precision.gate_disclosure import derive_concentration, ratified_corpus_members
 from argus.precision.replay_harness import PRECISION_GATE_THRESHOLD, registry_module
 
+# The SEALED-population generators are IMPORTED, never copied (AR7 — the same reason
+# tests/test_gate_decision.py imports this module's dispatch mirror instead of forking it).
+# Story 16.2 made every ratified member `pre-seal`, so a population that can reach a §5
+# OUTCOME at all has to be built over the SEALED bench rows, and those live in the module
+# that owns the partition.
+from tests.test_gate_seal import sealed_corpus_members
+
 _REPO_ROOT = Path(__file__).resolve().parents[1]
 _ARTIFACTS = _REPO_ROOT / "_bmad-output" / "design-artifacts" / "ArgusAgent"
 _RECORD_PATH = _ARTIFACTS / "validation-corpus" / "adjudication-record.json"
@@ -101,12 +108,26 @@ def _ratified() -> list[str]:
     return members
 
 
+def _sealed() -> list[str]:
+    """The SEALED bench member ids — the population a §5 OUTCOME is now reachable over.
+
+    ⛔ ADDED 2026-08-20 (Story 16.2 / AC6.3). Every one of the five RATIFIED members became
+    ``pre-seal`` when the seal landed, so a population spread over them fails §5's SEAL
+    condition by construction and can never be ``CLEARED`` whatever breadth does. A guard
+    below that kept generating over ``_ratified()`` would still pass — and would silently
+    have become a guard about the seal floor rather than about breadth.
+    """
+    members = [str(member["member_id"]) for member in sealed_corpus_members()]
+    assert members, "non-vacuity: the manifest reports ZERO sealed members"
+    return members
+
+
 def _floor() -> int:
     return contributing_member_floor(int(registry_module().VALIDATION_SET_FLOOR_N))
 
 
 def _population(*, contributing_members: int, size: int) -> AdjudicationRecord:
-    """A judged population spread over EXACTLY *contributing_members* ratified members.
+    """A judged population spread over EXACTLY *contributing_members* SEALED members.
 
     Built at the real seam — real :class:`AdjudicationRow` objects carried by the real,
     committed :class:`AdjudicationRecord` (its protocol version, its reproducibility flag,
@@ -116,8 +137,14 @@ def _population(*, contributing_members: int, size: int) -> AdjudicationRecord:
 
     The locators are per-index and therefore distinct, so the content-addressed row ids
     cannot collide and the population's size is exactly *size*.
+
+    ⛔ RE-AUTHORED 2026-08-20 (Story 16.2 / AC6.3) — INTENDED BEHAVIOUR CHANGE, recorded as
+    one. It spread over ``_ratified()``; it now spreads over ``_sealed()``, because §5 gained
+    a SIXTH condition and all five ratified members are ``pre-seal``. Nothing was relaxed:
+    the generated population is still real rows over real manifest members at real pins, and
+    it is now capable of reaching a §5 outcome, which is what every guard below asserts about.
     """
-    members = _ratified()
+    members = _sealed()
     assert 1 <= contributing_members <= len(members)
     assert size >= contributing_members
     rows = tuple(
@@ -144,8 +171,17 @@ def _population(*, contributing_members: int, size: int) -> AdjudicationRecord:
     return record
 
 
-def _decide(record: AdjudicationRecord) -> GateDecision:
-    """Drive the shipped :func:`decide_gate` with the live derived corpus figures."""
+def _decide(
+    record: AdjudicationRecord, *, corpus: tuple[dict[str, str], ...] | None = None
+) -> GateDecision:
+    """Drive the shipped :func:`decide_gate` with the live derived corpus figures.
+
+    *corpus* defaults to the five RATIFIED members — the shape every caller had before
+    2026-08-20 — and is passed explicitly by the guards that generate over SEALED rows, so
+    the concentration and the partitions describe the SAME population. Passing a row here
+    ratifies nothing: ``decide_gate`` takes ``ratified_members`` as an argument, and the
+    protocol §6 R2 act is an operator's.
+    """
     return decide_gate(
         record,
         expected_finding_ids=[row.finding_id for row in record.rows],
@@ -159,14 +195,16 @@ def _decide(record: AdjudicationRecord) -> GateDecision:
             clean_member_ids=("clean_control",),
             note="synthetic fixture",
         ),
-        ratified_members=ratified_corpus_members(),
+        ratified_members=ratified_corpus_members() if corpus is None else corpus,
         record_is_tracked_in_git=True,
         commit_sha="0" * 40,
         decided_on="2026-08-17",
     )
 
 
-def expected_section_5_outcome(fold: AdjudicatedPrecision, *, breadth_holds: bool) -> str:
+def expected_section_5_outcome(
+    fold: AdjudicatedPrecision, *, breadth_holds: bool, seal_holds: bool
+) -> str:
     """Protocol §5's three-way dispatch, RECOMPUTED from its preconditions — ONE mirror.
 
     Shared by ``TC-ArgusAgent-PRECISION-001-55``, which drives it over the COMMITTED
@@ -187,13 +225,29 @@ def expected_section_5_outcome(fold: AdjudicatedPrecision, *, breadth_holds: boo
     instead of a comment: see ``-86``, and the 2026-08-20 review finding that made it
     necessary.
 
-    PURE (AR8): a frozen fold and a bool in, a registered outcome name out. No I/O, no clock.
+    ⛔ **``seal_holds`` ADDED 2026-08-20 (Story 16.2 / AC6.2), on exactly the same terms and
+    for exactly the same reason.** §5 gained a sixth condition; the mirror is ADDED TO, never
+    forked. Both terms are REQUIRED keyword arguments — no default — so every existing caller
+    had to state what it believes about the seal rather than silently inherit the old answer,
+    which is how 16.1's breadth clause came to be unreachable in ``-55``.
+
+    ⛔ **Both terms must be DERIVED FROM THE FIXTURE and passed IN — never read back out of
+    ``assess_breadth`` or ``assess_seal``.** A mirror fed the predicate's own answer moves in
+    lockstep with the defect and survives exactly the mutation that should kill it. The seal
+    clause is driven INDEPENDENTLY of breadth by
+    ``tests/test_gate_seal.py::TC-ArgusAgent-PRECISION-001-90``, which pins breadth TRUE and
+    sweeps the sealed count — here the two move in lockstep, because a population generated
+    over sealed members has ``sealed contributing == contributing``.
+
+    PURE (AR8): a frozen fold and two bools in, a registered outcome name out. No I/O, no clock.
     """
     if fold.determinism is not None or not isinstance(fold.exhaustiveness, Exhaustive):
         return "BLOCKED"
     if fold.precision is None:
         return "BLOCKED"
     if not breadth_holds:
+        return "BLOCKED"
+    if not seal_holds:
         return "BLOCKED"
     return "CLEARED" if fold.meets_threshold else "NOT_CLEARED"
 
@@ -314,7 +368,8 @@ def test_TC_ArgusAgent_PRECISION_001_83_breadth_is_driven_to_both_outcomes_at_th
     **Non-vacuity first:** the range is asserted to STRADDLE the floor, so a corpus too
     small to exhibit both directions goes RED rather than passing silently.
     """
-    members = _ratified()
+    members = _sealed()
+    corpus = sealed_corpus_members()
     floor = _floor()
     assert 1 < floor <= len(members), (
         f"non-vacuity: the derived floor {floor} does not lie strictly inside the "
@@ -325,7 +380,9 @@ def test_TC_ArgusAgent_PRECISION_001_83_breadth_is_driven_to_both_outcomes_at_th
     verdicts: dict[int, str] = {}
     outcomes: dict[int, str] = {}
     for contributing in range(1, len(members) + 1):
-        decision = _decide(_population(contributing_members=contributing, size=size))
+        decision = _decide(
+            _population(contributing_members=contributing, size=size), corpus=corpus
+        )
         breadth = section_5_condition(decision.conditions, BREADTH_CONDITION_ID)
         precision = section_5_condition(decision.conditions, "precision-at-least-80-percent")
         verdicts[contributing] = breadth.verdict
@@ -395,14 +452,16 @@ def test_TC_ArgusAgent_PRECISION_001_84_the_two_precision_surfaces_cannot_disagr
     **Adversarial variants GENERATED with their count:** the same one-per-contributing-count
     family, each asserted in both directions, with both classes required non-empty.
     """
-    members = _ratified()
+    members = _sealed()
+    corpus = sealed_corpus_members()
     floor = _floor()
     disagreements = 0
     unevaluable_seen = 0
     evaluable_seen = 0
     for contributing in range(1, len(members) + 1):
         decision = _decide(
-            _population(contributing_members=contributing, size=max(len(members) * 3, 6))
+            _population(contributing_members=contributing, size=max(len(members) * 3, 6)),
+            corpus=corpus,
         )
         payload = decision.to_payload()
         verdict = section_5_condition(
@@ -522,10 +581,18 @@ def test_TC_ArgusAgent_PRECISION_001_85_the_measured_sentence_names_its_populati
         "reason it was blocked for before (AC3.5)."
     )
     assert section_5_condition(decision.conditions, BREADTH_CONDITION_ID).verdict == "FAILED"
-    assert len(decision.conditions) == len(SECTION_5_CONDITIONS) == 5, (
-        "§5 must now carry exactly five conditions: the four historical ones in their "
-        "historical positions, plus the appended breadth condition (DN-16-1-2)"
+    # ⛔ RE-AUTHORED 2026-08-20 (Story 16.2 / AC6.3) — INTENDED BEHAVIOUR CHANGE. §5 gained a
+    # SIXTH condition by dated addition on the same day, under the same DN-16-1-2 rule this
+    # assertion was written to enforce: the five historical ids keep their historical
+    # positions and the new one is APPENDED. The breadth id is additionally asserted to be
+    # still at its historical position, so a condition INSERTED rather than appended — the
+    # specific way this could go wrong — reddens this even at the right count.
+    assert len(decision.conditions) == len(SECTION_5_CONDITIONS) == 6, (
+        "§5 must now carry exactly six conditions: the five historical ones in their "
+        "historical positions, plus the appended seal condition (DN-16-1-2, inherited by "
+        "Story 16.2)"
     )
+    assert SECTION_5_CONDITIONS[4] == BREADTH_CONDITION_ID, SECTION_5_CONDITIONS
 
 
 def test_TC_ArgusAgent_PRECISION_001_86_the_outcome_recomputation_carries_a_live_breadth_term() -> None:
@@ -567,7 +634,8 @@ def test_TC_ArgusAgent_PRECISION_001_86_the_outcome_recomputation_carries_a_live
     **Non-vacuity first** (``DF-15-2-A`` arm (b)): the generated range is asserted to straddle
     the floor, and the two observed directions are asserted to be different answers.
     """
-    members = _ratified()
+    members = _sealed()
+    corpus = sealed_corpus_members()
     floor = _floor()
     assert 1 < floor <= len(members), (
         f"non-vacuity: the derived floor {floor} does not lie strictly inside the generated "
@@ -579,7 +647,7 @@ def test_TC_ArgusAgent_PRECISION_001_86_the_outcome_recomputation_carries_a_live
     decisive = 0
     for contributing in range(1, len(members) + 1):
         record = _population(contributing_members=contributing, size=size)
-        decision = _decide(record)
+        decision = _decide(record, corpus=corpus)
         fold = decision.fold
         # NON-VACUITY, asserted BEFORE anything is compared: every clause ABOVE the breadth
         # clause must be false, or the recomputation would answer BLOCKED for a reason that
@@ -592,8 +660,19 @@ def test_TC_ArgusAgent_PRECISION_001_86_the_outcome_recomputation_carries_a_live
         )
         # The breadth term, derived from the FIXTURE and the derived floor — never read back
         # out of the predicate under test.
+        # Both terms are derived from the FIXTURE. The population is generated ENTIRELY over
+        # SEALED members, so its sealed contributing count IS its contributing count and the
+        # two clauses move in lockstep here — which is exactly why the seal clause is driven
+        # INDEPENDENTLY, with breadth pinned TRUE, by
+        # tests/test_gate_seal.py::TC-ArgusAgent-PRECISION-001-90. Neither value is read back
+        # out of assess_breadth or assess_seal.
         holds = contributing >= floor
-        expected = expected_section_5_outcome(fold, breadth_holds=holds)
+        assert decision.seal is not None
+        assert decision.seal.sealed_contributing_member_count == contributing, (
+            "the generated population is not entirely sealed, so `holds` below would be "
+            "the wrong seal term and this guard would be asserting over the wrong fixture"
+        )
+        expected = expected_section_5_outcome(fold, breadth_holds=holds, seal_holds=holds)
         assert expected == ("CLEARED" if holds else "BLOCKED"), expected
         assert decision.outcome == expected, (
             f"{contributing} contributing member(s) against a floor of {floor}: the "
@@ -606,7 +685,10 @@ def test_TC_ArgusAgent_PRECISION_001_86_the_outcome_recomputation_carries_a_live
             # THE CLAUSE IS DECISIVE over this identical fold: flip the one argument and the
             # recomputation answers the opposite. This is what "unreachable branch" looked
             # like before, and what makes it a driven branch now.
-            assert expected_section_5_outcome(fold, breadth_holds=True) == "CLEARED", (
+            assert (
+                expected_section_5_outcome(fold, breadth_holds=True, seal_holds=True)
+                == "CLEARED"
+            ), (
                 "the breadth clause is not what refused this population — some other "
                 "precondition is, so the clause is still undriven"
             )

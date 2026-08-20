@@ -58,6 +58,7 @@ from argus.precision.adjudication import (
     validation_set_population_n,
 )
 from argus.precision.gate_breadth import assess_breadth
+from argus.precision.gate_seal import sealed_member_floor
 from argus.precision.gate_decision import (
     BREADTH_CONDITION_ID,
     CONDITION_VERDICTS,
@@ -97,6 +98,13 @@ from argus.verdict.negative_assurance import INSTRUMENT_STATUS, InstrumentStatus
 # harness). §5's dispatch MIRROR is imported for the same reason and is driven to its breadth
 # branch, in both directions, by -86 in the module it lives in.
 from tests.test_gate_breadth import expected_section_5_outcome
+
+# ⛔ MOVED 2026-08-20 (Story 16.2 / AC6.3), not deleted. `_spread` lived HERE and spread over
+# `ratified_corpus_members()`; all five of those became `pre-seal` when the seal landed, so a
+# population over them can never reach a §5 OUTCOME again. It now spreads over the SEALED
+# bench rows and lives in the module that owns the partition, IMPORTED rather than copied
+# (AR7) exactly as the §5 dispatch mirror above is.
+from tests.test_gate_seal import sealed_corpus_members, spread_over_sealed as _spread
 from tests.test_instrument_disclosure import protocol_cleared_call_sites
 
 _REPO_ROOT = Path(__file__).resolve().parents[1]
@@ -161,48 +169,6 @@ def _judged(
     )
 
 
-def _spread(record: AdjudicationRecord) -> AdjudicationRecord:
-    """The SAME findings, RE-HOMED across the ratified members — breadth GENERATED, not typed.
-
-    ADDED 2026-08-20 (Story 16.1 / AC1.5). §5 gained a fifth condition and the committed
-    record's findings come from **2** ratified members, below the derived breadth floor — so
-    a §5 OUTCOME (``CLEARED`` / ``NOT_CLEARED``) is no longer reachable from the committed
-    population at all, whatever the ratio does. Any guard whose subject is the DISPATCH
-    therefore needs a population that satisfies breadth, or it silently starts measuring the
-    breadth floor instead of the thing it names.
-
-    The population is GENERATED from the committed record by rotating each row's
-    ``member_id`` across the ratified corpus — never hand-written — so it stays the real
-    record's rules, locators and count. ``row_id`` is re-derived through the shipped
-    :func:`finding_row_id`, because the id is content-addressed over the member.
-    """
-    members = [str(member["member_id"]) for member in ratified_corpus_members()]
-    assert len(members) >= 3, (
-        f"non-vacuity: the ratified corpus holds {len(members)} member(s), too few to build "
-        f"a population that satisfies §5's breadth floor"
-    )
-    rows = tuple(
-        replace(
-            row,
-            member_id=members[index % len(members)],
-            row_id=finding_row_id(
-                member_id=members[index % len(members)],
-                rule_id=row.rule_id,
-                verdict_eligible=row.verdict_eligible,
-                advisory=row.advisory,
-                locator=row.locator,
-            ),
-        )
-        for index, row in enumerate(record.rows)
-    )
-    spread = replace(record, rows=rows)
-    assert len({row.member_id for row in spread.live_rows()}) >= 3, (
-        "non-vacuity: the generated population did not actually broaden, so every guard "
-        "below would be asserting over the same narrow denominator it meant to replace"
-    )
-    return spread
-
-
 def _clean_evidence(*, clean_repo_fp: int = 0) -> CleanRepoEvidence:
     """Cartridge-corpus clean-repo evidence, shaped exactly as the producer supplies it."""
     return CleanRepoEvidence(
@@ -243,8 +209,16 @@ def _decide(
     expected: list[str] | None = None,
     clean_repo_fp: int = 0,
     corpus_read_proof: CorpusReadProof | None = None,
+    corpus: tuple[dict[str, str], ...] | None = None,
 ) -> GateDecision:
-    """Drive :func:`decide_gate` at the REAL seam with the live derived corpus figures."""
+    """Drive :func:`decide_gate` at the REAL seam with the live derived corpus figures.
+
+    *corpus* defaults to the five RATIFIED members — every caller's shape before
+    2026-08-20 — and is passed explicitly by the guards that generate over SEALED rows, so
+    the concentration and the partitions describe the SAME population. Passing a row here
+    ratifies nothing: ``ratified_members`` is an argument, and protocol §6 R2 is an
+    operator act.
+    """
     return decide_gate(
         record,
         corpus_read_proof=corpus_read_proof,
@@ -255,7 +229,7 @@ def _decide(
         floor_n=int(registry_module().VALIDATION_SET_FLOOR_N),
         protocol_change_log_head=record.protocol_version,
         clean_repo_evidence=_clean_evidence(clean_repo_fp=clean_repo_fp),
-        ratified_members=ratified_corpus_members(),
+        ratified_members=ratified_corpus_members() if corpus is None else corpus,
         record_is_tracked_in_git=True,
         commit_sha="0" * 40,
         decided_on="2026-08-17",
@@ -407,7 +381,21 @@ def test_TC_ArgusAgent_PRECISION_001_55_the_live_outcome_is_derived_not_chosen()
         "the committed record became EXHAUSTIVE. This guard's fixture now reaches clauses it "
         "did not before: re-read its docstring, and check -86 still covers the breadth clause."
     )
-    expected = expected_section_5_outcome(fold, breadth_holds=breadth.holds)
+    # The SEAL term, added 2026-08-20 (Story 16.2 / AC6.2), derived HERE from the committed
+    # corpus and never read out of `assess_seal`. As with breadth, THIS FIXTURE DOES NOT
+    # REACH THAT CLAUSE — the record is not exhaustive, so the mirror's first clause fires;
+    # the term is passed in so this guard cannot expect CLEARED should that change, and the
+    # clause is DRIVEN both ways by tests/test_gate_seal.py::-90.
+    sealed_contributing = {
+        str(member["member_id"])
+        for member in ratified_corpus_members()
+        if member["partition"] == "sealed"
+    } & {row.member_id for row in record.live_rows()}
+    expected = expected_section_5_outcome(
+        fold,
+        breadth_holds=breadth.holds,
+        seal_holds=len(sealed_contributing) >= sealed_member_floor(fold.floor_n),
+    )
 
     payload = _decision_payload()
     assert payload["outcome"] == expected, (
@@ -625,15 +613,25 @@ def test_TC_ArgusAgent_PRECISION_001_58_the_dispatch_moves_at_the_real_seam() ->
     # breadth immediately after. Without this the guard would have gone red mid-round on a
     # line nobody edited, and its stated subject (the dispatch) would have quietly become
     # the breadth floor.
+    # ⛔ RE-AUTHORED AGAIN 2026-08-20 (Story 16.2 / AC6.3), INTENDED BEHAVIOUR CHANGE. §5
+    # gained a SIXTH condition and every RATIFIED member is `pre-seal`, so 16.1's repair
+    # stopped reaching a §5 OUTCOME. `_spread` now generates over the SEALED rows and the
+    # same rows are the decision's corpus, so concentration and partitions describe ONE
+    # population. Nothing is relaxed: CLEARED must still be reachable at the real seam.
     broad = _spread(record)
+    sealed = sealed_corpus_members()
     broad_rows = broad.rows
-    all_fp = _decide(broad.append([_judged(row, "FP") for row in broad_rows]))
+    all_fp = _decide(
+        broad.append([_judged(row, "FP") for row in broad_rows]), corpus=sealed
+    )
     assert all_fp.outcome == "NOT_CLEARED", all_fp.outcome_reason
     assert all_fp.fold.evaluable is True
     assert "RESULT" in all_fp.outcome_reason or "result" in all_fp.outcome_reason
     assert all_fp.failed_conditions, "a NOT_CLEARED decision must name a failing condition"
 
-    all_tp = _decide(broad.append([_judged(row, "TP") for row in broad_rows]))
+    all_tp = _decide(
+        broad.append([_judged(row, "TP") for row in broad_rows]), corpus=sealed
+    )
     assert all_tp.outcome == "CLEARED", all_tp.outcome_reason
     assert all(c.verdict == "MET" for c in all_tp.conditions)
     # ...and the SAME all-TP judgements over the NARROW committed population do NOT clear.

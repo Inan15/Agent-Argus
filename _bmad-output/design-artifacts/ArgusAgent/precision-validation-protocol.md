@@ -378,6 +378,109 @@ If ANY fails, the gate stays **PROVISIONAL** and the harness reports the number 
 > `TC-ArgusAgent-PRECISION-001-45` / `-63` stay green without any record being regenerated. Only
 > `gate-decision-record.json` was regenerated, because the condition SET it publishes grew.
 
+> **⚖️ AMENDED 2026-08-20 (Story 16.2 / AC3; sprint change proposal 2026-08-20 §4.3(2), approved
+> by XAgent007 2026-08-20) — A SIXTH CONDITION: THE EVIDENCE THAT GATES MUST COME FROM A
+> PARTITION THE TOOL WAS NEVER TUNED AGAINST.** This is the **second** dated block under V1.3 and
+> it edits **no existing byte**: the conjunction sentence above is not re-wrapped, the fifth
+> condition's block is untouched, and the new conjunct is **APPENDED** to the condition set so §5's
+> five historical conditions keep their historical positions and their ids.
+>
+> **The problem, stated as the change proposal states it (H-2).** *"Nothing is held back. The
+> cartridge corpus has an author-blind holdout (`holdout_vacuous`). The repository corpus that
+> actually gates has none. If all 14 bench members are adjudicated and the detector is then tuned,
+> no untouched population remains to show the tool was not shaped to fit its own exam."* §6's
+> phased plan and §3's author-blind labelling give the cartridge corpus that protection. The
+> repository corpus has **no golden key a labeler could be blinded to**, so the equivalent
+> protection has to be an **ordering**: a partition decided and frozen, in code and in git, before
+> any detector output over any member of it exists.
+>
+> **THE PARTITION RULE, frozen 2026-08-20 and stated here in full.** Every member of the corpus
+> lies in exactly one of **three** partitions — `sealed`, `open`, `pre-seal` — assigned by two
+> conjuncts, in this order:
+>
+> 1. **PRIOR-OUTPUT OVERRIDE.** A member over which Argus output already existed when the seal was
+>    taken is **`pre-seal`**, unconditionally, whatever its sha says. *A member that has already
+>    been run over cannot be a holdout, and a rule capable of sealing one would manufacture a fake
+>    holdout.* The set is DERIVED from the `members[]` arrays of the committed adjudication sets,
+>    not typed: guard `TC-ArgusAgent-PRECISION-001-88`.
+> 2. **THE BISECTION.** Every other member is **`sealed`** iff `int(commit_sha, 16) % 2 == 1` — the
+>    parity of the pinned object name read as an integer — and **`open`** otherwise.
+>
+> The rule is executable code in ONE place (`argus/precision/gate_seal.py::partition_of`), pure,
+> and its derivation and rejected alternatives are recorded WITH it. A member's partition is
+> **structurally readable off its manifest row** (`CorpusMemberSpec.partition`) and is **DERIVED,
+> never stored**: it cannot be changed without changing the **pin**, which changes which bytes are
+> audited, is visible in the diff, and is refused at construction. **`MANIFEST_FIELDS` stays CLOSED
+> at 9** — a derived property is not a dataclass field.
+>
+> **⛔ SET-RELATIVE RULES WERE REJECTED ON A DECISIVE GROUND.** Sorting by sha and alternating the
+> index would produce a partition that **re-partitions silently** when the operator ratifies eleven
+> members instead of fourteen — removing one member shifts every subsequent index — so it is
+> *re-derivable after the fact to a different answer*, which is exactly what "pre-committed"
+> forbids. A per-row function of the pin is stable under every ratification subset: **each member's
+> partition is already determined and publishable today**, so §6 **R2** can change the partition's
+> SIZE but never a MEMBER'S partition.
+>
+> **The new condition.** The precision ratio is **EVALUABLE only over a population drawn from at
+> least `(VALIDATION_SET_FLOOR_N + 1) // 2` — the SAME derived floor §5's breadth condition uses,
+> **3** at the locked floor of 5 — DISTINCT CONTRIBUTING members lying in the `sealed` partition**.
+> Below that, §5's **precision** condition is recorded `UNEVALUABLE` with the counts that made it
+> so, and the gate outcome is `BLOCKED` with a countable closure path. The seal condition's **own**
+> verdict is `MET` or `FAILED` — the provenance of the evidence *was* established, over a named
+> population; `UNEVALUABLE` would tell a reader it was unknown, which is a different and false
+> claim. Condition id: `gate-evidence-drawn-from-the-sealed-partition`. Guards:
+> `TC-ArgusAgent-PRECISION-001-87`..`-94`.
+>
+> **The floor is 16.1's, RESOLVED and not forked.** §5 now carries one derived member floor read by
+> two conditions: breadth asks *how many distinct members contributed*, the seal asks *how many of
+> those were members the tool was never tuned against*. A second, seal-specific constant was
+> rejected — DN-3's one-floor rule, and two floors is how two corpora happened in the first place.
+>
+> **⛔ IT PARTITIONS; IT DOES NOT NARROW, and the distinction is the whole of §5's own prohibition.**
+> `VALIDATION_SET_FLOOR_N` stays **5**, `eligible_member_count()` stays **5**, no member is dropped,
+> re-weighted or made ineligible, no `adjudication_caveat` is edited, and **every finding from every
+> partition stays recorded and stays disclosed** — the seal governs what may **GATE**, never what is
+> **REPORTED**. Both narrowing designs (filtering the record's rows to sealed members; deriving the
+> concentration over the sealed subset alone) were tested by execution and both `raise` on the
+> committed population, which is the correct refusal: a filter NARROWS, which §5 and Story 13.3 /
+> AC5 forbid, while a CONDITION REQUIRES, which is a strengthening. Every population that cleared
+> before this amendment either still clears or is now `BLOCKED`; no population that failed before
+> can pass because of it.
+>
+> **⛔ WHAT §6 R2 MUST NOW WEIGH, COUNTED IN ADVANCE RATHER THAN DISCOVERED AFTER.** Sealed ∩
+> ratified is currently **∅**, so the condition reads `FAILED` today and that is correct: the gate
+> cannot clear on evidence that predates the seal. It is **satisfiable** — the bench holds six
+> sealed candidates against a floor of three, slack three, and all six clear Story 15.1's
+> co-occurrence floor — but only by an act §6 **R2** takes: **at least THREE members of the
+> `sealed` partition must be ratified, and each must contribute at least one adjudicated finding.**
+> **Ratifying only `open`-partition members leaves this condition permanently `FAILED`.** That is
+> honest, it is countable, and the operator is told it here, before the act.
+>
+> **A POST-SEAL DETECTOR CHANGE MUST SAY WHICH PARTITION ITS EVIDENCE CAME FROM.** Any commit
+> touching a declared detector-tuning path that is not an ancestor of the seal commit carries a
+> machine-checkable trailer `Evidence-partition: sealed | open | none`. This is a **disclosure, not
+> a prohibition**: the value of a holdout is the *comparison across partitions*, and the comparison
+> is only possible if each change says which side it learned from. The rule is written down in
+> `argus/precision/gate_seal.py::SEAL_CITATION_RULE` and enforced against real git history by
+> `TC-ArgusAgent-PRECISION-001-93` / `-94`.
+>
+> **OPENING THE SEALED PARTITION IS A SINGLE RECORDED ACT, NEVER A SIDE EFFECT.** The seal is
+> opened only by a §6 **R2**-class operator act, recorded in this protocol as a further dated block
+> naming who took it, when, and which members moved — the same act class that ratifies a member.
+> **Running the harness does not open it, cannot open it, and no code path in this repository opens
+> it**: the partition is derived from pins, the pins are frozen, and Story 16.2 added no writer.
+> An agent may not take this act.
+>
+> **⚠️ NO CHANGE-LOG VERSION WAS TAKEN — the same operator decision of 2026-08-20, applied again.**
+> This amendment sits under the existing **V1.3** beside the fifth condition's block. The 31 human
+> judgements of 2026-08-17 keep their original V1.3 provenance untouched; adding a `V1.4` row would
+> re-stamp `protocol_version` across all 31 and re-interpret judgements nobody re-made. The
+> amendment is additive to §5, touches no §4 rule, no golden-key semantics and no TP/FP definition,
+> so no judgement's MEANING moves. `TC-ArgusAgent-PRECISION-001-45` / `-63` stay green and
+> `adjudication-record.json` was **not** regenerated. Only `gate-decision-record.json` was, because
+> the condition SET it publishes grew — and regenerating it executes **no** detector, stages **no**
+> repository and touches **no** candidate.
+
 > **⚖️ AMENDED 2026-08-16 (Story 13.2 / AC1b) — a FOURTH terminal state existed and was reported
 > as the first.** The sentence above enumerates *cleared* and *provisional*. Measured by execution
 > on `bc55e36`: a corpus emitting **nothing at all** (0 TP / 0 FP / 8 FN) returned

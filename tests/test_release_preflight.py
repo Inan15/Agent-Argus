@@ -343,6 +343,13 @@ _MODULES_NAMING_THE_TEST_TREE_IMPORT: frozenset[str] = frozenset(
         # module these two were cut out of.
         "argus/precision/gate_conditions.py",
         "argus/precision/gate_evidence.py",
+        # ADDED 2026-08-20 (Story 16.2). §5's SEAL condition and the partition rule. It joins
+        # TRANSITIVELY through gate_breadth / gate_disclosure, resolves NO path at module level
+        # and performs no I/O at all — asserted STRUCTURALLY by an AST walk of its own imports
+        # in tests/test_gate_seal.py::TC-ArgusAgent-PRECISION-001-87. DETECTOR_TUNING_PATHS is
+        # a tuple of repository-relative STRINGS the caller resolves, the same treatment
+        # gate_decision.DECISION_RECORD_PATH gets and for the same DF-9-2-A reason.
+        "argus/precision/gate_seal.py",
         "argus/precision/gate_disclosure.py",
         "argus/precision/replay_harness.py",
         "argus/dogfood/proof_types.py",
