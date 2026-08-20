@@ -770,6 +770,38 @@ def test_TC_ArgusAgent_PRECISION_001_100_the_pre_round_disclosure_is_re_derived_
         "'MET today' reading this disclosure exists to qualify is no longer what happens"
     )
 
+    # ⛔ THE LIVE LEG, added after an EXECUTED MUTATION found this guard UNREAL. Deleting
+    # `YIELD_PROVENANCE_DISCLOSURE` from the MET branch of `assess_yield`'s measured sentence
+    # left every assertion above GREEN, because they all read the COMMITTED artifact — which
+    # a mutation run does not regenerate. A guard that can only see a stale JSON file is a
+    # guard about a file, not about the code that writes it. Both branches are driven at the
+    # LIVE seam, because the MET branch is the one that most needs the qualifier: it is the
+    # branch a reader would otherwise take as "the detector currently yields 31".
+    live_legs = {}
+    for size in (_floor() - 2, _floor() + 2):
+        generated, corpus = mixed_population(
+            sealed_members=3, pre_seal_members=0, size=size
+        )
+        assessment = assess_yield(
+            derive_concentration(
+                generated,
+                ratified_member_ids=[str(member["member_id"]) for member in corpus],
+            ),
+            threshold=PRECISION_GATE_THRESHOLD,
+            population_source="synthetic fixture",
+        )
+        live_legs[assessment.holds] = assessment
+        assert YIELD_PROVENANCE_DISCLOSURE in assessment.measured, (
+            f"the LIVE measured sentence for a population of {size} (holds="
+            f"{assessment.holds}) does not carry the pre-round disclosure. A reader of a MET "
+            f"yield condition would see a population size with nothing qualifying it, and "
+            f"the committed artifact would not notice until it was next regenerated."
+        )
+    assert set(live_legs) == {True, False}, (
+        f"non-vacuity: the live legs only observed holds={sorted(live_legs)}, so one branch "
+        f"of the measured sentence was never exercised"
+    )
+
     # The disclosure says the unmeasured part is UNMEASURED and not impossible (§0.3 / AC7.4).
     for required in (
         "UNMEASURABLE",
