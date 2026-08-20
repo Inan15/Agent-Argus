@@ -4,7 +4,7 @@ baseline_commit: 6128466f86c3c34591d0338df4d4995b75663ba7
 
 # Story 16.2: Part of the bench is sealed before anything is run
 
-Status: review
+Status: done
 
 | | |
 |---|---|
@@ -1013,6 +1013,95 @@ sha it covers.
 
 ---
 
+### Review Findings
+
+**Round 1 — adversarial re-review, independent of the dev's own transcript.** Every claim below
+was checked BY EXECUTION on this tree — the dev's own transcript was read but never trusted as
+evidence. Nothing was patched; this round found nothing to patch.
+
+- [x] [Review][Verified] The 6/8 partition and the override — RE-DERIVED independently, not
+      read from the story. `int(commit_sha, 16) % 2` recomputed over all 21 manifest rows via
+      `spec.partition`: bench split is exactly 6 sealed / 8 open, `bench_candidates()` ids equal
+      `SEALED_PARTITION_TABLE` keys in both directions with zero mismatches, and
+      `PRE_SEAL_MEMBER_IDS` equals the measured union of both committed adjudication sets'
+      `members[]` arrays byte-for-byte. `xagents-webapp` (`33a86525…`) and `agent-smith`
+      (`9ab774d7…`) both re-derive `sealed` with the override disabled, confirming the override
+      is load-bearing and scoped only to the 5 pre-seal ids, not an arbitrary lever.
+      `MANIFEST_FIELDS` reads 9. [tests/corpus/_manifest.py]
+- [x] [Review][Verified] Git ancestry — `git log f89f028038dcd9881204f36bc404267c876b18f7 --
+      <CANDIDATE_OUTPUT_PATHS>` returns zero commits, independently re-run. The seal commit
+      resolves to a real commit object and is an ancestor of HEAD.
+- [x] [Review][Verified] D1's circular-import claim (two siblings, not one) — read
+      `gate_conditions.py` / `gate_evidence.py` / `gate_decision.py`: `CleanRepoEvidence.condition()`
+      genuinely constructs a `ConditionResult` whose `__post_init__` validates against
+      `SECTION_5_CONDITIONS`, so a single `gate_evidence` sibling holding both the evidence types
+      and that vocabulary would need `gate_decision` to import it for `CleanRepoEvidence` while it
+      imports `gate_decision` for `ConditionResult` — a real cycle, not a boundary chosen for line
+      count. The three-way split is genuine cohesion (vocabulary / evidence / result), each layer
+      imports only downward, and NFR-M1 line counts for all twelve touched/adjacent modules were
+      independently recomputed with the shipped `_physical_line_count` and match the story's
+      table exactly (`gate_decision.py` 986, `gate_conditions.py` 220, `gate_evidence.py` 214,
+      `gate_seal.py` 777, `_manifest.py` 1029, `test_gate_seal.py` 1135, etc. — all OK).
+- [x] [Review][Verified] AC3.5 byte-identity — re-diffed the committed
+      `gate-decision-record.json` before/after field-by-field: `outcome`, `outcome_reason`,
+      `closure_path`, `precision.gate_status` byte-identical; exactly four keys moved
+      (`section_5_conditions` 5→6, each `corpus.members` row gained `partition`,
+      `precision.seal_holds` added, top-level `seal` added) — matches the story's claim exactly.
+- [x] [Review][Verified — central adversarial task] Independently mutated the shipped code and
+      observed RED with fresh eyes, `PYTHONDONTWRITEBYTECODE=1` and cleared `__pycache__` before
+      every run, tree restored via `git checkout` and `git status --porcelain` empty after each:
+      bisection-parity flip (RED on `-87`/`-89`), override deleted (RED on `-87`/`-88`/`-90`/`-91`/`-92`),
+      pin-check disabled in `partition_of` (RED on `-87`), one table row flipped and run against
+      `test_gate_breadth.py` only — **GREEN, confirming the dev's own R5/R5b finding**: the
+      breadth-side sealed-population generator (`sealed_corpus_members()`) derives from
+      `spec.partition` (the RULE), not from `SEALED_PARTITION_TABLE` (the RECORD), so the two are
+      a genuine independent cross-check and not one derived from the other; the same mutation
+      against `-89` (the guard whose actual subject is the table-vs-rule agreement) is RED. Seal
+      predicate stuck TRUE (RED on `-90`/`-91`) and stuck FALSE (RED on `-90`), the seal dispatch
+      branch removed from `gate_decision.py` (RED on `-90`, and the failure is exactly the
+      claimed shape: the condition still reads `FAILED` while the outcome moves from `BLOCKED` to
+      `NOT_CLEARED` — proving the branch decisive), the seal term removed from
+      `_precision_condition` (RED on `-90`, verdict flips `UNEVALUABLE`→`MET`), the pin check
+      un-hoisted in `_manifest.py` (RED on both `-92` and `-76`, confirming the cross-story
+      coupling), the citation predicate forced to accept everything and to accept nothing (RED on
+      `-93` both ways), the seal floor forked to a literal (RED on `-90`, confirms DN-16-2-7's
+      "resolved not forked" claim), and the sixth condition id dropped from
+      `SECTION_5_CONDITIONS` in `gate_conditions.py` (RED on `-90` and on `-83`..`-86` in
+      `test_gate_breadth.py`, confirming the cross-module coupling the split claims to preserve).
+      Every mutation observed RED as claimed; no guard in the sample was unreal.
+- [x] [Review][Verified] Gates re-run independently on this tree: full suite collects 1,667
+      tests (matches the story's 1,658+9 baseline claim exactly) and completed with exit 0, no
+      failures observed in the run; `mypy argus` → `Success: no issues found in 91 source files`;
+      `bandit -r argus --severity-level medium` → `No issues identified`, 24,874 LOC, 0
+      Medium/High; `tests/test_module_size_ceiling.py` green; both
+      `scripts/build_gate_decision.py --check` and `scripts/build_adjudication_record.py --check`
+      exit 0 on the committed artifacts. `git status --porcelain` clean throughout and at the end
+      of this review.
+- [x] [Review][Verified] Byte-unchanged claims spot-checked by diffing the base commit against
+      HEAD: `argus/precision/gate_breadth.py`, `replay_harness.py`, `adjudication.py`,
+      `tests/cartridges/**`, `tests/test_vacuous_density.py`, `scripts/candidate_selection.py`,
+      `deferred-work.md`, `prd.md`, `epics.md`, `validation-corpus/adjudication-record.json` all
+      show empty diffs against `6128466`.
+- [x] [Review][Note] AC7.5's own recorded figure ("18 files") vs. this review's re-measurement
+      ("21 files" over `981891e^..HEAD`) — not a defect: the extra 3 are the final story-record
+      commit's own edits (`sprint-status.yaml`, the story file itself growing, and the
+      hand-off/deviation prose), landed after the dev's own AC7.5 measurement was taken and
+      recorded. Zero `CANDIDATE_OUTPUT_PATHS` entries are touched either way — AC7.5's actual
+      claim holds under re-measurement. Not actioned; noted for the record only.
+- [x] [Review][Note] `sealed ∩ ratified = ∅` today, so §5's new condition can only read
+      `FAILED` on the committed record until 16.4's R2 ratifies ≥3 of the six named sealed
+      candidates. This is judged **not** a repeat of Story 16.1's HALT-1: unlike the rule-class
+      arm (unreachable by construction with the shipped detector set, under this epic's
+      authorisation), reachability here is restored by an act the plan already schedules
+      (§6 R2), the six eligible candidates and the exact count are named in the hand-off before
+      the act rather than discovered after, and the story's own AC8.4 hand-off states the
+      constraint explicitly. Recorded here as read, not as a defect.
+
+No `decision-needed` or `patch` findings. No `defer` findings — nothing found here is pre-existing
+and out of scope; everything checked was this story's own change. 0 dismissed.
+
+---
+
 ## Dev Agent Record
 
 ### Agent Model Used
@@ -1421,4 +1510,5 @@ commits**; no corpus-audit script ran and no audit output exists in the tree.
 | Date | Change | By |
 |---|---|---|
 | 2026-08-20 | **Story IMPLEMENTED in one round; Status `in-progress` → `review`.** §0's premises were re-derived independently before anything was written and **none moved** — 21 rows, N=5, 14 candidates, `MANIFEST_FIELDS` 9, whole-sha and last-digit parity agreeing on all 21 rows, the 6/8 bench split, the 5-member pre-seal set, the 1,197/1,193 line counts, the AST boundary to the line, and the constructor gap (`commit_sha="NOT-A-SHA"`, `""` and an uppercase 40-char sha all constructed on a candidate row). **`DF-16-1-B`'s SPLIT-FIRST trigger was discharged FIRST and in its own commit (`95819bc`)**, 319 lines moved byte-for-byte and proved identical against `git show HEAD:...`, every import line in the repository unchanged — **as TWO siblings rather than one, because executing §2.1's measured boundary alone produces a CYCLE** (`CleanRepoEvidence.condition()` constructs a `ConditionResult` that validates against `SECTION_5_CONDITIONS`), recorded as deviation D1 with the two rejected alternatives. **The seal landed in `f89f028`**: the rule as ONE pure function with a closed three-value vocabulary, the prior-output override that stops two odd-pinned already-audited members being declared holdouts, the derivation and its three rejected alternatives recorded in code, the frozen 14-row table re-derived from the rule in both directions, the derived `pre-seal` set, the `partition` property (`MANIFEST_FIELDS` stays closed at 9 — a `@property` is not a dataclass field), the hoisted 40-hex pin check that now validates EVERY row, and §5's SIXTH condition APPENDED with its floor RESOLVED from 16.1's rather than forked (DN-16-2-7). **AC3.5 verified at the producing seam: `outcome`, `outcome_reason`, `closure_path` and `precision.gate_status` BYTE-IDENTICAL across the amendment; exactly four keys moved, all of them this story's own.** **27 EXECUTED mutations of the shipped code, 27 observed RED, tree restored byte-exact and `git status --porcelain` empty after every one** — including both directions of the bisection, the override, the pin refusal, the seal predicate, the citation predicate, and the dispatch branch whose removal leaves the CONDITION reading FAILED while the OUTCOME stops moving. A 28th (**R5**) was GREEN and is recorded rather than dropped: my expectation was wrong, because the generators derive from the RULE and not from the frozen TABLE, and re-running the identical mutation against `-89` gives RED. A methodology defect is also recorded: the first pass ran without `PYTHONDONTWRITEBYTECODE`, a stale `__pycache__` produced one false RED in a later run, and every number above is from the re-run with caching disabled. Eleven §2.4 guards audited plus **two the story's table does not name** (`-60`, found by re-running the AST walk; **`-76`**, a deliberate tripwire that fired on the AC2.3 hoist and was re-authored strictly stronger). Protocol §5 amended by a SECOND dated block under **V1.3** — no `V1.4` row, `adjudication-record.json` byte-unchanged, the 31 judgements of 2026-08-17 keep their provenance. `architecture.md` §Enforcement extended struck-not-erased. Gates: **1,667 passed / 0 failed / 0 skipped / exit 0** with `ARGUS_REQUIRE_LANGUAGE_GRAMMARS=1`; `mypy argus` Success (91 files); `bandit --severity-level medium` No issues identified; both builders `--check` exit 0. **AC8.3 recorded OPEN — instructed not to push, so no CI run covers these shas, and the local gates are Windows-only.** Nothing was ratified, fetched, staged or run over; `DF-13-5-A`'s round is UNSPENT, `DF-16-1-A` stays unlanded, amendment-A stays UNAPPROVED and unacted-on, and no `DF-*` entry is disposed of. | dev-story |
+| 2026-08-20 | **Code review round 1 — PASS. Status `review` → `done`.** Adversarial re-review independent of the dev's own transcript: every load-bearing arithmetic claim (the 6/8 partition, the override, `PRE_SEAL_MEMBER_IDS` derived from the two adjudication sets, `MANIFEST_FIELDS` at 9) was RE-DERIVED by execution rather than read from the story; git ancestry re-run and confirms zero commits reachable from `f89f028038dcd9881204f36bc404267c876b18f7` touch `CANDIDATE_OUTPUT_PATHS`; AC3.5's byte-identity claim re-diffed field-by-field and confirmed exact (four keys moved, all this story's own); D1's circular-import justification for the three-way split read against the actual code and confirmed real, not line-count-driven, with all twelve touched/adjacent NFR-M1 line counts independently recomputed with the shipped `_physical_line_count` and matching exactly. **Central adversarial task — independently mutated the shipped code with `PYTHONDONTWRITEBYTECODE=1` and a cleared `__pycache__`, restored via `git checkout` after each, `git status --porcelain` clean throughout**: bisection flip, override deletion, pin-check disable, seal predicate stuck both ways, the seal dispatch branch removed (confirmed decisive: condition stays `FAILED` while outcome moves `BLOCKED`→`NOT_CLEARED`), the seal term removed from `_precision_condition`, the pin check un-hoisted (RED on both `-92` and `-76`, cross-story coupling confirmed), the citation predicate forced both directions, the seal floor forked to a literal, and the sixth condition id dropped from `SECTION_5_CONDITIONS` — every one observed RED as claimed. The dev's own R5/R5b finding (one guard family derives from the RULE, the other from the frozen TABLE, and they genuinely cross-check rather than one deriving from the other) was independently reproduced: the same table-row-flip mutation is GREEN against `test_gate_breadth.py` and RED against `-89`. Gates re-run independently: 1,667 tests collected (matches exactly), full suite exit 0 with no observed failures; `mypy argus` Success on 91 files; `bandit --severity-level medium` No issues identified, 24,874 LOC; module-size ceiling green; both builders `--check` exit 0; byte-unchanged claims for `gate_breadth.py`, `replay_harness.py`, `adjudication.py`, `tests/cartridges/**`, `tests/test_vacuous_density.py`, `scripts/candidate_selection.py`, `deferred-work.md`, `prd.md`, `epics.md` and `adjudication-record.json` spot-checked and confirmed. Two notes recorded, neither actioned: AC7.5's own "18 files" figure reads 21 under re-measurement, entirely accounted for by the final story-record commit's own edits, with zero candidate-output paths touched either way; and `sealed ∩ ratified = ∅` today is judged an honest, countable strengthening rather than a repeat of Story 16.1's HALT-1, because 16.4's R2 act (named, with its exact count, in the hand-off) restores reachability, unlike the rule-class arm's unreachability by construction. Zero `decision-needed`, zero `patch`, zero `defer` findings. `sprint-status.yaml` `development_status` set to `done`. | code-review |
 | 2026-08-20 | Story contexted at HEAD `6128466`, baseline measured GREEN by execution (1,658 tests exit 0, mypy 88 files, bandit clean, both builders `--check` exit 0). §0 premises measured on the live tree, read-only. **§0.2 records the rule and the partition it produces (6 SEALED / 8 open of 14), with the proof that "parity of the sha" and "parity of the last hex digit" are ONE rule, and with the measurement that makes the prior-output override load-bearing: `xagents-webapp` and `agent-smith` both carry ODD pins and would have been declared "sealed" despite having been audited twice.** **§0.3 answers the shutdown question 16.1 escalated on: the breadth floor is 3, invariant under corpus size; six sealed candidates are available against it, slack 3, all six clearing Story 15.1's co-occurrence floor — so the seal does NOT make breadth unsatisfiable — and the countable R2 consequence (ratify ≥3 of six named candidates) is recorded for 16.4 rather than discovered after the act.** **§0.5 answers the `MANIFEST_FIELDS` question by execution rather than by assumption: `-22` compares `dataclasses.fields`, so a derived property is not a field and the schema stays closed at 9 — with a HALT recorded if anyone judges otherwise, because extending a locked constant is not a dev's decision; and the measured constructor gap (a candidate row accepts `commit_sha="NOT-A-SHA"` today) is what AC2's "validated at construction" repairs.** §2.1 raises `DF-16-1-B`'s SPLIT-FIRST trigger to **Task 1** with the boundary measured by AST (173 contiguous lines, four importers enumerated). §2.4 records the coupling that will bite hardest: **all three §5-outcome fixture generators spread over the five ratified members, every one of which becomes `pre-seal`**, with the coupled guards enumerated by AST walk into two tiers (6 Tier-1 asserting `CLEARED`/`NOT_CLEARED` in code, 12 Tier-2 built on a pre-seal generator) — and with the first, looser scan's over-report corrected in place rather than quietly fixed, because a stated-as-measured list that is wrong is the exact defect Story 15.1's fix round exists for. §2.5 records the two narrowing designs proved by execution to `raise`, which is why the seal is a §5 CONDITION and not a filter. Locked decisions cited and not reopened: `DF-16-1-A` stays unlanded, no `V1.4` row, `DF-13-5-A`'s round UNSPENT, amendment-A UNAPPROVED and out of scope. Status `backlog` → `ready-for-dev`. | create-story |
