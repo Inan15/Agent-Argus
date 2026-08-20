@@ -5377,3 +5377,50 @@ disposed and three new ones are filed, one of which bounds Epic 15.
     also now disclosed in the story's own File List and Dev Agent Record, so the entry above is
     left standing, unedited, as the record that the review caught it. This bullet is the dated
     append §3.4 asks for; nothing above it was rewritten.
+
+## Deferred from: 16-3-a-detector-that-finds-nothing-has-not-passed (2026-08-20)
+
+- **`DF-16-3-A` — `tests/test_gate_seal.py` sits at 55 lines of NFR-M1 headroom with NO ledger
+  entry.** Filed by the story that grew it, and filed because of the *absence* rather than the
+  size — the same reason `DF-15-2-E` exists. Story 16.2 measured this module at **1,135 / 1,200**
+  (65 lines) and left it untracked; Story 16.3 added **10 lines** to it, an annotated `6 -> 7`
+  condition-count bump plus a positional assertion at `TC-ArgusAgent-PRECISION-001-91`, taking it
+  to **1,145 / 1,200 — 55 lines**, measured with the ceiling guard's own `_physical_line_count`
+  and `_CEILING = 1200`. **An untracked approach to a ceiling is worse than a tracked one
+  precisely because nobody is watching it**, and this story is the third in a row to be handed an
+  unfiled split-first trigger at the moment it was most inconvenient: `DF-16-1-B` caught
+  `gate_decision.py` at 1,197 and 16.2 discharged it, and `tests/test_gate_decision.py` reached
+  **1,191 with no entry at all** and had to be split by 16.3 as Task 1 before §5's seventh
+  condition could be written. Filing this is the cheapest way to stop that happening a fourth
+  time.
+  ⛔ **The trigger, stated so it is not a judgement call at the moment it is inconvenient:** the
+  first change that would take this module past **1,180** performs the cohesion split FIRST — by
+  subject cohesion, never by arithmetic, with no function split across the boundary, shared
+  fixtures IMPORTED rather than copied, moved definitions byte-for-byte, and in its own commit.
+  That is the `95819bc` (16.2, production) and `01a2f48` (16.3, tests) precedent, and
+  `tests/test_module_size_ceiling.py::_REMEDY` states it in the repository's own words: *"do NOT
+  shave lines."* The margin is deliberate — 20 lines is enough to notice and not enough to
+  tempt.
+  **A candidate boundary is already visible and is recorded here so the next author does not have
+  to find it under pressure**, though it is NOT pre-approved and must be confirmed by that
+  author's own AST walk: the module holds the PARTITION RULE and its fixtures (`-87`..`-89`,
+  plus `sealed_corpus_members` / `mixed_population` / `decide_over`, which four other test modules
+  now import) against the ORDERING and citation guards (`-93`, `-94`, `SEAL_COMMIT_SHA`,
+  `_candidate_output_paths`) — the same *what a rule IS* / *what the history SHOWS* split shape.
+  ⛔ **`SEAL_COMMIT_SHA` and the generators four modules import must keep their import paths**, or
+  the split stops being a pure move.
+  - id: DF-16-3-A
+  - origin_story: 16-3-a-detector-that-finds-nothing-has-not-passed
+  - owner: **XAgent007 (Engineering Lead)** (`AI-E9-8`)
+  - target_story: **NONE** — a precondition on whoever opens that module next, not work with a
+    schedule of its own. Pinning it to an unwritten story is how `DF-14-3-H`'s
+    `target_story: 13-5` went stale; `DF-15-2-D` and `DF-15-2-E` both decline to repeat it and
+    this entry declines with them.
+  - category: maintainability (`NFR-M1`)
+  - severity: 🟡 — 55 lines is materially more room than `DF-15-2-D`'s four or `DF-15-2-E`'s 41,
+    which is why this is filed at 🟡 and not raised further. It is enough for a guard or two and
+    not enough for a story's worth of them.
+  - ⛔ **NOT a claim that anything is broken, and nothing is disposed of by this entry.** The
+    ceiling guard still fails loudly at 1,201; the point of filing is that it should not fail as
+    a surprise. No existing entry is edited, no `DF-*` is closed, and `DF-16-1-A`, `DF-13-5-A`,
+    `DF-15-2-D` and `DF-15-2-E` are all left exactly as they stand.
