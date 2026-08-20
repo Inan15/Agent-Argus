@@ -9,8 +9,11 @@ deliberately stopped short of using it. `epics.md` ends at Epic 15, so the work 
 that bench has no container.
 **Change scope classification:** **MAJOR** — one epic created; **and an amendment to protocol §5,
 the ≥80%-precision externalization gate itself**, in the STRENGTHENING direction only
-**Status:** ⏳ **AWAITING OPERATOR APPROVAL.** §4.3 amends the gate. Writing this document was
-authorised; approving it is a separate act and has not been taken.
+**Status:** ✅ **APPROVED by XAgent007, 2026-08-20.** The document was authored and committed
+(`7f54506`) in the `AWAITING OPERATOR APPROVAL` state, and approval was taken as a **separate,
+later act** — recorded here in place, with §6 carrying both dates so the two are not collapsed. The
+distinction is the whole point of §4.3: the gate amendment could not be authored and approved in one
+motion by the party proposing it.
 
 > **Nothing under `argus/` or `tests/` was modified to produce this document**, and no detector was
 > run over any candidate. Every figure below is read from committed artifacts — chiefly
@@ -236,7 +239,9 @@ after, on the live tree. **Committed together with this document** — `-22` clo
 
 | Field | Value |
 |---|---|
-| **Proposed** | 2026-08-20, orchestrator (`bmad-dev-loop`) |
-| **Approved by** | ⏳ *not yet approved* |
-| **Gate moved by this document** | **None.** `protocol_cleared` is `False` and has never been `True`. |
-| **`DF-13-5-A` round** | **UNSPENT.** Epic 16 story 16.4 is where it is spent, after an operator act. |
+| **Proposed** | 2026-08-20, orchestrator (`bmad-dev-loop`), committed `7f54506` |
+| **Approved by** | ✅ **XAgent007 (Engineering Lead), 2026-08-20** — a separate act after the commit above, not a self-approval folded into authoring |
+| **What approval authorises** | Stories **16.1, 16.2 and 16.3** to apply §4.3's three §5 conditions, each deriving and recording its own constants. It does **NOT** authorise 16.4: that story still opens by halting on the protocol §6 **R2** operator act. |
+| **What approval does NOT authorise** | Any softening. The ≥80% figure, `VALIDATION_SET_FLOOR_N`, FR34, `protocol_cleared` and the five ratified members stay untouched; the three new conditions may only make clearing **harder**. |
+| **Gate moved by this document** | **None.** `protocol_cleared` is `False` and has never been `True`. Approval moves no gate — it schedules the work that changes how the gate is evaluated. |
+| **`DF-13-5-A` round** | **UNSPENT.** Epic 16 story 16.4 is where it is spent, after a second, separate operator act. |

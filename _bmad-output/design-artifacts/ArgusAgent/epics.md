@@ -3024,6 +3024,15 @@ stories are filed at `backlog` so the plan has the container SD-5 found missing;
 start before that approval**, because §4.3 of the proposal amends protocol §5 and Story 16.4 spends
 `DF-13-5-A`'s ONE round.*
 
+> ✅ **APPROVED 2026-08-20 by XAgent007 (Engineering Lead).** The paragraph above is left exactly as
+> written (§3.4 evidence immutability) rather than rewritten to say "approved" — it was the true
+> state when the section was authored, and a plan document that silently re-narrates its own
+> preconditions is the `DF-8-5-C` class in prose. **What the approval unblocks:** Stories 16.1, 16.2
+> and 16.3 may now start and may apply §4.3's three §5 conditions, each deriving and recording its
+> own constants. **What it does NOT unblock: Story 16.4**, which still opens by halting on the
+> protocol §6 **R2** operator act — ratification and third-party fetch remain a separate,
+> not-yet-taken decision, and approval of this epic is not approval to spend `DF-13-5-A`'s round.
+
 Epic 14 repaired the instrument. Epic 15 established, without running the detector over anything,
 that the five-member corpus **does not contain the defect class** — 1 co-occurrence file under the
 strict predicate across 315 Python test files — and assembled a 14-candidate bench that does
