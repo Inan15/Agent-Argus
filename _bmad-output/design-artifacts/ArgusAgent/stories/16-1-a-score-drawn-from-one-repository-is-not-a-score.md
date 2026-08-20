@@ -1808,6 +1808,8 @@ moved) · `tests/test_gate_condition_lookup.py` · `tests/test_release_preflight
 **Next TC ids:** `TC-ArgusAgent-PRECISION-001-*` is now allocated through **`-86`**. Allocate
 from **`-87`**.
 
+**Landing shas for 16.4's ancestry guard — ROUND 3, appended after the fact because a commit cannot cite itself:** **`7323f61`** (the guard repair and the ledger restoration) and **`a20a0ef`** (this record). Together with round 2's **`2ac1078`** and **`11f40cb`** these are this story's four landing commits. **None of the four contains Argus output over any bench member** — verified over `0a6e121..HEAD` — so the 🔒 BINDING ordering constraint holds.
+
 ### Hand-off addendum for 16.2 and 16.3
 
 Round 2's nine hand-off points stand. Two are added, and they are the ones this round paid for:
