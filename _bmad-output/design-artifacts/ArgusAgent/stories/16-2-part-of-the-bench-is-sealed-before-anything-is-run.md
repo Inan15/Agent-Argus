@@ -4,7 +4,7 @@ baseline_commit: 6128466f86c3c34591d0338df4d4995b75663ba7
 
 # Story 16.2: Part of the bench is sealed before anything is run
 
-Status: in-progress
+Status: review
 
 | | |
 |---|---|
@@ -945,70 +945,70 @@ sha it covers.
 
 ## Tasks & Subtasks
 
-- [ ] **Read §0, §1.1 and §2 first, then re-verify §0.2, §0.3 and §0.5 INDEPENDENTLY.** The premises
+- [x] **Read §0, §1.1 and §2 first, then re-verify §0.2, §0.3 and §0.5 INDEPENDENTLY.** The premises
       are measured, but AC1/AC2 require **your own** reproduction, not this file's. (AC: all)
-- [ ] ⛔ **TASK 1 — SPLIT `argus/precision/gate_decision.py` FIRST, as its own commit** (§2.1,
+- [x] ⛔ **TASK 1 — SPLIT `argus/precision/gate_decision.py` FIRST, as its own commit** (§2.1,
       `DF-16-1-B`). Move `CleanRepoEvidence` (97) + `CorpusReadProof` (76) to a new sibling; re-export
       from `gate_decision`; **change no import line** at any of the four importers. Verify with
       `git diff -M` that it reads as a pure move. Re-measure NFR-M1 before and after. Full suite green
       **before** anything else lands. (AC: AC8.2)
-- [ ] Create `argus/precision/gate_seal.py`: the closed 3-value vocabulary raising on an unregistered
+- [x] Create `argus/precision/gate_seal.py`: the closed 3-value vocabulary raising on an unregistered
       member, the pure `partition_of`, the derivation with its rejected alternatives, the seal
       assessment and the published sentences. **No I/O, no manifest resolution, no repo-only path.**
       (AC: AC1.1, AC1.2, AC3.3)
-- [ ] Materialize the frozen partition table for the 14 bench members and the derived `pre-seal` set;
+- [x] Materialize the frozen partition table for the 14 bench members and the derived `pre-seal` set;
       add the `partition` property to `CorpusMemberSpec`; **hoist the sha validation above the
       `not eligible_for_n` early return** and drive the new refusal RED. (AC: AC1.3, AC1.4, AC2.1,
       AC2.3)
-- [ ] ⛔ Confirm by execution that `MANIFEST_FIELDS` is still 9 and `-22` is green **unedited**. **If
+- [x] ⛔ Confirm by execution that `MANIFEST_FIELDS` is still 9 and `-22` is green **unedited**. **If
       a tenth field seems required, HALT to the operator with both options and their costs** —
       do not extend the constant. (AC: AC2.2, DN-16-2-3)
-- [ ] Extend `gate_disclosure.ratified_corpus_members()` with each member's `partition`, through the
+- [x] Extend `gate_disclosure.ratified_corpus_members()` with each member's `partition`, through the
       **existing** lazy edge. (AC: AC3.3)
-- [ ] Extend `SECTION_5_CONDITIONS` by one, **appended**; build the seal `ConditionResult`; thread the
+- [x] Extend `SECTION_5_CONDITIONS` by one, **appended**; build the seal `ConditionResult`; thread the
       seal term into `_precision_condition` so a non-sealed denominator makes precision `UNEVALUABLE`
       and the outcome `BLOCKED` with a countable closure path. **`GATE_OUTCOMES` stays at three,
       `CONDITION_VERDICTS` at four.** (AC: AC3.1, AC3.2)
-- [ ] Write the seal `measured` sentence naming the population, each contributing member's partition,
+- [x] Write the seal `measured` sentence naming the population, each contributing member's partition,
       and the sealed/open/pre-seal split. (AC: AC3.4)
-- [ ] ⛔ **Add your term to `expected_section_5_outcome()` — do not fork it — and pass `seal_holds`
+- [x] ⛔ **Add your term to `expected_section_5_outcome()` — do not fork it — and pass `seal_holds`
       IN, derived from the fixture, never read back out of the predicate under test.** (AC: AC6.2)
-- [ ] ⛔ **Re-run §2.4's AST walk yourself, then audit EVERY guard it returns — Tier 1 and Tier 2 —
+- [x] ⛔ **Re-run §2.4's AST walk yourself, then audit EVERY guard it returns — Tier 1 and Tier 2 —
       and look beyond the list.** For each, either re-author as an
       INTENDED BEHAVIOUR CHANGE (recorded, driven RED) or verify by execution that it needs no change
       (recorded). Extend `_spread()` / `_population()` / `_decide()` to generate over **sealed
       manifest rows**, with a non-vacuity floor asserting enough sealed rows exist. (AC: AC6.1, AC6.3)
-- [ ] Create `tests/test_gate_seal.py`; allocate ids from **`-87`**; drive the condition to **both**
+- [x] Create `tests/test_gate_seal.py`; allocate ids from **`-87`**; drive the condition to **both**
       verdicts over GENERATED populations and assert **where the verdict flips**. (AC: AC6.2, AC6.4)
-- [ ] Build AC4's git-history citation guard on the `-75` template: three non-vacuity preconditions,
+- [x] Build AC4's git-history citation guard on the `-75` template: three non-vacuity preconditions,
       the predicate driven to **both** outcomes over synthetic messages, the `SEAL_CITATION_RULE`
       written down, the remedy in the failure message. ⛔ **`argus/detectors/**` stays byte-unchanged.**
       (AC: AC4.1–AC4.4)
-- [ ] Amend protocol §5 by a **dated block under V1.3** that edits no existing byte and does not
+- [x] Amend protocol §5 by a **dated block under V1.3** that edits no existing byte and does not
       re-wrap the conjunction sentence `-63` pins. ⛔ **No `V1.4` row.** (AC: AC7.1)
-- [ ] Amend `architecture.md` §Enforcement struck-not-erased, extending *Gate-decision enforcement*;
+- [x] Amend `architecture.md` §Enforcement struck-not-erased, extending *Gate-decision enforcement*;
       run `TC-ArgusAgent-DOCS-001-77` and confirm every anchor resolves. (AC: AC7.2)
-- [ ] Re-run `python scripts/build_gate_decision.py`; commit the regenerated record **separately**;
+- [x] Re-run `python scripts/build_gate_decision.py`; commit the regenerated record **separately**;
       confirm `-54` green and both builders `--check` exit 0. Record that no detector executed and no
       candidate was touched. (AC: AC7.3)
-- [ ] ⛔ **Verify by execution that `outcome`, `outcome_reason`, `closure_path` and the precision
+- [x] ⛔ **Verify by execution that `outcome`, `outcome_reason`, `closure_path` and the precision
       `gate_status` sentence are BYTE-IDENTICAL across the amendment**, and that the record gained a
       sixth condition reading `FAILED` and nothing else. If anything else moved, **stop and record why.**
       (AC: AC3.5)
-- [ ] Re-read the four published figures from `_live_figures()`; update `README.md` / `CHANGELOG.md`;
+- [x] Re-read the four published figures from `_live_figures()`; update `README.md` / `CHANGELOG.md`;
       regenerate the dogfood artifacts in the declared order and commit them separately. (AC: AC7.4)
-- [ ] Assert by execution: `VALIDATION_SET_FLOOR_N == 5`, `eligible_member_count() == 5`, the ≥80%
+- [x] Assert by execution: `VALIDATION_SET_FLOOR_N == 5`, `eligible_member_count() == 5`, the ≥80%
       `Fraction` unmoved, `MANIFEST_FIELDS` at 9, no member dropped or re-weighted, all 14 candidates
       still `eligible_for_n=False`. Record every reading. (AC: AC5.1, AC5.4)
-- [ ] Record `SEAL_COMMIT_SHA` in a **later** commit; verify `git diff --name-only` over this story's
+- [x] Record `SEAL_COMMIT_SHA` in a **later** commit; verify `git diff --name-only` over this story's
       commits touches **no** `CANDIDATE_OUTPUT_PATHS` entry and that no corpus-audit script ran;
       record the landing shas for 16.4. (AC: AC1.5, AC7.5)
-- [ ] Full suite with `ARGUS_REQUIRE_LANGUAGE_GRAMMARS=1`, **exit code recorded, 0 skipped**; `mypy`;
+- [x] Full suite with `ARGUS_REQUIRE_LANGUAGE_GRAMMARS=1`, **exit code recorded, 0 skipped**; `mypy`;
       `bandit`; NFR-M1 measured for every touched module; confirm `vacuous_test.py` and
       `test_vacuous_density.py` byte-unchanged. (AC: AC8.1, AC8.2)
-- [ ] Push; record the CI run id **with the sha it covers**, or record AC8.3 **OPEN** if instructed
+- [x] Push; record the CI run id **with the sha it covers**, or record AC8.3 **OPEN** if instructed
       not to push. (AC: AC8.3)
-- [ ] Write the hand-off for 16.3 and 16.4 — **including §0.3's countable R2 constraint: ratify at
+- [x] Write the hand-off for 16.3 and 16.4 — **including §0.3's countable R2 constraint: ratify at
       least 3 of the six named sealed candidates, or `CLEARED` is unreachable.** (AC: AC8.4)
 
 ---
@@ -1017,13 +1017,402 @@ sha it covers.
 
 ### Agent Model Used
 
-*(to be filled by the dev agent)*
+`claude-opus-5[1m]` (Opus 5, 1M context), BMAD `dev-story` worker, single implementation round,
+2026-08-20. Baseline HEAD `6128466`; the story file and its `ready-for-dev` transition were
+untracked/uncommitted at that point and landed as this story's first commit.
 
 ### Debug Log References
 
+Every figure below was produced by execution on this tree, out of tree and read-only unless it is
+a commit. `git status --porcelain` was empty before the first commit, after every mutation restore,
+and at the end.
+
+#### §0 premises RE-DERIVED INDEPENDENTLY (the story's own instruction; 16.1's round 1 exists
+because a "measured" premise was false inside its own story)
+
+| Premise | Story says | I measured | Agrees |
+|---|---|---|---|
+| Manifest rows | 21 | **21** | ✅ |
+| `eligible_member_count()` | 5 | **5** | ✅ |
+| Bench candidates | 14, all `eligible_for_n=False` | **14, all False** | ✅ |
+| `MANIFEST_FIELDS` | 9, CLOSED | **9** | ✅ |
+| `int(sha,16)%2` vs `int(sha[-1],16)%2` | agree on every row | **21 of 21 agree, 0 disagreements** | ✅ |
+| Bench split under the rule | 6 SEALED / 8 open | **6 / 8** | ✅ |
+| `pre-seal` from the two adjudication sets | 5 members | **5**, `agent-markovich`, `agent-smith`, `ai-body-runtime`, `minions`, `xagents-webapp` | ✅ |
+| Rows 4 & 5 carry ODD pins | yes — the override is load-bearing | **`xagents-webapp` `33a86525…` and `agent-smith` `9ab774d7…` both re-derive `sealed` with the override disabled** | ✅ |
+| `gate_decision.py` | 1,197 / 1,200 | **1,197** | ✅ |
+| `test_gate_decision.py` | 1,193 / 1,200 | **1,193** | ✅ |
+| Split boundary by AST | `CleanRepoEvidence` 97 `:364-460`, `CorpusReadProof` 76 `:463-538` | **identical, to the line** | ✅ |
+| The constructor gap | `commit_sha="NOT-A-SHA"` and `""` construct on a candidate row | **both constructed; so did `"ABCDEF…abcd"` (uppercase)** | ✅ |
+| All 21 rows already satisfy 40-hex | yes | **yes — 0 rows fail** | ✅ |
+| Baseline suite | 1,658 / 0 / 0 / 0, exit 0 | **exit 0** | ✅ |
+
+**Nothing in §0 moved.** No figure had to be struck.
+
+#### §2.4's AST walk, RE-RUN rather than trusted
+
+Walked `test_gate_{decision,breadth,condition_lookup}.py`, counting `CLEARED`/`NOT_CLEARED`/
+`BLOCKED` string literals in **executable code only**, docstrings excluded. Result: `-53`, `-55`,
+`-56`, `-58`, **`-60`**, `-61`, `-62`, `-69`, `-70` (`test_gate_decision.py`); `-83`, `-85`, `-86`
+and `expected_section_5_outcome` itself (`test_gate_breadth.py`); none in
+`test_gate_condition_lookup.py`.
+
+⚠️ **The walk returned one guard §2.4's table does not name: `-60`.** The story's own instruction
+was *"look beyond the list"*, and this is what that found. `-60`'s outcome literals are all inside
+`derive_residual_completion_bound` assertions and one `if payload["outcome"] == "BLOCKED"` branch
+over the committed payload; verified by execution to need no change, and it stayed green
+throughout. Recorded here rather than left implicit.
+
+⚠️ **And one coupling NEITHER the story nor the walk names, found by running the suite:
+`TC-ArgusAgent-PRECISION-001-76` in `tests/test_candidate_selection.py`.** It asserts, *as a
+premise*, that `CorpusMemberSpec(commit_sha="deadbeef", eligible_for_n=False)` **constructs
+silently** — a deliberate tripwire whose docstring says *"if `__post_init__` ever stops returning
+early, this guard says so rather than quietly becoming redundant."* AC2.3's hoist made it fire.
+It is re-authored as an intended behaviour change (below), never reverted and never relaxed.
+
 ### Completion Notes List
 
+#### AC6.3 — the §2.4 audit, one line per guard, none silent
+
+| Guard | Disposition | Evidence |
+|---|---|---|
+| `-53` | **verified, no change** — vocabulary only, no fixture | green throughout; uses no generator |
+| `-54` | **no source change**; went red on the STALE committed record and green after regeneration | it compares the artifact to a live re-derivation, which is exactly its job |
+| `-55` | **RE-AUTHORED** — the mirror call gains `seal_holds`, DERIVED here from the committed corpus (every ratified member is `pre-seal`, so no contributing member can be sealed), never read out of `assess_seal` | its docstring already records that this fixture reaches the mirror's FIRST clause; the seal clause is driven by `-90` |
+| `-56` | **no source change**; red on the stale record, green after regeneration | asserts `reported == list(SECTION_5_CONDITIONS)` |
+| `-58` | **RE-AUTHORED** — `_spread` now generates over SEALED rows and the same rows are passed as the decision's corpus | RED under R2 and R6 |
+| `-59` | **verified, no change** | green; `_decide` default is unchanged |
+| `-60` | **verified, no change** (found by my walk, absent from §2.4's table) | green |
+| `-61` | **verified, no change** | green; RED under R6, so it is not inert |
+| `-62` | **verified, no change** — conditional on the payload, not an assertion | green |
+| `-63` | **verified, no change** — `protocol_version` did not move; no `V1.4` row | green; `build_adjudication_record.py --check` exit 0 |
+| `-64` | **verified, no change** | green |
+| `-69` | **verified, no change** | green; RED under R6 |
+| `-70` | **verified, no change** | green |
+| `-76` | **RE-AUTHORED** (not in §2.4's list) — premise moves from "constructs" to "RAISES", struck-not-erased in the docstring, and made **strictly stronger**: 5 generated bad pins refused on an INELIGIBLE row, plus a legal-shape control | RED under M12 / R4 |
+| `-80` / `-81` | **verified, no change** | green; both assert `len(conditions) == len(SECTION_5_CONDITIONS) >= 4`, which is why they survived |
+| `-83` | **RE-AUTHORED** — generates over `_sealed()` with the sealed corpus | RED under R1, R3 |
+| `-84` | **RE-AUTHORED** — same | RED under R1, R3 |
+| `-85` | **RE-AUTHORED** — `== 5` → `== 6`, plus a NEW assertion that `SECTION_5_CONDITIONS[4]` is still `BREADTH_CONDITION_ID`, so a condition INSERTED rather than appended reddens it even at the right count | RED under R3 |
+| `-86` | **RE-AUTHORED** — `expected_section_5_outcome(..., seal_holds=)`, derived from the fixture; plus a new assertion that the generated population really is entirely sealed | RED under R1, R3 |
+
+`expected_section_5_outcome` gained a **REQUIRED** keyword (no default) so no caller could silently
+inherit the old answer — which is exactly how 16.1's breadth clause came to be unreachable in `-55`.
+
+#### AC6.1 — EXECUTED MUTATIONS, EVERY ONE OBSERVED RED
+
+Harness: apply one mutation → run the named modules with `ARGUS_REQUIRE_LANGUAGE_GRAMMARS=1`,
+`PYTHONDONTWRITEBYTECODE=1`, `-p no:randomly -p no:cacheprovider` → record → restore the file
+**byte-exact** with `write_bytes(original)` → assert `git status --porcelain` empty.
+
+⚠️ **A methodology defect found and fixed mid-verification, recorded because it would have made
+this evidence untrustworthy.** The first pass ran without disabling bytecode caching, and a
+restored file whose byte-length was unchanged was later served from a stale `__pycache__`,
+producing a **false RED** in an unrelated subsequent run. Every result below is from the **re-run
+with caching disabled**, and the first pass's numbers were identical.
+
+| # | File | Mutation | Guard(s) observed RED | Observed failure (first line) |
+|---|---|---|---|---|
+| M1 | `gate_seal.py` | bisection `% 2 == 1` → `== 0` | `-87`, `-89` | `AssertionError: ('000…0', 'sealed', 'open')` |
+| M2 | `gate_seal.py` | prior-output override deleted (`if False and has_prior_output`) | `-87`, `-88` | `AssertionError: 000…0` (override direction) |
+| M3 | `gate_seal.py` | pin check disabled in `partition_of` | `-87` | `ValueError: invalid literal for int() with base 16: ''` |
+| M4 | `_manifest.py` | `agent-smith` DROPPED from `PRE_SEAL_MEMBER_IDS` | `-88` | *"frozen-only=[] run-over-only=['agent-smith']"* |
+| M5 | `_manifest.py` | `pypa-pip` ADDED to `PRE_SEAL_MEMBER_IDS` | `-88` | *"frozen-only=['pypa-pip'] run-over-only=[]"* |
+| M6 | `_manifest.py` | one table row flipped `sealed`→`open` | `-89` | *"the frozen table says 'open' and the rule re-derives 'sealed' from the pin '2c42237d…'"* |
+| M7 | `_manifest.py` | a bench candidate omitted from the table | `-89` | *"'tox-dev-tox' is a bench candidate with no row in SEALED_PARTITION_TABLE"* |
+| M8 | `gate_seal.py` | seal predicate stuck **TRUE** | `-90` | *"seal = 0 SEALED contributing member(s) of 3 contributing, against a floor of 3"* |
+| M9 | `gate_seal.py` | seal predicate stuck **FALSE** | `-90` | *"seal = 3 SEALED contributing member(s) of 6 contributing, against a floor of 3"* |
+| M10 | `gate_decision.py` | **the seal DISPATCH BRANCH removed** | `-90` | *"the measurement RAN … and 2 of protocol §5's 6 conditions did not hold"* — i.e. the condition still read FAILED while the OUTCOME stopped moving. This is the mutation that proves the clause is decisive rather than decorative. |
+| M11 | `gate_decision.py` | the seal TERM removed from `_precision_condition` | `-90` | `AssertionError: precision = 1/1 over 18 adjudicated finding(s) … >= 4/5` (verdict `MET` where `UNEVALUABLE` was required) |
+| M12 | `_manifest.py` | pin check **un-hoisted** behind the eligible branch | `-92`, `-76` | `Failed: DID NOT RAISE ValueError` |
+| M13 | `gate_seal.py` | `cites_partition` accepts everything | `-93` | refused-direction assertion |
+| M14 | `gate_seal.py` | `cites_partition` accepts nothing | `-93` | `AssertionError: Evidence-partition: sealed` |
+| M15 | `test_gate_seal.py` | `SEAL_COMMIT_SHA` → a non-resolving sha | `-94` | `AssertionError: 000…0` |
+| M16 | `gate_seal.py` | a declared detector-tuning path misspelled | `-94` | *"'argus/detectors-typo' does not exist … a misspelled pathspec reads exactly like a clean history"* |
+| M17 | `gate_disclosure.py` | `partition` key dropped from the published row | `-87`.. + `MissingMemberPartition` | *"the fixture's corpus-member shape forked from the shipped producer's"* |
+| M18 | `gate_seal.py` | seal floor FORKED (`return 1`) | `-90` | *"the seal floor forked from §5's breadth floor … two floors is how two corpora happened"* |
+| M19 | `gate_seal.py` | counts `open` members as sealed | `-90`, `-91` | `AssertionError: ()` |
+| M20 | `gate_seal.py` | a zero-member partition stops being STATED as zero | `-91` | `AssertionError: ['pre-seal', 'sealed']` |
+| M21 | `gate_seal.py` | AC3.4's discrimination sentence removed | `-91` | *"assert 'NO SEALED MEMBER WAS IN THE POPULATION AT ALL' in 'seal = 0 SEALED …'"* |
+| M22 | `gate_conditions.py` | the sixth id dropped from `SECTION_5_CONDITIONS` | `-90`, `-83`..`-86` | `ValueError: 'gate-evidence-drawn-from-the-sealed-partition' is not one of protocol §5's conditions` |
+| R1 | `gate_seal.py` | seal stuck FALSE, run against `test_gate_breadth.py` only | **`-83`, `-84`, `-86`** | three FAILED |
+| R2 | `gate_seal.py` | seal stuck FALSE, run against `test_gate_decision.py` only | **`-58`** | FAILED |
+| R3 | `gate_conditions.py` | sixth id dropped, `test_gate_breadth.py` only | **`-83`, `-84`, `-85`, `-86`** | four FAILED |
+| R4 | `_manifest.py` | pin check un-hoisted, `test_candidate_selection.py` only | **`-76`** | FAILED |
+| R6 | `gate_decision.py` | the seal `ConditionResult` never built | **`-54`, `-56`, `-58`, `-59`, `-61`, `-69`** | six FAILED |
+
+**27 mutations, 27 observed RED. Tree restored byte-exact and `git status --porcelain` empty after
+every single one**, and the full suite re-run green afterwards.
+
+⚠️ **One mutation I EXPECTED to be red was GREEN, and it is recorded rather than dropped.** **R5**
+re-tabled three `sealed` rows as `open` in `SEALED_PARTITION_TABLE` and ran `test_gate_breadth.py`;
+it stayed **GREEN**. That is **correct behaviour and my expectation was wrong**: the sealed
+generators derive from `gate_seal.partition_of` (the RULE), not from the frozen table (the
+RECORD) — which is the whole point of AC1.3. Re-running the identical mutation against its actual
+guard (**R5b**) gives **RED** on `-89`. Recorded because a mutation whose expectation was wrong is
+evidence about the design, and quietly deleting it would be the same class of act this epic exists
+to prevent.
+
+#### The seal condition, DRIVEN — why `-90` needed a mixed population
+
+A population built only from sealed members has `sealed contributing == contributing`, so its seal
+term and its breadth term move in **lockstep**, and a mutation deleting the seal clause outright
+leaves every assertion green — **exactly** the unreal-guard finding the 2026-08-20 review made
+against 16.1's round 2. `-90` therefore generates **`k` sealed members PLUS a fixed `floor`
+pre-seal members**, which pins **breadth TRUE** while the sealed count sweeps `0..6`, so the seal
+is the only term that can move the answer. Observed: `BLOCKED` for `k ∈ {0,1,2}`, `CLEARED` for
+`k ∈ {3,4,5,6}`, verdict `FAILED`→`MET` flipping exactly at the derived floor of 3. M10 confirms
+the branch is load-bearing.
+
+#### AC3.5 — the amendment is INERT, VERIFIED AT THE PRODUCING SEAM
+
+`build_decision(...)` was run with the committed artifact's own sha/date/provenance and compared
+field-by-field, in **serialized** form (a first comparison of live payloads showed `threshold` and
+`residual_completion_bound` "moving" — that was `Fraction` vs. its serialized form, not a real
+difference, and it is recorded here because it is exactly the kind of artefact that would otherwise
+be reported as a finding):
+
+- `outcome` **BYTE-IDENTICAL** (`BLOCKED`) · `outcome_reason` **BYTE-IDENTICAL** ·
+  `closure_path` **BYTE-IDENTICAL** · `precision.gate_status` **BYTE-IDENTICAL**
+- `section_5_conditions` 5 → 6, a **clean prefix-plus-one**; the five historical verdicts unchanged
+  (`UNEVALUABLE` / `MET` / `MET` / `FAILED` / `FAILED`), the appended one `FAILED`
+- exactly four keys moved, **all of them this story's own**: `section_5_conditions`,
+  `corpus.members` (each row gained `partition`), `precision.seal_holds`, `seal`
+
+#### AC7.3 — regeneration executed NO detector and touched NO candidate
+
+`scripts/build_gate_decision.py` reads the **committed** adjudication record, the **committed**
+adjudication sets and the manifest, and folds the **CARTRIDGE** corpus for §5's clean-repo
+condition — `tests/cartridges/`, this repository's own recall corpus, which is **not** a
+validation-set member (DN-2). It executes no detector over any repository, stages nothing, fetches
+nothing, and touches no candidate. All 14 bench candidates remain unrun. `adjudication-record.json`
+is byte-unchanged and `build_adjudication_record.py --check` exits 0, so §2.3's coupling stayed
+**unarmed**.
+
+#### AC5.1 / AC5.4 — the readings that prove it PARTITIONS and does not NARROW
+
+`VALIDATION_SET_FLOOR_N` **5** · `validation_floor_n()` **5** · `eligible_member_count()` **5** ·
+`len(VALIDATION_CORPUS)` **21** · `len(MANIFEST_FIELDS)` **9** · `PRECISION_GATE_THRESHOLD`
+**4/5** · `len(GATE_OUTCOMES)` **3** · `len(CONDITION_VERDICTS)` **4** ·
+`len(SECTION_5_CONDITIONS)` **6** · bench candidates **14, every one still `eligible_for_n=False`**
+· every candidate's `adjudication_caveat` intact · partition census over all 21 rows **6 sealed /
+10 open / 5 pre-seal** · bench split **6 sealed / 8 open** · seal floor **3** == breadth floor
+**3** · frozen table **14 rows** · committed record **31 rows, `protocol_version` V1.3**.
+
+#### AC8.2 — NFR-M1, before and after, with `_physical_line_count`
+
+| Module | Before | After | Headroom |
+|---|---|---|---|
+| `argus/precision/gate_decision.py` | **1,197** | **986** | 214 |
+| `argus/precision/gate_conditions.py` | — | **220** | 980 |
+| `argus/precision/gate_evidence.py` | — | **214** | 986 |
+| `argus/precision/gate_seal.py` | — | **777** | 423 |
+| `argus/precision/gate_disclosure.py` | 341 | **350** | 850 |
+| `tests/corpus/_manifest.py` | 886 | **1,029** | 171 |
+| `tests/test_gate_decision.py` | 1,193 | **1,191** | 9 |
+| `tests/test_gate_breadth.py` | 622 | **704** | 496 |
+| `tests/test_gate_seal.py` | — | **1,135** | 65 |
+| `tests/test_candidate_selection.py` | 698 | **740** | 460 |
+| `argus/detectors/vacuous_test.py` | 1,196 | **1,196 — BYTE-UNCHANGED** | 4 |
+| `tests/test_vacuous_density.py` | 1,159 | **1,159 — BYTE-UNCHANGED** | 41 |
+
+`git diff --name-only 981891e^..HEAD` over `argus/detectors/` and `tests/test_vacuous_density.py`:
+**0 files.** AC4.4's *"`argus/detectors/**` stays BYTE-UNCHANGED"* holds by execution.
+
+### Decisions this story TOOK beyond the story's own DN table, each with its rationale
+
+**DN-16-2-7 — the seal floor IS §5's breadth floor, resolved through the same function.** The
+condition requires at least `contributing_member_floor(VALIDATION_SET_FLOOR_N)` = **3** distinct
+SEALED contributing members. *Rejected:* **every contributing member must be sealed** — a SHUTDOWN
+by construction, because the five pre-seal members will keep contributing and the only way to
+satisfy it would be to drop them, which is the NARROWING AC5 forbids; 16.1 HALTED rather than land
+an unsatisfiable arm and the same test applies here. *Rejected:* **≥ 1 sealed member** — that is
+H-1 (*a score drawn from one repository is not a score*) re-introduced on the sealed side, one
+epic after it was closed. *Rejected:* **a majority of contributing members** — set-relative, so the
+threshold would move as a side effect of how many pre-seal members happened to emit. *Rejected:* a
+second seal-specific constant — DN-3's one-floor rule, forked. The chosen floor also makes §0.3's
+closure path exactly countable: **ratify ≥ 3 of the six sealed candidates, or `CLEARED` is
+unreachable.** Guarded by `-90`, and M18 proves the resolution is real.
+
+**DN-16-2-8 — `sealed_precision_gate_status` is a sibling of `effective_precision_gate_status`,
+not a widening of it.** Both are thin wrappers over the ONE shared renderer
+`replay_harness.precision_gate_status_for`; neither authors a status string. The story's write set
+holds `argus/precision/gate_breadth.py` **byte-unchanged** (*"read it; do not edit its subject"*),
+and that module's subject is the breadth arm — giving its renderer a second reason would make it
+not-about-breadth. `GateDecision.precision_gate_status` reports the **FIRST binding reason in §5's
+own condition order**, so a population failing both is told about breadth: reporting the later
+reason would tell a reader the evidence was un-sealed when there was not enough of it to ask.
+
+**DN-16-2-9 — the sealed-population generators live in the TEST tree, not in `argus/**`.** §0.4
+suggested `gate_disclosure` as the home for `sealed_corpus_member_ids`. It has **no production
+caller**, and shipping a public function no shipped code calls is dead surface. `partition` on
+`ratified_corpus_members()` — which does have one — went to `gate_disclosure` exactly as §0.4 says.
+The fixtures (`sealed_corpus_members`, `pre_seal_corpus_members`, `spread_over_sealed`,
+`mixed_population`) are named **once**, in `tests/test_gate_seal.py`, and IMPORTED by
+`test_gate_decision.py` and `test_gate_breadth.py` — the precedent this tree already sets with
+`expected_section_5_outcome` and `protocol_cleared_call_sites`. **AR7 satisfied without shipping
+dead code**, and `sealed_corpus_members()` asserts its mapping shape against the shipped producer
+so the fixture cannot fork from it (M17 proves that assertion real).
+
+### ⚖️ DEVIATIONS from the declared write set, each RECORDED with its rationale (AC8.5)
+
+**D1 — the split is TWO sibling modules, not one, and it moves 319 lines rather than 173.**
+§2.1 measured the boundary as `CleanRepoEvidence` (97) + `CorpusReadProof` (76) = 173 contiguous
+lines. **Executing that alone produces a CYCLE**, measured not predicted:
+`CleanRepoEvidence.condition()` CONSTRUCTS a `ConditionResult`, whose `__post_init__` validates
+against `SECTION_5_CONDITIONS` — so the sibling would import `gate_decision` while `gate_decision`
+imports the sibling. Three layers were tangled and they are strictly ordered, so they became three
+modules: `gate_conditions.py` (what a §5 condition IS, 152 moved lines), `gate_evidence.py`
+(what one is MEASURED FROM — **exactly** the story's measured boundary, 173 lines),
+`gate_decision.py` (what the result IS). *Rejected:* a function-local import to dodge the cycle
+(a smell, and it hides a real layering fact); *rejected:* relocating `CleanRepoEvidence.condition()`
+out to `gate_decision` the way DN-16-1-3 has it build the breadth condition — that would make the
+split a **behaviour change** on the one commit whose entire value is that it is not one. The move
+is proved byte-exact: each of the six moved spans was compared against `git show
+HEAD:argus/precision/gate_decision.py` and is identical in the new module and absent from the old.
+**Every import line in the repository is byte-unchanged.**
+
+**D2 — `tests/test_candidate_selection.py` was edited, and it is not on the declared write set.**
+`TC-ArgusAgent-PRECISION-001-76` is a deliberate tripwire over the exact `__post_init__` early
+return AC2.3 requires closing, and it fired. Re-authored strictly stronger, struck-not-erased.
+Not touching it was not an option: the alternative was reverting AC2.3.
+
+**D3 — `tests/test_release_preflight.py` was edited, and it is not on the declared write set.**
+`RELEASE-001-11`'s `_MODULES_NAMING_THE_TEST_TREE_IMPORT` is a registry whose own docstring says an
+addition is *"DELIBERATE, which is what this registry exists to force someone to say."* Three new
+`argus/**` modules join it, each with its reason, each transitively and each resolving no path at
+module level.
+
+**D4 — the four published figures were updated TWICE, in two commits.** §2.5 implies one update.
+`DF-16-1-B` requires the split as its own commit, and `DOCS-001-54` pins the figures in both
+directions — so a single update would have left one of the two commits red. They move 88→90 in the
+split commit (naming the split) and 90→91 in the seal commit (naming `gate_seal.py`), so each
+commit is green and each parenthetical states what that commit did.
+
+**D5 — nothing else.** `deferred-work.md`, `prd.md`, `epics.md`, `adjudication-record.json`, the
+adjudication sets, `scripts/candidate_selection.py`, `argus/detectors/**`, `gate_breadth.py`,
+`replay_harness.py`, `adjudication.py`, `tests/cartridges/**`, `tests/test_vacuous_density.py` and
+`tests/test_status_document_registry.py` are all **byte-unchanged**. **No `DF-*` entry is disposed
+of; this story disposes of none.**
+
+### What this story did NOT do, because none of it is authorised
+
+No member was ratified, fetched, staged or checked out. **No detector executed over any repository
+— ratified or candidate.** `DF-13-5-A`'s ONE round is **UNSPENT**. `DF-16-1-A` stays **OPEN and
+unlanded** and no rule-class threshold is written anywhere. No protocol version was taken and there
+is **no `V1.4` row**. `sprint-change-proposal-2026-08-20-amendment-A.md` is registered and
+**UNAPPROVED**; nothing here applies it, cites it as authority or acts on it. **Opening the sealed
+partition is a single recorded §6 R2-class operator act, and this story adds no code path that
+opens it** — the partition is derived from pins, the pins are frozen, and no writer exists.
+
+### AC1.5 / AC7.5 — the ordering, and the landing shas for 16.4
+
+**`SEAL_COMMIT_SHA = f89f028038dcd9881204f36bc404267c876b18f7`**, recorded in
+`tests/test_gate_seal.py` in a **later** commit (`9d7f8b5`), on Story 15.1's `16d7100d → 4f4db78`
+pattern: *a commit cannot cite itself.*
+
+| # | Sha | Subject |
+|---|---|---|
+| 1 | `981891e` | `chore(16-2): file the contexted story and take it in-progress` |
+| 2 | `95819bc` | `refactor(16-2): split gate_decision before a sixth condition lands in it` (`DF-16-1-B`) |
+| 3 | **`f89f028`** | **`feat(16-2): seal part of the bench before anything is run` — THE SEAL COMMIT** |
+| 4 | `fd20c32` | `chore(16-2): regenerate the record and the dogfood artifacts, in the declared order` |
+| 5 | `9d7f8b5` | `feat(16-2): record the seal sha, which a commit cannot cite about itself` |
+| 6 | *(this commit)* | the story record |
+
+Verified by execution: `git diff --name-only 981891e^..HEAD` touches **18 files and NOT ONE**
+`CANDIDATE_OUTPUT_PATHS` entry; `git log` over those paths across the whole range returns **0
+commits**; no corpus-audit script ran and no audit output exists in the tree.
+
+### AC8.1 / AC8.3 — gates
+
+| Gate | Result |
+|---|---|
+| `ARGUS_REQUIRE_LANGUAGE_GRAMMARS=1 python -m pytest` | **1,667 collected · 1,667 passed · 0 failed · 0 skipped · exit 0** (baseline 1,658; +9 new guards) |
+| `mypy argus` | **Success: no issues found in 91 source files** (was 88) |
+| `bandit -r argus --severity-level medium` | **No issues identified** (24,874 LOC; by severity: Low 20, Medium 0, High 0) |
+| `python scripts/build_gate_decision.py --check` | **exit 0** (`CURRENT — BLOCKED`) |
+| `python scripts/build_adjudication_record.py --check` | **exit 0** |
+| module-size ceiling (`TC-ArgusAgent-MAINT-001-01`..`-05`) | **green**; see AC8.2's table |
+| `TC-ArgusAgent-DOCS-001-54` (four published figures) | **green** — 91 / 91 / 99 / 98, read from `_live_figures()` |
+| `TC-ArgusAgent-DOCS-001-77` (architecture registrations) | **green** |
+| **AC8.3 — CI run id** | ⛔ **OPEN.** I was instructed **not to push**, so no CI run covers these shas. ⚠️ **The local gates are Windows-only while CI runs an ubuntu matrix, and a green local suite has already shipped POSIX-only bugs to master.** This is recorded OPEN rather than claimed. |
+
+### Hand-off to 16.3 and 16.4 (AC8.4)
+
+1. **THE SEAL SHA, for 16.4's ancestry guard: `f89f028038dcd9881204f36bc404267c876b18f7`.** It is
+   already a constant in `tests/test_gate_seal.py`; **import it, do not re-type it.**
+2. ⛔ **THE COUNTABLE §6 R2 CONSTRAINT, which the operator must be told BEFORE the act.** §5's seal
+   condition needs **≥ 3 distinct SEALED contributing members**. The sealed partition holds exactly
+   six candidates: **`aws-aws-sam-cli`, `celery-celery`, `certbot-certbot`, `conda-conda`,
+   `getsentry-sentry-python`, `googleapis-google-auth-library-python`.** **Ratifying only
+   open-partition members leaves the gate permanently `BLOCKED` on this condition.** And ratifying
+   three is necessary, not sufficient: each must actually *emit* a verdict-eligible finding that
+   survives adjudication, which is unknowable without running.
+3. **THE FROZEN PARTITION TABLE** is `_manifest.SEALED_PARTITION_TABLE` — 6 sealed / 8 open — with
+   `PRE_SEAL_MEMBER_IDS` (5) beside it. `-89` re-derives every row from the rule in both
+   directions; **never read the table as a hand-list.**
+4. **`expected_section_5_outcome(fold, *, breadth_holds, seal_holds)`** — both keywords REQUIRED,
+   no defaults. 16.3 adds its yield term the same way: **add to the mirror, never fork it**, and
+   derive every term from the fixture. Note that over a purely-sealed population `breadth_holds`
+   and `seal_holds` move in lockstep; `-90`'s **mixed** population (sealed + pre-seal ballast) is
+   the pattern that isolates one term. **16.3 will need the same trick.**
+5. **The §2.4 coupling will fire a THIRD time.** Every §5-outcome fixture now generates over
+   SEALED rows via `tests/test_gate_seal.py`'s generators. A seventh condition re-couples `-83`,
+   `-84`, `-85`, `-86`, `-58`, `-55`, `-90`, `-91` — and `-85`/`-91` pin the condition COUNT
+   explicitly, so both go red the moment `SECTION_5_CONDITIONS` grows. Re-run the AST walk
+   yourself; my run found `-60`, which §2.4's table does not name.
+6. ⚠️ **NFR-M1 headroom that 16.3 should know about before it starts:** `tests/corpus/_manifest.py`
+   **1,029 / 1,200** (171) and `tests/test_gate_seal.py` **1,135 / 1,200** (65) are the tightest
+   files this story leaves. `tests/test_gate_decision.py` came back to **1,191** (9) by MOVING
+   `_spread` out rather than shaving it. `argus/precision/gate_decision.py` is at **986** (214) —
+   `DF-16-1-B`'s trigger is discharged, but a seventh condition is not free.
+7. **Protocol §5 now carries TWO dated blocks under V1.3.** A third amendment adds a third block.
+   ⛔ **Still no `V1.4` row** — locked operator decision; the 31 judgements of 2026-08-17 keep
+   their V1.3 provenance, and `build_adjudication_record.py` stays un-re-run.
+8. **§2.2's coupling is now armed for you:** any change to `SECTION_5_CONDITIONS` requires
+   `python scripts/build_gate_decision.py` re-run and the record re-committed, **in its own commit
+   after the code commit** — and regenerating is not Argus output over a bench member.
+9. **The dogfood artifacts cite `f89f028`.** Any further `argus/**` delta re-arms the LOC-currency
+   guards: commit `argus/` first, then `python scripts/regenerate_dogfood_artifacts.py`, then
+   commit the artifacts separately. The script refuses on a dirty `argus/` tree by design.
+10. **AC8.3 is OPEN.** Nothing was pushed and no CI run covers `981891e..HEAD`. The local gates are
+    Windows-only; the ubuntu matrix has not seen this change.
+11. **A post-seal detector change must now carry `Evidence-partition: sealed | open | none`.**
+    `-94` enforces it over real git history and its population is EMPTY today — `-93` is what makes
+    the predicate real. If 16.3 or 16.4 touches `argus/detectors/**` or
+    `argus/precision/replay_harness.py`, **write the trailer**; amending the rule to make a red
+    commit green is the corpus-shopping failure mode with an extra step.
+
 ### File List
+
+**New (`argus/`)**
+- `argus/precision/gate_seal.py` — the partition vocabulary, the pure rule, its derivation, the
+  seal assessment, the published sentences and the citation rule
+- `argus/precision/gate_conditions.py` — `DF-16-1-B` split: what a §5 condition IS
+- `argus/precision/gate_evidence.py` — `DF-16-1-B` split: what one is MEASURED FROM
+
+**New (`tests/`)**
+- `tests/test_gate_seal.py` — `TC-ArgusAgent-PRECISION-001-87`..`-94`, the sealed-population
+  generators, and `SEAL_COMMIT_SHA`
+
+**Modified**
+- `argus/precision/gate_decision.py` · `argus/precision/gate_disclosure.py`
+- `tests/corpus/_manifest.py` · `tests/test_gate_decision.py` · `tests/test_gate_breadth.py` ·
+  `tests/test_candidate_selection.py` · `tests/test_release_preflight.py`
+- `README.md` · `CHANGELOG.md`
+- `_bmad-output/design-artifacts/ArgusAgent/precision-validation-protocol.md` (§5, second dated
+  block under V1.3) · `architecture.md` (§Enforcement, struck-not-erased)
+- `_bmad-output/design-artifacts/ArgusAgent/validation-corpus/gate-decision-record.json`
+  (regenerated) · `minions-dogfood-{partition-plan,budget-plan,proof}.md` (regenerated)
+- this story file · `sprint-status.yaml`
+
+**Byte-unchanged, confirmed by execution:** `argus/detectors/**` ·
+`argus/precision/gate_breadth.py` · `argus/precision/replay_harness.py` ·
+`argus/precision/adjudication.py` · `tests/cartridges/**` · `tests/test_vacuous_density.py` ·
+`scripts/candidate_selection.py` · `deferred-work.md` · `prd.md` · `epics.md` ·
+`validation-corpus/adjudication-record.json` · `validation-corpus/adjudication-set*.json` ·
+`tests/test_status_document_registry.py`
 
 ---
 
@@ -1031,4 +1420,5 @@ sha it covers.
 
 | Date | Change | By |
 |---|---|---|
+| 2026-08-20 | **Story IMPLEMENTED in one round; Status `in-progress` → `review`.** §0's premises were re-derived independently before anything was written and **none moved** — 21 rows, N=5, 14 candidates, `MANIFEST_FIELDS` 9, whole-sha and last-digit parity agreeing on all 21 rows, the 6/8 bench split, the 5-member pre-seal set, the 1,197/1,193 line counts, the AST boundary to the line, and the constructor gap (`commit_sha="NOT-A-SHA"`, `""` and an uppercase 40-char sha all constructed on a candidate row). **`DF-16-1-B`'s SPLIT-FIRST trigger was discharged FIRST and in its own commit (`95819bc`)**, 319 lines moved byte-for-byte and proved identical against `git show HEAD:...`, every import line in the repository unchanged — **as TWO siblings rather than one, because executing §2.1's measured boundary alone produces a CYCLE** (`CleanRepoEvidence.condition()` constructs a `ConditionResult` that validates against `SECTION_5_CONDITIONS`), recorded as deviation D1 with the two rejected alternatives. **The seal landed in `f89f028`**: the rule as ONE pure function with a closed three-value vocabulary, the prior-output override that stops two odd-pinned already-audited members being declared holdouts, the derivation and its three rejected alternatives recorded in code, the frozen 14-row table re-derived from the rule in both directions, the derived `pre-seal` set, the `partition` property (`MANIFEST_FIELDS` stays closed at 9 — a `@property` is not a dataclass field), the hoisted 40-hex pin check that now validates EVERY row, and §5's SIXTH condition APPENDED with its floor RESOLVED from 16.1's rather than forked (DN-16-2-7). **AC3.5 verified at the producing seam: `outcome`, `outcome_reason`, `closure_path` and `precision.gate_status` BYTE-IDENTICAL across the amendment; exactly four keys moved, all of them this story's own.** **27 EXECUTED mutations of the shipped code, 27 observed RED, tree restored byte-exact and `git status --porcelain` empty after every one** — including both directions of the bisection, the override, the pin refusal, the seal predicate, the citation predicate, and the dispatch branch whose removal leaves the CONDITION reading FAILED while the OUTCOME stops moving. A 28th (**R5**) was GREEN and is recorded rather than dropped: my expectation was wrong, because the generators derive from the RULE and not from the frozen TABLE, and re-running the identical mutation against `-89` gives RED. A methodology defect is also recorded: the first pass ran without `PYTHONDONTWRITEBYTECODE`, a stale `__pycache__` produced one false RED in a later run, and every number above is from the re-run with caching disabled. Eleven §2.4 guards audited plus **two the story's table does not name** (`-60`, found by re-running the AST walk; **`-76`**, a deliberate tripwire that fired on the AC2.3 hoist and was re-authored strictly stronger). Protocol §5 amended by a SECOND dated block under **V1.3** — no `V1.4` row, `adjudication-record.json` byte-unchanged, the 31 judgements of 2026-08-17 keep their provenance. `architecture.md` §Enforcement extended struck-not-erased. Gates: **1,667 passed / 0 failed / 0 skipped / exit 0** with `ARGUS_REQUIRE_LANGUAGE_GRAMMARS=1`; `mypy argus` Success (91 files); `bandit --severity-level medium` No issues identified; both builders `--check` exit 0. **AC8.3 recorded OPEN — instructed not to push, so no CI run covers these shas, and the local gates are Windows-only.** Nothing was ratified, fetched, staged or run over; `DF-13-5-A`'s round is UNSPENT, `DF-16-1-A` stays unlanded, amendment-A stays UNAPPROVED and unacted-on, and no `DF-*` entry is disposed of. | dev-story |
 | 2026-08-20 | Story contexted at HEAD `6128466`, baseline measured GREEN by execution (1,658 tests exit 0, mypy 88 files, bandit clean, both builders `--check` exit 0). §0 premises measured on the live tree, read-only. **§0.2 records the rule and the partition it produces (6 SEALED / 8 open of 14), with the proof that "parity of the sha" and "parity of the last hex digit" are ONE rule, and with the measurement that makes the prior-output override load-bearing: `xagents-webapp` and `agent-smith` both carry ODD pins and would have been declared "sealed" despite having been audited twice.** **§0.3 answers the shutdown question 16.1 escalated on: the breadth floor is 3, invariant under corpus size; six sealed candidates are available against it, slack 3, all six clearing Story 15.1's co-occurrence floor — so the seal does NOT make breadth unsatisfiable — and the countable R2 consequence (ratify ≥3 of six named candidates) is recorded for 16.4 rather than discovered after the act.** **§0.5 answers the `MANIFEST_FIELDS` question by execution rather than by assumption: `-22` compares `dataclasses.fields`, so a derived property is not a field and the schema stays closed at 9 — with a HALT recorded if anyone judges otherwise, because extending a locked constant is not a dev's decision; and the measured constructor gap (a candidate row accepts `commit_sha="NOT-A-SHA"` today) is what AC2's "validated at construction" repairs.** §2.1 raises `DF-16-1-B`'s SPLIT-FIRST trigger to **Task 1** with the boundary measured by AST (173 contiguous lines, four importers enumerated). §2.4 records the coupling that will bite hardest: **all three §5-outcome fixture generators spread over the five ratified members, every one of which becomes `pre-seal`**, with the coupled guards enumerated by AST walk into two tiers (6 Tier-1 asserting `CLEARED`/`NOT_CLEARED` in code, 12 Tier-2 built on a pre-seal generator) — and with the first, looser scan's over-report corrected in place rather than quietly fixed, because a stated-as-measured list that is wrong is the exact defect Story 15.1's fix round exists for. §2.5 records the two narrowing designs proved by execution to `raise`, which is why the seal is a §5 CONDITION and not a filter. Locked decisions cited and not reopened: `DF-16-1-A` stays unlanded, no `V1.4` row, `DF-13-5-A`'s round UNSPENT, amendment-A UNAPPROVED and out of scope. Status `backlog` → `ready-for-dev`. | create-story |
