@@ -325,6 +325,12 @@ _MODULES_NAMING_THE_TEST_TREE_IMPORT: frozenset[str] = frozenset(
         "argus/precision/__init__.py",
         "argus/precision/adjudication.py",
         "argus/precision/gate_decision.py",
+        # ADDED 2026-08-20 (Story 16.1). §5's breadth condition. It names the repository-only
+        # tree TRANSITIVELY, through gate_disclosure and replay_harness, exactly as its four
+        # siblings above do — and it resolves NO path at module level (``DF-9-2-A``): the one
+        # locked floor it derives from arrives as an ARGUMENT. The wheel-importability claim
+        # is TC-ArgusAgent-RELEASE-001-20's, and it is asserted there, not here.
+        "argus/precision/gate_breadth.py",
         "argus/precision/gate_disclosure.py",
         "argus/precision/replay_harness.py",
         "argus/dogfood/proof_types.py",

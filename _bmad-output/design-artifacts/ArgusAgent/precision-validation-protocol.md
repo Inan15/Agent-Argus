@@ -316,6 +316,68 @@ honestly is a signal the cartridge is ambiguous and SHOULD be reworked or deferr
 blocking-FP count is 0 **AND** N ≥ 5 **AND** this protocol's adjudication run is recorded cleared.
 If ANY fails, the gate stays **PROVISIONAL** and the harness reports the number as an early signal.
 
+> **⚖️ AMENDED 2026-08-20 (Story 16.1 / AC1; sprint change proposal 2026-08-20 §4.3(1), approved
+> by XAgent007 2026-08-20) — A FIFTH CONDITION: THE DENOMINATOR MUST BE BROAD ENOUGH TO MEAN
+> SOMETHING.** The sentence above is **not edited** and its conjunction is not re-wrapped (§3.4:
+> amend by dated ADDITION, strike rather than erase). The new conjunct is stated here and is
+> **APPENDED** to the condition set, so §5's four historical conditions keep their historical
+> positions and their ids.
+>
+> **The new condition.** The precision ratio is **EVALUABLE only over a population drawn from at
+> least `(VALIDATION_SET_FLOOR_N + 1) // 2` — i.e. `ceil(N_floor / 2)`, which at the locked floor
+> of 5 is **3** — DISTINCT CONTRIBUTING members** of the ratified repository validation set. Below
+> that, §5's **precision** condition is recorded `UNEVALUABLE` with the counts that made it so, and
+> the gate outcome is `BLOCKED` with a countable closure path. The breadth condition's **own**
+> verdict is `MET` or `FAILED` — it *was* evaluated, over a named population. Condition id:
+> `denominator-breadth-contributing-members`. Guards:
+> `TC-ArgusAgent-PRECISION-001-82`..`-85`.
+>
+> **Why.** §5's `N >= 5` is satisfied by MEMBER COUNT while the ratio is computed over whichever
+> members actually emitted a blocking finding — *the N that gates and the N that contributes are
+> different numbers*. The committed gate record has DISCLOSED that since 2026-08-17 and has been
+> unable to act on it: as shipped, a gate could report **CLEARED** on a figure measured over **one
+> repository**, and the record would say so in a paragraph a reader is free to skip. A disclosure
+> the reader may weigh is not a condition the gate must satisfy.
+>
+> **This is a STRENGTHENING, and the distinction from a forbidden threshold change is spelled out
+> rather than asserted.** §5 and Story 13.3 / AC5 forbid any change that makes clearing EASIER —
+> narrowing a corpus, dropping a member, re-weighting one, or moving a threshold to fit a result.
+> This condition can only make clearing **harder**: every population that cleared before this
+> amendment either still clears or is now `BLOCKED`, and no population that failed before can pass
+> because of it. It touches **nothing else**: the ≥ 80% `Fraction`, `VALIDATION_SET_FLOOR_N = 5`,
+> the five ratified members, `MANIFEST_FIELDS` (closed at 9), `GATE_OUTCOMES` (closed at three) and
+> `CONDITION_VERDICTS` (closed at four) are all byte-unchanged, verified by execution. And it is
+> made **BEFORE the measurement it governs** — `DF-13-5-A`'s one permitted round is UNSPENT — which
+> is the whole point: adding a breadth requirement after seeing what the bench yields would be
+> corpus-shopping in the opposite direction.
+>
+> **⛔ The RULE-CLASS arm was DERIVED and deliberately NOT LANDED, by operator decision (XAgent007,
+> 2026-08-20).** An honest breadth condition has two arms — *not one repository* and *not one
+> rule*. Measured at `0a6e121` by two independent instruments (an AST walk of all seven
+> `build_recording` call sites, of which only `argus/detectors/vacuous_test.py:1067` passes a
+> non-`None` `depth_supported`, with the Prosecutor's promotion path unreachable because the single
+> production `prosecute()` call site at `argus/pipeline.py:535` supplies no `sign_offs`; and a
+> direct count over both committed adjudication sets — 2026-08-16: 6 rule classes emitted, **1**
+> verdict-eligible; 2026-08-18: 5 emitted, **0**): **the maximum achievable distinct
+> verdict-eligible rule-class count is 1.** A floor of **≥ 2 would be a SHUTDOWN**, not a
+> strengthening — it would make `CLEARED` unreachable by construction with the shipped detector
+> set — and a floor of **1 could not fail for any admissible input**, which this protocol already
+> refuses in its own words above: *"A §5 condition that cannot fail is not a threshold."* Neither
+> was landed. The rule-class count is still **DISCLOSED** on every decision. The detector-side work
+> that would make the arm achievable is filed on the deferred-work ledger as **`DF-16-1-A`**, and
+> landing a rule-class floor remains an operator decision taken in the open.
+>
+> **⚠️ NO CHANGE-LOG VERSION WAS TAKEN, and that is deliberate (operator decision, 2026-08-20).**
+> This amendment sits **under the existing V1.3**. The committed adjudication record holds **31
+> human judgements** (26 FP / 5 BORDERLINE, `XAgent007 (Engineering Lead)`, 2026-08-17) made under
+> V1.3. Adding a `V1.4` row would re-stamp `protocol_version` across all 31 — precisely the act
+> `decide_gate`'s own refusal names: *"a decision folded across an amendment is a re-interpretation
+> of judgements nobody re-made."* The amendment is additive to §5, touches no §4 rule, no golden-key
+> semantics and no TP/FP definition, so no judgement's MEANING moves; the version therefore does
+> not move either, the 31 judgements keep their original V1.3 provenance untouched, and
+> `TC-ArgusAgent-PRECISION-001-45` / `-63` stay green without any record being regenerated. Only
+> `gate-decision-record.json` was regenerated, because the condition SET it publishes grew.
+
 > **⚖️ AMENDED 2026-08-16 (Story 13.2 / AC1b) — a FOURTH terminal state existed and was reported
 > as the first.** The sentence above enumerates *cleared* and *provisional*. Measured by execution
 > on `bc55e36`: a corpus emitting **nothing at all** (0 TP / 0 FP / 8 FN) returned

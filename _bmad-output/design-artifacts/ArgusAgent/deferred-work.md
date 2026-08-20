@@ -5203,7 +5203,8 @@ disposed and three new ones are filed, one of which bounds Epic 15.
   never an exemption. The contract docstring was condensed twice during implementation and was
   deliberately **not** shaved below the content `AC2.2` / `AC2.4` / `AC10.1` / `AC10.2` require to
   be **in the code**: the index named as the counterparty, `argus/pipeline_stages.py:124` named as
-  the reason `` / `
+  the reason `
+` / `
 ` are not part of the problem, the adoptability statement a second
   detector would read, the `DF-15-2-B` price, and the `DF-14-3-A` / `-B` / `-C` statement of what
   stays broken. ⛔ **The trigger, stated so it is not a judgement call at the moment it is
@@ -5256,3 +5257,99 @@ disposed and three new ones are filed, one of which bounds Epic 15.
   - severity: 🟡 — nothing is failing, 41 lines is real room, and the ceiling guard is the live
     safety net. The defect being recorded here is the **absence of tracking**, not the size; it
     becomes 🟠 if this module crosses 1,180 with this entry still un-actioned.
+
+## Deferred from: Story 16.1 (2026-08-20) — filed by OPERATOR DECISION (XAgent007)
+
+- **`DF-16-1-A` — protocol §5's breadth condition landed with ONE arm, because the other arm is
+  unachievable with the shipped detector set.** Story 16.1's title argument has two halves — *a
+  score drawn from one repository is not a score*, and *a score drawn from one rule is not a
+  score*. The **contributing-member** arm landed (floor `(VALIDATION_SET_FLOOR_N + 1) // 2` = 3).
+  The **rule-class** arm did **not**, and this entry carries the blocking measurement so the next
+  reader does not have to re-derive it. **Measured at `0a6e121` by two instruments that share no
+  code:**
+  - **Static.** `verdict_eligible` is `depth_supported is not None`
+    (`replay_harness.finding_match_key`). An AST walk of **all 7** `build_recording(...)` call
+    sites in `argus/**` resolves `depth_supported` to `None` at six of them
+    (`argus/audit/deep_pass.py:345`, `argus/detectors/orphan_code.py:272`,
+    `argus/detectors/secret_scan.py:496` and `:517`, `argus/detectors/tool_runner.py:455`,
+    `argus/verdict/prosecutor.py:375`) and to a non-`None` depth at exactly **one**:
+    **`argus/detectors/vacuous_test.py:1067`**, where the depth and `rule_id = RULE_AST` are
+    governed by the SAME `corroborated` boolean, binding a verdict-eligible finding to
+    `vacuous_test_ast` by construction. The only other route to a depth is `prosecutor._promote`,
+    gated on `recording_id in sign_offs`; the single production `prosecute()` call site is
+    **`argus/pipeline.py:535`** and its keyword set is `{verdict, ledger, findings, cut_edges,
+    scope_paths, file_to_partition}` — **`sign_offs` is absent**, so `sign_off_set` is empty and
+    the promotion branch is unreachable on the corpus-audit path
+    (`scripts/audit_validation_corpus.py` reaches the detector through that same unmodified site).
+  - **Empirical.** Counted over both committed adjudication sets: `adjudication-set.json`
+    (2026-08-16) — 5,988 findings, **6** rule classes emitted, **1** verdict-eligible
+    (`vacuous_test_ast`, 31); `adjudication-set-13-5.json` (2026-08-18) — 4,284 findings, **5**
+    rule classes emitted (`orphan_code` 1675, `hardcoded_secret` 1330, `vacuous_test_heuristic`
+    1032, `cross_partition` 231, `traceability_not_establishable` 16), **0** verdict-eligible;
+    blocking total **0**.
+
+  **MAXIMUM ACHIEVABLE DISTINCT VERDICT-ELIGIBLE RULE-CLASS COUNT = 1.** Stated plainly, because
+  both horns are closed by rules this project already holds: **a floor of ≥ 2 would be a
+  SHUTDOWN, not a strengthening** — it makes `CLEARED` unreachable by construction with the
+  shipped detector set, and the operator's approval authorises making clearing harder, not
+  impossible; **a floor of 1 would be VACUOUS** — `derive_concentration` raises on an empty
+  population, so every population it accepts carries at least 1 rule class and the condition would
+  read `MET` for every possible input, which `CONDITION_VERDICTS` already refuses in this
+  codebase's own words: *"A §5 condition that cannot fail is not a threshold."* **Neither was
+  landed, and no rule-class threshold exists anywhere in the tree.** The count is still DISCLOSED
+  on every decision (`concentration.distinct_rule_class_count`, and in the breadth condition's own
+  `measured` sentence, which says in terms that the arm is not gated) so nobody can read the
+  landed condition as covering both halves. ⛔ **The work this entry names is DETECTOR/PIPELINE
+  work, not protocol work:** making a second rule class reachable — e.g. supplying `sign_offs` at
+  `argus/pipeline.py:535` so `DN-PROMOTE` becomes reachable, or grading a second detector's
+  `depth_supported` — changes what the gate MEASURES, which is a larger act than changing what it
+  REQUIRES, and it is outside the 2026-08-20 authorisation. Landing a rule-class floor without
+  first making it achievable remains an **operator decision taken in the open**, never a side
+  effect of a constant.
+  - id: DF-16-1-A
+  - origin_story: 16-1-a-score-drawn-from-one-repository-is-not-a-score (raised as that story's
+    AC2.4 HALT-1; **decided by the operator on 2026-08-20** — *"land the contributing-member arm
+    only; file the rule-class arm"*)
+  - owner: **XAgent007 (Engineering Lead)** (`AI-E9-8`)
+  - target_story: **NONE** — it is a precondition on whoever makes a second rule class reachable,
+    not work with a schedule of its own, and pinning it to an unwritten story is how
+    `DF-14-3-H`'s `target_story: 13-5` went stale
+  - category: validation instrument / precision gate coverage
+  - severity: 🟠 — nothing is failing and the landed arm is real, but the gate's breadth guarantee
+    is **half of what its own story argues for**: 40 findings from three members, all
+    `vacuous_test_ast`, would clear. That is a narrower claim than "we measured the tool", and the
+    externalization gate is the one surface where the gap between those two must not be silent.
+
+- **`DF-16-1-B` — `argus/precision/gate_decision.py` ends Story 16.1 with THREE lines of headroom,
+  and Stories 16.2 and 16.3 each append another §5 condition.** **Measured with the ceiling
+  guard's own method** (`_physical_line_count`, `_CEILING = 1200`): **1,197 of 1,200**. `MAINT-001`
+  is green and **no `_EXEMPT_BY_DESIGN` entry was added** — the registry may only shrink (`-04`),
+  and the remedy `tests/test_module_size_ceiling.py::_REMEDY` names is a **cohesion split**, never
+  a shave and never an exemption. Story 16.1 did not shave: the breadth CONSTANTS, the pure
+  predicate and the `measured` / `closure` / `outcome_reason` **sentences** went to the new
+  `argus/precision/gate_breadth.py` exactly as `DN-16-1-3` directs, and what remains in
+  `gate_decision.py` is its own subject — the vocabularies, `ConditionResult`, `GateDecision`, the
+  condition builders and the dispatch. The `ConditionResult` builder could not follow the sentences
+  out, because `ConditionResult` lives in `gate_decision.py` and the import would be circular.
+  ⛔ **The trigger, stated so it is not a judgement call at the moment it is inconvenient:** the
+  **next** change to this module — which is Story 16.2's sixth §5 condition — performs the cohesion
+  split **FIRST**, by subject cohesion, with no function split across the boundary, on the
+  `argus/pipeline_stages.py` (Story 12.1) and `argus/precision/gate_breadth.py` (this story)
+  precedent. The natural boundary is already visible: `CleanRepoEvidence` and `CorpusReadProof` are
+  the EVIDENCE the decision consumes rather than the decision itself, and they are roughly 180
+  lines. It was **not** performed here because it is a production restructuring outside this
+  story's declared write set, and doing it inside a story that also amends the protocol would make
+  the one change a reviewer most needs to read unreviewable.
+  - id: DF-16-1-B
+  - origin_story: 16-1-a-score-drawn-from-one-repository-is-not-a-score (the condition is created
+    by that story's own delta, 1,081 → 1,197)
+  - owner: **XAgent007 (Engineering Lead)** (`AI-E9-8`)
+  - target_story: **NONE** — a precondition on whoever opens that module next, which on the current
+    plan is 16.2. Recorded as a precondition rather than as scheduled work, on the `DF-15-2-D`
+    precedent.
+  - category: maintainability / NFR-M1 headroom
+  - severity: 🟠 — worse than `DF-15-2-D`'s four lines, and unlike that entry the next change is
+    already **known and planned**: 16.2 cannot append a §5 condition inside three lines. The
+    ceiling guard fails loudly at 1,201 and never silently, but it would fail in the middle of the
+    story that must not stall, and the tempting answer at that moment is the exemption
+    `MAINT-001-04` forbids.

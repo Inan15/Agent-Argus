@@ -57,9 +57,12 @@ from argus.precision.adjudication import (
     load_record,
     validation_set_population_n,
 )
+from argus.precision.gate_breadth import assess_breadth
 from argus.precision.gate_decision import (
+    BREADTH_CONDITION_ID,
     CONDITION_VERDICTS,
     GATE_OUTCOMES,
+    RECORDED_CLEARED_CONDITION_ID,
     SECTION_5_CONDITIONS,
     CleanRepoEvidence,
     ConditionResult,
@@ -71,6 +74,7 @@ from argus.precision.gate_decision import (
     condition_verdict_meaning,
     decide_gate,
     gate_outcome_meaning,
+    section_5_condition,
 )
 from argus.precision.gate_disclosure import (
     VacuousDisclosureError,
@@ -153,6 +157,48 @@ def _judged(
         reason="synthetic fixture: exercises the instrument, adjudicates nothing real",
         supersedes=row.row_id,
     )
+
+
+def _spread(record: AdjudicationRecord) -> AdjudicationRecord:
+    """The SAME findings, RE-HOMED across the ratified members — breadth GENERATED, not typed.
+
+    ADDED 2026-08-20 (Story 16.1 / AC1.5). §5 gained a fifth condition and the committed
+    record's findings come from **2** ratified members, below the derived breadth floor — so
+    a §5 OUTCOME (``CLEARED`` / ``NOT_CLEARED``) is no longer reachable from the committed
+    population at all, whatever the ratio does. Any guard whose subject is the DISPATCH
+    therefore needs a population that satisfies breadth, or it silently starts measuring the
+    breadth floor instead of the thing it names.
+
+    The population is GENERATED from the committed record by rotating each row's
+    ``member_id`` across the ratified corpus — never hand-written — so it stays the real
+    record's rules, locators and count. ``row_id`` is re-derived through the shipped
+    :func:`finding_row_id`, because the id is content-addressed over the member.
+    """
+    members = [str(member["member_id"]) for member in ratified_corpus_members()]
+    assert len(members) >= 3, (
+        f"non-vacuity: the ratified corpus holds {len(members)} member(s), too few to build "
+        f"a population that satisfies §5's breadth floor"
+    )
+    rows = tuple(
+        replace(
+            row,
+            member_id=members[index % len(members)],
+            row_id=finding_row_id(
+                member_id=members[index % len(members)],
+                rule_id=row.rule_id,
+                verdict_eligible=row.verdict_eligible,
+                advisory=row.advisory,
+                locator=row.locator,
+            ),
+        )
+        for index, row in enumerate(record.rows)
+    )
+    spread = replace(record, rows=rows)
+    assert len({row.member_id for row in spread.live_rows()}) >= 3, (
+        "non-vacuity: the generated population did not actually broaden, so every guard "
+        "below would be asserting over the same narrow denominator it meant to replace"
+    )
+    return spread
 
 
 def _clean_evidence(*, clean_repo_fp: int = 0) -> CleanRepoEvidence:
@@ -326,15 +372,31 @@ def test_TC_ArgusAgent_PRECISION_001_55_the_live_outcome_is_derived_not_chosen()
     """
     record = _record()
     assert len(record.rows) > 0, "non-vacuity: the adjudication record is EMPTY"
+    ratified = [str(member["member_id"]) for member in ratified_corpus_members()]
+    assert ratified, "non-vacuity: the manifest reports ZERO ratified members"
     fold = fold_adjudicated_precision(
         record,
         expected_finding_ids=[row.finding_id for row in record.rows],
         population_n=validation_set_population_n(),
         floor_n=int(registry_module().VALIDATION_SET_FLOOR_N),
     )
+    # RE-AUTHORED 2026-08-20 (Story 16.1 / AC1.5) as an INTENDED BEHAVIOUR CHANGE. This
+    # recomputation carried NO breadth term and was GREEN only because the live fold is
+    # non-exhaustive: a fold that is reproducible, exhaustive and over threshold with a
+    # one-member denominator would make it expect CLEARED while the decision correctly
+    # records BLOCKED. The divergence would first appear in the middle of the one permitted
+    # measurement round, on a guard nobody edited. The term is DERIVED from the same
+    # concentration the decision publishes — never recounted here.
+    breadth = assess_breadth(
+        derive_concentration(record, ratified_member_ids=ratified),
+        validation_set_floor_n=int(registry_module().VALIDATION_SET_FLOOR_N),
+        population_source=_RECORD_PATH.name,
+    )
     if fold.determinism is not None or not isinstance(fold.exhaustiveness, Exhaustive):
         expected = "BLOCKED"
     elif fold.precision is None:
+        expected = "BLOCKED"
+    elif not breadth.holds:
         expected = "BLOCKED"
     elif fold.meets_threshold:
         expected = "CLEARED"
@@ -431,14 +493,14 @@ def test_TC_ArgusAgent_PRECISION_001_56_all_four_section_5_conditions_are_report
 
     live = _decide(_record())
     for dropped in range(len(SECTION_5_CONDITIONS)):
-        with pytest.raises(ValueError, match="ALL FOUR"):
+        with pytest.raises(ValueError, match="must report ALL"):
             replace(
                 live,
                 conditions=tuple(
                     c for i, c in enumerate(live.conditions) if i != dropped
                 ),
             )
-    with pytest.raises(ValueError, match="ALL FOUR"):
+    with pytest.raises(ValueError, match="must report ALL"):
         replace(live, conditions=tuple(reversed(live.conditions)))
 
     # A CLEARED decision may not carry a NOT_APPLICABLE or UNEVALUABLE condition.
@@ -446,7 +508,7 @@ def test_TC_ArgusAgent_PRECISION_001_56_all_four_section_5_conditions_are_report
     assert not_met, (
         "non-vacuity: this branch needs >=1 non-MET condition to prove CLEARED refuses it"
     )
-    with pytest.raises(ValueError, match="CLEARED requires all four"):
+    with pytest.raises(ValueError, match="CLEARED requires all"):
         replace(live, outcome="CLEARED")
     with pytest.raises(UnregisteredConditionVerdict):
         ConditionResult(
@@ -550,15 +612,33 @@ def test_TC_ArgusAgent_PRECISION_001_58_the_dispatch_moves_at_the_real_seam() ->
     expected = [row.finding_id for row in rows]
     assert len(expected) > 2, "non-vacuity: need >2 findings to remove exactly one"
 
-    all_fp = _decide(record.append([_judged(row, "FP") for row in rows]))
+    # RE-AUTHORED 2026-08-20 (Story 16.1 / AC1.5) as an INTENDED BEHAVIOUR CHANGE, not
+    # relaxed. §5's fifth condition means the committed population — 2 contributing members
+    # — can no longer reach a §5 outcome at all, so the two variants below are generated
+    # over a population that satisfies breadth and the narrow one is asserted BLOCKED on
+    # breadth immediately after. Without this the guard would have gone red mid-round on a
+    # line nobody edited, and its stated subject (the dispatch) would have quietly become
+    # the breadth floor.
+    broad = _spread(record)
+    broad_rows = broad.rows
+    all_fp = _decide(broad.append([_judged(row, "FP") for row in broad_rows]))
     assert all_fp.outcome == "NOT_CLEARED", all_fp.outcome_reason
     assert all_fp.fold.evaluable is True
     assert "RESULT" in all_fp.outcome_reason or "result" in all_fp.outcome_reason
     assert all_fp.failed_conditions, "a NOT_CLEARED decision must name a failing condition"
 
-    all_tp = _decide(record.append([_judged(row, "TP") for row in rows]))
+    all_tp = _decide(broad.append([_judged(row, "TP") for row in broad_rows]))
     assert all_tp.outcome == "CLEARED", all_tp.outcome_reason
     assert all(c.verdict == "MET" for c in all_tp.conditions)
+    # ...and the SAME all-TP judgements over the NARROW committed population do NOT clear.
+    # This is the amendment working, driven at the real seam, in the direction that matters.
+    narrow_tp = _decide(record.append([_judged(row, "TP") for row in rows]))
+    assert narrow_tp.outcome == "BLOCKED", narrow_tp.outcome_reason
+    assert section_5_condition(narrow_tp.conditions, BREADTH_CONDITION_ID).verdict == "FAILED"
+    assert narrow_tp.fold.meets_threshold and narrow_tp.fold.evaluable, (
+        "non-vacuity: the narrow variant must be over threshold and otherwise evaluable, or "
+        "the refusal could be caused by something other than breadth"
+    )
     assert "ATTESTED externalization and NOTHING ELSE" in all_tp.outcome_reason, (
         "a cleared gate authorises attested externalization and nothing else, and the "
         "record must say so where it says 'cleared'"
@@ -848,8 +928,17 @@ def test_TC_ArgusAgent_PRECISION_001_62_the_disclosure_stays_while_the_gate_is_n
         f"records {payload['outcome']!r}. The disclosure is REPLACED by the cleared status "
         f"only when the gate has genuinely cleared, and never deleted (FR34.4)."
     )
+    # BY ID (Story 16.1 / AC1.3). This read was `[3]`, which was correct for §5's four
+    # conditions in §5's order and is the same latent false green the production code
+    # carried: §5 is amended by dated ADDITION and an index returns a well-formed verdict
+    # belonging to another condition.
+    recorded_cleared = next(
+        c
+        for c in payload["section_5_conditions"]
+        if c["condition_id"] == RECORDED_CLEARED_CONDITION_ID
+    )
     assert payload["adjudication_record"]["adjudication_run_recorded_cleared"] is (
-        payload["section_5_conditions"][3]["verdict"] == "MET"
+        recorded_cleared["verdict"] == "MET"
     )
 
     production = sorted(

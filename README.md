@@ -189,8 +189,8 @@ graded, but has no definition for the depth gate to stand on. Pinned language-by
 
 ### What the distribution contains, and what needs the git repository
 
-MEASURED from the built wheel (`argus_agent-0.1.0-py3-none-any.whl`, 95 entries) and sdist
-(`argus_agent-0.1.0.tar.gz`, 94 files), not inferred: `[tool.flit.module] name = "argus"`
+MEASURED from the built wheel (`argus_agent-0.1.0-py3-none-any.whl`, 96 entries) and sdist
+(`argus_agent-0.1.0.tar.gz`, 95 files), not inferred: `[tool.flit.module] name = "argus"`
 packages **the `argus` Python package and nothing else** — which, since Story 12.7, includes
 the command assets under `argus/assets/commands/`: `flit_core` walks the whole `argus/`
 directory and ships every file in it, so a `.md` there reaches the wheel with **no**
@@ -218,7 +218,9 @@ to contradict each other (see the struck sentence under [Slash Commands](#-slash
 
 > **Measured limitation, stated rather than discovered later — and now measured away.** On a
 > freshly built wheel, with this repository removed from `sys.path` and one clean subprocess
-> per module, **87 of the 87 shipped modules import**. None fail. (87, not 86, since
+> per module, **88 of the 88 shipped modules import**. None fail. (88, not 87, since
+> 2026-08-20: Story 16.1 added `argus/precision/gate_breadth.py`, protocol §5's breadth
+> condition — pure, and resolving no repository path at module level. 87, not 86, since
 > 2026-08-17: Story 14.1 split `argus/detectors/provenance_scan.py` out of the
 > vacuous-test detector — the line-oriented source-text scan that answers "do the asserted
 > values derive from the SUT output?"; it is pure and resolves no repository path at module

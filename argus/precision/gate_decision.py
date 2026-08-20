@@ -1,4 +1,4 @@
-"""Story 13.3 — the ONE place protocol §5's four conditions become a recorded decision.
+"""Story 13.3 — the ONE place protocol §5's conditions become a recorded decision.
 
 Verification area ``TC-ArgusAgent-PRECISION-001-53``.. (``tests/test_gate_decision.py``).
 Drivers: `precision-validation-protocol.md` §4 (the two preconditions and the borderline
@@ -10,7 +10,7 @@ arithmetic, never forked); **NFR-S1** (rule-id provenance, locators and counts o
 What this module is
 -------------------
 13.1 decided what the validation set is and built it. 13.2 built the adjudication
-instrument and recorded the emitted blocking findings. **This module computes the four §5
+instrument and recorded the emitted blocking findings. **This module computes §5's
 conditions over the committed, human-adjudicated record and lets the arithmetic decide.**
 It does not adjudicate, it does not tune, and it authors no second threshold: the ratio,
 the threshold, the provisional predicate and the status sentence are all
@@ -24,7 +24,7 @@ THREE terminal states, never two (DN-1)
 ``DF-10-4-E`` exhaustive-dispatch shape 12.5 / 12.8 / 13.2 already use), and the third
 member is the point of the whole module:
 
-* ``CLEARED`` — all four §5 conditions hold over an exhaustively adjudicated,
+* ``CLEARED`` — ALL §5 conditions hold over an exhaustively adjudicated,
   byte-reproducible record.
 * ``NOT_CLEARED`` — the measurement **RAN** (reproducible **and** exhaustive **and**
   non-empty denominator) and at least one §5 condition FAILED. **This is a result.**
@@ -98,6 +98,14 @@ from argus.precision.adjudication import (
     adjudicator_role,
     fold_adjudicated_precision,
 )
+from argus.precision.gate_breadth import (
+    BREADTH_CONDITION_ID,
+    BreadthAssessment,
+    assess_breadth,
+    breadth_blocked_reason,
+    breadth_closure_path,
+    effective_precision_gate_status,
+)
 from argus.precision.gate_disclosure import (
     ConcentrationDisclosure,
     ResidualCompletionBound,
@@ -109,20 +117,24 @@ from argus.precision.replay_harness import PRECISION_GATE_THRESHOLD, ratio_strin
 from argus.store.canonical import dumps, dumps_bytes
 
 __all__ = [
+    "BREADTH_CONDITION_ID",
     "CONDITION_VERDICTS",
     "DECISION_RECORD_PATH",
     "GATE_OUTCOMES",
+    "RECORDED_CLEARED_CONDITION_ID",
     "SECTION_5_CONDITIONS",
     "CleanRepoEvidence",
     "ConditionResult",
     "CorpusReadProof",
     "GateDecision",
+    "MissingSection5Condition",
     "UnregisteredConditionVerdict",
     "UnregisteredGateOutcome",
     "VacuousDecisionError",
     "condition_verdict_meaning",
     "decide_gate",
     "gate_outcome_meaning",
+    "section_5_condition",
 ]
 
 #: Repository-relative, forward-slash, resolved by the CALLER against its own root — the
@@ -150,6 +162,16 @@ class UnregisteredConditionVerdict(ValueError):
     """Raised on a per-condition verdict outside :data:`CONDITION_VERDICTS`."""
 
 
+class MissingSection5Condition(ValueError):
+    """Raised when a §5 condition is looked up BY ID and the decision does not carry it.
+
+    A ``ValueError`` subclass (AR10) whose message says what a reader must do. This is the
+    typed replacement for a POSITIONAL index into
+    :attr:`GateDecision.conditions` — see :func:`section_5_condition` for why an index was
+    a latent false green rather than a style preference.
+    """
+
+
 class VacuousDecisionError(VacuousDisclosureError):
     """Raised when a decision was requested over an empty record or empty population.
 
@@ -165,7 +187,7 @@ class VacuousDecisionError(VacuousDisclosureError):
 #: member raises, and a registered member nobody constructs is itself a finding.
 GATE_OUTCOMES: dict[str, str] = {
     "CLEARED": (
-        "CLEARED — all four protocol §5 conditions hold over an exhaustively adjudicated, "
+        "CLEARED — ALL of protocol §5's conditions hold over an exhaustively adjudicated, "
         "byte-reproducible committed record. Clearing authorises ATTESTED externalization "
         "and nothing else: it is not a publish act, and it is not plan closure."
     ),
@@ -206,13 +228,28 @@ CONDITION_VERDICTS: dict[str, str] = {
     ),
 }
 
+#: §5(4)'s id, named ONCE. :func:`decide_gate` reads this condition's verdict back out to
+#: populate :attr:`GateDecision.adjudication_run_recorded_cleared`, and
+#: :func:`_recorded_cleared_condition` writes it — so the id is a constant rather than two
+#: string literals that can drift apart without anything noticing.
+RECORDED_CLEARED_CONDITION_ID = "adjudication-run-recorded-cleared"
+
 #: §5's four conditions, in §5's own order. The ids are stable and the record is keyed by
 #: them, so a condition cannot be dropped from the report without the schema noticing.
+#: §5 is amended by dated ADDITION, so a future condition is APPENDED and the historical
+#: ids keep their historical positions — which is exactly why nothing may read this tuple
+#: by POSITION (:func:`section_5_condition`).
 SECTION_5_CONDITIONS: tuple[str, ...] = (
     "precision-at-least-80-percent",
     "clean-repo-blocking-false-positives-zero",
     "corpus-floor-n-at-least-5",
-    "adjudication-run-recorded-cleared",
+    RECORDED_CLEARED_CONDITION_ID,
+    # AMENDED 2026-08-20 (Story 16.1; protocol §5's dated block of the same date). APPENDED,
+    # never inserted next to precision: §5 is amended by dated ADDITION, the four historical
+    # ids keep their historical positions, and the regenerated record's condition list is a
+    # clean prefix-plus-one diff a reviewer can actually read. Nothing reads this tuple by
+    # POSITION (:func:`section_5_condition`), which is what makes appending safe at all.
+    BREADTH_CONDITION_ID,
 )
 
 
@@ -240,6 +277,44 @@ def condition_verdict_meaning(verdict: str) -> str:
         ) from None
 
 
+def section_5_condition(
+    conditions: Sequence["ConditionResult"], condition_id: str
+) -> "ConditionResult":
+    """The §5 condition with *condition_id* — BY ID, and RAISES when it is absent.
+
+    **Why this exists at all.** :func:`decide_gate` used to read its own derived
+    recorded-cleared verdict back out as ``conditions[3].verdict == "MET"``. That index was
+    correct for §5's four conditions in §5's order and it is a LATENT FALSE GREEN, not a
+    style question: §5 is amended by dated addition, the ``ConditionResult`` type is
+    structurally identical for every condition, and an index that lands on the wrong
+    condition returns a perfectly well-formed ``bool``. There is no shape for a reader —
+    or a guard — to notice. Reading position 3 of a re-ordered tuple would publish one
+    condition's verdict under another condition's name, on the record that gates attested
+    externalization.
+
+    Looking up by id converts that silent misread into a typed failure
+    (:class:`MissingSection5Condition`), and the failure is DRIVEN rather than asserted:
+    the lookup is exercised over a condition set with the id removed, which is the only
+    way to know the raise is real.
+
+    PURE (AR8): a lookup over a sequence, with no I/O and no clock.
+
+    Raises:
+        MissingSection5Condition: *condition_id* is carried by none of *conditions*.
+    """
+    for condition in conditions:
+        if condition.condition_id == condition_id:
+            return condition
+    raise MissingSection5Condition(
+        f"no §5 condition carries the id {condition_id!r}. The decision reported "
+        f"{tuple(c.condition_id for c in conditions)!r} and §5 registers "
+        f"{SECTION_5_CONDITIONS!r}. This lookup is BY ID and never by position, because a "
+        f"positional index into a condition set that §5 amends by ADDITION silently "
+        f"returns another condition's verdict under this condition's name. Re-check the "
+        f"condition set the decision was built from; do NOT re-introduce an index."
+    )
+
+
 @dataclass(frozen=True)
 class ConditionResult:
     """ONE protocol §5 condition, with its own measured value and its own verdict (DN-3).
@@ -261,8 +336,10 @@ class ConditionResult:
         if self.condition_id not in SECTION_5_CONDITIONS:
             raise ValueError(
                 f"{self.condition_id!r} is not one of protocol §5's conditions "
-                f"{SECTION_5_CONDITIONS!r}. §5 enumerates four and the record is keyed by "
-                f"them, so a fifth condition — or a renamed one — is a protocol amendment."
+                f"{SECTION_5_CONDITIONS!r}. §5 enumerates {len(SECTION_5_CONDITIONS)} and "
+                f"the record is keyed by them, so a further condition — or a renamed one — "
+                f"is a protocol amendment, taken by a dated addition to §5 and never by an "
+                f"edit here alone."
             )
         condition_verdict_meaning(self.verdict)
         if not self.what_would_close_it.strip():
@@ -496,6 +573,11 @@ class GateDecision:
     #: pre-13.5 shape and stays valid, because a decision over a NON-empty emitted population
     #: never needed one. Defaulted last so every existing construction site is unchanged.
     corpus_read_proof: CorpusReadProof | None = None
+    #: Story 16.1. §5's breadth arm, MEASURED over the same ``ConcentrationDisclosure`` this
+    #: decision publishes. ``None`` is the pre-16.1 shape and stays constructible, so no
+    #: existing construction site moved; a decision built without it reports the fold's own
+    #: evaluability unchanged. Defaulted last, the ``corpus_read_proof`` precedent.
+    breadth: BreadthAssessment | None = None
     #: Story 13.5 / AC9. Whether ``commit_sha`` describes the tree the measurement ran over.
     #: ``build_gate_decision.py`` stamped ``git rev-parse HEAD`` with NO dirty check, so on a
     #: dirty tree the recorded sha named a tree that was not the one measured. The state is
@@ -507,8 +589,8 @@ class GateDecision:
         gate_outcome_meaning(self.outcome)
         if tuple(c.condition_id for c in self.conditions) != SECTION_5_CONDITIONS:
             raise ValueError(
-                f"the decision must report ALL FOUR §5 conditions, in §5's order "
-                f"{SECTION_5_CONDITIONS!r}; got "
+                f"the decision must report ALL {len(SECTION_5_CONDITIONS)} of §5's "
+                f"conditions, in §5's order {SECTION_5_CONDITIONS!r}; got "
                 f"{tuple(c.condition_id for c in self.conditions)!r}. Reporting three and "
                 f"a conjunction is how a condition that cannot fail gets counted as met."
             )
@@ -522,10 +604,12 @@ class GateDecision:
             )
         if self.outcome == "CLEARED" and not all(c.verdict == "MET" for c in self.conditions):
             raise ValueError(
-                "CLEARED requires all four §5 conditions MET. A NOT_APPLICABLE or "
-                "UNEVALUABLE condition is not met — protocol §5 as amended 2026-08-16 "
-                "forbids counting the clean-repo condition met by default, and this is "
-                "that rule made unexpressible rather than written down."
+                f"CLEARED requires all {len(SECTION_5_CONDITIONS)} §5 conditions MET. A "
+                f"NOT_APPLICABLE or UNEVALUABLE condition is not met — protocol §5 as "
+                f"amended 2026-08-16 forbids counting the clean-repo condition met by "
+                f"default, and this is that rule made unexpressible rather than written "
+                f"down. The COUNT is derived from SECTION_5_CONDITIONS so that Story 16.2 "
+                f"and 16.3 do not each have to re-edit a shipped gate's error text."
             )
         if self.outcome == "BLOCKED" and not self.closure_path:
             raise ValueError(
@@ -539,6 +623,30 @@ class GateDecision:
                 f"({self.fold.exhaustiveness}). A §5 outcome may only be recorded when the "
                 f"measurement RAN: reproducible AND exhaustive AND a non-empty denominator."
             )
+
+    @property
+    def precision_evaluable(self) -> bool:
+        """The EFFECTIVE evaluability the payload publishes — ONE value, computed once.
+
+        ``fold.evaluable AND breadth holds`` (Story 16.1 / AC3.3, DN-16-1-1). Publishing the
+        fold's answer while §5's precision condition reads ``UNEVALUABLE`` would be a true
+        status carrying a false subject (``DF-9-2-B``) on the surface that publishes the
+        gate, so the two are ONE derivation and ``-84`` asserts they cannot be separated.
+        """
+        return self.fold.evaluable and (self.breadth is None or self.breadth.holds)
+
+    @property
+    def precision_gate_status(self) -> str:
+        """The status SENTENCE for :attr:`precision_evaluable` — the same object, re-rendered.
+
+        Byte-identical to ``fold.gate_status`` whenever breadth does not change the answer,
+        so the amendment is provably inert on a population it does not bind.
+        """
+        if self.breadth is None:
+            return self.fold.gate_status
+        return effective_precision_gate_status(
+            fold=self.fold, breadth=self.breadth, protocol_path=self.protocol_path
+        )
 
     @property
     def failed_conditions(self) -> tuple[ConditionResult, ...]:
@@ -573,10 +681,16 @@ class GateDecision:
                 "precision_ratio": self.fold.precision_ratio,
                 "threshold": PRECISION_GATE_THRESHOLD,
                 "meets_threshold": self.fold.meets_threshold,
-                "evaluable": self.fold.evaluable,
+                # EFFECTIVE, not the fold's own (Story 16.1 / AC3.3). The fold's value is
+                # still published beside it as ``fold_evaluable`` so nothing is hidden and a
+                # reader can see exactly which of the two conjuncts moved.
+                "evaluable": self.precision_evaluable,
+                "fold_evaluable": self.fold.evaluable,
+                "breadth_holds": None if self.breadth is None else self.breadth.holds,
                 "provisional": self.fold.provisional,
-                "gate_status": self.fold.gate_status,
+                "gate_status": self.precision_gate_status,
             },
+            "breadth": None if self.breadth is None else self.breadth.to_payload(),
             "preconditions": {
                 "determinism": (
                     "SATISFIED" if self.fold.determinism is None else str(self.fold.determinism)
@@ -617,8 +731,18 @@ class GateDecision:
         return dumps(self.to_payload())
 
 
-def _precision_condition(fold: AdjudicatedPrecision, bound: ResidualCompletionBound) -> ConditionResult:
-    """§5(1) — precision >= 80%, as the EXACT ``Fraction`` comparison and nothing else."""
+def _precision_condition(
+    fold: AdjudicatedPrecision,
+    bound: ResidualCompletionBound,
+    breadth: BreadthAssessment,
+) -> ConditionResult:
+    """§5(1) — precision >= 80%, as the EXACT ``Fraction`` comparison and nothing else.
+
+    **Story 16.1 / AC3.1.** A ratio over a denominator narrower than §5's breadth floor is
+    recorded ``UNEVALUABLE`` — the REGISTERED verdict, not a new one. The fold's own
+    preconditions are checked FIRST and their wording is byte-unchanged, so breadth is an
+    ADDITIONAL way to be unevaluable and never a re-labelling of an existing one.
+    """
     if not fold.evaluable:
         verdict = "UNEVALUABLE"
         measured = (
@@ -630,6 +754,15 @@ def _precision_condition(fold: AdjudicatedPrecision, bound: ResidualCompletionBo
             f"protocol §4's ladder must terminate for every residual finding, after which "
             f"the ratio is computable. {bound.statement}"
         )
+    elif not breadth.holds:
+        verdict = "UNEVALUABLE"
+        measured = (
+            f"NOT A MEASUREMENT OF THE TOOL — the ratio "
+            f"{fold.precision_ratio} was computable over "
+            f"{fold.total_tp + fold.total_fp} adjudicated finding(s), and protocol §5's "
+            f"BREADTH condition (as amended 2026-08-20) does not hold: {breadth.measured}"
+        )
+        closes = breadth.what_would_close_it
     elif fold.meets_threshold:
         verdict = "MET"
         measured = (
@@ -748,7 +881,7 @@ def _recorded_cleared_condition(
         else "NOT recorded cleared — " + "; ".join(problems)
     )
     return ConditionResult(
-        condition_id="adjudication-run-recorded-cleared",
+        condition_id=RECORDED_CLEARED_CONDITION_ID,
         requirement=(
             "protocol §5 + architecture §Enforcement (Adjudication-record enforcement, "
             "2026-08-16): the gate may be cleared ONLY from a COMMITTED, append-only, "
@@ -765,6 +898,23 @@ def _recorded_cleared_condition(
             if verdict == "MET"
             else "; ".join(problems)
         ),
+    )
+
+
+def _breadth_condition(breadth: BreadthAssessment) -> ConditionResult:
+    """§5(5) — the denominator is drawn from enough DISTINCT CONTRIBUTING members (16.1).
+
+    Its OWN verdict is ``MET`` or ``FAILED`` and never ``UNEVALUABLE`` (AC3.2). Every
+    sentence it publishes was derived by :mod:`argus.precision.gate_breadth` from the SAME
+    concentration disclosure this decision serializes; that module documents why.
+    """
+    return ConditionResult(
+        condition_id=BREADTH_CONDITION_ID,
+        requirement=breadth.requirement,
+        corpus=breadth.population_source,
+        measured=breadth.measured,
+        verdict="MET" if breadth.holds else "FAILED",
+        what_would_close_it=breadth.what_would_close_it,
     )
 
 
@@ -863,8 +1013,23 @@ def decide_gate(
         total_fp=fold.total_fp,
         residual_count=residual_count,
     )
+    # HOISTED above the conditions tuple (Story 16.1 / AC1.2). It used to be computed
+    # inline in the GateDecision(...) call below, AFTER the conditions were built — which
+    # meant §5's breadth condition could only have been derived from a SECOND count. A
+    # second count is a second thing that can disagree with the disclosure the record
+    # publishes, and the disagreement would be invisible to every reader of either. One
+    # instance, computed once, read by the threshold AND by the disclosure.
+    concentration = derive_concentration(
+        record,
+        ratified_member_ids=[str(member["member_id"]) for member in ratified_members],
+    )
+    breadth = assess_breadth(
+        concentration,
+        validation_set_floor_n=fold.floor_n,
+        population_source=record_path,
+    )
     conditions = (
-        _precision_condition(fold, bound),
+        _precision_condition(fold, bound, breadth),
         clean_repo_evidence.condition(),
         _floor_condition(fold),
         _recorded_cleared_condition(
@@ -874,8 +1039,15 @@ def decide_gate(
             record_is_tracked_in_git=record_is_tracked_in_git,
             record_path=record_path,
         ),
+        _breadth_condition(breadth),
     )
-    recorded_cleared = conditions[3].verdict == "MET"
+    # BY ID, never by position (AC1.3). See :func:`section_5_condition`: an index into a
+    # condition set that §5 amends by dated ADDITION is a latent false green — it returns
+    # a well-formed verdict belonging to a different condition, with no shape a reader or
+    # a guard could notice, on the record that gates attested externalization.
+    recorded_cleared = (
+        section_5_condition(conditions, RECORDED_CLEARED_CONDITION_ID).verdict == "MET"
+    )
 
     # ── the three-outcome dispatch, in protocol §4's order ────────────────────────────
     closure: tuple[str, ...] = ()
@@ -961,14 +1133,25 @@ def decide_gate(
             "adjudicate at least one emitted blocking finding TP or FP under protocol §4",
             "re-run this decision",
         )
+    elif not breadth.holds:
+        # Story 16.1 / AC3.1, reasoned in argus/precision/gate_breadth.py. It sits AFTER the
+        # empty-denominator branch deliberately: an empty denominator is a stronger and more
+        # specific claim than a narrow one, and reporting the narrow one first would tell a
+        # reader the population was concentrated when there was no population at all.
+        outcome = "BLOCKED"
+        reason = breadth_blocked_reason(breadth)
+        closure = breadth_closure_path(breadth)
     elif all(condition.verdict == "MET" for condition in conditions):
         outcome = "CLEARED"
         reason = (
-            f"all four protocol §5 conditions hold over an exhaustively adjudicated, "
-            f"byte-reproducible committed record: precision {fold.precision_ratio} >= "
-            f"{ratio_string(PRECISION_GATE_THRESHOLD)}, the clean-repo blocking-FP condition is "
-            f"met over {clean_repo_evidence.corpus}, N = {fold.n} >= {fold.floor_n}, and "
-            f"the adjudication run is recorded cleared. Clearing authorises ATTESTED "
+            f"all {len(SECTION_5_CONDITIONS)} protocol §5 conditions hold over an "
+            f"exhaustively adjudicated, byte-reproducible committed record: precision "
+            f"{fold.precision_ratio} >= {ratio_string(PRECISION_GATE_THRESHOLD)}, the "
+            f"clean-repo blocking-FP condition is met over {clean_repo_evidence.corpus}, "
+            f"N = {fold.n} >= {fold.floor_n}, the adjudication run is recorded cleared, and "
+            f"the denominator draws on {breadth.contributing_member_count} distinct "
+            f"contributing member(s) against a floor of "
+            f"{breadth.contributing_member_floor}. Clearing authorises ATTESTED "
             f"externalization and NOTHING ELSE."
         )
     else:
@@ -981,7 +1164,8 @@ def decide_gate(
             f"adjudicated, and the denominator holds "
             f"{fold.total_tp + fold.total_fp} finding(s) — and "
             f"{len(tuple(c for c in conditions if c.verdict != 'MET'))} of protocol §5's "
-            f"four conditions did not hold: {failed}. This is a RESULT, not an absence. A "
+            f"{len(SECTION_5_CONDITIONS)} conditions did not hold: {failed}. This is a "
+            f"RESULT, not an absence. A "
             f"failed measurement is not a reason to amend the threshold; it is the "
             f"measurement working."
         )
@@ -990,10 +1174,8 @@ def decide_gate(
         outcome=outcome,
         outcome_reason=reason,
         conditions=conditions,
-        concentration=derive_concentration(
-            record,
-            ratified_member_ids=[str(member["member_id"]) for member in ratified_members],
-        ),
+        concentration=concentration,
+        breadth=breadth,
         completion_bound=bound,
         clean_repo_evidence=clean_repo_evidence,
         fold=fold,
