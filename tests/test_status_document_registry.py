@@ -248,6 +248,22 @@ _STATUS_DOCUMENTS: tuple[str, ...] = (
     # ⚠️ It must be committed TOGETHER with this line — `-22` closes in BOTH directions, so the
     # document without this entry and this entry without the document red `master` equally.
     "sprint-change-proposal-2026-08-20-amendment-A.md",
+    # Registered 2026-08-22 by the research + measurement session that wrote it — the registration is
+    # part of writing the document, not a later cleanup (`AI-E12-1`'s second half, applied to a change
+    # proposal again). `-22` was observed RED against this document before this line
+    # (`unregistered: ['sprint-change-proposal-2026-08-22.md']`) and GREEN after, on the live tree.
+    # Verified before registering, in the same form as every entry above: `_status_assertions()`
+    # returns 0 for it — no phrase in `_STATUS_CLAIMS` occurs in it at all, denied or otherwise — so
+    # `-21`'s per-document loop short-circuits and this registration is inert rather than
+    # load-bearing. `_executed_gate_citations()` returns 0, so it mints an excuse for nothing. The
+    # document asserts no release status of any kind: it is an UNAPPROVED proposal adding Stories
+    # 16.6 and 16.7 to Epic 16 (the assertion-vocabulary defect, then adjudication of the silent-test
+    # class), and it changes nothing until approved. It proposes NO bench expansion, NO ratification,
+    # NO gate or protocol amendment and NO promotion of any finding, and it WITHDRAWS its own
+    # predecessor's falsified 250-candidate estimate in place rather than restating it quietly.
+    # ⚠️ It must be committed TOGETHER with this line — `-22` closes in BOTH directions, so the
+    # document without this entry and this entry without the document red `master` equally.
+    "sprint-change-proposal-2026-08-22.md",
 )
 
 # Exactly the set the epic's AC names — "any future change proposal or retrospective".
