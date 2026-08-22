@@ -5274,6 +5274,51 @@ disposed and three new ones are filed, one of which bounds Epic 15.
   - severity: 🟡 — nothing is failing today and the ceiling guard is the live safety net: it fails
     loudly at 1,201, never silently. It becomes a forced choice the moment the next line is
     written, and the tempting answer at that moment is the exemption `MAINT-001-04` forbids.
+  - **✅ CLOSED 2026-08-22 by the cohesion split — the trigger fired exactly as written, and was
+    obeyed.** (Append-only closure note; the entry above is **not** rewritten, §3.4.) Story 16.6
+    was the next change of any size to `argus/detectors/vacuous_test.py`, and the split went in
+    **ALONE and FIRST**, in its own commit `4123931`, **before** any behaviour change — the
+    `provenance_scan.py` precedent this entry named, followed rather than cited. It landed while
+    16.6 was still `backlog`, which is the entry working as filed: this was a **precondition on
+    whoever opens the module next**, not work with a schedule of its own (`target_story: NONE`).
+    **Re-measured with the ceiling guard's own method** (`_physical_line_count`, `_CEILING = 1200`):
+    `argus/detectors/vacuous_test.py` **1,196 → 796**, headroom **4 → 404**; the new sibling
+    `argus/detectors/vacuous_vocabulary.py` is **455 of 1,200**, headroom **745**. Four lines was
+    not room for a bug fix; four hundred is.
+    **Proven a pure restructuring rather than asserted to be one** (the `DF-8-2-A` standard). An
+    `ast` span comparison of `4123931^` against HEAD accounts for every top-level node: **31**
+    before = **25** that stayed + **6** that moved, with **zero** vanished, **zero** new, and
+    **zero** that stayed-but-changed. All **six** moved bodies are **byte-identical** by sha256 to
+    their pre-split form. Re-export was verified by **is-identity, not equality**: all six names
+    resolve to the **same object** through either module, so no call site had to be rewritten, and
+    `__all__` is unchanged at **9**.
+    **The subject moved, not an arithmetic slice** — which is the half of the trigger that is easy
+    to skip. The new module answers exactly one question (*which callee names count as an
+    assertion, and which as a mock?*) and no function is split across the boundary.
+    `ASSERTION_DENSITY_FLOOR` and `MOCK_RATIO_CEILING` **deliberately stayed**: they are scorer
+    configuration, not vocabulary, and moving them to make a line count work would have been
+    precisely the **arithmetic split this entry forbids by name**. `DN-14-2-1` holds —
+    `_CORROBORATION_ASSERTION_CALLEES` is byte-unchanged at **23** names.
+    **`MAINT-001-04` respected: no `_EXEMPT_BY_DESIGN` entry was added** — the registry may only
+    shrink, and the remedy `_REMEDY` names is a cohesion split, never a shave and never an
+    exemption. `4123931` touched **only the two production modules** — no guard, no registry, no
+    test. Re-run 2026-08-22: `test_module_size_ceiling.py`, `test_vacuous_detector.py`,
+    `test_vacuous_density.py`, `test_vacuous_detector_index.py` — **44 passed, 0 failed**.
+    ⛔ **What this closure does NOT do, stated so a later reader does not over-read it.** It closes
+    the headroom condition on `argus/detectors/vacuous_test.py` **only**. **`DF-15-2-E` stays OPEN
+    and its trigger has NOT fired**: `tests/test_vacuous_density.py` re-measured **1,159 of 1,200**
+    at the same HEAD — **41 lines, unchanged by this split** — against a trigger at **1,180**, and
+    Story 16.6 is the likeliest story to move it. It also ratifies nothing, promotes nothing, and
+    moves no threshold.
+    ⛔ **The new module is deliberately NOT filed as its own entry, and that is a disposition, not
+    an oversight.** At **745** lines of headroom it is nowhere near the **41** at which `DF-15-2-E`
+    was filed, so an entry would track nothing. It is recorded here rather than left in prose
+    because *a disposition recorded in prose and not in the ledger is not a disposition*
+    (`AI-E12-3` / `AI-E12-6`) — the founding reason this entry exists at all.
+    - closed_by: `4123931` (the split, alone and first) + `ba5e8df` (the four currency guards the
+      split re-armed, repaired in the order Story 16.4 §2.7 documents: `argus/` first, regenerate,
+      artifacts committed separately)
+    - closure_verified_by: re-measurement and execution on 2026-08-22, not by report
 
 ## Deferred from: the Epic 15 retrospective (2026-08-19), filed 2026-08-20
 
