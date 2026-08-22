@@ -4726,6 +4726,57 @@ remains the recorded candidate should it ever be needed.
     **This does NOT close the entry.** The rule is committed; the branch is not yet taken, because
     13.5 has not run. `DF-13-5-A` closes when 13.5 records its outcome and the pre-registered branch
     is executed — and it closes by EXECUTION of the rule, never by re-opening it.
+  - **⏸️ DEFERRED 2026-08-22 by XAgent007 — the round is NOT spent, and the rule is NOT amended.**
+    (Append-only note; the entry above is not rewritten, §3.4.) Story 16.4 raised HALT-1 and stopped.
+    The operator weighed the §6 **R2** act and **declined it for now**, on measurement rather than
+    preference. The pre-registered rule of 2026-08-17 stands **verbatim and unchanged**; what is
+    deferred is the *execution* of its branch (a), not the branch itself.
+
+    ⛔ **The tension is recorded rather than papered over.** The pre-registered rule says that an
+    `UNEVALUABLE` 13.5 leads to branch (a), and 13.5 *did* return `UNEVALUABLE`. **This note does not
+    execute branch (a).** It defers that execution under a named trigger. The rule is not amended,
+    narrowed or reinterpreted, and no position is taken on branch (b).
+
+    **What was measured, on the corpus already ratified and already audited — no round spent, no
+    member ratified, no third-party source fetched:**
+    - The verdict-eligible predicate (fact (b)) reaches **6 of the 1,032** heuristically-flagged
+      findings. The corroborable ceiling across all five ratified members is **six**, against a
+      yield floor of **five**.
+    - One clause of fact (b) — *at least one assertion referencing a mock-bound name* — fires **0
+      times in 1,032**. It is dead over this corpus.
+    - The binding constraint is the **whole-function scope** of `consumed == 0`: **676** findings
+      carry a discarded SUT call, but only **14** carry no consumed one, so a single observed call
+      anywhere withholds corroboration from the entire test.
+    - A shipped precision defect was found: the assertion vocabulary does not recognise
+      `raise AssertionError`, affecting **22** flagged findings in the over-flagging direction.
+
+    Harnesses are committed under `research/` and each was validated in **both** directions —
+    reproducing the recorded 0 blocking findings **and** still promoting the project's own
+    `_CORROBORATED_FIXTURE` control, so a trivially-empty harness could not masquerade as agreement.
+
+    **Why this defers rather than executes.** Branch (a) buys a precision number measured *through*
+    the predicate above. Expanding the bench does not widen that predicate; it samples more
+    repositories through the same six-in-a-thousand aperture. The round is single-use, and it is
+    worth materially more after the predicate work than before it. This reasoning is recorded
+    **before** any further finding exists, in the same discipline as the 2026-08-17 rule itself.
+
+    ⛔ **No expansion is proposed by this note** — not here, not in the story file, not in a change
+    proposal. Story 16.4 / AC5.3 forbids it and it is not done.
+
+    ⛔ **THE ENTRY STAYS OPEN.** `DF-13-5-A` is **UNSPENT**. Neither (a) nor (b) has been taken.
+    The FR34 disclosure stands as it already did; nothing published changes.
+
+    **RE-REVIEW TRIGGER — the deferral is bounded, not open-ended.** This entry returns to the
+    operator for a spend/decline decision on the **earlier** of:
+    1. the proposed Stories 16.6 and 16.7 both reaching `done`; or
+    2. **2026-11-22** (three months), whichever comes first.
+    A deferral without a trigger is the silence this entry already forbids.
+    - deferred_by: **XAgent007 (Engineering Lead)**
+    - deferred_on: 2026-08-22
+    - members_ratified: **NONE** — `eligible_member_count()` is unchanged at **5**
+    - round_state: **UNSPENT**
+    - protocol_edit: **NONE** — §6's R2 row already reads `NOT PERFORMED`, which stays true; no
+      `V1.4` row was added and the change-log head is unmoved (`-45` / `-63` untouched)
 
 ## Correct-course 2026-08-17b — the three multi-language gaps Story 14.3 does NOT fix
 
