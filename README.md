@@ -189,8 +189,8 @@ graded, but has no definition for the depth gate to stand on. Pinned language-by
 
 ### What the distribution contains, and what needs the git repository
 
-MEASURED from the built wheel (`argus_agent-0.1.0-py3-none-any.whl`, 100 entries) and sdist
-(`argus_agent-0.1.0.tar.gz`, 99 files), not inferred: `[tool.flit.module] name = "argus"`
+MEASURED from the built wheel (`argus_agent-0.1.0-py3-none-any.whl`, 101 entries) and sdist
+(`argus_agent-0.1.0.tar.gz`, 100 files), not inferred: `[tool.flit.module] name = "argus"`
 packages **the `argus` Python package and nothing else** — which, since Story 12.7, includes
 the command assets under `argus/assets/commands/`: `flit_core` walks the whole `argus/`
 directory and ships every file in it, so a `.md` there reaches the wheel with **no**
@@ -218,7 +218,12 @@ to contradict each other (see the struck sentence under [Slash Commands](#-slash
 
 > **Measured limitation, stated rather than discovered later — and now measured away.** On a
 > freshly built wheel, with this repository removed from `sys.path` and one clean subprocess
-> per module, **92 of the 92 shipped modules import**. None fail. (92, not 91, since
+> per module, **93 of the 93 shipped modules import**. None fail. (93, not 92, since
+> 2026-08-22: the `DF-15-2-D` cohesion split moved the two assertion vocabularies and the mock
+> table out of `argus/detectors/vacuous_test.py` — which stood at 1,196 of 1,200 — into
+> `argus/detectors/vacuous_vocabulary.py`. Names only, no scoring, no threshold and no
+> behaviour change: all three tables hash identically to before the split, and every moved
+> name is re-exported from the original module, so no import path changed. 92, not 91, since
 > 2026-08-20: Story 16.3 added `argus/precision/gate_yield.py`, protocol §5's SEVENTH
 > condition — the YIELD floor under the precision ratio's denominator, which is what stops a
 > ratio over three findings being published as a cleared 80% gate — pure, resolving no
