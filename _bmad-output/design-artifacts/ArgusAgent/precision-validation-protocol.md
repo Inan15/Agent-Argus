@@ -141,7 +141,7 @@ finding (or its absence) is correct — not the arithmetic.
 > | Role | Holder | State |
 > |---|---|---|
 > | **Engineering Lead** (primary adjudicator) | **XAgent007** | ✅ named — the start condition for Story 13.2 |
-> | **QA Lead** (second reviewer) | *unfilled* | filling it is itself an operator act; required only when a **golden key is added or changed**, or a borderline finding reaches step 3 of the ladder below |
+> | **QA Lead** (second reviewer) | **Veer Pratap Singh** | ✅ **named 2026-08-22** by XAgent007 — see the dated block below. Filled **ahead of** Story 16.7 rather than during it |
 > | **External adjudicator** (tie-break) | *unfilled* | required only on persistent disagreement (§4) |
 >
 > **The rule:** every disposition on the adjudication record carries an `adjudicator` id of the
@@ -157,6 +157,39 @@ finding (or its absence) is correct — not the arithmetic.
 > judgements would therefore fail at construction rather than at review. *An autonomous story
 > that tags its own findings TP has measured nothing and has produced the exact artifact Epic 13
 > exists to make impossible.*
+
+> ### 👤 DATED BLOCK — 2026-08-22 — **THE QA LEAD ROLE IS FILLED: Veer Pratap Singh**
+>
+> **This block sits under the existing V1.3 and adds NO change-log row**, because nothing in the
+> protocol's *method* changed — §2's three roles, §3's budget, §4's ladder and §5's seven conditions
+> are all byte-unchanged. What changed is a **holder cell**. Adding a `V1.4` row would re-stamp
+> `protocol_version` across the 31 committed judgements of 2026-08-17, which is exactly the act
+> `§3.4` forbids; the change-log head is therefore unmoved and
+> `TC-ArgusAgent-PRECISION-001-45` / `-63` are untouched. This is the **fourth** dated block under
+> V1.3.
+>
+> **Who, and when.** **Veer Pratap Singh** fills the **QA Lead (second reviewer)** role, named by
+> **XAgent007 (Engineering Lead)** on **2026-08-22**. Dispositions authored in this role carry the
+> `adjudicator` id **`"Veer Pratap Singh (QA Lead)"`** — the role string must match
+> `PROTOCOL_ADJUDICATOR_ROLES` exactly or `AdjudicationRow.__post_init__` raises
+> `UnregisteredAdjudicator` at construction.
+>
+> **Why it was filled BEFORE the story that needs it, and not during.** Story 16.7 adjudicates a
+> 36-member class, and the only comparable population — the 2026-08-16 set of 31 — produced **5
+> borderlines**, so roughly six are expected. §4's ladder terminates at this role. **A role filled
+> mid-adjudication is a role filled to unblock a result**, and it would be indistinguishable, on the
+> record, from a role filled to obtain one. Filling it in advance, in its own act, is what keeps the
+> two apart. This is the same discipline as the 2026-08-17 pre-registration and the bench's
+> pick-before-you-look rule, applied to staffing.
+>
+> ⛔ **What this does NOT do.** It adjudicates nothing, promotes nothing, and moves no threshold. It
+> does **not** fill the **External adjudicator** tie-break, which stays *unfilled* — so a borderline
+> on which the Engineering Lead and QA Lead **persistently disagree** still has nowhere to go, and a
+> story reaching that step must STOP and report the rows rather than resolve them by default. It
+> makes **no claim of independence for an externalization sign-off**: §2 records that the tie-break
+> "SHOULD be outside the implementing team" for that purpose, and that bar is untouched here.
+> Whether any given adjudication was independent is Story **16.5**'s question to record, not this
+> block's to assert.
 
 ---
 
