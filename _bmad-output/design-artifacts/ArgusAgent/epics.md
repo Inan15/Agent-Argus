@@ -3216,6 +3216,90 @@ being filled. It makes the current state legible, whatever it is.
 
 ---
 
+### Story 16.6: The assertion vocabulary recognises the assertion that is a `raise`
+
+> Added by [sprint-change-proposal-2026-08-22.md](sprint-change-proposal-2026-08-22.md), **APPROVED
+> by XAgent007 on 2026-08-22**. ⛔ **Precondition: `argus/detectors/vacuous_test.py` sits at
+> 1,196/1,200 with `DF-15-2-D` filed. The module SPLIT lands FIRST, alone, in its own commit, with
+> no behaviour change.** Four lines is not room for the fix and its guards.
+
+As the Engineering Lead,
+I want `raise AssertionError` counted as an assertion,
+So that the advisory population is not inflated by tests that assert rigorously in a spelling the
+tool cannot read.
+
+**Measured basis (2026-08-22, read-only over pinned git objects):** `is_assertion_callee` recognises
+the `_ASSERTION_CALLEES` table **or** the convention `\A_?assert\w*\Z`. That regex is
+**case-sensitive**, so `AssertionError` does not match, and a `raise` is a statement rather than a
+call to an assertion callee. **22 of the 1,032 flagged findings contain the idiom**, and because the
+density scorer counts assertion statements, those tests are scored below their true density — the
+tool over-flags, in the accusation direction.
+
+**Acceptance Criteria:**
+
+**Given** the ceiling and `DF-15-2-D`
+**Then** the `vacuous_test.py` split lands **first, in its own commit**, byte-equivalent in
+behaviour, and `DF-15-2-D` is discharged or re-filed against the new module sizes.
+
+**Given** two assertion vocabularies exist for different questions (`DN-14-2-1`)
+**Then** the recognition is added to the **WIDE** vocabulary only — the one that asks *"does this
+test assert anything?"* — and ⛔ `_CORROBORATION_ASSERTION_CALLEES` stays **byte-unchanged at 23
+names**, because widening the frozen table moves fact (b) toward an accusation.
+
+**Given** a guard that cannot fail proves nothing
+**Then** the new recognition is driven **RED by executed mutation**, with the tree restored
+byte-exact, and the before/after flagged count over the 22 affected findings is recorded.
+
+**Given** this story changes the advisory tier only
+**Then** no finding becomes verdict-eligible, no threshold moves, and the gate outcome is unchanged.
+
+### Story 16.7: Adjudicate the silent-test class before anyone proposes promoting it
+
+> Added by [sprint-change-proposal-2026-08-22.md](sprint-change-proposal-2026-08-22.md), **APPROVED
+> by XAgent007 on 2026-08-22**. ⛔ **Preconditions: Story 16.6 done, AND protocol §2's QA Lead role
+> FILLED** — §4's borderline ladder terminates there, and this story can produce borderlines.
+
+As the Engineering Lead,
+I want the 36-member silent class adjudicated by a named human under §4,
+So that any future promotion proposal carries a measurement instead of an estimate.
+
+**Measured basis (2026-08-22):** formulating the per-call question as *"reaches the SUT, discards the
+result, and asserts nothing at all"* yields **39** findings, of which **3** are false accusations
+from the §16.6 vocabulary gap — **36 survive**. For comparison, the shipped fact (b) reaches **0**,
+and dropping its provably-dead mock-referencing clause reaches **6**.
+
+⛔ **Promotion is deliberately NOT proposed.** A spot-check found the class contains the **deliberate
+smoke test**, where *"does not raise"* **is** the assertion, stated in a comment no analyser can
+read. `DN-3` already carves out the explicit spelling (`pytest.raises`); this is the implicit one,
+and the proportion is **unmeasured**. Promoting the class blind would manufacture exactly the false
+🔴 that cross-cutting #6 exists to prevent.
+
+**Acceptance Criteria:**
+
+**Given** 16.6 changes what counts as an assertion
+**Then** the class is **re-derived after 16.6**, not carried over, and its exact membership recorded.
+
+**Given** protocol §4 requires a named human
+**Then** every member carries one live TP/FP/BORDERLINE disposition with an `adjudicator` of the
+form `"<who> (<role>)"` from §2's registered three, and ⛔ **no automated step writes a disposition.**
+
+**Given** the smoke-test idiom is a legitimate pattern
+**Then** it is adjudicated **explicitly as its own recorded outcome**, never folded into FP without
+comment — the whole point of the story is to learn its proportion.
+
+**Given** §3 sets a ≤4-hour expectation
+**Then** actual `expert_hours` are recorded as an exact `Fraction` and compared by
+`expert_hours_report()` — ⛔ **as a report, never as a gate.** Never trim the adjudication to fit.
+
+**Given** §2 records the External adjudicator as unfilled
+**Then** if the ladder reaches an unfilled role the story **STOPS** and reports which rows and why.
+
+**Given** this story measures rather than promotes
+**Then** ⛔ **no finding is promoted to verdict-eligible, no threshold moves, `decide_gate` is not
+re-run, and no bench expansion is proposed** — in this story, the ledger, or any change proposal.
+
+---
+
 ## Minions-Repo Handoff — not epics in this breakdown
 
 > **Operator scope decision, 2026-08-03.** RS-2, RS-3, IN-1, IN-3 and IN-4 execute in the **Minions

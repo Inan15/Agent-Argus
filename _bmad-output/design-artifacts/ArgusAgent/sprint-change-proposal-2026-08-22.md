@@ -9,7 +9,10 @@ flagged population identified **one shipped precision defect** and **one candida
 class carrying 36 members**, and **falsified the research's own first estimate** of a cheap widening.
 **Change scope classification:** **MODERATE** — two stories added to Epic 16. **No** gate amendment,
 **no** protocol amendment, **no** threshold movement, **no** bench expansion, **no** ratification.
-**Status:** ⚠️ **AWAITING OPERATOR APPROVAL.**
+**Status:** ✅ **APPROVED by XAgent007, 2026-08-22.** The document was authored and committed
+(`b4b9b92`) in the `AWAITING OPERATOR APPROVAL` state, and approval was taken as a **separate, later
+act** — recorded here in place, on the §4.3 precedent of the 2026-08-20 proposal, so that authoring
+and approving are not collapsed into one motion by the party proposing.
 
 > **Nothing under `argus/` or `tests/` was modified to produce this document.** No detector was run
 > over any corpus member; no adjudication set, finding, verdict, disposition or gate artifact was
@@ -288,8 +291,17 @@ This document registered in `_STATUS_DOCUMENTS` **in the same commit**, per
 | Act | Party | Date | Status |
 |---|---|---|---|
 | Authored | research + measurement session | 2026-08-22 | ✅ |
-| Approved | XAgent007 (Engineering Lead) | — | ⚠️ **PENDING** |
+| Approved | XAgent007 (Engineering Lead) | 2026-08-22 | ✅ **APPROVED** |
+| §4 edits applied | research session, on approval | 2026-08-22 | ✅ |
 
-⛔ **This proposal changes nothing until approved.** It spends no round, ratifies no member, moves no
-threshold, and promotes no finding. It files a measured defect and proposes measuring a class before
-anyone argues about promoting it.
+**Applied on approval**, per §4: `epics.md` (Stories 16.6 + 16.7 appended to Epic 16) ·
+`sprint-status.yaml` (2 entries, `backlog`, with preconditions recorded inline) ·
+`deferred-work.md` (`DF-16-6-A`, `DF-16-7-A`) · `tests/test_status_document_registry.py`
+(registered at authoring time in `b4b9b92`, because `-22` closes in both directions).
+
+⛔ **What approval does NOT do.** It spends no round, ratifies no member, moves no threshold, and
+promotes no finding. `DF-13-5-A` remains **OPEN and UNSPENT** with its 2026-08-22 deferral and
+re-review trigger intact. The gate outcome is **unchanged** — still `BLOCKED`. Approving the
+proposal authorises the two stories to be *scheduled*; §2.2's preconditions still gate them, and
+**Story 16.7 additionally requires protocol §2's QA Lead role to be filled**, which remains an
+operator act nobody has taken.

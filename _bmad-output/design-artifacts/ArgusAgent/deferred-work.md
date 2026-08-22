@@ -5475,3 +5475,56 @@ disposed and three new ones are filed, one of which bounds Epic 15.
     ceiling guard still fails loudly at 1,201; the point of filing is that it should not fail as
     a surprise. No existing entry is edited, no `DF-*` is closed, and `DF-16-1-A`, `DF-13-5-A`,
     `DF-15-2-D` and `DF-15-2-E` are all left exactly as they stand.
+
+## Deferred from: sprint-change-proposal-2026-08-22 (APPROVED by XAgent007, 2026-08-22)
+
+> Both entries are filed by an **approved change proposal**, not by a code review, and both are
+> **measurements that Stories 16.6/16.7 do not consume**. Neither closes anything. `DF-13-5-A` is
+> left exactly as it stands — OPEN, UNSPENT, with its 2026-08-22 deferral and re-review trigger
+> intact — and no existing entry is edited.
+
+- **`DF-16-6-A` — the mock-referencing clause of fact (b) is provably dead over the ratified
+  corpus.** Measured 2026-08-22 through the **shipped** `provenance_evidence()` over all 1,032
+  heuristically-flagged findings: `mock_referencing_assertions >= 1` holds for **0 of 1,032**. Not
+  one flagged test carries an assertion referencing a mock-bound name, so the clause can never fire
+  on this population. Removing it would take promotions from **0 → 6** — which crosses the yield
+  floor of 5.
+  - id: DF-16-6-A
+  - origin: sprint-change-proposal-2026-08-22 §1.2
+  - owner: **XAgent007 (Engineering Lead)**
+  - target_story: **NONE** — deliberately. Removing the clause promotes six findings, and neither
+    16.6 nor 16.7 promotes anything. It belongs to whatever promotion story 16.7's outcome may
+    justify, and pinning it to an unwritten story is how `DF-14-3-H`'s `target_story` went stale.
+  - category: guard adequacy / verdict-eligibility predicate
+  - severity: 🟡 — nothing is broken and no guard is loose. A dead clause is not a defect; it is a
+    clause whose population never arrived. Filed so that a future reader does not rediscover the
+    zero and mistake it for a bug.
+  - ⛔ **NOT a proposal to remove it.** Six findings, from five repositories, against a historical
+    adjudication base rate of **0 TP / 26 FP**. A precision figure resting on a population of six is
+    statistically fragile even if all six adjudicate true, and that fragility is the reason this is
+    a ledger entry rather than a story.
+
+- **`DF-16-7-A` — per-call observation analysis needs real dataflow, and is the only path to the
+  suspect population.** The `consumed == 0` clause is **whole-function scoped**: measured
+  2026-08-22, **676** of 1,032 findings carry at least one discarded SUT call while only **14**
+  carry no consumed one, so a single observed call anywhere — including one inside a `pytest.raises`
+  block (CONSUMED by `DN-3`) or one that cannot be located in source (CONSUMED because *unresolvable
+  is not evidence*) — withholds corroboration from the entire test. Making the judgement **per call**
+  reaches a measured **122** findings (*"asserts, but nothing about the SUT"*), which is the largest
+  reachable population found and the only one addressing the ~40% suspect class.
+  - id: DF-16-7-A
+  - origin: sprint-change-proposal-2026-08-22 §1.2 / §4.3
+  - owner: **XAgent007 (Engineering Lead)**
+  - target_story: **6.2** (`6-2-full-python-ast-grounding-of-audited-deep-claims`) — the full
+    dataflow / scope-resolved grounding already chartered by `DF-14-1-A`. This entry does not create
+    new work; it records that 6.2 is the prerequisite and what it would buy.
+  - category: verdict-eligibility predicate / detector reach
+  - severity: 🟠 — nothing false is published and the gate is correctly `BLOCKED`, but this is the
+    only measured route to the population the detector exists to find, and it is currently
+    unreachable by any cheap predicate edit.
+  - ⛔ **The 122 figure is THIS MEASUREMENT'S OWN reasoning, not the shipped predicate.** No shipped
+    helper computes SUT-derived name binding; it was computed with Python `ast` in
+    [`research/investigate-per-call-scoping.py`](research/investigate-per-call-scoping.py). It is
+    **not adjudicated** and no claim is made that any of the 122 is a true positive.
+  - ⛔ **Not a proposal to loosen fact (b).** Its asymmetry is correct and was the Story 14.1
+    conformance repair. The fix is a **finer** predicate, never a weaker one.
