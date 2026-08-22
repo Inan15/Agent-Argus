@@ -179,6 +179,95 @@ _STATUS_DOCUMENTS: tuple[str, ...] = (
     # ⚠️ It must be committed TOGETHER with this line — `-22` closes in BOTH directions, so the
     # document without this entry and this entry without the document red `master` equally.
     "sprint-change-proposal-2026-08-19.md",
+    # Registered 2026-08-19 by the Epic-15 retrospective that wrote it — `AI-E12-1`'s SECOND half
+    # ("make the registration part of the retrospective step's own DoD") on its FOURTH consecutive
+    # application, after the Epic-13 INTERIM, Epic-14 and FINAL Epic-13 entries above established
+    # it. Same one-line edit, same reason, same verification-before-registration: `-22` was observed
+    # RED against this document before this line (`unregistered:
+    # ['epic-15-retro-2026-08-19.md']`) and GREEN after, on the live tree.
+    # `_status_assertions()` returns 0 for it — no phrase in `_STATUS_CLAIMS` occurs in it at all,
+    # denied or otherwise — so `-21`'s per-document loop short-circuits and this registration is
+    # inert rather than load-bearing. `_executed_gate_citations()` returns 0, so it mints an excuse
+    # for nothing. The document asserts no release status of any kind: it records that the precision
+    # gate is UNCHANGED and still `UNEVALUABLE`, that the FR34 disclosure stands, that protocol §6
+    # R2 ratification has NOT been taken (all 14 candidate rows remain `eligible_for_n=False` and
+    # `eligible_member_count()` is 5), that `DF-13-5-A`'s ONE pre-registered round is UNSPENT, and
+    # that publication is NOT ESTABLISHED — `git tag -l` empty, no release. It dispositions NO
+    # ledger entry and edits no planning document.
+    # ⚠️ It must be committed TOGETHER with this line — `-22` closes in BOTH directions, so the
+    # document without this entry and this entry without the document red `master` equally.
+    "epic-15-retro-2026-08-19.md",
+    # Registered 2026-08-20 by the change proposal that carries it — `AI-E12-1`'s second half
+    # ("make the registration part of the authoring step's own DoD") on its FIFTH consecutive
+    # application. Same one-line edit, same verification-before-registration: `-22` was observed
+    # RED against this document before this line (`unregistered:
+    # ['sprint-change-proposal-2026-08-20.md']`) and GREEN after, on the live tree.
+    # `_status_assertions()` returns 0 for it and `_executed_gate_citations()` returns 0, so
+    # `-21`'s per-document loop short-circuits and this registration is inert rather than
+    # load-bearing — it mints an excuse for nothing.
+    # WHAT THE DOCUMENT ASSERTS, so the registration is judged against its contents: the gate is
+    # UNCHANGED and still `BLOCKED` with an empty precision denominator; `protocol_cleared` is
+    # `False` and has never been `True`; the >=80% threshold, `VALIDATION_SET_FLOOR_N`, FR34 and
+    # the five ratified members are untouched; all 14 candidate rows stay `eligible_for_n=False`;
+    # `DF-13-5-A`'s ONE round is UNSPENT. It PROPOSES a §5 amendment in the STRENGTHENING
+    # direction and applies none of it — the document is `AWAITING OPERATOR APPROVAL`, which is a
+    # status about the proposal and not a release status about the tool.
+    # ⚠️ It must be committed TOGETHER with this line — `-22` closes in BOTH directions, so the
+    # document without this entry and this entry without the document red `master` equally.
+    "sprint-change-proposal-2026-08-20.md",
+    # Registered 2026-08-20 by the operator decision that received it (XAgent007) — `AI-E12-1`'s
+    # second half ("make the registration part of the authoring step's own DoD") on its SIXTH
+    # consecutive application, and the FIRST one applied to a document that is NOT approved.
+    # REGISTRATION IS NOT APPROVAL, and this entry is the place that says so. The operator ruled
+    # "register it, do NOT approve it": this line places the document under `-21`'s citation rule
+    # and inside `-22`'s closure, and does nothing else. The document's own §7.4 asked for exactly
+    # this and no more. Its status line still reads `AWAITING OPERATOR APPROVAL`; no Epic 17 or
+    # Epic 18 container was written to `epics.md`; no key was added to sprint-status.yaml's
+    # `development_status` map; not one byte of the document's substance was edited. A registered
+    # proposal is a GOVERNED proposal, not an accepted one — the registry answers "is this record
+    # covered by the citation rule", never "was this record approved", and reading a registration
+    # as an approval would be the exact category error `-21` exists to refuse.
+    # Same one-line edit and same verification-before-registration as every entry above: `-22` was
+    # observed RED against this document before this line (`status-asserting document(s) exist but
+    # are not registered: ['sprint-change-proposal-2026-08-20-amendment-A.md']`) and GREEN after,
+    # on the live tree, with the full suite re-run green afterwards. Verified by execution:
+    # `_split_sentences()` returns 225 sentences, so `-21` is genuinely reading the document rather
+    # than passing over an unparseable one; `_status_assertions()` returns 0 — no phrase in
+    # `_STATUS_CLAIMS` occurs in it at all, denied or otherwise — so `-21`'s per-document loop
+    # short-circuits and this registration is inert rather than load-bearing; and
+    # `_executed_gate_citations()` returns 0, so it mints an excuse for nothing. The `RELEASE_READY`
+    # in its appendix is a verdict the tool RETURNED about an audited third-party repository, which
+    # is a measurement about someone else's tree and not a release status about ArgusAgent.
+    # WHAT THE DOCUMENT ASSERTS, so the registration is judged against its contents: it PROPOSES
+    # two epic containers (17, 18) and an FR38 pre-condition gate, and applies none of it. The
+    # parent proposal, Epic 16 and the in-flight Story 16.1 are untouched and uncontested by it;
+    # the >=80% threshold, `VALIDATION_SET_FLOOR_N`, `MANIFEST_FIELDS`, FR34, `protocol_cleared`
+    # and the five ratified members are untouched; no FR is added, amended or dispositioned; no
+    # ledger entry is dispositioned; `DF-13-5-A`'s ONE round is UNSPENT, no bench round was spent,
+    # no candidate ratified and no row moved off `UNADJUDICATED`.
+    # ⚠️ It must be committed TOGETHER with this line — `-22` closes in BOTH directions, so the
+    # document without this entry and this entry without the document red `master` equally.
+    "sprint-change-proposal-2026-08-20-amendment-A.md",
+    # Registered 2026-08-22 by the research + measurement session that wrote it — the registration is
+    # part of writing the document, not a later cleanup (`AI-E12-1`'s second half, applied to a change
+    # proposal again). `-22` was observed RED against this document before this line
+    # (`unregistered: ['sprint-change-proposal-2026-08-22.md']`) and GREEN after, on the live tree.
+    # Verified before registering, in the same form as every entry above: `_status_assertions()`
+    # returns 0 for it — no phrase in `_STATUS_CLAIMS` occurs in it at all, denied or otherwise — so
+    # `-21`'s per-document loop short-circuits and this registration is inert rather than
+    # load-bearing. `_executed_gate_citations()` returns 0, so it mints an excuse for nothing. The
+    # document asserts no release status of any kind: it is a proposal adding Stories 16.6 and 16.7
+    # to Epic 16 (the assertion-vocabulary defect, then adjudication of the silent-test class).
+    # It was registered here while UNAPPROVED and was ✅ APPROVED by XAgent007 later the same day
+    # (2026-08-22), with §4's edits applied on approval — the two acts kept separate on the §4.3
+    # precedent. Re-verified after approval: `_status_assertions()` still returns 0 and
+    # `_executed_gate_citations()` still returns 0, so this registration remains inert. It proposes
+    # NO bench expansion, NO ratification,
+    # NO gate or protocol amendment and NO promotion of any finding, and it WITHDRAWS its own
+    # predecessor's falsified 250-candidate estimate in place rather than restating it quietly.
+    # ⚠️ It must be committed TOGETHER with this line — `-22` closes in BOTH directions, so the
+    # document without this entry and this entry without the document red `master` equally.
+    "sprint-change-proposal-2026-08-22.md",
 )
 
 # Exactly the set the epic's AC names — "any future change proposal or retrospective".

@@ -3016,6 +3016,290 @@ exactly the class that differs across platforms
 
 ---
 
+## Epic 16: Spend the Round Well — strengthen the gate, then measure once · *Argus repo*
+
+*Created 2026-08-20 by [sprint-change-proposal-2026-08-20.md](sprint-change-proposal-2026-08-20.md),
+which is **AWAITING OPERATOR APPROVAL** at the time this section is written. The epic and its
+stories are filed at `backlog` so the plan has the container SD-5 found missing; **nothing in it may
+start before that approval**, because §4.3 of the proposal amends protocol §5 and Story 16.4 spends
+`DF-13-5-A`'s ONE round.*
+
+> ✅ **APPROVED 2026-08-20 by XAgent007 (Engineering Lead).** The paragraph above is left exactly as
+> written (§3.4 evidence immutability) rather than rewritten to say "approved" — it was the true
+> state when the section was authored, and a plan document that silently re-narrates its own
+> preconditions is the `DF-8-5-C` class in prose. **What the approval unblocks:** Stories 16.1, 16.2
+> and 16.3 may now start and may apply §4.3's three §5 conditions, each deriving and recording its
+> own constants. **What it does NOT unblock: Story 16.4**, which still opens by halting on the
+> protocol §6 **R2** operator act — ratification and third-party fetch remain a separate,
+> not-yet-taken decision, and approval of this epic is not approval to spend `DF-13-5-A`'s round.
+
+Epic 14 repaired the instrument. Epic 15 established, without running the detector over anything,
+that the five-member corpus **does not contain the defect class** — 1 co-occurrence file under the
+strict predicate across 315 Python test files — and assembled a 14-candidate bench that does
+(2,316 test files, 614 co-occurrence files). The gate is therefore `BLOCKED` on an **empty
+denominator**, not on a shortfall.
+
+This epic spends that bench. It does so **after** closing the three holes that would otherwise let
+the resulting number mean less than it appears to, because closing them afterwards — once a result
+exists to bias the choice — is corpus-shopping in the opposite direction.
+
+**Covers:** the Epic 15 retrospective's SD-1 (R2 untaken), SD-5 (no container), SD-6 (the two
+NFR-M1 splits) · `DF-13-5-A`'s ONE pre-registered round
+**Depends on:** Epic 15 (the bench), Epic 14 (the instrument). A round measured with either missing
+is a round spent either way.
+**Blocks:** any attested-tier externalization claim. The DISCLOSED tier (FR34) is unaffected and
+remains the honest fallback.
+
+> ⚠️ **This epic may not clear the gate, and that is a permitted outcome.** `DF-13-5-A` was answered
+> on 2026-08-17 **before any number existed**: **one** round, and if it yields zero blocking findings
+> or precision below 80%, **the answer is a better detector, not a bigger bench.** Nothing in this
+> epic may be read as licence to expand again.
+
+> 🔒 **BINDING ORDERING CONSTRAINT.** Stories 16.1, 16.2 and 16.3 must land in commits that
+> **precede every commit containing Argus output over any bench member**, evidenced by git ancestry
+> exactly as Story 15.1's `TC-ArgusAgent-PRECISION-001-75` evidences its own. A guard asserting this
+> is part of 16.4, not a promise made in prose.
+
+### Story 16.1: A score drawn from one repository is not a score
+
+As the Argus maintainer,
+I want the precision gate to refuse a denominator that is too narrow to mean anything,
+So that a figure computed from a single repository and a single rule class cannot be reported as if
+it measured the tool.
+
+**Acceptance Criteria:**
+
+**Given** the last adjudicated population was 31 findings from **2 of 5** ratified members across
+**1** distinct rule class, and the record computes `concentration.is_concentrated = True` while
+stating in terms that it is *"not a threshold and not a distribution requirement"*
+**When** this story completes
+**Then** breadth is a **§5 condition**: precision is evaluable only over a population drawn from at
+least a stated number of distinct contributing members **and** at least a stated number of distinct
+rule classes. Below either, the outcome is `UNEVALUABLE` — the state already exists and already
+forces the gate provisional. No new terminal state is invented.
+
+**Given** every input to this threshold is **already computed** and recorded
+**Then** the implementation reads those existing fields and does **not** re-derive them, so the
+disclosure and the threshold can never disagree.
+
+**Given** this project shipped 4 of 35 unreal guards in Epic 14
+**Then** the new condition is driven to **both** outcomes by executed mutation — a population that
+passes it and a population that fails it — and each mutation is observed RED before the guard is
+trusted.
+
+**Given** the constants must be defensible rather than convenient
+**Then** the chosen numbers are **derived and recorded with their reasoning, never typed**, and the
+derivation names what would have happened to the 2026-08-18 population under them.
+
+**Given** §5 and Story 13.3 / AC5 forbid changes that make clearing easier
+**Then** this story records explicitly that it makes clearing **harder**, and touches neither the
+≥80% figure, `VALIDATION_SET_FLOOR_N`, the five ratified members, nor `MANIFEST_FIELDS`.
+
+### Story 16.2: Part of the bench is sealed before anything is run
+
+As the Argus maintainer,
+I want a partition of the ratified bench sealed before any detector output exists over it,
+So that the gate figure is computed over a population the tool was never tuned against.
+
+**Acceptance Criteria:**
+
+**Given** the cartridge corpus has an author-blind holdout (`holdout_vacuous`) and the repository
+corpus that actually gates has **none**
+**When** this story completes
+**Then** the ratified bench is split by a **pre-committed, mechanically reproducible rule** (a
+sha-ordered partition, so the split cannot be chosen to flatter a result), and the rule is frozen in
+a commit that precedes every commit containing Argus output over any member.
+
+**Given** a holdout that can be peeked at is not a holdout
+**Then** the sealed partition is **structurally** distinguishable — a member's partition is a field
+on its manifest row, validated at construction — and opening it is a single recorded act, not a
+side effect of running the harness.
+
+**Given** the gate must be computed over the sealed partition and tuning must happen only against
+the open one
+**Then** a guard asserts that any detector change dated after the seal cites which partition its
+evidence came from, and the guard is driven to both outcomes.
+
+**Given** N is a locked quantity
+**Then** the split does **not** change `VALIDATION_SET_FLOOR_N`, does not drop a member, and does
+not re-weight one. It partitions; it does not narrow.
+
+### Story 16.3: A detector that finds nothing has not passed
+
+As the Argus maintainer,
+I want the gate to distinguish "accurate" from "silent",
+So that a detector emitting three ultra-safe findings cannot score 100% and be called validated.
+
+**Acceptance Criteria:**
+
+**Given** `UNEVALUABLE` closed the emit-nothing hole for an **empty** denominator, but nothing
+prevents a **tiny** one from clearing at 100%
+**When** this story completes
+**Then** a **yield floor** is a §5 condition: over a bench selected *because* it carries the defect
+class, a run promoting fewer than a stated number of verdict-eligible findings is recorded as a
+finding **about the detector**, not as a pass.
+
+**Given** recall is diagnostic-only by the OI1 lock and this story must not silently re-open that
+**Then** the floor is stated as a **yield** condition over the gating corpus and the OI1 bullet is
+amended explicitly, struck-not-erased, rather than contradicted in passing.
+
+**Given** the floor could be satisfied by noise
+**Then** it composes with 16.1's breadth condition rather than replacing it: quantity without
+breadth still fails.
+
+**Given** the number must not be reverse-engineered from a result
+**Then** it is derived and frozen **before** 16.4 runs, and the derivation is recorded.
+
+### Story 16.4: Ratify, run, adjudicate, and let the arithmetic decide
+
+As the Engineering Lead,
+I want the ratified bench audited at its pins and every blocking finding adjudicated under §4,
+So that the gate outcome is a measurement rather than an assertion.
+
+**Acceptance Criteria:**
+
+**Given** protocol §6 **R2** makes ratification an operator act — *"choosing which repositories are
+legitimate members, and fetching third-party source, are not autonomous acts"*
+**When** this story starts
+**Then** it **HALTS** and names the act with options. Promotion is two deliberate edits per row; no
+automation may take it. ⛔ **This story is not autonomous and must not be driven to completion by
+the dev loop without the operator in the loop.**
+
+**Given** 16.1, 16.2 and 16.3 must precede any output over a bench member
+**Then** a guard asserts, from git ancestry, that each of their commits is an ancestor of this
+story's first output commit and that none of them touches a candidate-output path — with its
+non-vacuity preconditions pinned and the ancestry predicate driven to both outcomes.
+
+**Given** every member must be read from its pinned git object and proved byte-for-byte
+**Then** the run produces a corpus-read proof of the same shape as the 2026-08-18 one, so a zero is
+again distinguishable from an absence.
+
+**Given** §2 requires every disposition to carry a registered adjudicator and `UNADJUDICATED` is the
+only value an automated producer may write
+**Then** no row is dispositioned by any automated step, the adjudication is exhaustive under §4's
+ladder, and the actual `expert_hours` are recorded as a `Fraction` against the ≤4-hour ceiling **as
+a report, never a gate**.
+
+**Given** `DF-13-5-A` permits exactly ONE round
+**Then** this story consumes it, records that it has been consumed, and records the pre-registered
+fallback verbatim. If the outcome is `UNEVALUABLE` or below threshold, **no further expansion is
+proposed by this story.**
+
+**Given** narrowing, dropping or re-weighting to move the ratio is forbidden
+**Then** the outcome is recorded whatever it is, and `decide_gate` is re-run unmodified.
+
+### Story 16.5: The record says who judged, and whether they were independent
+
+As a prospective adopter of Argus,
+I want the gate record to state whether its adjudication was independent of the tool's authors,
+So that I can weigh the precision figure without having to reconstruct who was in the room.
+
+**Acceptance Criteria:**
+
+**Given** §2's QA Lead and External adjudicator are both **unfilled**, and §2 already says an
+externalization sign-off *"SHOULD be outside the implementing team"*
+**When** this story completes
+**Then** the gate decision record carries an **independence status**, derived from the registered
+adjudicators on the adjudication record rather than typed, naming which roles were filled and by
+whom.
+
+**Given** a non-independent result must not be quotable as an independent one
+**Then** the rendered gate-status string carries the independence status wherever it carries the
+precision figure, and a guard asserts the two cannot be separated.
+
+**Given** FR34 already enforces provisional-status disclosure on every user-facing surface
+**Then** this story **extends** that mechanism rather than forking a second one.
+
+**Given** filling a role is an operator act
+**Then** this story does **not** claim independence, does not fill a role, and does not gate on one
+being filled. It makes the current state legible, whatever it is.
+
+---
+
+### Story 16.6: The assertion vocabulary recognises the assertion that is a `raise`
+
+> Added by [sprint-change-proposal-2026-08-22.md](sprint-change-proposal-2026-08-22.md), **APPROVED
+> by XAgent007 on 2026-08-22**. ⛔ **Precondition: `argus/detectors/vacuous_test.py` sits at
+> 1,196/1,200 with `DF-15-2-D` filed. The module SPLIT lands FIRST, alone, in its own commit, with
+> no behaviour change.** Four lines is not room for the fix and its guards.
+
+As the Engineering Lead,
+I want `raise AssertionError` counted as an assertion,
+So that the advisory population is not inflated by tests that assert rigorously in a spelling the
+tool cannot read.
+
+**Measured basis (2026-08-22, read-only over pinned git objects):** `is_assertion_callee` recognises
+the `_ASSERTION_CALLEES` table **or** the convention `\A_?assert\w*\Z`. That regex is
+**case-sensitive**, so `AssertionError` does not match, and a `raise` is a statement rather than a
+call to an assertion callee. **22 of the 1,032 flagged findings contain the idiom**, and because the
+density scorer counts assertion statements, those tests are scored below their true density — the
+tool over-flags, in the accusation direction.
+
+**Acceptance Criteria:**
+
+**Given** the ceiling and `DF-15-2-D`
+**Then** the `vacuous_test.py` split lands **first, in its own commit**, byte-equivalent in
+behaviour, and `DF-15-2-D` is discharged or re-filed against the new module sizes.
+
+**Given** two assertion vocabularies exist for different questions (`DN-14-2-1`)
+**Then** the recognition is added to the **WIDE** vocabulary only — the one that asks *"does this
+test assert anything?"* — and ⛔ `_CORROBORATION_ASSERTION_CALLEES` stays **byte-unchanged at 23
+names**, because widening the frozen table moves fact (b) toward an accusation.
+
+**Given** a guard that cannot fail proves nothing
+**Then** the new recognition is driven **RED by executed mutation**, with the tree restored
+byte-exact, and the before/after flagged count over the 22 affected findings is recorded.
+
+**Given** this story changes the advisory tier only
+**Then** no finding becomes verdict-eligible, no threshold moves, and the gate outcome is unchanged.
+
+### Story 16.7: Adjudicate the silent-test class before anyone proposes promoting it
+
+> Added by [sprint-change-proposal-2026-08-22.md](sprint-change-proposal-2026-08-22.md), **APPROVED
+> by XAgent007 on 2026-08-22**. ⛔ **Preconditions: Story 16.6 done, AND protocol §2's QA Lead role
+> FILLED** — §4's borderline ladder terminates there, and this story can produce borderlines.
+
+As the Engineering Lead,
+I want the 36-member silent class adjudicated by a named human under §4,
+So that any future promotion proposal carries a measurement instead of an estimate.
+
+**Measured basis (2026-08-22):** formulating the per-call question as *"reaches the SUT, discards the
+result, and asserts nothing at all"* yields **39** findings, of which **3** are false accusations
+from the §16.6 vocabulary gap — **36 survive**. For comparison, the shipped fact (b) reaches **0**,
+and dropping its provably-dead mock-referencing clause reaches **6**.
+
+⛔ **Promotion is deliberately NOT proposed.** A spot-check found the class contains the **deliberate
+smoke test**, where *"does not raise"* **is** the assertion, stated in a comment no analyser can
+read. `DN-3` already carves out the explicit spelling (`pytest.raises`); this is the implicit one,
+and the proportion is **unmeasured**. Promoting the class blind would manufacture exactly the false
+🔴 that cross-cutting #6 exists to prevent.
+
+**Acceptance Criteria:**
+
+**Given** 16.6 changes what counts as an assertion
+**Then** the class is **re-derived after 16.6**, not carried over, and its exact membership recorded.
+
+**Given** protocol §4 requires a named human
+**Then** every member carries one live TP/FP/BORDERLINE disposition with an `adjudicator` of the
+form `"<who> (<role>)"` from §2's registered three, and ⛔ **no automated step writes a disposition.**
+
+**Given** the smoke-test idiom is a legitimate pattern
+**Then** it is adjudicated **explicitly as its own recorded outcome**, never folded into FP without
+comment — the whole point of the story is to learn its proportion.
+
+**Given** §3 sets a ≤4-hour expectation
+**Then** actual `expert_hours` are recorded as an exact `Fraction` and compared by
+`expert_hours_report()` — ⛔ **as a report, never as a gate.** Never trim the adjudication to fit.
+
+**Given** §2 records the External adjudicator as unfilled
+**Then** if the ladder reaches an unfilled role the story **STOPS** and reports which rows and why.
+
+**Given** this story measures rather than promotes
+**Then** ⛔ **no finding is promoted to verdict-eligible, no threshold moves, `decide_gate` is not
+re-run, and no bench expansion is proposed** — in this story, the ledger, or any change proposal.
+
+---
+
 ## Minions-Repo Handoff — not epics in this breakdown
 
 > **Operator scope decision, 2026-08-03.** RS-2, RS-3, IN-1, IN-3 and IN-4 execute in the **Minions

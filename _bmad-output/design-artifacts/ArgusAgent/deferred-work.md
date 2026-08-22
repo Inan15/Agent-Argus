@@ -4726,6 +4726,57 @@ remains the recorded candidate should it ever be needed.
     **This does NOT close the entry.** The rule is committed; the branch is not yet taken, because
     13.5 has not run. `DF-13-5-A` closes when 13.5 records its outcome and the pre-registered branch
     is executed — and it closes by EXECUTION of the rule, never by re-opening it.
+  - **⏸️ DEFERRED 2026-08-22 by XAgent007 — the round is NOT spent, and the rule is NOT amended.**
+    (Append-only note; the entry above is not rewritten, §3.4.) Story 16.4 raised HALT-1 and stopped.
+    The operator weighed the §6 **R2** act and **declined it for now**, on measurement rather than
+    preference. The pre-registered rule of 2026-08-17 stands **verbatim and unchanged**; what is
+    deferred is the *execution* of its branch (a), not the branch itself.
+
+    ⛔ **The tension is recorded rather than papered over.** The pre-registered rule says that an
+    `UNEVALUABLE` 13.5 leads to branch (a), and 13.5 *did* return `UNEVALUABLE`. **This note does not
+    execute branch (a).** It defers that execution under a named trigger. The rule is not amended,
+    narrowed or reinterpreted, and no position is taken on branch (b).
+
+    **What was measured, on the corpus already ratified and already audited — no round spent, no
+    member ratified, no third-party source fetched:**
+    - The verdict-eligible predicate (fact (b)) reaches **6 of the 1,032** heuristically-flagged
+      findings. The corroborable ceiling across all five ratified members is **six**, against a
+      yield floor of **five**.
+    - One clause of fact (b) — *at least one assertion referencing a mock-bound name* — fires **0
+      times in 1,032**. It is dead over this corpus.
+    - The binding constraint is the **whole-function scope** of `consumed == 0`: **676** findings
+      carry a discarded SUT call, but only **14** carry no consumed one, so a single observed call
+      anywhere withholds corroboration from the entire test.
+    - A shipped precision defect was found: the assertion vocabulary does not recognise
+      `raise AssertionError`, affecting **22** flagged findings in the over-flagging direction.
+
+    Harnesses are committed under `research/` and each was validated in **both** directions —
+    reproducing the recorded 0 blocking findings **and** still promoting the project's own
+    `_CORROBORATED_FIXTURE` control, so a trivially-empty harness could not masquerade as agreement.
+
+    **Why this defers rather than executes.** Branch (a) buys a precision number measured *through*
+    the predicate above. Expanding the bench does not widen that predicate; it samples more
+    repositories through the same six-in-a-thousand aperture. The round is single-use, and it is
+    worth materially more after the predicate work than before it. This reasoning is recorded
+    **before** any further finding exists, in the same discipline as the 2026-08-17 rule itself.
+
+    ⛔ **No expansion is proposed by this note** — not here, not in the story file, not in a change
+    proposal. Story 16.4 / AC5.3 forbids it and it is not done.
+
+    ⛔ **THE ENTRY STAYS OPEN.** `DF-13-5-A` is **UNSPENT**. Neither (a) nor (b) has been taken.
+    The FR34 disclosure stands as it already did; nothing published changes.
+
+    **RE-REVIEW TRIGGER — the deferral is bounded, not open-ended.** This entry returns to the
+    operator for a spend/decline decision on the **earlier** of:
+    1. the proposed Stories 16.6 and 16.7 both reaching `done`; or
+    2. **2026-11-22** (three months), whichever comes first.
+    A deferral without a trigger is the silence this entry already forbids.
+    - deferred_by: **XAgent007 (Engineering Lead)**
+    - deferred_on: 2026-08-22
+    - members_ratified: **NONE** — `eligible_member_count()` is unchanged at **5**
+    - round_state: **UNSPENT**
+    - protocol_edit: **NONE** — §6's R2 row already reads `NOT PERFORMED`, which stays true; no
+      `V1.4` row was added and the change-log head is unmoved (`-45` / `-63` untouched)
 
 ## Correct-course 2026-08-17b — the three multi-language gaps Story 14.3 does NOT fix
 
@@ -5223,3 +5274,257 @@ disposed and three new ones are filed, one of which bounds Epic 15.
   - severity: 🟡 — nothing is failing today and the ceiling guard is the live safety net: it fails
     loudly at 1,201, never silently. It becomes a forced choice the moment the next line is
     written, and the tempting answer at that moment is the exemption `MAINT-001-04` forbids.
+
+## Deferred from: the Epic 15 retrospective (2026-08-19), filed 2026-08-20
+
+- **`DF-15-2-E` — `tests/test_vacuous_density.py` sits at 41 lines of headroom with NO ledger entry
+  at all.** This is `DF-15-2-D`'s condition on the sibling module, and it is filed because the
+  Epic 15 retrospective found the *absence* rather than the size: `argus/detectors/vacuous_test.py`
+  (1,196/1,200) is tracked by `DF-15-2-D` and `tests/test_vacuous_detector.py` by `DF-14-3-H`,
+  while this module — the third of the three that Story 14.2 and Story 15.2 grew — **was tracked by
+  nothing**. An untracked approach to a ceiling is worse than a tracked one precisely because
+  nobody is watching it: the guard still fails loudly at 1,201, but it fails as a surprise.
+  **Measured with the ceiling guard's own method** (`_physical_line_count`, `_CEILING = 1200`):
+  **1,159 of 1,200 — 41 lines** at HEAD `ef41449`. That is materially more room than
+  `DF-15-2-D`'s four, which is why this is filed at 🟡 and not raised further; it is enough for a
+  guard or two and not enough for a story's worth of them.
+  ⛔ **The trigger, stated so it is not a judgement call at the moment it is inconvenient:** the
+  first change that would take this module past **1,180** performs the cohesion split FIRST — by
+  subject cohesion, never by arithmetic, with no function split across the boundary — on the
+  `test_vacuous_detector_index.py` precedent Story 15.2 set. The margin is deliberate: a split
+  decided at 1,199 is a split decided under duress, and duress is what produces the
+  `_EXEMPT_BY_DESIGN` entry `MAINT-001-04` forbids.
+  - id: DF-15-2-E
+  - origin_story: **NONE** — found by the Epic 15 retrospective (`epic-15-retro-2026-08-19.md`,
+    SD-6) rather than by a story's review, and filed by
+    `sprint-change-proposal-2026-08-20.md` §4.4. Recorded as retrospective-origin because a
+    finding attributed to a story that did not make it is the `DF-13-3-A` failure shape.
+  - owner: **XAgent007 (Engineering Lead)** (`AI-E9-8`)
+  - target_story: **NONE** — a precondition on whoever opens that module next, not work with a
+    schedule of its own. Pinning it to an unwritten story is how `DF-14-3-H`'s
+    `target_story: 13-5` went stale, and `DF-15-2-D` already declines to repeat it.
+  - category: maintainability / NFR-M1 headroom
+  - severity: 🟡 — nothing is failing, 41 lines is real room, and the ceiling guard is the live
+    safety net. The defect being recorded here is the **absence of tracking**, not the size; it
+    becomes 🟠 if this module crosses 1,180 with this entry still un-actioned.
+
+## Deferred from: Story 16.1 (2026-08-20) — filed by OPERATOR DECISION (XAgent007)
+
+- **`DF-16-1-A` — protocol §5's breadth condition landed with ONE arm, because the other arm is
+  unachievable with the shipped detector set.** Story 16.1's title argument has two halves — *a
+  score drawn from one repository is not a score*, and *a score drawn from one rule is not a
+  score*. The **contributing-member** arm landed (floor `(VALIDATION_SET_FLOOR_N + 1) // 2` = 3).
+  The **rule-class** arm did **not**, and this entry carries the blocking measurement so the next
+  reader does not have to re-derive it. **Measured at `0a6e121` by two instruments that share no
+  code:**
+  - **Static.** `verdict_eligible` is `depth_supported is not None`
+    (`replay_harness.finding_match_key`). An AST walk of **all 7** `build_recording(...)` call
+    sites in `argus/**` resolves `depth_supported` to `None` at six of them
+    (`argus/audit/deep_pass.py:345`, `argus/detectors/orphan_code.py:272`,
+    `argus/detectors/secret_scan.py:496` and `:517`, `argus/detectors/tool_runner.py:455`,
+    `argus/verdict/prosecutor.py:375`) and to a non-`None` depth at exactly **one**:
+    **`argus/detectors/vacuous_test.py:1067`**, where the depth and `rule_id = RULE_AST` are
+    governed by the SAME `corroborated` boolean, binding a verdict-eligible finding to
+    `vacuous_test_ast` by construction. The only other route to a depth is `prosecutor._promote`,
+    gated on `recording_id in sign_offs`; the single production `prosecute()` call site is
+    **`argus/pipeline.py:535`** and its keyword set is `{verdict, ledger, findings, cut_edges,
+    scope_paths, file_to_partition}` — **`sign_offs` is absent**, so `sign_off_set` is empty and
+    the promotion branch is unreachable on the corpus-audit path
+    (`scripts/audit_validation_corpus.py` reaches the detector through that same unmodified site).
+  - **Empirical.** Counted over both committed adjudication sets: `adjudication-set.json`
+    (2026-08-16) — 5,988 findings, **6** rule classes emitted, **1** verdict-eligible
+    (`vacuous_test_ast`, 31); `adjudication-set-13-5.json` (2026-08-18) — 4,284 findings, **5**
+    rule classes emitted (`orphan_code` 1675, `hardcoded_secret` 1330, `vacuous_test_heuristic`
+    1032, `cross_partition` 231, `traceability_not_establishable` 16), **0** verdict-eligible;
+    blocking total **0**.
+
+  **MAXIMUM ACHIEVABLE DISTINCT VERDICT-ELIGIBLE RULE-CLASS COUNT = 1.** Stated plainly, because
+  both horns are closed by rules this project already holds: **a floor of ≥ 2 would be a
+  SHUTDOWN, not a strengthening** — it makes `CLEARED` unreachable by construction with the
+  shipped detector set, and the operator's approval authorises making clearing harder, not
+  impossible; **a floor of 1 would be VACUOUS** — `derive_concentration` raises on an empty
+  population, so every population it accepts carries at least 1 rule class and the condition would
+  read `MET` for every possible input, which `CONDITION_VERDICTS` already refuses in this
+  codebase's own words: *"A §5 condition that cannot fail is not a threshold."* **Neither was
+  landed, and no rule-class threshold exists anywhere in the tree.** The count is still DISCLOSED
+  on every decision (`concentration.distinct_rule_class_count`, and in the breadth condition's own
+  `measured` sentence, which says in terms that the arm is not gated) so nobody can read the
+  landed condition as covering both halves. ⛔ **The work this entry names is DETECTOR/PIPELINE
+  work, not protocol work:** making a second rule class reachable — e.g. supplying `sign_offs` at
+  `argus/pipeline.py:535` so `DN-PROMOTE` becomes reachable, or grading a second detector's
+  `depth_supported` — changes what the gate MEASURES, which is a larger act than changing what it
+  REQUIRES, and it is outside the 2026-08-20 authorisation. Landing a rule-class floor without
+  first making it achievable remains an **operator decision taken in the open**, never a side
+  effect of a constant.
+  - id: DF-16-1-A
+  - origin_story: 16-1-a-score-drawn-from-one-repository-is-not-a-score (raised as that story's
+    AC2.4 HALT-1; **decided by the operator on 2026-08-20** — *"land the contributing-member arm
+    only; file the rule-class arm"*)
+  - owner: **XAgent007 (Engineering Lead)** (`AI-E9-8`)
+  - target_story: **NONE** — it is a precondition on whoever makes a second rule class reachable,
+    not work with a schedule of its own, and pinning it to an unwritten story is how
+    `DF-14-3-H`'s `target_story: 13-5` went stale
+  - category: validation instrument / precision gate coverage
+  - severity: 🟠 — nothing is failing and the landed arm is real, but the gate's breadth guarantee
+    is **half of what its own story argues for**: 40 findings from three members, all
+    `vacuous_test_ast`, would clear. That is a narrower claim than "we measured the tool", and the
+    externalization gate is the one surface where the gap between those two must not be silent.
+
+- **`DF-16-1-B` — `argus/precision/gate_decision.py` ends Story 16.1 with THREE lines of headroom,
+  and Stories 16.2 and 16.3 each append another §5 condition.** **Measured with the ceiling
+  guard's own method** (`_physical_line_count`, `_CEILING = 1200`): **1,197 of 1,200**. `MAINT-001`
+  is green and **no `_EXEMPT_BY_DESIGN` entry was added** — the registry may only shrink (`-04`),
+  and the remedy `tests/test_module_size_ceiling.py::_REMEDY` names is a **cohesion split**, never
+  a shave and never an exemption. Story 16.1 did not shave: the breadth CONSTANTS, the pure
+  predicate and the `measured` / `closure` / `outcome_reason` **sentences** went to the new
+  `argus/precision/gate_breadth.py` exactly as `DN-16-1-3` directs, and what remains in
+  `gate_decision.py` is its own subject — the vocabularies, `ConditionResult`, `GateDecision`, the
+  condition builders and the dispatch. The `ConditionResult` builder could not follow the sentences
+  out, because `ConditionResult` lives in `gate_decision.py` and the import would be circular.
+  ⛔ **The trigger, stated so it is not a judgement call at the moment it is inconvenient:** the
+  **next** change to this module — which is Story 16.2's sixth §5 condition — performs the cohesion
+  split **FIRST**, by subject cohesion, with no function split across the boundary, on the
+  `argus/pipeline_stages.py` (Story 12.1) and `argus/precision/gate_breadth.py` (this story)
+  precedent. The natural boundary is already visible: `CleanRepoEvidence` and `CorpusReadProof` are
+  the EVIDENCE the decision consumes rather than the decision itself, and they are roughly 180
+  lines. It was **not** performed here because it is a production restructuring outside this
+  story's declared write set, and doing it inside a story that also amends the protocol would make
+  the one change a reviewer most needs to read unreviewable.
+  - id: DF-16-1-B
+  - origin_story: 16-1-a-score-drawn-from-one-repository-is-not-a-score (the condition is created
+    by that story's own delta, 1,081 → 1,197)
+  - owner: **XAgent007 (Engineering Lead)** (`AI-E9-8`)
+  - target_story: **NONE** — a precondition on whoever opens that module next, which on the current
+    plan is 16.2. Recorded as a precondition rather than as scheduled work, on the `DF-15-2-D`
+    precedent.
+  - category: maintainability / NFR-M1 headroom
+  - severity: 🟠 — worse than `DF-15-2-D`'s four lines, and unlike that entry the next change is
+    already **known and planned**: 16.2 cannot append a §5 condition inside three lines. The
+    ceiling guard fails loudly at 1,201 and never silently, but it would fail in the middle of the
+    story that must not stall, and the tempting answer at that moment is the exemption
+    `MAINT-001-04` forbids.
+
+## Deferred from: code review of 16-1-a-score-drawn-from-one-repository-is-not-a-score (2026-08-20, iteration 1)
+
+- **Undisclosed byte-level edit to a pre-existing (Story 15.x-era) `deferred-work.md` entry,
+  outside this story's declared write set.** `_bmad-output/design-artifacts/ArgusAgent/deferred-work.md:5205-5206`
+  (the `argus/detectors/vacuous_test.py` NFR-M1 entry): the pre-existing sentence fragment
+  `` the reason `` / ` `` was silently changed to `` the reason `\n` / `\n` `` by this story's
+  commits, with no mention in the Dev Agent Record and despite the story's own File List
+  claiming only `DF-16-1-A` / `DF-16-1-B` were added and "nothing is disposed of." Content
+  impact is negligible (an unprintable example value in a backtick span), but it is an edit to
+  historical ledger text made without the append-only / strike-not-erase annotation this
+  project's own writing rules require for exactly this file. Cosmetic — not a functional or
+  correctness issue; no assertion or guard is affected. Owner: unassigned. No target story —
+  revert the one line, or annotate it properly, alongside the next edit to that entry.
+
+  - **RESOLVED 2026-08-20 (Story 16.1, review-fix round), by RESTORATION rather than by
+    annotation.** The finding is correct and the remedy taken is the first of the two it names:
+    the pre-existing sentence's bytes were restored to their `0a6e121` state — the two backtick
+    spans hold a literal CR and a literal CRLF again, which is the example the Story-15.x entry
+    was making — so no historical ledger text carries an undisclosed edit. Verified by execution:
+    `git diff 0a6e121 -- _bmad-output/design-artifacts/ArgusAgent/deferred-work.md` is now a
+    SINGLE hunk at the end of the file with **zero deletions**, i.e. a pure append. The edit is
+    also now disclosed in the story's own File List and Dev Agent Record, so the entry above is
+    left standing, unedited, as the record that the review caught it. This bullet is the dated
+    append §3.4 asks for; nothing above it was rewritten.
+
+## Deferred from: 16-3-a-detector-that-finds-nothing-has-not-passed (2026-08-20)
+
+- **`DF-16-3-A` — `tests/test_gate_seal.py` sits at 55 lines of NFR-M1 headroom with NO ledger
+  entry.** Filed by the story that grew it, and filed because of the *absence* rather than the
+  size — the same reason `DF-15-2-E` exists. Story 16.2 measured this module at **1,135 / 1,200**
+  (65 lines) and left it untracked; Story 16.3 added **10 lines** to it, an annotated `6 -> 7`
+  condition-count bump plus a positional assertion at `TC-ArgusAgent-PRECISION-001-91`, taking it
+  to **1,145 / 1,200 — 55 lines**, measured with the ceiling guard's own `_physical_line_count`
+  and `_CEILING = 1200`. **An untracked approach to a ceiling is worse than a tracked one
+  precisely because nobody is watching it**, and this story is the third in a row to be handed an
+  unfiled split-first trigger at the moment it was most inconvenient: `DF-16-1-B` caught
+  `gate_decision.py` at 1,197 and 16.2 discharged it, and `tests/test_gate_decision.py` reached
+  **1,191 with no entry at all** and had to be split by 16.3 as Task 1 before §5's seventh
+  condition could be written. Filing this is the cheapest way to stop that happening a fourth
+  time.
+  ⛔ **The trigger, stated so it is not a judgement call at the moment it is inconvenient:** the
+  first change that would take this module past **1,180** performs the cohesion split FIRST — by
+  subject cohesion, never by arithmetic, with no function split across the boundary, shared
+  fixtures IMPORTED rather than copied, moved definitions byte-for-byte, and in its own commit.
+  That is the `95819bc` (16.2, production) and `01a2f48` (16.3, tests) precedent, and
+  `tests/test_module_size_ceiling.py::_REMEDY` states it in the repository's own words: *"do NOT
+  shave lines."* The margin is deliberate — 20 lines is enough to notice and not enough to
+  tempt.
+  **A candidate boundary is already visible and is recorded here so the next author does not have
+  to find it under pressure**, though it is NOT pre-approved and must be confirmed by that
+  author's own AST walk: the module holds the PARTITION RULE and its fixtures (`-87`..`-89`,
+  plus `sealed_corpus_members` / `mixed_population` / `decide_over`, which four other test modules
+  now import) against the ORDERING and citation guards (`-93`, `-94`, `SEAL_COMMIT_SHA`,
+  `_candidate_output_paths`) — the same *what a rule IS* / *what the history SHOWS* split shape.
+  ⛔ **`SEAL_COMMIT_SHA` and the generators four modules import must keep their import paths**, or
+  the split stops being a pure move.
+  - id: DF-16-3-A
+  - origin_story: 16-3-a-detector-that-finds-nothing-has-not-passed
+  - owner: **XAgent007 (Engineering Lead)** (`AI-E9-8`)
+  - target_story: **NONE** — a precondition on whoever opens that module next, not work with a
+    schedule of its own. Pinning it to an unwritten story is how `DF-14-3-H`'s
+    `target_story: 13-5` went stale; `DF-15-2-D` and `DF-15-2-E` both decline to repeat it and
+    this entry declines with them.
+  - category: maintainability (`NFR-M1`)
+  - severity: 🟡 — 55 lines is materially more room than `DF-15-2-D`'s four or `DF-15-2-E`'s 41,
+    which is why this is filed at 🟡 and not raised further. It is enough for a guard or two and
+    not enough for a story's worth of them.
+  - ⛔ **NOT a claim that anything is broken, and nothing is disposed of by this entry.** The
+    ceiling guard still fails loudly at 1,201; the point of filing is that it should not fail as
+    a surprise. No existing entry is edited, no `DF-*` is closed, and `DF-16-1-A`, `DF-13-5-A`,
+    `DF-15-2-D` and `DF-15-2-E` are all left exactly as they stand.
+
+## Deferred from: sprint-change-proposal-2026-08-22 (APPROVED by XAgent007, 2026-08-22)
+
+> Both entries are filed by an **approved change proposal**, not by a code review, and both are
+> **measurements that Stories 16.6/16.7 do not consume**. Neither closes anything. `DF-13-5-A` is
+> left exactly as it stands — OPEN, UNSPENT, with its 2026-08-22 deferral and re-review trigger
+> intact — and no existing entry is edited.
+
+- **`DF-16-6-A` — the mock-referencing clause of fact (b) is provably dead over the ratified
+  corpus.** Measured 2026-08-22 through the **shipped** `provenance_evidence()` over all 1,032
+  heuristically-flagged findings: `mock_referencing_assertions >= 1` holds for **0 of 1,032**. Not
+  one flagged test carries an assertion referencing a mock-bound name, so the clause can never fire
+  on this population. Removing it would take promotions from **0 → 6** — which crosses the yield
+  floor of 5.
+  - id: DF-16-6-A
+  - origin: sprint-change-proposal-2026-08-22 §1.2
+  - owner: **XAgent007 (Engineering Lead)**
+  - target_story: **NONE** — deliberately. Removing the clause promotes six findings, and neither
+    16.6 nor 16.7 promotes anything. It belongs to whatever promotion story 16.7's outcome may
+    justify, and pinning it to an unwritten story is how `DF-14-3-H`'s `target_story` went stale.
+  - category: guard adequacy / verdict-eligibility predicate
+  - severity: 🟡 — nothing is broken and no guard is loose. A dead clause is not a defect; it is a
+    clause whose population never arrived. Filed so that a future reader does not rediscover the
+    zero and mistake it for a bug.
+  - ⛔ **NOT a proposal to remove it.** Six findings, from five repositories, against a historical
+    adjudication base rate of **0 TP / 26 FP**. A precision figure resting on a population of six is
+    statistically fragile even if all six adjudicate true, and that fragility is the reason this is
+    a ledger entry rather than a story.
+
+- **`DF-16-7-A` — per-call observation analysis needs real dataflow, and is the only path to the
+  suspect population.** The `consumed == 0` clause is **whole-function scoped**: measured
+  2026-08-22, **676** of 1,032 findings carry at least one discarded SUT call while only **14**
+  carry no consumed one, so a single observed call anywhere — including one inside a `pytest.raises`
+  block (CONSUMED by `DN-3`) or one that cannot be located in source (CONSUMED because *unresolvable
+  is not evidence*) — withholds corroboration from the entire test. Making the judgement **per call**
+  reaches a measured **122** findings (*"asserts, but nothing about the SUT"*), which is the largest
+  reachable population found and the only one addressing the ~40% suspect class.
+  - id: DF-16-7-A
+  - origin: sprint-change-proposal-2026-08-22 §1.2 / §4.3
+  - owner: **XAgent007 (Engineering Lead)**
+  - target_story: **6.2** (`6-2-full-python-ast-grounding-of-audited-deep-claims`) — the full
+    dataflow / scope-resolved grounding already chartered by `DF-14-1-A`. This entry does not create
+    new work; it records that 6.2 is the prerequisite and what it would buy.
+  - category: verdict-eligibility predicate / detector reach
+  - severity: 🟠 — nothing false is published and the gate is correctly `BLOCKED`, but this is the
+    only measured route to the population the detector exists to find, and it is currently
+    unreachable by any cheap predicate edit.
+  - ⛔ **The 122 figure is THIS MEASUREMENT'S OWN reasoning, not the shipped predicate.** No shipped
+    helper computes SUT-derived name binding; it was computed with Python `ast` in
+    [`research/investigate-per-call-scoping.py`](research/investigate-per-call-scoping.py). It is
+    **not adjudicated** and no claim is made that any of the 122 is a true positive.
+  - ⛔ **Not a proposal to loosen fact (b).** Its asymmetry is correct and was the Story 14.1
+    conformance repair. The fix is a **finer** predicate, never a weaker one.

@@ -1,11 +1,29 @@
 """Story 13.3 / AC1–AC5 — the gate decision, and the guards that keep it a measurement.
 
-``TC-ArgusAgent-PRECISION-001-53``..``-63``. A **NEW** module, for the reason AC8.5 states
-and this story re-measured on its own baseline: ``tests/test_evidence_citation.py`` is at
-**1199/1200** lines, ``tests/test_built_distribution.py`` at **1198/1200** and
+``TC-ArgusAgent-PRECISION-001-53``..``-58``, ``-69``, ``-70``. A **NEW** module, for the
+reason AC8.5 states and this story re-measured on its own baseline:
+``tests/test_evidence_citation.py`` is at **1199/1200** lines,
+``tests/test_built_distribution.py`` at **1198/1200** and
 ``tests/test_instrument_disclosure.py`` at **1194/1200**. Three files are effectively full,
 the sanctioned remedy is a cohesion split (12.8), and *"do not shave a file to fit"* is the
 rule this module exists to obey rather than to test.
+
+⛔ **SPLIT 2026-08-20 (Story 16.3 / Task 1), and the rule it exists to obey was applied to
+itself.** This module reached **1,191 of 1,200** with **no ledger entry at all** — 16.2's
+contexted story flagged it at 1,193 and said it *"gets the same rule"*, then split the
+production module (``DF-16-1-B``) and left this one unfiled. §5's SEVENTH condition forces an
+edit to ``-55``, because ``expected_section_5_outcome`` takes its dispatch terms as REQUIRED
+keyword arguments with no default — deliberately, so no caller silently inherits the old
+answer — and that edit does not fit in nine lines. The remedy is the sanctioned one, taken
+FIRST and in its own commit (the ``95819bc`` precedent): the six guards over the **ARTIFACT
+the decision publishes** (``-59``..``-64``: the concentration disclosure, the completion
+bound, locators-and-counts, the disclosure's persistence, no-threshold-moved, the
+``UNEVALUABLE`` sentence) moved **byte-for-byte** to
+``tests/test_gate_decision_artifact.py``. What stayed is the guards over the **decision
+FUNCTION itself**. The boundary is the test-side mirror of the split 16.2 already made in
+production — ``gate_conditions.py`` (what a condition IS) against ``gate_evidence.py`` (what
+one is MEASURED FROM) — and it was confirmed by an AST walk before a line moved. The shared
+fixtures below did **not** move and are IMPORTED by the new module, never copied (AR7).
 
 **What every guard here is ultimately protecting.** Epic 13 exists to answer one question
 honestly: has Argus's own finding precision been measured, and did it clear ≥80%? There
@@ -17,11 +35,12 @@ are exactly two ways to get that wrong, and both are cheap:
    unexpressible, and ``-55`` / ``-58`` are what make the vocabulary real.
 2. **Publish a figure that overstates the breadth of what was measured.** ``-59`` closes
    AC3b in both directions: the disclosure must go RED when it is absent, and it must NOT
-   manufacture a concentration claim over a well-distributed population.
+   manufacture a concentration claim over a well-distributed population. That guard now
+   lives in ``tests/test_gate_decision_artifact.py``; the claim it protects is unchanged.
 
 **GUARD-ADEQUACY (``AI-E11-1``, architecture §Enforcement) is discharged per guard**: each
 names its **observable**, each moves the defect **at the real seam** (the shipped types and
-the committed artifacts, never a copy), and ``-58`` / ``-59`` **GENERATE** their adversarial
+the committed artifacts, never a copy), and ``-58`` **GENERATES** its adversarial
 variants *from the committed record itself* with their counts, rather than hand-listing
 them. Its input-side twin is honoured too — ``-54`` asserts what the artifact IS (a tracked
 file with a live re-derivation), not merely what shape it has.
@@ -46,18 +65,20 @@ from pathlib import Path
 import pytest
 
 from argus.precision.adjudication import (
-    LOCATOR_RE,
     AdjudicationRecord,
     AdjudicationRow,
     AdjudicationUnevaluable,
     Exhaustive,
-    change_log_head_version,
     finding_row_id,
     fold_adjudicated_precision,
     load_record,
     validation_set_population_n,
 )
+from argus.precision.gate_breadth import assess_breadth
+from argus.precision.gate_seal import sealed_member_floor
+from argus.precision.gate_yield import verdict_eligible_population_floor
 from argus.precision.gate_decision import (
+    BREADTH_CONDITION_ID,
     CONDITION_VERDICTS,
     GATE_OUTCOMES,
     SECTION_5_CONDITIONS,
@@ -71,27 +92,31 @@ from argus.precision.gate_decision import (
     condition_verdict_meaning,
     decide_gate,
     gate_outcome_meaning,
+    section_5_condition,
 )
 from argus.precision.gate_disclosure import (
     VacuousDisclosureError,
     derive_concentration,
-    derive_residual_completion_bound,
     ratified_corpus_members,
 )
 from argus.precision.replay_harness import (
     PRECISION_GATE_THRESHOLD,
-    UNEVALUABLE_EMPTY_DENOMINATOR,
-    precision_gate_status_for,
     ratio_string,
     registry_module,
 )
 from argus.store.canonical import loads
-from argus.verdict.negative_assurance import INSTRUMENT_STATUS, InstrumentStatus
 
-# The analyzer is IMPORTED, never copied (12.6 / DN-7 — a second copy is a second thing to
-# keep true, and this one is the only mechanism tying the declared instrument status to the
-# harness).
-from tests.test_instrument_disclosure import protocol_cleared_call_sites
+# §5's dispatch MIRROR is IMPORTED, never copied (12.6 / DN-7 — a second copy is a second
+# thing to keep true), and is driven to its breadth branch, in both directions, by -86 in
+# the module it lives in.
+from tests.test_gate_breadth import expected_section_5_outcome
+
+# ⛔ MOVED 2026-08-20 (Story 16.2 / AC6.3), not deleted. `_spread` lived HERE and spread over
+# `ratified_corpus_members()`; all five of those became `pre-seal` when the seal landed, so a
+# population over them can never reach a §5 OUTCOME again. It now spreads over the SEALED
+# bench rows and lives in the module that owns the partition, IMPORTED rather than copied
+# (AR7) exactly as the §5 dispatch mirror above is.
+from tests.test_gate_seal import sealed_corpus_members, spread_over_sealed as _spread
 
 _REPO_ROOT = Path(__file__).resolve().parents[1]
 _ARTIFACTS = _REPO_ROOT / "_bmad-output" / "design-artifacts" / "ArgusAgent"
@@ -195,8 +220,16 @@ def _decide(
     expected: list[str] | None = None,
     clean_repo_fp: int = 0,
     corpus_read_proof: CorpusReadProof | None = None,
+    corpus: tuple[dict[str, str], ...] | None = None,
 ) -> GateDecision:
-    """Drive :func:`decide_gate` at the REAL seam with the live derived corpus figures."""
+    """Drive :func:`decide_gate` at the REAL seam with the live derived corpus figures.
+
+    *corpus* defaults to the five RATIFIED members — every caller's shape before
+    2026-08-20 — and is passed explicitly by the guards that generate over SEALED rows, so
+    the concentration and the partitions describe the SAME population. Passing a row here
+    ratifies nothing: ``ratified_members`` is an argument, and protocol §6 R2 is an
+    operator act.
+    """
     return decide_gate(
         record,
         corpus_read_proof=corpus_read_proof,
@@ -207,7 +240,7 @@ def _decide(
         floor_n=int(registry_module().VALIDATION_SET_FLOOR_N),
         protocol_change_log_head=record.protocol_version,
         clean_repo_evidence=_clean_evidence(clean_repo_fp=clean_repo_fp),
-        ratified_members=ratified_corpus_members(),
+        ratified_members=ratified_corpus_members() if corpus is None else corpus,
         record_is_tracked_in_git=True,
         commit_sha="0" * 40,
         decided_on="2026-08-17",
@@ -317,29 +350,81 @@ def test_TC_ArgusAgent_PRECISION_001_54_the_decision_is_committed_derived_and_re
 def test_TC_ArgusAgent_PRECISION_001_55_the_live_outcome_is_derived_not_chosen() -> None:
     """TC-ArgusAgent-PRECISION-001-55 — AC1/AC5: the outcome equals what the preconditions dictate.
 
-    **Observable:** the committed outcome, versus the three-way dispatch recomputed here
-    from the fold's own preconditions. This is the guard that would catch a story writing
-    down the answer it preferred: the expected outcome is DERIVED from
-    ``determinism`` / ``exhaustiveness`` / ``precision`` rather than pinned as a literal, so
-    it stays correct when the adjudication moves and it fails the moment the recorded
-    outcome and the measured state disagree.
+    **Observable:** the committed outcome, versus §5's three-way dispatch recomputed from
+    the fold's own preconditions by the shared :func:`expected_section_5_outcome` mirror.
+    This is the guard that would catch a story writing down the answer it preferred: the
+    expected outcome is DERIVED from ``determinism`` / ``exhaustiveness`` / ``precision`` /
+    breadth rather than pinned as a literal, so it stays correct when the adjudication moves
+    and it fails the moment the recorded outcome and the measured state disagree.
+
+    ⛔ **WHICH CLAUSE THIS FIXTURE REACHES, stated plainly** (2026-08-20 code review). The
+    COMMITTED record carries 5 ``BORDERLINE`` rows, is therefore never :class:`Exhaustive`,
+    and the mirror's FIRST clause always fires here. The breadth clause is **not** exercised
+    by this fixture and is not claimed to be: round 2 claimed it and the review disproved it
+    by execution (``holds = True``, and separately both breadth branches disabled, left this
+    guard GREEN). The term is passed in so this guard cannot expect ``CLEARED`` over a narrow
+    denominator should the record ever become exhaustive; the clause itself is DRIVEN both
+    ways by ``tests/test_gate_breadth.py::TC-ArgusAgent-PRECISION-001-86``.
     """
     record = _record()
     assert len(record.rows) > 0, "non-vacuity: the adjudication record is EMPTY"
+    ratified = [str(member["member_id"]) for member in ratified_corpus_members()]
+    assert ratified, "non-vacuity: the manifest reports ZERO ratified members"
     fold = fold_adjudicated_precision(
         record,
         expected_finding_ids=[row.finding_id for row in record.rows],
         population_n=validation_set_population_n(),
         floor_n=int(registry_module().VALIDATION_SET_FLOOR_N),
     )
-    if fold.determinism is not None or not isinstance(fold.exhaustiveness, Exhaustive):
-        expected = "BLOCKED"
-    elif fold.precision is None:
-        expected = "BLOCKED"
-    elif fold.meets_threshold:
-        expected = "CLEARED"
-    else:
-        expected = "NOT_CLEARED"
+    # RE-AUTHORED 2026-08-20 (Story 16.1 / AC1.5), and REPAIRED the same day after the code
+    # review proved the re-authoring had not been driven. The dispatch mirror is now written
+    # ONCE, in tests/test_gate_breadth.py, and its breadth clause is driven in both
+    # directions by -86 over GENERATED populations. Here the breadth term is DERIVED from the
+    # same concentration the decision publishes — never recounted — and over THIS fixture the
+    # mirror's first clause fires, because the committed record is not exhaustive. That is
+    # recorded in the docstring rather than papered over.
+    breadth = assess_breadth(
+        derive_concentration(record, ratified_member_ids=ratified),
+        validation_set_floor_n=int(registry_module().VALIDATION_SET_FLOOR_N),
+        population_source=_RECORD_PATH.name,
+    )
+    assert not isinstance(fold.exhaustiveness, Exhaustive), (
+        "the committed record became EXHAUSTIVE. This guard's fixture now reaches clauses it "
+        "did not before: re-read its docstring, and check -86 still covers the breadth clause."
+    )
+    # The SEAL term, added 2026-08-20 (Story 16.2 / AC6.2), derived HERE from the committed
+    # corpus and never read out of `assess_seal`. As with breadth, THIS FIXTURE DOES NOT
+    # REACH THAT CLAUSE — the record is not exhaustive, so the mirror's first clause fires;
+    # the term is passed in so this guard cannot expect CLEARED should that change, and the
+    # clause is DRIVEN both ways by tests/test_gate_seal.py::-90.
+    sealed_contributing = {
+        str(member["member_id"])
+        for member in ratified_corpus_members()
+        if member["partition"] == "sealed"
+    } & {row.member_id for row in record.live_rows()}
+    # The YIELD term, added 2026-08-20 (Story 16.3 / AC4.4) on exactly the same terms as the
+    # seal term above it: a THIRD REQUIRED keyword argument with no default, so this caller
+    # had to state what it believes rather than inherit the old answer. It is COUNTED HERE
+    # from the record's own live rows — the same quantity `derive_concentration` publishes as
+    # `adjudicated_population` — and is never read back out of `assess_yield`; a mirror fed
+    # the predicate's own answer moves in lockstep with the defect and survives exactly the
+    # mutation that should kill it. As with the two terms above, THIS FIXTURE DOES NOT REACH
+    # THAT CLAUSE: the record is not exhaustive, so the mirror's first clause fires. The
+    # clause is DRIVEN both ways, with breadth and the seal pinned TRUE, by
+    # tests/test_gate_yield.py::TC-ArgusAgent-PRECISION-001-97.
+    live_population = len(record.live_rows())
+    assert live_population > 0, (
+        "non-vacuity: the committed record carries ZERO live rows, so the yield term below "
+        "would be about an empty population and the mirror would be answering a different "
+        "question than the decision"
+    )
+    expected = expected_section_5_outcome(
+        fold,
+        breadth_holds=breadth.holds,
+        seal_holds=len(sealed_contributing) >= sealed_member_floor(fold.floor_n),
+        yield_holds=live_population
+        >= verdict_eligible_population_floor(PRECISION_GATE_THRESHOLD),
+    )
 
     payload = _decision_payload()
     assert payload["outcome"] == expected, (
@@ -431,14 +516,14 @@ def test_TC_ArgusAgent_PRECISION_001_56_all_four_section_5_conditions_are_report
 
     live = _decide(_record())
     for dropped in range(len(SECTION_5_CONDITIONS)):
-        with pytest.raises(ValueError, match="ALL FOUR"):
+        with pytest.raises(ValueError, match="must report ALL"):
             replace(
                 live,
                 conditions=tuple(
                     c for i, c in enumerate(live.conditions) if i != dropped
                 ),
             )
-    with pytest.raises(ValueError, match="ALL FOUR"):
+    with pytest.raises(ValueError, match="must report ALL"):
         replace(live, conditions=tuple(reversed(live.conditions)))
 
     # A CLEARED decision may not carry a NOT_APPLICABLE or UNEVALUABLE condition.
@@ -446,7 +531,7 @@ def test_TC_ArgusAgent_PRECISION_001_56_all_four_section_5_conditions_are_report
     assert not_met, (
         "non-vacuity: this branch needs >=1 non-MET condition to prove CLEARED refuses it"
     )
-    with pytest.raises(ValueError, match="CLEARED requires all four"):
+    with pytest.raises(ValueError, match="CLEARED requires all"):
         replace(live, outcome="CLEARED")
     with pytest.raises(UnregisteredConditionVerdict):
         ConditionResult(
@@ -550,15 +635,43 @@ def test_TC_ArgusAgent_PRECISION_001_58_the_dispatch_moves_at_the_real_seam() ->
     expected = [row.finding_id for row in rows]
     assert len(expected) > 2, "non-vacuity: need >2 findings to remove exactly one"
 
-    all_fp = _decide(record.append([_judged(row, "FP") for row in rows]))
+    # RE-AUTHORED 2026-08-20 (Story 16.1 / AC1.5) as an INTENDED BEHAVIOUR CHANGE, not
+    # relaxed. §5's fifth condition means the committed population — 2 contributing members
+    # — can no longer reach a §5 outcome at all, so the two variants below are generated
+    # over a population that satisfies breadth and the narrow one is asserted BLOCKED on
+    # breadth immediately after. Without this the guard would have gone red mid-round on a
+    # line nobody edited, and its stated subject (the dispatch) would have quietly become
+    # the breadth floor.
+    # ⛔ RE-AUTHORED AGAIN 2026-08-20 (Story 16.2 / AC6.3), INTENDED BEHAVIOUR CHANGE. §5
+    # gained a SIXTH condition and every RATIFIED member is `pre-seal`, so 16.1's repair
+    # stopped reaching a §5 OUTCOME. `_spread` now generates over the SEALED rows and the
+    # same rows are the decision's corpus, so concentration and partitions describe ONE
+    # population. Nothing is relaxed: CLEARED must still be reachable at the real seam.
+    broad = _spread(record)
+    sealed = sealed_corpus_members()
+    broad_rows = broad.rows
+    all_fp = _decide(
+        broad.append([_judged(row, "FP") for row in broad_rows]), corpus=sealed
+    )
     assert all_fp.outcome == "NOT_CLEARED", all_fp.outcome_reason
     assert all_fp.fold.evaluable is True
     assert "RESULT" in all_fp.outcome_reason or "result" in all_fp.outcome_reason
     assert all_fp.failed_conditions, "a NOT_CLEARED decision must name a failing condition"
 
-    all_tp = _decide(record.append([_judged(row, "TP") for row in rows]))
+    all_tp = _decide(
+        broad.append([_judged(row, "TP") for row in broad_rows]), corpus=sealed
+    )
     assert all_tp.outcome == "CLEARED", all_tp.outcome_reason
     assert all(c.verdict == "MET" for c in all_tp.conditions)
+    # ...and the SAME all-TP judgements over the NARROW committed population do NOT clear.
+    # This is the amendment working, driven at the real seam, in the direction that matters.
+    narrow_tp = _decide(record.append([_judged(row, "TP") for row in rows]))
+    assert narrow_tp.outcome == "BLOCKED", narrow_tp.outcome_reason
+    assert section_5_condition(narrow_tp.conditions, BREADTH_CONDITION_ID).verdict == "FAILED"
+    assert narrow_tp.fold.meets_threshold and narrow_tp.fold.evaluable, (
+        "non-vacuity: the narrow variant must be over threshold and otherwise evaluable, or "
+        "the refusal could be caused by something other than breadth"
+    )
     assert "ATTESTED externalization and NOTHING ELSE" in all_tp.outcome_reason, (
         "a cleared gate authorises attested externalization and nothing else, and the "
         "record must say so where it says 'cleared'"
@@ -615,352 +728,6 @@ def test_TC_ArgusAgent_PRECISION_001_58_the_dispatch_moves_at_the_real_seam() ->
         _decide(record, expected=[])
     with pytest.raises(VacuousDecisionError):
         _decide(replace(record, rows=()), expected=expected)
-
-
-def test_TC_ArgusAgent_PRECISION_001_59_the_concentration_disclosure_is_derived_and_can_be_absent() -> None:
-    """TC-ArgusAgent-PRECISION-001-59 — AC3b: the denominator discloses its own concentration.
-
-    **Observable:** :func:`derive_concentration` and the committed ``concentration`` block.
-    **Guarded in BOTH directions** (the ``-55b`` convention), which is the whole content of
-    the AC: over the corpus as it stands the disclosure must be present and must agree with
-    the counts derived here independently; and driven over a SYNTHETIC well-distributed
-    population the same predicate must **NOT** manufacture a concentration claim. *A caveat
-    that cannot be absent is not an observation.*
-
-    Every figure is COUNTED, never pinned: the story's 24/7/0/0/0 and single-rule-class
-    figures were the state at authoring time and are deliberately absent from this file
-    (``DF-8-5-C`` / ``AI-E9-7``).
-    """
-    record = _record()
-    ratified = [member["member_id"] for member in ratified_corpus_members()]
-    assert ratified, "non-vacuity: the manifest reports ZERO ratified members"
-
-    disclosure = derive_concentration(record, ratified_member_ids=ratified)
-    live_rows = record.live_rows()
-    assert disclosure.adjudicated_population == len(live_rows) > 0
-    assert dict(disclosure.per_member_finding_counts) == {
-        member: sum(1 for row in live_rows if row.member_id == member)
-        for member in {row.member_id for row in live_rows}
-    }
-    assert sum(count for _, count in disclosure.per_member_finding_counts) == len(live_rows)
-    assert disclosure.distinct_rule_class_count == len(
-        {row.rule_id for row in live_rows}
-    ) > 0
-    assert disclosure.ratified_member_count == len(set(ratified))
-    assert set(disclosure.non_contributing_member_ids) == set(ratified) - {
-        row.member_id for row in live_rows
-    }
-
-    payload = _decision_payload()["concentration"]
-    assert payload["contributing_member_count"] == disclosure.contributing_member_count
-    assert payload["ratified_member_count"] == disclosure.ratified_member_count
-    assert payload["distinct_rule_class_count"] == disclosure.distinct_rule_class_count
-    assert payload["per_member_finding_counts"] == [
-        {"member_id": member, "findings": count}
-        for member, count in disclosure.per_member_finding_counts
-    ]
-    assert payload["statement"] == disclosure.statement
-    assert payload["is_concentrated"] is disclosure.is_concentrated
-
-    # AC3b applies in BOTH branches: the statement rides with the outcome whatever it is.
-    for outcome_record in (
-        record,
-        record.append([_judged(row, "TP") for row in record.rows]),
-        record.append([_judged(row, "FP") for row in record.rows]),
-    ):
-        decision = _decide(outcome_record)
-        assert decision.concentration.statement.strip()
-        assert decision.concentration.adjudicated_population > 0
-
-    # THE OTHER DIRECTION — the predicate must not manufacture a claim. A synthetic
-    # population spread evenly across every ratified member and >1 rule class is NOT
-    # concentrated, and the guard says so.
-    spread_rows = tuple(
-        AdjudicationRow(
-            row_id=f"synthetic{index:04d}.0",
-            member_id=member,
-            rule_id=f"synthetic_rule_{index % 3}",
-            verdict_eligible=True,
-            advisory=True,
-            locator=f"pkg/tests/test_synthetic_{index}.py:{index + 1}",
-            disposition="FP",
-            adjudicator=_ADJUDICATOR,
-            adjudicated_on="2026-08-17",
-            reason="synthetic fixture: a well-distributed population",
-        )
-        for index, member in enumerate(ratified * 3)
-    )
-    spread = derive_concentration(
-        replace(record, rows=spread_rows), ratified_member_ids=ratified
-    )
-    assert spread.non_contributing_member_ids == ()
-    assert spread.distinct_rule_class_count > 1
-    assert spread.is_concentrated is False, (
-        "the concentration predicate fired over a well-distributed population — a caveat "
-        "that cannot be absent is not an observation, it is boilerplate"
-    )
-    assert disclosure.is_concentrated is True, (
-        "the concentration predicate did NOT fire over the live corpus, where the "
-        "population is drawn from a strict subset of the ratified members. If that has "
-        "genuinely stopped being true, re-derive this guard rather than deleting it."
-    )
-    with pytest.raises(VacuousDisclosureError):
-        derive_concentration(replace(record, rows=()), ratified_member_ids=ratified)
-    with pytest.raises(VacuousDisclosureError):
-        derive_concentration(record, ratified_member_ids=[])
-
-
-def test_TC_ArgusAgent_PRECISION_001_60_the_completion_bound_is_exact_and_decides_nothing() -> None:
-    """TC-ArgusAgent-PRECISION-001-60 — AC5: what would close it, DERIVED in countable terms.
-
-    **Observable:** :func:`derive_residual_completion_bound`. It answers *"could the
-    unfinished judgements still change the answer?"* in exact ``Fraction`` arithmetic, and
-    the guard pins the one thing that must never follow from it: an unreachable threshold
-    does **not** promote ``BLOCKED`` to ``NOT_CLEARED``. The residual is a human's
-    unfinished act; the arithmetic trending one way is not a judgement having been made.
-    """
-    reachable = derive_residual_completion_bound(total_tp=8, total_fp=2, residual_count=2)
-    assert reachable.best_case_precision == Fraction(10, 12)
-    assert reachable.worst_case_precision == Fraction(8, 12)
-    assert reachable.completed_denominator == 12
-    assert reachable.threshold_reachable is True
-    assert "GENUINELY OPEN" in reachable.statement
-
-    unreachable = derive_residual_completion_bound(total_tp=0, total_fp=26, residual_count=5)
-    assert unreachable.best_case_precision == Fraction(5, 31)
-    assert unreachable.threshold_reachable is False
-    assert unreachable.completed_denominator == 31
-    assert "NOT as a decision" in unreachable.statement, (
-        "an unreachable threshold must be recorded as a BOUND, never as a decision — "
-        "otherwise it becomes the licence to record NOT_CLEARED over an incomplete "
-        "adjudication, which is the exact falsehood BLOCKED exists to prevent"
-    )
-    # The completed denominator is named beside every ratio because Fraction REDUCES:
-    # 0/31 renders "0/1", which reads as a denominator of one on the honesty-critical
-    # artifact.
-    assert unreachable.worst_case_ratio == "0/1"
-    assert "31" in unreachable.statement
-
-    assert derive_residual_completion_bound(
-        total_tp=4, total_fp=1, residual_count=0
-    ).statement.startswith("no residual")
-    with pytest.raises(ValueError):
-        derive_residual_completion_bound(total_tp=-1, total_fp=1, residual_count=0)
-
-    # AT THE REAL SEAM: the live decision carries the bound, and carries BLOCKED anyway.
-    payload = _decision_payload()
-    if payload["outcome"] == "BLOCKED":
-        bound = payload["residual_completion_bound"]
-        if bound["residual_count"] > 0 and bound["threshold_reachable"] is False:
-            assert payload["outcome"] == "BLOCKED", (
-                "the decision was promoted out of BLOCKED because the residual could not "
-                "reach the threshold. It may not be: an incomplete measurement stays an "
-                "incomplete measurement however its arithmetic is trending (AC1)."
-            )
-
-
-def test_TC_ArgusAgent_PRECISION_001_61_the_artifact_carries_locators_and_counts_only() -> None:
-    """TC-ArgusAgent-PRECISION-001-61 — AC3/NFR-S1: no source byte, no host path, no drive letter.
-
-    **Observable:** the committed artifact's bytes and every locator it republishes.
-    **The locator pattern is IMPORTED, not re-authored** — a second regex here would drift
-    from the one that admits a row into the record, and NFR-S1 would then be enforced by
-    two rules that disagree. The pattern already refuses a leading ``/``, a drive letter, a
-    backslash and a ``..`` segment, which is also what keeps this artifact identical on
-    the Windows machine that produced it and the ubuntu matrix that verifies it.
-    """
-    # AT THE PRODUCING SEAM, not at the checkout: this repository carries no
-    # `.gitattributes` and `core.autocrlf` is true on the Windows machine the local gates
-    # run on, so the bytes ON DISK depend on how git checked the file out. What must hold
-    # unconditionally is that the SERIALIZER never emits a carriage return — that is the
-    # NFR-P1 property, and it is the same on both platforms.
-    produced = _decide(_record()).to_bytes()
-    assert b"\r" not in produced and produced.endswith(b"\n"), (
-        "the canonical serializer emitted a carriage return or no trailing newline; the "
-        "artifact would then differ byte-for-byte between the Windows local gates and the "
-        "ubuntu CI matrix (NFR-P1)"
-    )
-    text = _DECISION_PATH.read_text(encoding="utf-8").replace("\r\n", "\n")
-    assert text.endswith("\n")
-    assert "\\" not in text, "a backslash in the artifact is a Windows path leak (NFR-S1)"
-    assert not re.search(r"\b[A-Za-z]:/", text), "a drive letter reached the artifact"
-    for marker in (str(_REPO_ROOT), _REPO_ROOT.name, "C:/", "/home/", "/Users/"):
-        assert marker not in text or marker == "ArgusAgent", marker
-
-    payload = _decision_payload()
-    residual = payload["preconditions"]["residual_finding_ids"]
-    contributing = payload["concentration"]["contributing_member_ids"]
-    assert contributing, "non-vacuity: the artifact republished ZERO member ids"
-    checked = 0
-    for finding_id in residual:
-        locator = finding_id.split("::")[-1]
-        assert LOCATOR_RE.match(locator), (
-            f"{locator!r} is not a repository-relative posix locator. The pattern is the "
-            f"one AdjudicationRow enforces at construction; a second one here would let "
-            f"the two disagree about NFR-S1."
-        )
-        assert ".." not in locator.split("/")
-        checked += 1
-    assert checked == len(residual)
-    if payload["outcome"] == "BLOCKED":
-        # AMENDED 2026-08-18 (Story 13.5 / AC5). A BLOCKED-on-an-EMPTY-EMITTED-POPULATION
-        # decision has no residual finding id to publish — there is nothing residual about a
-        # population that is empty. The non-vacuity floor does not disappear with it: it
-        # MOVES to the corpus-read proof, and the proof's own counts are asserted here so
-        # this leg cannot be satisfied by a decision that simply omitted both.
-        proof = payload.get("corpus_read_proof")
-        if checked == 0:
-            assert proof and proof["proves_corpus_was_read"], (
-                "non-vacuity: a BLOCKED decision published no residual finding id AND no "
-                "positive corpus-read proof, so this locator scan observed nothing and "
-                "nothing else vouches for the population either"
-            )
-            assert proof["source_file_count"] > 0 and proof["scored_population_count"] > 0, (
-                "non-vacuity: the corpus-read proof standing in for the residual list is "
-                "itself empty — that is the unread corpus it exists to rule out"
-            )
-            assert proof["members_audited"] > 0 and proof["every_member_pin_verified"], (
-                "non-vacuity: the corpus-read proof names no audited member, or its bytes "
-                "were never proved against the pin. Reproducibility is not provenance."
-            )
-
-
-def test_TC_ArgusAgent_PRECISION_001_62_the_disclosure_stays_while_the_gate_is_not_cleared() -> None:
-    """TC-ArgusAgent-PRECISION-001-62 — AC5: the declared status and the decision cannot diverge.
-
-    **Observable:** :data:`INSTRUMENT_STATUS`, the ``argus/**`` production scan from
-    ``protocol_cleared_call_sites`` (IMPORTED, never copied — 12.6 / DN-7), and the
-    committed outcome. ``TC-ArgusAgent-DOCS-001-46`` ties the declaration to the harness;
-    this ties it to the **recorded decision**, which is the surface a reader actually acts
-    on, and it moves in BOTH directions: flip the constant without a CLEARED decision and
-    it goes red, record CLEARED without flipping the constant and it goes red.
-
-    ⚠️ It is deliberately NOT a substitute for AC4(d). ``protocol_cleared_call_sites``
-    matches only a literal ``True``, so a DERIVED flag is invisible to it; whoever performs
-    the flip must extend that closure in the same change. Until then
-    :func:`~argus.precision.gate_decision.decide_gate` passes the literal ``False`` rather
-    than opening the blind spot, and the assertion below is what would notice if it did.
-    """
-    payload = _decision_payload()
-    cleared = payload["outcome"] == "CLEARED"
-    assert (INSTRUMENT_STATUS is InstrumentStatus.VALIDATED) is cleared, (
-        f"INSTRUMENT_STATUS is {INSTRUMENT_STATUS!r} while the committed gate decision "
-        f"records {payload['outcome']!r}. The disclosure is REPLACED by the cleared status "
-        f"only when the gate has genuinely cleared, and never deleted (FR34.4)."
-    )
-    assert payload["adjudication_record"]["adjudication_run_recorded_cleared"] is (
-        payload["section_5_conditions"][3]["verdict"] == "MET"
-    )
-
-    production = sorted(
-        path
-        for path in (_REPO_ROOT / "argus").rglob("*.py")
-        if "__pycache__" not in path.parts
-        and protocol_cleared_call_sites(path.read_text(encoding="utf-8"))
-    )
-    if not cleared:
-        assert production == [], (
-            f"a production argus/** call site passes protocol_cleared=True while the gate "
-            f"is not cleared: {[p.relative_to(_REPO_ROOT).as_posix() for p in production]}"
-        )
-    # The analyzer itself is non-vacuous — proven on synthetic input, so an empty
-    # production scan means "nothing passes it" and not "the analyzer stopped seeing".
-    assert protocol_cleared_call_sites("f(x, protocol_cleared=True)") == (1,)
-    assert protocol_cleared_call_sites("f(x, protocol_cleared=False)") == ()
-
-
-def test_TC_ArgusAgent_PRECISION_001_63_no_threshold_floor_or_unit_moved() -> None:
-    """TC-ArgusAgent-PRECISION-001-63 — AC5/AC2: the protocol's locked figures are byte-unchanged.
-
-    **Observable:** protocol §5's own literals, cross-checked against the shipped
-    constants. *A failed measurement is not a reason to amend the threshold — it is the
-    measurement working*, and the temptation runs in both directions: loosening it to
-    clear, and tightening it to look rigorous after a shortfall. Either is a story failure
-    regardless of the outcome, so the document and the code are asserted to agree rather
-    than either being trusted alone.
-
-    It also asserts the record's ``protocol_version`` still equals the change-log head:
-    amending the protocol after the dispositions were recorded would re-interpret
-    judgements nobody re-made, and the decision constructor refuses it.
-    """
-    protocol = _PROTOCOL_PATH.read_text(encoding="utf-8")
-    assert protocol.strip(), "non-vacuity: the protocol document is empty"
-    for literal, why in (
-        ("Fraction(4, 5)", "§5 states the threshold as the EXACT Fraction"),
-        ("≥ 80%", "§5's precision row"),
-        ("N ≥ 5", "§5's corpus-floor row"),
-        ("VALIDATION_SET_FLOOR_N = 5", "the ONE floor, never forked (13.1 / DN-3)"),
-        (
-            "measured over FINDINGS, not repos",
-            "§7's OI1 unit lock — V1.3 fixed the unit as the FINDING",
-        ),
-        (
-            "the clean-repo\nblocking-FP count is 0",
-            "§5's conjunction, which is the sentence the four conditions implement",
-        ),
-    ):
-        assert literal in protocol, f"protocol §5/§7 no longer states {literal!r} — {why}"
-
-    assert PRECISION_GATE_THRESHOLD == Fraction(4, 5)
-    assert int(registry_module().VALIDATION_SET_FLOOR_N) == 5
-
-    record = _record()
-    assert record.protocol_version == change_log_head_version(protocol), (
-        "the committed adjudication record was judged under a protocol version that is no "
-        "longer the change-log head. Amend the protocol BEFORE a run, never during it."
-    )
-    assert _decision_payload()["adjudication_record"]["protocol_version"] == (
-        record.protocol_version
-    )
-
-
-def test_TC_ArgusAgent_PRECISION_001_64_the_unevaluable_sentence_names_its_real_reason() -> None:
-    """TC-ArgusAgent-PRECISION-001-64 — AC1/DF-9-2-B: a true status may not carry a false reason.
-
-    **Observable:** ``precision_gate_status_for``'s unevaluable branch. **The defect, moved
-    at the real seam:** until Story 13.3 there was exactly one way to be unevaluable and the
-    sentence said so as a literal — *"DENOMINATOR EMPTY"*. The moment a human recorded a
-    ``BORDERLINE`` that stopped being true, and the fold over a record holding 26 TP/FP
-    dispositions rendered "DENOMINATOR EMPTY" beside a denominator of 26. That is the
-    ``DF-9-2-B`` FALSE-SUBJECT class, on the surface that publishes the externalization gate.
-
-    Fixed ADDITIVELY: ``unevaluable_reason`` defaults to the exact prior wording, so every
-    pre-13.3 caller renders the bytes it always did (NFR-P1), and the fold now supplies the
-    precondition that actually failed.
-    """
-    default = precision_gate_status_for(
-        precision=None, n=5, provisional=True, protocol_path="p.md", floor_n=5, evaluable=False
-    )
-    assert UNEVALUABLE_EMPTY_DENOMINATOR in default, (
-        "the default unevaluable sentence changed, so every pre-13.3 caller's bytes moved"
-    )
-    named = precision_gate_status_for(
-        precision=None,
-        n=5,
-        provisional=True,
-        protocol_path="p.md",
-        floor_n=5,
-        evaluable=False,
-        unevaluable_reason="NOT EXHAUSTIVELY ADJUDICATED — synthetic",
-    )
-    assert "NOT EXHAUSTIVELY ADJUDICATED — synthetic" in named
-    assert UNEVALUABLE_EMPTY_DENOMINATOR not in named
-
-    record = _record()
-    fold = fold_adjudicated_precision(
-        record,
-        expected_finding_ids=[row.finding_id for row in record.rows],
-        population_n=validation_set_population_n(),
-        floor_n=int(registry_module().VALIDATION_SET_FLOOR_N),
-    )
-    if not fold.evaluable and isinstance(fold.exhaustiveness, AdjudicationUnevaluable):
-        denominator = fold.total_tp + fold.total_fp
-        if denominator > 0:
-            assert UNEVALUABLE_EMPTY_DENOMINATOR not in fold.gate_status, (
-                f"the live fold reports 'DENOMINATOR EMPTY' beside a denominator of "
-                f"{denominator}. A true status carrying a false reason is DF-9-2-B's class."
-            )
-            assert "NOT EXHAUSTIVELY ADJUDICATED" in fold.gate_status
 
 
 # ─────────────────────────────────────────────────────────────────────────────

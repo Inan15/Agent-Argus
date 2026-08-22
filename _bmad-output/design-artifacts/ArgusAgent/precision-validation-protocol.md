@@ -141,7 +141,7 @@ finding (or its absence) is correct — not the arithmetic.
 > | Role | Holder | State |
 > |---|---|---|
 > | **Engineering Lead** (primary adjudicator) | **XAgent007** | ✅ named — the start condition for Story 13.2 |
-> | **QA Lead** (second reviewer) | *unfilled* | filling it is itself an operator act; required only when a **golden key is added or changed**, or a borderline finding reaches step 3 of the ladder below |
+> | **QA Lead** (second reviewer) | **Veer Pratap Singh** | ✅ **named 2026-08-22** by XAgent007 — see the dated block below. Filled **ahead of** Story 16.7 rather than during it |
 > | **External adjudicator** (tie-break) | *unfilled* | required only on persistent disagreement (§4) |
 >
 > **The rule:** every disposition on the adjudication record carries an `adjudicator` id of the
@@ -157,6 +157,39 @@ finding (or its absence) is correct — not the arithmetic.
 > judgements would therefore fail at construction rather than at review. *An autonomous story
 > that tags its own findings TP has measured nothing and has produced the exact artifact Epic 13
 > exists to make impossible.*
+
+> ### 👤 DATED BLOCK — 2026-08-22 — **THE QA LEAD ROLE IS FILLED: Veer Pratap Singh**
+>
+> **This block sits under the existing V1.3 and adds NO change-log row**, because nothing in the
+> protocol's *method* changed — §2's three roles, §3's budget, §4's ladder and §5's seven conditions
+> are all byte-unchanged. What changed is a **holder cell**. Adding a `V1.4` row would re-stamp
+> `protocol_version` across the 31 committed judgements of 2026-08-17, which is exactly the act
+> `§3.4` forbids; the change-log head is therefore unmoved and
+> `TC-ArgusAgent-PRECISION-001-45` / `-63` are untouched. This is the **fourth** dated block under
+> V1.3.
+>
+> **Who, and when.** **Veer Pratap Singh** fills the **QA Lead (second reviewer)** role, named by
+> **XAgent007 (Engineering Lead)** on **2026-08-22**. Dispositions authored in this role carry the
+> `adjudicator` id **`"Veer Pratap Singh (QA Lead)"`** — the role string must match
+> `PROTOCOL_ADJUDICATOR_ROLES` exactly or `AdjudicationRow.__post_init__` raises
+> `UnregisteredAdjudicator` at construction.
+>
+> **Why it was filled BEFORE the story that needs it, and not during.** Story 16.7 adjudicates a
+> 36-member class, and the only comparable population — the 2026-08-16 set of 31 — produced **5
+> borderlines**, so roughly six are expected. §4's ladder terminates at this role. **A role filled
+> mid-adjudication is a role filled to unblock a result**, and it would be indistinguishable, on the
+> record, from a role filled to obtain one. Filling it in advance, in its own act, is what keeps the
+> two apart. This is the same discipline as the 2026-08-17 pre-registration and the bench's
+> pick-before-you-look rule, applied to staffing.
+>
+> ⛔ **What this does NOT do.** It adjudicates nothing, promotes nothing, and moves no threshold. It
+> does **not** fill the **External adjudicator** tie-break, which stays *unfilled* — so a borderline
+> on which the Engineering Lead and QA Lead **persistently disagree** still has nowhere to go, and a
+> story reaching that step must STOP and report the rows rather than resolve them by default. It
+> makes **no claim of independence for an externalization sign-off**: §2 records that the tie-break
+> "SHOULD be outside the implementing team" for that purpose, and that bar is untouched here.
+> Whether any given adjudication was independent is Story **16.5**'s question to record, not this
+> block's to assert.
 
 ---
 
@@ -310,11 +343,285 @@ honestly is a signal the cartridge is ambiguous and SHOULD be reworked or deferr
 | **False-positive ceiling on clean repos** | **0 blocking** false positives on any `clean_control` / `trap` / `no_crash` repo (`clean_repo_fp == 0` for blocking findings). **⚠️ AMENDED 2026-08-16 (Story 13.2 / AC1c) — this condition must NAME the corpus it is measured over.** `_is_clean_repo` requires an **empty golden key AND `max_blocking == 0`** (`replay_harness.py`), and **no repository-corpus member has either** — so over the population that actually gates externalization the condition was **vacuously 0 for every possible input**, and reporting it as one of the four met conditions would have been a false green of the strongest kind. **A §5 condition that cannot fail is not a threshold.** Resolved additively rather than by softening: it remains a **real threshold over the CARTRIDGE corpus**, where `compute_precision` measures it and reports `clean_repo_fp_applicable=True` naming the clean members it folded; and over the **repository corpus** it is recorded **NOT APPLICABLE with its reason** (`AdjudicatedPrecision.clean_repo_fp_note`), never as satisfied. Story 13.3 must therefore evaluate this condition against the cartridge corpus explicitly, or record it not-applicable — it may not count it as met by default. Guards: `TC-ArgusAgent-PRECISION-001-36` and `-37`. | R6 false-accusation floor; the 6.5 `max_blocking == 0` contract |
 | **Corpus floor** | ~~**N ≥ 5** distinct labeled planted-defect (+ holdout) cartridges (`populated_planted_defect_count() >= VALIDATION_SET_FLOOR_N`)~~ **STRUCK 2026-08-16 (Story 13.1 / DN-1) — this named the wrong corpus.** Replaced by: **N ≥ 5** eligible members of the **validation set** — independent real repositories (`_manifest.eligible_member_count() >= VALIDATION_SET_FLOOR_N`, i.e. `meets_validation_floor()`). The **same** `VALIDATION_SET_FLOOR_N = 5` is reused, never forked (DN-3). ~~**Measured 2026-08-16: N = 0 — NOT MET.**~~ **Superseded the same day: the operator ratified five members under Story 13.1 / AC3b — `N = 5`, floor MET** (struck, not erased: the zero was the state at the moment the corpus definition was decided, before ratification). **Floor met ≠ gate cleared** — see the status note below §5. | OI1 LOCK; PRD §Validation Approach (`N ≈ 5–10` real repositories); `VALIDATION_SET_FLOOR_N = 5` |
 | **Recall over planted defects** *(added 2026-08-16 — this is what the cartridges gate)* | the FR20 cartridge harness stays green: every golden key emitted, `max_blocking == 0` on every clean control. **Not** a threshold on the externalization gate — a **diagnostic of the detectors**, reported alongside. Measured 2026-08-16: **7 populated rows across 5 distinct rule classes.** | FR20; `tests/cartridges/_registry.py`; `distinct_rule_class_count()` |
-| **Recall** (TP / (TP + FN)) | reported as a **diagnostic** (not gated in V1) — a low recall is a coverage signal, but the externalization gate is **precision** (the OI1 lock) | `PrecisionResult.recall_ratio` |
+| **Recall** (TP / (TP + FN)) | reported as a **diagnostic** (not gated in V1) — a low recall is a coverage signal, but the externalization gate is **precision** (the OI1 lock). **⚖️ AMENDED 2026-08-20 (Story 16.3 / AC2) — this row is NOT softened and NOT rewritten; the sentence before this marker is byte-unchanged and recall stays UNGATED and DIAGNOSTIC. What is added is a boundary, so no future reader can read a recall gate into §5's seventh condition.** §5 gained, the same day, a **YIELD** condition: `detector-yield-verdict-eligible-population-floor`. **What it IS:** a floor on the **DENOMINATOR of the precision ratio** — the number of verdict-eligible findings the ratio is computed over — DERIVED from the gate threshold's own arithmetic as `ceil(q / (q − p))` over `PRECISION_GATE_THRESHOLD = p/q`, i.e. **the smallest denominator at which "≥ 80%" is not silently "100%"** (= **5** at the shipped 4/5). It is a statement about the **RESOLUTION of the measurement that was taken**. **What it is NOT:** a floor on **recall**, on **coverage**, or on **any estimate of `FN`**; it makes no claim about defects the detector MISSED, and it does not re-open the OI1 lock. The distinction turns entirely on **where the number comes from**: this floor's only inputs are the threshold and the counted population. ⛔ A floor derived instead from **how much of the defect class the bench carries** — e.g. *"the sealed partition holds 431 co-occurrence files, so expect at least X"* — would estimate `FN` from a text proxy and gate on it. **That would be recall by another name, it WOULD re-open OI1, and it is an OPERATOR ESCALATION, not an implementation choice.** The boundary is enforced **structurally**, not promised: `TC-ArgusAgent-PRECISION-001-99` walks `argus/precision/gate_yield.py`'s own AST and fails if the module imports any recall symbol or references any `FN` / co-occurrence / bench-content quantity, and the guard is itself driven RED by adversarial variants that add one. Line 312's *"Recall over planted defects"* row governs the **cartridge** corpus and is **untouched**; §7's OI1 invariants are **untouched** (they carry no recall bullet). | `PrecisionResult.recall_ratio` |
 
 **The gate is CLEARED iff ALL of:** precision ≥ 80% (exact Fraction) **AND** the clean-repo
 blocking-FP count is 0 **AND** N ≥ 5 **AND** this protocol's adjudication run is recorded cleared.
 If ANY fails, the gate stays **PROVISIONAL** and the harness reports the number as an early signal.
+
+> **⚖️ AMENDED 2026-08-20 (Story 16.1 / AC1; sprint change proposal 2026-08-20 §4.3(1), approved
+> by XAgent007 2026-08-20) — A FIFTH CONDITION: THE DENOMINATOR MUST BE BROAD ENOUGH TO MEAN
+> SOMETHING.** The sentence above is **not edited** and its conjunction is not re-wrapped (§3.4:
+> amend by dated ADDITION, strike rather than erase). The new conjunct is stated here and is
+> **APPENDED** to the condition set, so §5's four historical conditions keep their historical
+> positions and their ids.
+>
+> **The new condition.** The precision ratio is **EVALUABLE only over a population drawn from at
+> least `(VALIDATION_SET_FLOOR_N + 1) // 2` — i.e. `ceil(N_floor / 2)`, which at the locked floor
+> of 5 is **3** — DISTINCT CONTRIBUTING members** of the ratified repository validation set. Below
+> that, §5's **precision** condition is recorded `UNEVALUABLE` with the counts that made it so, and
+> the gate outcome is `BLOCKED` with a countable closure path. The breadth condition's **own**
+> verdict is `MET` or `FAILED` — it *was* evaluated, over a named population. Condition id:
+> `denominator-breadth-contributing-members`. Guards:
+> `TC-ArgusAgent-PRECISION-001-82`..`-85`.
+>
+> **Why.** §5's `N >= 5` is satisfied by MEMBER COUNT while the ratio is computed over whichever
+> members actually emitted a blocking finding — *the N that gates and the N that contributes are
+> different numbers*. The committed gate record has DISCLOSED that since 2026-08-17 and has been
+> unable to act on it: as shipped, a gate could report **CLEARED** on a figure measured over **one
+> repository**, and the record would say so in a paragraph a reader is free to skip. A disclosure
+> the reader may weigh is not a condition the gate must satisfy.
+>
+> **This is a STRENGTHENING, and the distinction from a forbidden threshold change is spelled out
+> rather than asserted.** §5 and Story 13.3 / AC5 forbid any change that makes clearing EASIER —
+> narrowing a corpus, dropping a member, re-weighting one, or moving a threshold to fit a result.
+> This condition can only make clearing **harder**: every population that cleared before this
+> amendment either still clears or is now `BLOCKED`, and no population that failed before can pass
+> because of it. It touches **nothing else**: the ≥ 80% `Fraction`, `VALIDATION_SET_FLOOR_N = 5`,
+> the five ratified members, `MANIFEST_FIELDS` (closed at 9), `GATE_OUTCOMES` (closed at three) and
+> `CONDITION_VERDICTS` (closed at four) are all byte-unchanged, verified by execution. And it is
+> made **BEFORE the measurement it governs** — `DF-13-5-A`'s one permitted round is UNSPENT — which
+> is the whole point: adding a breadth requirement after seeing what the bench yields would be
+> corpus-shopping in the opposite direction.
+>
+> **⛔ The RULE-CLASS arm was DERIVED and deliberately NOT LANDED, by operator decision (XAgent007,
+> 2026-08-20).** An honest breadth condition has two arms — *not one repository* and *not one
+> rule*. Measured at `0a6e121` by two independent instruments (an AST walk of all seven
+> `build_recording` call sites, of which only `argus/detectors/vacuous_test.py:1067` passes a
+> non-`None` `depth_supported`, with the Prosecutor's promotion path unreachable because the single
+> production `prosecute()` call site at `argus/pipeline.py:535` supplies no `sign_offs`; and a
+> direct count over both committed adjudication sets — 2026-08-16: 6 rule classes emitted, **1**
+> verdict-eligible; 2026-08-18: 5 emitted, **0**): **the maximum achievable distinct
+> verdict-eligible rule-class count is 1.** A floor of **≥ 2 would be a SHUTDOWN**, not a
+> strengthening — it would make `CLEARED` unreachable by construction with the shipped detector
+> set — and a floor of **1 could not fail for any admissible input**, which this protocol already
+> refuses in its own words above: *"A §5 condition that cannot fail is not a threshold."* Neither
+> was landed. The rule-class count is still **DISCLOSED** on every decision. The detector-side work
+> that would make the arm achievable is filed on the deferred-work ledger as **`DF-16-1-A`**, and
+> landing a rule-class floor remains an operator decision taken in the open.
+>
+> **⚠️ NO CHANGE-LOG VERSION WAS TAKEN, and that is deliberate (operator decision, 2026-08-20).**
+> This amendment sits **under the existing V1.3**. The committed adjudication record holds **31
+> human judgements** (26 FP / 5 BORDERLINE, `XAgent007 (Engineering Lead)`, 2026-08-17) made under
+> V1.3. Adding a `V1.4` row would re-stamp `protocol_version` across all 31 — precisely the act
+> `decide_gate`'s own refusal names: *"a decision folded across an amendment is a re-interpretation
+> of judgements nobody re-made."* The amendment is additive to §5, touches no §4 rule, no golden-key
+> semantics and no TP/FP definition, so no judgement's MEANING moves; the version therefore does
+> not move either, the 31 judgements keep their original V1.3 provenance untouched, and
+> `TC-ArgusAgent-PRECISION-001-45` / `-63` stay green without any record being regenerated. Only
+> `gate-decision-record.json` was regenerated, because the condition SET it publishes grew.
+
+> **⚖️ AMENDED 2026-08-20 (Story 16.2 / AC3; sprint change proposal 2026-08-20 §4.3(2), approved
+> by XAgent007 2026-08-20) — A SIXTH CONDITION: THE EVIDENCE THAT GATES MUST COME FROM A
+> PARTITION THE TOOL WAS NEVER TUNED AGAINST.** This is the **second** dated block under V1.3 and
+> it edits **no existing byte**: the conjunction sentence above is not re-wrapped, the fifth
+> condition's block is untouched, and the new conjunct is **APPENDED** to the condition set so §5's
+> five historical conditions keep their historical positions and their ids.
+>
+> **The problem, stated as the change proposal states it (H-2).** *"Nothing is held back. The
+> cartridge corpus has an author-blind holdout (`holdout_vacuous`). The repository corpus that
+> actually gates has none. If all 14 bench members are adjudicated and the detector is then tuned,
+> no untouched population remains to show the tool was not shaped to fit its own exam."* §6's
+> phased plan and §3's author-blind labelling give the cartridge corpus that protection. The
+> repository corpus has **no golden key a labeler could be blinded to**, so the equivalent
+> protection has to be an **ordering**: a partition decided and frozen, in code and in git, before
+> any detector output over any member of it exists.
+>
+> **THE PARTITION RULE, frozen 2026-08-20 and stated here in full.** Every member of the corpus
+> lies in exactly one of **three** partitions — `sealed`, `open`, `pre-seal` — assigned by two
+> conjuncts, in this order:
+>
+> 1. **PRIOR-OUTPUT OVERRIDE.** A member over which Argus output already existed when the seal was
+>    taken is **`pre-seal`**, unconditionally, whatever its sha says. *A member that has already
+>    been run over cannot be a holdout, and a rule capable of sealing one would manufacture a fake
+>    holdout.* The set is DERIVED from the `members[]` arrays of the committed adjudication sets,
+>    not typed: guard `TC-ArgusAgent-PRECISION-001-88`.
+> 2. **THE BISECTION.** Every other member is **`sealed`** iff `int(commit_sha, 16) % 2 == 1` — the
+>    parity of the pinned object name read as an integer — and **`open`** otherwise.
+>
+> The rule is executable code in ONE place (`argus/precision/gate_seal.py::partition_of`), pure,
+> and its derivation and rejected alternatives are recorded WITH it. A member's partition is
+> **structurally readable off its manifest row** (`CorpusMemberSpec.partition`) and is **DERIVED,
+> never stored**: it cannot be changed without changing the **pin**, which changes which bytes are
+> audited, is visible in the diff, and is refused at construction. **`MANIFEST_FIELDS` stays CLOSED
+> at 9** — a derived property is not a dataclass field.
+>
+> **⛔ SET-RELATIVE RULES WERE REJECTED ON A DECISIVE GROUND.** Sorting by sha and alternating the
+> index would produce a partition that **re-partitions silently** when the operator ratifies eleven
+> members instead of fourteen — removing one member shifts every subsequent index — so it is
+> *re-derivable after the fact to a different answer*, which is exactly what "pre-committed"
+> forbids. A per-row function of the pin is stable under every ratification subset: **each member's
+> partition is already determined and publishable today**, so §6 **R2** can change the partition's
+> SIZE but never a MEMBER'S partition.
+>
+> **The new condition.** The precision ratio is **EVALUABLE only over a population drawn from at
+> least `(VALIDATION_SET_FLOOR_N + 1) // 2` — the SAME derived floor §5's breadth condition uses,
+> **3** at the locked floor of 5 — DISTINCT CONTRIBUTING members lying in the `sealed` partition**.
+> Below that, §5's **precision** condition is recorded `UNEVALUABLE` with the counts that made it
+> so, and the gate outcome is `BLOCKED` with a countable closure path. The seal condition's **own**
+> verdict is `MET` or `FAILED` — the provenance of the evidence *was* established, over a named
+> population; `UNEVALUABLE` would tell a reader it was unknown, which is a different and false
+> claim. Condition id: `gate-evidence-drawn-from-the-sealed-partition`. Guards:
+> `TC-ArgusAgent-PRECISION-001-87`..`-94`.
+>
+> **The floor is 16.1's, RESOLVED and not forked.** §5 now carries one derived member floor read by
+> two conditions: breadth asks *how many distinct members contributed*, the seal asks *how many of
+> those were members the tool was never tuned against*. A second, seal-specific constant was
+> rejected — DN-3's one-floor rule, and two floors is how two corpora happened in the first place.
+>
+> **⛔ IT PARTITIONS; IT DOES NOT NARROW, and the distinction is the whole of §5's own prohibition.**
+> `VALIDATION_SET_FLOOR_N` stays **5**, `eligible_member_count()` stays **5**, no member is dropped,
+> re-weighted or made ineligible, no `adjudication_caveat` is edited, and **every finding from every
+> partition stays recorded and stays disclosed** — the seal governs what may **GATE**, never what is
+> **REPORTED**. Both narrowing designs (filtering the record's rows to sealed members; deriving the
+> concentration over the sealed subset alone) were tested by execution and both `raise` on the
+> committed population, which is the correct refusal: a filter NARROWS, which §5 and Story 13.3 /
+> AC5 forbid, while a CONDITION REQUIRES, which is a strengthening. Every population that cleared
+> before this amendment either still clears or is now `BLOCKED`; no population that failed before
+> can pass because of it.
+>
+> **⛔ WHAT §6 R2 MUST NOW WEIGH, COUNTED IN ADVANCE RATHER THAN DISCOVERED AFTER.** Sealed ∩
+> ratified is currently **∅**, so the condition reads `FAILED` today and that is correct: the gate
+> cannot clear on evidence that predates the seal. It is **satisfiable** — the bench holds six
+> sealed candidates against a floor of three, slack three, and all six clear Story 15.1's
+> co-occurrence floor — but only by an act §6 **R2** takes: **at least THREE members of the
+> `sealed` partition must be ratified, and each must contribute at least one adjudicated finding.**
+> **Ratifying only `open`-partition members leaves this condition permanently `FAILED`.** That is
+> honest, it is countable, and the operator is told it here, before the act.
+>
+> **A POST-SEAL DETECTOR CHANGE MUST SAY WHICH PARTITION ITS EVIDENCE CAME FROM.** Any commit
+> touching a declared detector-tuning path that is not an ancestor of the seal commit carries a
+> machine-checkable trailer `Evidence-partition: sealed | open | none`. This is a **disclosure, not
+> a prohibition**: the value of a holdout is the *comparison across partitions*, and the comparison
+> is only possible if each change says which side it learned from. The rule is written down in
+> `argus/precision/gate_seal.py::SEAL_CITATION_RULE` and enforced against real git history by
+> `TC-ArgusAgent-PRECISION-001-93` / `-94`.
+>
+> **OPENING THE SEALED PARTITION IS A SINGLE RECORDED ACT, NEVER A SIDE EFFECT.** The seal is
+> opened only by a §6 **R2**-class operator act, recorded in this protocol as a further dated block
+> naming who took it, when, and which members moved — the same act class that ratifies a member.
+> **Running the harness does not open it, cannot open it, and no code path in this repository opens
+> it**: the partition is derived from pins, the pins are frozen, and Story 16.2 added no writer.
+> An agent may not take this act.
+>
+> **⚠️ NO CHANGE-LOG VERSION WAS TAKEN — the same operator decision of 2026-08-20, applied again.**
+> This amendment sits under the existing **V1.3** beside the fifth condition's block. The 31 human
+> judgements of 2026-08-17 keep their original V1.3 provenance untouched; adding a `V1.4` row would
+> re-stamp `protocol_version` across all 31 and re-interpret judgements nobody re-made. The
+> amendment is additive to §5, touches no §4 rule, no golden-key semantics and no TP/FP definition,
+> so no judgement's MEANING moves. `TC-ArgusAgent-PRECISION-001-45` / `-63` stay green and
+> `adjudication-record.json` was **not** regenerated. Only `gate-decision-record.json` was, because
+> the condition SET it publishes grew — and regenerating it executes **no** detector, stages **no**
+> repository and touches **no** candidate.
+
+> **⚖️ AMENDED 2026-08-20 (Story 16.3 / AC1; sprint change proposal 2026-08-20 §4.3(3), approved
+> by XAgent007 2026-08-20) — A SEVENTH CONDITION: A RATIO OVER THREE FINDINGS NEVER FACED THE
+> BAR IT IS PUBLISHED AGAINST.** This is the **third** dated block under V1.3 and it edits **no
+> existing byte**: the conjunction sentence above is not re-wrapped, the fifth and sixth
+> conditions' blocks are untouched, and the new conjunct is **APPENDED** to the condition set so
+> §5's six historical conditions keep their historical positions and their ids.
+>
+> **The hole, PROVED by execution rather than argued.** Story 13.2's `UNEVALUABLE` closed the
+> case of an **empty** denominator and Story 13.5 made *"the corpus was read and nothing was
+> promoted"* expressible. Neither closes the **tiny** one. Driven through the shipped
+> `decide_gate` at `1ecf618`, a population of **exactly three findings — one per sealed member,
+> all adjudicated TP — returned `CLEARED`** at precision `1/1`, with all six §5 conditions
+> reporting `MET` and an outcome sentence reading *"Clearing authorises ATTESTED
+> externalization."* So did four. **Three findings. All correct. Cleared.**
+>
+> **The new condition.** The precision ratio is **EVALUABLE only over a VERDICT-ELIGIBLE
+> population of at least `ceil(q / (q − p))` adjudicated findings**, for the gate threshold
+> `PRECISION_GATE_THRESHOLD = p/q` in lowest terms — **which at the locked 4/5 is 5**. Below that
+> floor, §5's **precision** condition is recorded `UNEVALUABLE` with the counts that made it so,
+> and the gate outcome is `BLOCKED` with a countable closure path. The yield condition's **own**
+> verdict is `MET` or `FAILED`, never `UNEVALUABLE` — the population *was* counted. Condition id:
+> `detector-yield-verdict-eligible-population-floor`. Guards:
+> `TC-ArgusAgent-PRECISION-001-95`..`-100`. It **composes** with the fifth and sixth conditions
+> and replaces neither: quantity without breadth still fails, and breadth without quantity now
+> fails too — both driven, in both directions, at the real seam.
+>
+> **Why THAT number, and why it is not typed.** At a denominator `d` the largest number of false
+> positives a population can carry and still clear is `max{ k : (d − k)/d ≥ p/q }`. Executed over
+> the shipped threshold that count is **0 at d = 1, 2, 3 and 4**, and **1 at d = 5**. **Below a
+> denominator of five, the ≥ 80% gate is silently a 100% gate**: a detector that emits three
+> findings and gets all three right has not cleared an 80% bar, it has cleared a bar it never
+> faced — and the record publishes the figure as though it had. The floor is the smallest
+> denominator at which the threshold means the thing it is written as. ⛔ It is stated in the
+> **general form** because `ceil(q / (q − p))` equals `q` **only when `q − p == 1`**: at `5/7` the
+> floor is 4 and at `7/9` it is 5, verified against brute force. Writing `threshold.denominator`
+> would be correct by coincidence at exactly the one threshold shipped, which is Story 16.1's
+> *"strict majority"* correction repeated one story later. **⚠️ `VALIDATION_SET_FLOOR_N` is also
+> 5 and the equality is a COINCIDENCE, disclosed rather than leaned on**: one counts members that
+> must EXIST, the other is the smallest denominator at which a ratio threshold is the threshold it
+> is written as, and coupling them would move a §5 threshold as a side effect of a corpus-floor
+> change. The floor is likewise **not** resolved from the breadth/seal floor of 3 — a different
+> quantity from a different source — and both of those are left byte-unchanged.
+>
+> **It is NOT vacuous, and the check ran from two directions.** *"A §5 condition that cannot fail
+> is not a threshold"* is this protocol's own sentence, above. (i) `derive_concentration` raises
+> on an empty population, so a floor of **1** could never fail. (ii) The smallest population that
+> passes **both** breadth and the seal is **3**, so a floor of **2 or 3** could never FIRE — every
+> population it would block is already blocked upstream. The derived floor of **5 fires on exactly
+> the sizes 3 and 4**, which are precisely the two measured as wrongly `CLEARED` above. The
+> derivation and the vacuity bound agree from two directions that share no reasoning.
+>
+> **This is a STRENGTHENING and it can only make clearing HARDER**, verified by execution: a
+> population returning `CLEARED` at sizes 3 and 4 before this amendment returns `BLOCKED` after
+> it, every population that cleared before either still clears or is now `BLOCKED`, and **no**
+> population that failed before can pass because of it. It touches **nothing else**: the ≥ 80%
+> `Fraction`, `VALIDATION_SET_FLOOR_N = 5`, `eligible_member_count() == 5`, the five ratified
+> members, `MANIFEST_FIELDS` (closed at 9), `GATE_OUTCOMES` (closed at three), `CONDITION_VERDICTS`
+> (closed at four), the sealed partition table and the breadth/seal floors are all byte-unchanged.
+> It governs what may **GATE**, never what is **REPORTED**: every finding from every member stays
+> recorded and stays disclosed. And it is made **BEFORE the measurement it governs** —
+> `DF-13-5-A`'s one permitted round is **UNSPENT** — which is the whole point.
+>
+> **⛔ IT IS NOT A RECALL CONDITION, and the OI1 row above is amended in terms rather than left to
+> be inferred.** `recall = TP / (TP + FN)` requires `FN`, which is unknowable over a repository
+> corpus (*"a real repository has no golden key"*, V1.1). This condition's only inputs are the
+> **counted verdict-eligible population** and the **gate threshold**; it carries no `FN` term, no
+> estimate of one, and no quantity describing what the bench contains. It is a claim about the
+> **resolution of the measurement taken**, never about what was missed. The boundary is enforced
+> **structurally** by `TC-ArgusAgent-PRECISION-001-99`, which walks `gate_yield.py`'s own AST. A
+> floor derived instead from bench content *would* be recall with an estimated denominator and is
+> an **operator escalation**. See §5's Recall row, amended the same day.
+>
+> **⚠️ THE PRE-ROUND DISCLOSURE, owed BEFORE `DF-13-5-A`'s ONE round is spent, not after.**
+> Counted out of the committed `adjudication-set-13-5.json` (2026-08-18, post-Epic-14): the
+> **corrected** detector emitted **4,284 findings across all five ratified members and promoted
+> ZERO** to verdict-eligible — 0 blocking. The only population that ever exceeded this floor was
+> the 2026-08-16 set of **31**, produced under the **pre-Epic-14 corroboration rule that Epic 14
+> REFUTED**, and adjudicated **0 TP / 26 FP / 5 BORDERLINE**. A yield above this floor has been
+> achieved exactly once and was achieved **entirely by false positives**. The achievable yield over
+> the **sealed** partition is **UNMEASURABLE** without fetching third-party source, which is a §6
+> **R2** operator act — so it is recorded as **unmeasured, not as impossible**: a search for a
+> STRUCTURAL cap on promoted findings found **none** (the corroboration path emits one finding per
+> flagged test function and admits no *k*). **On the only evidence that exists, the likely outcome
+> of the one pre-registered round is `BLOCKED` on yield** — which `DF-13-5-A`, answered 2026-08-17
+> **before any number existed**, already routes to option **(b)**: the FR34 disclosure stands for
+> V1.5 and the next attempt requires *"a materially better detector — NOT a bigger bench."* This
+> condition is therefore not a new hurdle; it is **that stopping rule made arithmetic**, because
+> without it a round yielding **three** would route to `CLEARED` while a round yielding **zero**
+> routes to option (b) — two destinations for a materially identical result. The disclosure is
+> carried **on the condition itself** (`YIELD_PROVENANCE_DISCLOSURE`), and every figure in it is
+> RE-DERIVED from the committed artifacts by `TC-ArgusAgent-PRECISION-001-100`.
+>
+> **⚠️ NO CHANGE-LOG VERSION WAS TAKEN — the same operator decision of 2026-08-20, applied a
+> third time.** This amendment sits under the existing **V1.3** beside the fifth and sixth
+> conditions' blocks. The 31 human judgements of 2026-08-17 keep their original V1.3 provenance
+> untouched; adding a `V1.4` row would re-stamp `protocol_version` across all 31 and re-interpret
+> judgements nobody re-made. The amendment is additive to §5, touches no §4 rule, no golden-key
+> semantics and no TP/FP definition, so no judgement's MEANING moves.
+> `TC-ArgusAgent-PRECISION-001-45` / `-63` stay green and `adjudication-record.json` was **not**
+> regenerated — asserted byte-unchanged. Only `gate-decision-record.json` was, because the
+> condition SET it publishes grew — and regenerating it executes **no** detector over any bench
+> member, stages **no** repository and touches **no** candidate.
+>
+> **INERT ON THE LIVE TREE, verified at the producing seam.** The committed population is 31,
+> above the floor of 5, so the yield condition reads **`MET`** and the committed decision is still
+> `BLOCKED` for the **Story 13.5** reason — the corpus was read and nothing was promoted — and not
+> for a yield reason. ⛔ A reader must not take that `MET` as *"the detector currently yields 31"*;
+> see the pre-round disclosure above, which the condition's own `measured` sentence carries.
 
 > **⚖️ AMENDED 2026-08-16 (Story 13.2 / AC1b) — a FOURTH terminal state existed and was reported
 > as the first.** The sentence above enumerates *cleared* and *provisional*. Measured by execution

@@ -325,6 +325,44 @@ _MODULES_NAMING_THE_TEST_TREE_IMPORT: frozenset[str] = frozenset(
         "argus/precision/__init__.py",
         "argus/precision/adjudication.py",
         "argus/precision/gate_decision.py",
+        # ADDED 2026-08-20 (Story 16.1). §5's breadth condition. It names the repository-only
+        # tree TRANSITIVELY, through gate_disclosure and replay_harness, exactly as its four
+        # siblings above do — and it resolves NO path at module level (``DF-9-2-A``): the one
+        # locked floor it derives from arrives as an ARGUMENT. The wheel-importability claim
+        # is TC-ArgusAgent-RELEASE-001-20's, and it is asserted there, not here.
+        "argus/precision/gate_breadth.py",
+        # ADDED 2026-08-20 (Story 16.2). The two halves of ``DF-16-1-B``'s cohesion split of
+        # ``gate_decision.py``: what a §5 condition IS, and what one is MEASURED FROM. Both
+        # join the set TRANSITIVELY and for the same reason ``gate_decision.py`` itself is in
+        # it — ``gate_conditions`` imports ``gate_breadth``, ``gate_evidence`` imports
+        # ``gate_disclosure``, and both of those already name the repository-only tree in
+        # prose. Neither resolves a path at module level (``DF-9-2-A``); neither performs any
+        # I/O at all. This addition is DELIBERATE, which is what this registry exists to force
+        # someone to say, and it is a consequence of a PURE MOVE: no symbol changed, no import
+        # line anywhere in the repository moved, and the reach was already present in the
+        # module these two were cut out of.
+        "argus/precision/gate_conditions.py",
+        "argus/precision/gate_evidence.py",
+        # ADDED 2026-08-20 (Story 16.2). §5's SEAL condition and the partition rule. It joins
+        # TRANSITIVELY through gate_breadth / gate_disclosure, resolves NO path at module level
+        # and performs no I/O at all — asserted STRUCTURALLY by an AST walk of its own imports
+        # in tests/test_gate_seal.py::TC-ArgusAgent-PRECISION-001-87. DETECTOR_TUNING_PATHS is
+        # a tuple of repository-relative STRINGS the caller resolves, the same treatment
+        # gate_decision.DECISION_RECORD_PATH gets and for the same DF-9-2-A reason.
+        "argus/precision/gate_seal.py",
+        # ADDED 2026-08-20 (Story 16.3). §5's SEVENTH condition — the YIELD floor. It joins
+        # TRANSITIVELY through gate_disclosure / replay_harness, exactly as its siblings do,
+        # and it resolves NO path at module level (``DF-9-2-A``): the threshold it derives
+        # the floor from arrives as an ARGUMENT, and the module performs no I/O at all. That
+        # is asserted STRUCTURALLY, by an AST walk of the module's own imports and names, in
+        # tests/test_gate_yield.py::TC-ArgusAgent-PRECISION-001-99 — a walk that additionally
+        # forbids any recall / FN / bench-content reference, because a floor derived from
+        # those would be a recall gate and re-opening the OI1 lock is an operator act. The
+        # dated figures it publishes (the 2026-08-18 set's 4284/0 and the 2026-08-16 set's
+        # 31) are STRINGS the module cannot read for itself; they are re-derived from the
+        # committed artifacts by TC-ArgusAgent-PRECISION-001-100. This addition is
+        # DELIBERATE, which is what this registry exists to force someone to say.
+        "argus/precision/gate_yield.py",
         "argus/precision/gate_disclosure.py",
         "argus/precision/replay_harness.py",
         "argus/dogfood/proof_types.py",

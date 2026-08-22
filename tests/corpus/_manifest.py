@@ -85,6 +85,12 @@ __all__ = [
     "AST_INELIGIBLE_LANGUAGES",
     "AST_INELIGIBILITY_REASONS",
     "SOURCING_RULE",
+    "BENCH_COMMIT_SHA",
+    "BENCH_MEMBER_IDS",
+    "PRE_SEAL_MEMBER_IDS",
+    "unratified_bench_candidates",
+    "SEALED_PARTITION_TABLE",
+    "bench_candidates",
     "member",
     "eligible_members",
     "eligible_member_count",
@@ -188,6 +194,119 @@ AST_INELIGIBLE_LANGUAGES: frozenset[str] = frozenset(AST_INELIGIBILITY_REASONS)
 _SHA_LENGTH = 40
 _SHA_ALPHABET = frozenset("0123456789abcdef")
 
+# ─────────────────────────────────────────────────────────────────────────────────────────────
+# THE SEAL (Story 16.2, 2026-08-20) — a partition of the bench frozen BEFORE anything is run.
+#
+# H-2: the cartridge corpus has an author-blind holdout; the repository corpus that actually
+# gates has none. If every bench member is adjudicated and the detector is then tuned, no
+# untouched population remains to show the tool was not shaped to fit its own exam.
+#
+# THE RULE LIVES IN ONE PLACE AND IT IS NOT HERE. `argus.precision.gate_seal.partition_of` is
+# the pure function; its derivation and its three rejected alternatives are recorded WITH it
+# (AC1.2). What lives here is the manifest's half: WHICH members already had output when the
+# seal was taken, and the FROZEN MATERIALIZATION of the partition the rule produced.
+# ─────────────────────────────────────────────────────────────────────────────────────────────
+
+#: AC1.4 — the members over which Argus output ALREADY EXISTED when the seal was taken, so the
+#: bisection was never applied to them. It is DERIVED, not chosen: it is exactly the union of
+#: the `members[]` arrays of the two committed adjudication sets (2026-08-16 and 2026-08-18),
+#: and `TC-ArgusAgent-PRECISION-001-88` re-derives it from those artifacts and asserts equality
+#: in BOTH directions with a non-vacuity floor, so a broken extractor goes RED rather than
+#: silently green.
+#:
+#: ⛔ This set is the reason the seal rule has TWO conjuncts rather than one. Two of these five
+#: carry ODD pins — the bisection ALONE would have declared two already-audited members
+#: "sealed", one of which supplied 7 of the committed record's 31 judged findings. A holdout
+#: that has already been peeked at is not a holdout, and this project would have shipped one.
+PRE_SEAL_MEMBER_IDS: frozenset[str] = frozenset(
+    {
+        "ai-body-runtime",
+        "agent-markovich",
+        "minions",
+        "xagents-webapp",
+        "agent-smith",
+    }
+)
+
+#: AC1.3 — the FROZEN PARTITION of every bench candidate, materialized at the seal commit.
+#:
+#: ⛔ IT IS A FROZEN MATERIALIZATION OF A RULE, NEVER A HAND-LIST, and the distinction is the
+#: whole point: `TC-ArgusAgent-PRECISION-001-89` RE-DERIVES every row from
+#: `gate_seal.partition_of` and asserts equality in BOTH directions — no table row the rule
+#: contradicts, and no rule output the table omits. A guard that only read the table would be a
+#: guard over a hand-list.
+#:
+#: WHY IT EXISTS AT ALL, given the rule can always be re-run. It exists so the partition
+#: SURVIVES the protocol §6 R2 ratification act. After R2 a ratified candidate carries
+#: `eligible_for_n=True` and is indistinguishable from a pre-seal member by its fields alone;
+#: this table and `PRE_SEAL_MEMBER_IDS` are what keep the two apart, and both were frozen in
+#: git before any Argus output over any candidate existed.
+SEALED_PARTITION_TABLE: tuple[tuple[str, str], ...] = (
+    ("aws-aws-sam-cli", "sealed"),
+    ("celery-celery", "sealed"),
+    ("certbot-certbot", "sealed"),
+    ("conda-conda", "sealed"),
+    ("getsentry-sentry-python", "sealed"),
+    ("googleapis-google-auth-library-python", "sealed"),
+    ("mitmproxy-mitmproxy", "open"),
+    ("pypa-pip", "open"),
+    ("python-poetry-poetry", "open"),
+    ("redis-redis-py", "open"),
+    ("scrapy-scrapy", "open"),
+    ("spotify-luigi", "open"),
+    ("streamlink-streamlink", "open"),
+    ("tox-dev-tox", "open"),
+)
+
+#: HALT-3 (Story 16.4) — the Story 15.1 BENCH: the 14 members admitted as candidates, frozen at
+#: :data:`BENCH_COMMIT_SHA`. **Historical and CLOSED**, exactly like :data:`PRE_SEAL_MEMBER_IDS`
+#: — and for the reason :data:`SEALED_PARTITION_TABLE`'s own docstring already states:
+#: *"After R2 a ratified candidate carries ``eligible_for_n=True`` and is indistinguishable from
+#: a pre-seal member by its fields alone."*
+#:
+#: ⛔ **WHY THIS SET EXISTS AT ALL.** Story 16.2 froze the PARTITION so it would survive the
+#: protocol §6 R2 ratification act, but bench MEMBERSHIP was still derived from the two fields
+#: R2 edits (``eligible_for_n`` and ``ineligible_reason``), so ratifying a member silently
+#: removed it FROM THE BENCH IT WAS CHOSEN INTO. Story 16.4 MEASURED the consequence: ratifying
+#: three members dropped the bench 14 -> 11, breaching ``DF-13-5-A``'s pre-registered 12-20 band
+#: and breaking :data:`SEALED_PARTITION_TABLE`'s both-directions equality with the bench.
+#: Membership in a set frozen in the past cannot depend on state edited in the future. This
+#: constant COMPLETES 16.2's own design intent rather than introducing a new one.
+#:
+#: ⛔ It is DERIVED, not chosen. ``TC-ArgusAgent-PRECISION-001-103`` re-derives it from
+#: ``tests/corpus/_manifest.py`` **as read out of git at** :data:`BENCH_COMMIT_SHA`, applying the
+#: ORIGINAL live predicate — correct at that commit precisely because nothing had been ratified
+#: yet — and asserts equality in BOTH directions behind a non-vacuity floor that is
+#: ``DF-13-5-A``'s own 12-20 band.
+BENCH_MEMBER_IDS: frozenset[str] = frozenset(
+    {
+        "aws-aws-sam-cli",
+        "celery-celery",
+        "certbot-certbot",
+        "conda-conda",
+        "getsentry-sentry-python",
+        "googleapis-google-auth-library-python",
+        "mitmproxy-mitmproxy",
+        "pypa-pip",
+        "python-poetry-poetry",
+        "redis-redis-py",
+        "scrapy-scrapy",
+        "spotify-luigi",
+        "streamlink-streamlink",
+        "tox-dev-tox",
+    }
+)
+
+#: The commit in which Story 15.1's bench LANDED — the 14 rows entered this manifest here.
+#: ⛔ NOT ``CRITERIA_COMMIT_SHA``: the criteria were frozen three commits earlier, when this
+#: manifest still held only 7 rows. The ordering criteria -> bench -> seal is asserted from the
+#: object database by ``TC-ArgusAgent-PRECISION-001-103``, never from this comment.
+BENCH_COMMIT_SHA = "c028da5b06a553f9c79c37877874e37a0bdecc61"
+
+#: The `ineligible_reason` marker Story 15.1 gave every bench candidate. Named once so
+#: `bench_candidates()` folds on a constant rather than on a substring repeated at call sites.
+_CANDIDATE_REASON_MARKER = "candidate"
+
 
 class UnregisteredCorpusMember(LookupError):
     """Raised when a member id is not in the manifest (the ``DF-10-4-E`` dispatch shape).
@@ -242,6 +361,38 @@ class CorpusMemberSpec:
     ineligible_reason: str | None = None
     adjudication_caveat: str | None = None
 
+    @property
+    def partition(self) -> str:
+        """AC2.1 — this member's SEAL PARTITION, DERIVED from its own pin. Never stored.
+
+        ``sealed`` | ``open`` | ``pre-seal``, through the one rule in
+        ``argus.precision.gate_seal.partition_of``. Read it off the row; never recompute it
+        at a call site and never cache it into a field.
+
+        ⛔ **A DERIVED PROPERTY, AND `MANIFEST_FIELDS` STAYS CLOSED AT 9 (DN-16-2-3).**
+        ``TC-ArgusAgent-PRECISION-001-22`` compares ``dataclasses.fields(CorpusMemberSpec)``
+        against ``MANIFEST_FIELDS`` in both directions, and a ``@property`` is not a
+        dataclass field — so this satisfies *"structurally readable off the row"* without
+        touching a constant this epic's authorisation lists as untouched.
+
+        **It is also the STRONGER answer, not merely the permitted one.** A stored field can
+        be edited to move a member across the seal in one character. A DERIVED partition
+        cannot change at all without changing the PIN — which changes which bytes are
+        audited, is visible in the diff, and is refused by ``__post_init__`` above unless it
+        is a real 40-hex sha. AC2's requirement is that the partition be UNFORGEABLE, and
+        derivation is what makes it so.
+
+        The import is function-local for the reason ``_known_languages`` and ``_registry``
+        are: ``tests/`` is repository-only and absent from the built distribution
+        (``DF-9-2-A``), so this module reaches ``argus`` through declared lazy edges and
+        never through a module-level import.
+        """
+        from argus.precision.gate_seal import partition_of
+
+        return partition_of(
+            self.commit_sha, has_prior_output=self.member_id in PRE_SEAL_MEMBER_IDS
+        )
+
     def __post_init__(self) -> None:
         if self.provenance not in PROVENANCE_VALUES:
             raise ValueError(
@@ -254,6 +405,37 @@ class CorpusMemberSpec:
                 f"{self.member_id!r}: unregistered language {self.primary_language!r}. The "
                 "vocabulary is argus/shared/source_languages.py::LANGUAGE_BY_SUFFIX — a "
                 "language Argus cannot even enumerate cannot be a corpus member."
+            )
+
+        # ⛔ HOISTED 2026-08-20 (Story 16.2 / AC2.3) — an INTENDED BEHAVIOUR CHANGE, recorded
+        # as one. This check used to live inside the `eligible_for_n=True` branch BELOW, after
+        # the early `return`, so a row with `eligible_for_n=False` was never pin-validated at
+        # all: `commit_sha="NOT-A-SHA"` and `commit_sha=""` both CONSTRUCTED SILENTLY, on
+        # exactly the fourteen candidate rows Story 16.2's seal rule keys on. That was
+        # tolerable while a candidate's pin was inert metadata awaiting an operator act. It
+        # stopped being tolerable the moment the pin became the INPUT TO A GATE CONDITION:
+        # `gate_seal.partition_of` bisects on `int(commit_sha, 16)`, and a SHA-ORDERED RULE
+        # OVER UNVALIDATED SHAS IS NOT MECHANICALLY REPRODUCIBLE — the property the whole
+        # seal rests on.
+        #
+        # MEASURED SAFE BEFORE HOISTING, not assumed: all 21 committed rows already satisfy
+        # this check, including the deliberate all-zero pin on `minions-story-7-2-superseded`
+        # (which is a valid 40-hex sha and is meant to be). So the hoist closes the gap and
+        # breaks no existing row. `TC-ArgusAgent-PRECISION-001-76` recorded the OLD behaviour
+        # as a deliberate tripwire — *"if __post_init__ ever stops returning early, this
+        # guard says so rather than quietly becoming redundant"* — and it fired here exactly
+        # as built to; it is re-authored, never relaxed.
+        sha = self.commit_sha
+        if len(sha) != _SHA_LENGTH or not set(sha) <= _SHA_ALPHABET:
+            raise ValueError(
+                f"{self.member_id!r}: commit_sha {sha!r} is not a full {_SHA_LENGTH}-character "
+                "lowercase hex sha. DN-4 pins by commit and fetches; an unpinned member is not "
+                "byte-reproducible, and protocol §4 makes reproducibility the precondition for "
+                "any adjudication being valid. Since 2026-08-20 the pin is ALSO the input to "
+                "protocol §5's seal condition (Story 16.2): a member's partition is derived "
+                "from int(commit_sha, 16), so an unvalidated pin makes the partition "
+                "irreproducible. Record the full 40-character lowercase hex sha of the commit "
+                "you intend to audit; do NOT shorten it and do NOT leave it blank."
             )
 
         if not self.eligible_for_n:
@@ -275,14 +457,7 @@ class CorpusMemberSpec:
                 "independent corroboration of anything'; a member cannot be promoted out of "
                 "that by flipping a boolean."
             )
-        sha = self.commit_sha
-        if len(sha) != _SHA_LENGTH or not set(sha) <= _SHA_ALPHABET:
-            raise ValueError(
-                f"{self.member_id!r}: commit_sha {sha!r} is not a full {_SHA_LENGTH}-character "
-                "lowercase hex sha. DN-4 pins by commit and fetches; an unpinned member is not "
-                "byte-reproducible, and protocol §4 makes reproducibility the precondition for "
-                "any adjudication being valid."
-            )
+        # (the pin is validated ABOVE, for EVERY row — Story 16.2 / AC2.3)
         if self.primary_language in AST_INELIGIBLE_LANGUAGES:
             raise ValueError(
                 f"{self.member_id!r}: primary_language {self.primary_language!r} cannot support "
@@ -832,6 +1007,46 @@ def member(member_id: str) -> CorpusMemberSpec:
         f"{member_id!r} is not a validation-set member. The manifest is the one named place a "
         f"member exists, so this is an error rather than an absence. Registered: "
         f"{sorted(spec.member_id for spec in VALIDATION_CORPUS)}"
+    )
+
+
+def bench_candidates() -> tuple[CorpusMemberSpec, ...]:
+    """The Story 15.1 BENCH: rows admitted as candidates awaiting the protocol §6 R2 act.
+
+    A fold over the manifest, never a transcription — the same shape
+    :func:`eligible_members` takes. It is the population :data:`SEALED_PARTITION_TABLE` is
+    frozen over, so the table's key set and this fold are asserted equal in both directions
+    rather than each being maintained by hand.
+
+    ⛔ **It keys on :data:`BENCH_MEMBER_IDS`, never on eligibility.** It used to fold on
+    ``not eligible_for_n and "candidate" in ineligible_reason`` — the exact two fields the
+    protocol §6 R2 ratification act edits — so a ratified member LEFT the bench it was chosen
+    into. Being admitted to the bench is a historical fact about a frozen set; being ratified is
+    a later and separate act, and one may not silently undo the other. For the LIVE pending
+    state, which ratification legitimately empties, see :func:`unratified_bench_candidates`.
+    """
+    return tuple(spec for spec in VALIDATION_CORPUS if spec.member_id in BENCH_MEMBER_IDS)
+
+
+def unratified_bench_candidates() -> tuple[CorpusMemberSpec, ...]:
+    """The bench members STILL AWAITING the protocol §6 R2 ratification act.
+
+    ⛔ **This is a different population from :func:`bench_candidates` and the difference is the
+    whole of HALT-3.** The bench is HISTORICAL and closed — what was admitted at
+    :data:`BENCH_COMMIT_SHA`. *Pending* is a LIVE state that ratification legitimately empties.
+    Before 16.4 one predicate served both, so ratifying a member silently shrank the bench; a
+    guard asking *"is this row still pending?"* and a guard asking *"is the bench intact?"* got
+    the same answer to two different questions.
+
+    Guards asserting a row's **pending state** read this. Guards asserting anything about **the
+    bench as chosen** — its size band, its pins, its recorded rationales — read
+    :func:`bench_candidates`, which ratification does not move.
+    """
+    return tuple(
+        spec
+        for spec in bench_candidates()
+        if not spec.eligible_for_n
+        and _CANDIDATE_REASON_MARKER in (spec.ineligible_reason or "").lower()
     )
 
 

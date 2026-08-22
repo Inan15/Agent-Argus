@@ -56,6 +56,7 @@ from _manifest import (  # noqa: E402
     VALIDATION_CORPUS,
     CorpusMemberSpec,
     eligible_member_count,
+    unratified_bench_candidates,
 )
 
 from candidate_selection import (  # noqa: E402
@@ -279,25 +280,39 @@ def test_TC_ArgusAgent_PRECISION_001_75_the_criteria_commit_precedes_every_candi
 
 
 def _candidate_rows() -> tuple[CorpusMemberSpec, ...]:
-    """Rows admitted as CANDIDATES awaiting the protocol section 6 R2 ratification act."""
-    return tuple(
-        spec
-        for spec in VALIDATION_CORPUS
-        if not spec.eligible_for_n and "candidate" in (spec.ineligible_reason or "").lower()
-    )
+    """Rows admitted as CANDIDATES awaiting the protocol section 6 R2 ratification act.
+
+    ⛔ DELEGATES; it does not re-implement. This function used to carry a VERBATIM COPY of
+    ``_manifest.bench_candidates()``'s predicate, so when Story 16.4 corrected that predicate
+    the copy here kept the defect — AR7's reuse-never-fork rule, and exactly the shape
+    ``AI-E9-7`` warns about for constants.
+
+    It maps to ``unratified_bench_candidates()`` rather than to ``bench_candidates()``, which
+    keeps this module's behaviour BIT-IDENTICAL today: nothing is ratified, so the two
+    populations coincide. Which of the guards below should measure the frozen BENCH instead of
+    the pending subset is a semantic decision belonging to the story that carries the operator's
+    ratification authority, and it is deliberately NOT taken here (Story 16.4 / HALT-3).
+    """
+    return unratified_bench_candidates()
 
 
 def test_TC_ArgusAgent_PRECISION_001_76_a_candidate_row_cannot_carry_a_bad_pin_or_language() -> None:
     """TC-ArgusAgent-PRECISION-001-76 — AC4.3/AC4.4: what *"the guard is structural"* does NOT cover.
 
-    ⛔ **THE MEASURED PREMISE.** ``CorpusMemberSpec.__post_init__`` **returns early** immediately
-    after the ineligible-reason check, so on a row with ``eligible_for_n=False`` the sha,
-    provenance and AST-eligibility validations **never run**. *"The guard is structural"* is TRUE
-    of the promotion path — flipping ``eligible_for_n`` to ``True`` while the reason is still
-    present RAISES, so promotion takes two deliberate edits, both visible in a diff — and FALSE
-    of criteria 1, 5 and 7 on a candidate row. A reader will assume otherwise, so this asserts
-    the early return **as a fact**: if ``__post_init__`` ever stops returning early, this guard
-    says so rather than quietly becoming redundant.
+    ⛔ **THE MEASURED PREMISE — AMENDED 2026-08-20 (Story 16.2), STRUCK NOT ERASED.**
+    ~~``CorpusMemberSpec.__post_init__`` returns early immediately after the ineligible-reason
+    check, so on a row with ``eligible_for_n=False`` the sha, provenance and AST-eligibility
+    validations never run.~~ That was true from 2026-08-19 to 2026-08-20 and this guard
+    asserted it as a FACT precisely so a change to it could not pass unnoticed. **Story 16.2
+    HOISTED the pin check above the early return**, because protocol §5's seal condition
+    bisects on ``int(commit_sha, 16)`` and a candidate's pin therefore became an input to a
+    gate condition. The premise now reads: the sha is validated for EVERY row; ``provenance``
+    and AST-eligibility are still checked only on the eligible branch. *"The guard is
+    structural"* is TRUE of the promotion path — flipping ``eligible_for_n`` to ``True`` while
+    the reason is still present RAISES, so promotion takes two deliberate edits, both visible
+    in a diff — TRUE of criterion 1 since 2026-08-20, and still FALSE of criteria 5 and 7 on a
+    candidate row. If ``__post_init__`` ever stops validating, this guard says so rather than
+    quietly becoming redundant.
 
     The three missing checks are added as a **pure fold over the rows**, never as a new
     ``__post_init__`` branch — a new branch would change behaviour for the five RATIFIED rows,
@@ -322,18 +337,54 @@ def test_TC_ArgusAgent_PRECISION_001_76_a_candidate_row_cannot_carry_a_bad_pin_o
     fold is asserted to have actually visited every row, so "no defects" can never again mean
     "nothing was inspected".
     """
-    # ── The premise, asserted rather than remembered: these three CONSTRUCT SILENTLY today. ──
-    for bad_sha in ("deadbeef", "zzzz"):
-        CorpusMemberSpec(
-            member_id="premise-probe",
-            repository_url="https://example.invalid/x.git",
-            commit_sha=bad_sha,
-            licence="MIT",
-            primary_language="python",
-            provenance="independent",
-            eligible_for_n=False,
-            ineligible_reason="candidate - awaiting operator ratification (protocol section 6 R2)",
-        )
+    # ⛔ ── THE TRIPWIRE FIRED AGAIN, 2026-08-20 (Story 16.2 / AC2.3). ──────────────────────
+    # This block used to assert, as a PREMISE, that a candidate row with commit_sha="deadbeef"
+    # or "zzzz" CONSTRUCTS SILENTLY — and the docstring above says why in its own words:
+    # *"if __post_init__ ever stops returning early, this guard says so rather than quietly
+    # becoming redundant."* Story 16.2 hoisted the pin check ABOVE the `not eligible_for_n`
+    # early return, and this guard went RED on the first run afterwards. That is the tripwire
+    # working, so the premise is RE-AUTHORED to the new truth rather than the hoist being
+    # reverted or this assertion deleted.
+    #
+    # WHY THE PIN MOVED AND THE LANGUAGE DID NOT, which is the whole content of the change.
+    # The pin stopped being inert metadata awaiting an operator act: protocol §5's SEAL
+    # condition bisects on int(commit_sha, 16), so a candidate's pin is now an INPUT TO A
+    # GATE CONDITION and a sha-ordered rule over unvalidated shas is not mechanically
+    # reproducible. `primary_language` is unchanged: criterion 5 is still checked by the
+    # pure fold below and NOT by __post_init__, because adding that branch would change
+    # behaviour for the five RATIFIED rows and move N — which is outside both stories.
+    #
+    # STRICTLY STRONGER, never a relaxation (DF-8-5-B): the premise moves from "constructs"
+    # to "RAISES", the bad pins are asserted refused on an INELIGIBLE row (where nothing
+    # checked them before), and the legal shape is asserted to still construct so this is
+    # not a guard that simply refuses everything. `tests/test_gate_seal.py::-92` drives the
+    # same hoist from the seal side, over a generated family of malformed pins.
+    for bad_sha in ("deadbeef", "zzzz", "", "A" * 40, "0" * 39):
+        with pytest.raises(ValueError, match="sha"):
+            CorpusMemberSpec(
+                member_id="premise-probe",
+                repository_url="https://example.invalid/x.git",
+                commit_sha=bad_sha,
+                licence="MIT",
+                primary_language="python",
+                provenance="independent",
+                eligible_for_n=False,
+                ineligible_reason="candidate - awaiting operator ratification (protocol section 6 R2)",
+            )
+    # ...and the control: a WELL-PINNED candidate row still constructs, so the refusal above
+    # is about the pin and not about the row.
+    CorpusMemberSpec(
+        member_id="premise-probe",
+        repository_url="https://example.invalid/x.git",
+        commit_sha="a" * 40,
+        licence="MIT",
+        primary_language="python",
+        provenance="independent",
+        eligible_for_n=False,
+        ineligible_reason="candidate - awaiting operator ratification (protocol section 6 R2)",
+    )
+    # The LANGUAGE premise is UNCHANGED and still holds: criterion 5 is not structural on a
+    # candidate row, and this row constructs silently today exactly as it always did.
     CorpusMemberSpec(
         member_id="premise-probe",
         repository_url="https://example.invalid/x.git",
