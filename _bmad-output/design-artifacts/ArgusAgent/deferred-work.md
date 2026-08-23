@@ -4852,6 +4852,46 @@ remains the recorded candidate should it ever be needed.
       re-dated** — this is the change from 2026-08-22, whose trigger was story-completion-shaped and
       fired without the underlying condition having moved
 
+  - **⚠️ TRIGGER SHARPENED 2026-08-24 by XAgent007 — same day, same operator, and the reason is a
+    measurement taken AFTER the declination above was written.** (Append-only note; the note above is
+    not rewritten, §3.4.) The declination's condition 1 reads *"raises the corroborable ceiling over
+    the five ALREADY-RATIFIED members above the six measured on 2026-08-22"*. **That metric is
+    under-specified against the change it is meant to detect.** "Corroborable ceiling = 6" is `W1` —
+    fact (b) with its mock-referencing clause deleted — and `W1` is defined in terms of
+    `discarded`/`consumed`, which are structures belonging to **the very predicate the trigger exists
+    to wait for the replacement of**. If Epic 17 replaces the vacuity signal rather than widening its
+    clauses, `W1` may not be computable at all, and a trigger that cannot be evaluated is a trigger
+    that never fires.
+
+    ⛔ **The SUBSTANCE of the declination is unchanged and is now more strongly supported, not less.**
+    The measurement recorded in
+    [research/technical-argusagent-stage-mismatch-measurement-2026-08-24.md](research/technical-argusagent-stage-mismatch-measurement-2026-08-24.md)
+    found the shipped predicate returns **0**, not 6, over all 1,032 findings, and that stage 1
+    selects **100%** on assertion density while stage 2 judges mock provenance — two different
+    defects, disjoint on this corpus. **A larger bench samples more repositories through an aperture
+    that is structurally shut.** Declining was right; only the metric naming the way back needed
+    fixing.
+
+    **Condition 1 is therefore RESTATED, and it is the only thing this note changes:**
+    > **the count of findings the SHIPPED verdict-eligible predicate promotes over the five
+    > ALREADY-RATIFIED members — whatever that predicate is at the time of measurement — rises above
+    > ZERO.** Measured on the ratified corpus with **no member ratified, no third-party source
+    > fetched and no round spent**, with the harnesses under `research/` or their successors, and
+    > reported together with the predicate definition in force.
+
+    ⛔ **Zero, not six, is the honest floor** — §2 of that document shows six was always `W1` and the
+    shipped output was always 0. ⛔ **Condition 2 is UNTOUCHED: 2026-11-22, still not re-dated.**
+    ⛔ **Nothing else moves.** The pre-registered rule of 2026-08-17 stands verbatim; branch (a) is
+    still not executed and branch (b) still not declared; `round_state` **UNSPENT**,
+    `members_ratified` **NONE**, `protocol_edit` **NONE**; the entry **STAYS OPEN**.
+    - sharpened_by: **XAgent007 (Engineering Lead)**
+    - sharpened_on: 2026-08-24
+    - what_changed: **the metric in condition 1 only** — from `W1`-shaped ("ceiling above six") to
+      predicate-agnostic ("shipped promotions above zero"). Condition 2, the rule, and both branches
+      are untouched
+    - evidence: `research/technical-argusagent-stage-mismatch-measurement-2026-08-24.md`;
+      `DF-INV-VACUOUS-A`
+
 ## Correct-course 2026-08-17b — the three multi-language gaps Story 14.3 does NOT fix
 
 > **All three were found by EXECUTION**, not by reading: an out-of-tree probe imported the shipped
@@ -6105,3 +6145,98 @@ and `-D`.
     `DF-16-6-F`, `DF-16-5-A`, `DF-16-5-B`, `DF-16-1-A`, `DF-15-2-E`, `DF-14-1-A` and the three
     `DF-12-1-*` entries all stay **OPEN**, and no historical entry on this ledger is edited —
     this is a pure append.
+
+## Deferred from: the 2026-08-24 stage-mismatch measurement session (operator-directed, NO story)
+
+> **Why a new `DF-INV-*` prefix, stated rather than assumed.** This session was chartered by the
+> operator to answer a question — *are the detectors mis-implemented, or is the defect class simply
+> rare?* — and no story owns it, so a `DF-<epic>-<story>-<letter>` id would attribute the finding to
+> work that did not produce it. The `DF-AUD-APAA-*` entries set the precedent for a non-story origin
+> kind; `INV` (investigation) follows that shape. **The findings are measurements, not defect claims
+> against the people or the stories that shipped the code** — §5 of the research document is explicit
+> that the module is careful, pure, well-documented, and that Story 14.1's repair was correct.
+>
+> Full record, with reproduction commands and every table:
+> [research/technical-argusagent-stage-mismatch-measurement-2026-08-24.md](research/technical-argusagent-stage-mismatch-measurement-2026-08-24.md).
+> Harnesses committed beside it. ⛔ **Nothing is disposed of, ratified, spent or promoted by this
+> section; `DF-13-5-A` stays OPEN and UNSPENT and every other entry keeps its status.**
+
+- **`DF-INV-VACUOUS-A` — the flagging stage and the corroboration stage are graded on different
+  definitions of "vacuous", and their intersection on the ratified corpus is EMPTY.**
+  - id: DF-INV-VACUOUS-A
+  - origin: operator-directed measurement session 2026-08-24, at HEAD `7edf74e`; corpus read from
+    the five pinned shas in `validation-corpus/adjudication-set-13-5.json`
+  - owner: **XAgent007 (Engineering Lead)**
+  - target_story: **6.2** (`argus` dataflow / scope-resolved grounding) — ⛔ **as a SCOPE CHANGE, not
+    an absorption.** 6.2 is scoped as provenance grounding; assertion STRENGTH is a different
+    question over the same dataflow and must be argued through `bmad-correct-course`, on
+    `DF-16-7-B`'s precedent that a different predicate is a different predicate
+  - category: detector architecture / verdict-eligibility yield
+  - severity: 🟠 — nothing false is published and the moat holds (the failure direction is
+    under-claiming, never over-accusing), but this is the mechanical reason the gate cannot clear,
+    and everything commercial waits behind the gate
+  - ⛔ **THE MEASUREMENT.** Over all **1,032** `vacuous_test_heuristic` findings: stage 1 selects
+    `density_only` **1,025 (100%)**, `mock_only` **0**, `both` **0** — *the mock arm has never fired
+    on this corpus*. Stage 2 (fact (b)) asks an exclusively mock-provenance question and promotes
+    **0**. `mock_referencing_assertions >= 1` holds in **0 of 1,032**. **917 of 1,032 (88.9%) carry
+    ≥3 CONSUMED SUT calls**, and `consumed == 0` is evaluated at whole-function scope.
+  - ⛔ **"THE CORROBORABLE CEILING IS SIX" IS A MISREADING AND SHOULD STOP BEING QUOTED.** Six is
+    `W1` — fact (b) with the mock clause DELETED. The shipped predicate's output is **ZERO** and
+    always has been. A ceiling of six reads as *nearly enough*; a floor of zero reads as
+    *structurally shut*, and the second is the true one.
+  - ⛔ **THE READING ERROR UNDERNEATH BOTH `DF-13-5-A` BRANCHES.** *"0 blocking findings"* has been
+    read as a fact about the WORLD — the detector is too conservative (b), or the corpus is too small
+    (a). **It is a fact about the INSTRUMENT.** No conclusion about the base rate of vacuous tests in
+    real repositories is available from this evidence. The honest statement is not *"the defect is
+    rare"* but *"this measurement is silent on the base rate."*
+  - ⚠️ **WHERE THIS CORRECTS AN EARLIER DOCUMENT, rather than quietly preferring the newer number.**
+    `technical-argusagent-detector-categories-research-2026-08-21.md` §6 reached the blindness finding
+    three days earlier and is the primary source; its §6 table, however, marks *"result ignored,
+    assertions on a mock"* as ✅ verdict-eligible. **Measurement does not support that half: the row is
+    also empty, 0 of 1,032.** Consequence — of Story 6.2's two halves, **the provenance half is worth
+    approximately nothing over this corpus and the assertion-strength half is worth everything.**
+  - ⛔ **WHAT THIS ENTRY DOES NOT PROPOSE.** It does not propose loosening `consumed == 0` — that
+    asymmetry is what keeps the false-accusation moat closed and the research is explicit that
+    nothing here argues for relaxing it. It does not propose promoting `V2` (36) or `V5` (125):
+    `DF-16-7-B` already records that `V2` is a genuinely DIFFERENT predicate rather than a loosening
+    of fact (b) and must be argued as one, **and that applies with more force to `V5`.**
+  - ⛔ **TWO CONSTRAINTS FOR WHOEVER CHARTERS THE FIX, carried onto the charter and not into its
+    aftermath.** (i) **Yield and precision move in opposite directions** — going from 0 to ~12%
+    eligible mechanically increases false-accusation exposure, and ≥80% precision is the whole gate,
+    so the precision guard must be **pre-registered BEFORE the widening lands**, in the discipline of
+    the 2026-08-17 rule. (ii) **It is a scope change to 6.2**, per `target_story` above.
+  - ⚠️ **A denominator fact recorded without arguing from it.** One of the five ratified members
+    (`ai-body-runtime`) contributes **ZERO** findings to this rule class, and **`minions` alone
+    contributes 63%** (648 of 1,032). This is filed as a property of the corpus. ⛔ **It is NOT an
+    argument for a bigger bench** — see the reading error above.
+
+- **`DF-INV-VACUOUS-B` — `_mock_bound_names` cannot see three of the four dominant Python mock
+  idioms. A latent defect, filed so it is NOT mistaken for the remedy.**
+  - id: DF-INV-VACUOUS-B
+  - origin: same session; measured with an INDEPENDENT instrument (CPython `ast`, not argus's
+    tree-sitter index) precisely because the question is *"can the shipped resolver see what is
+    there?"* and an instrument sharing the resolver cannot answer it
+  - owner: **Engineering Lead**
+  - target_story: **NONE yet** — it rides with whatever story reworks the predicate; it is not worth
+    a story of its own, for the reason in the ⛔ below
+  - category: detector correctness (latent — no observable effect today)
+  - severity: 🟡 — it changes **nothing** measurable on the current corpus, and the direction of the
+    error is under-claiming corroboration, which is the safe direction. It becomes load-bearing only
+    if a future predicate depends on mock binding
+  - **What it is.** `argus/detectors/provenance_scan.py:794` binds a name as mock-derived by exactly
+    two routes — an in-span assignment with a mock-derived value, and `with … as m` — and it rejects
+    any dotted target (`if name and "." not in name`). Invisible to it: **`@patch` decorator
+    injection** (bound by the signature), **fixture / `mocker` injection** (bound in another function),
+    and **`setUp` + `self.attr = Mock()`** (bound outside the span AND dotted). Only the bare local
+    `fake = Mock()` — the shape of the project's own `_CORROBORATED_FIXTURE` control — is seen.
+  - ⛔ **DO NOT PROPOSE THIS AS THE YIELD FIX. It was measured and it is worth 0 → 1.** An extended
+    resolver covering all four idioms was run over the same 1,032 findings: **1,025 (99.3%) bind no
+    mock at all, by any idiom**, and the mock-referencing count moves from 0 to **1**. ⚠️ **This entry
+    exists mainly so the gap is not rediscovered in six months and mistaken for the remedy** — which
+    is exactly what it looks like until it is measured.
+  - ⚠️ **Control, so the result is not misread as "this corpus never mocks".** It does:
+    `agent-smith` **23.2%** of test files, `minions` **22.9%**, `agent-markovich` **11.5%**. The
+    corpus mocks; the FLAGGED population does not. That is `DF-INV-VACUOUS-A`, not this entry.
+  - ⚠️ **A validation-practice observation, filed without blame.** The one idiom the resolver
+    implements is the shape of the fixture that proves it works. The fixture passes and the world
+    returns zero. Worth remembering when the replacement predicate gets its own control.
