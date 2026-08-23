@@ -5685,3 +5685,210 @@ disposed and three new ones are filed, one of which bounds Epic 15.
     UNSPENT**, `DF-16-1-A`, `DF-16-3-A`, `DF-15-2-E` and `DF-16-5-A` stay **OPEN**, and no
     historical entry on this ledger is edited — this is a pure append
     (`TC-ArgusAgent-DOCS-001-78`).
+
+## Deferred from: Story 16.6 READINESS VALIDATION (2026-08-23)
+
+⛔ **Filed by the create-story amendment pass, not by a story's implementation.** Story 16.6 failed
+an independent readiness validation. The measurement underneath the story was confirmed exact — the
+headline **−7** re-derived to the `Fraction` on all seven named rows — and every defect found was in
+the story's own text. Two of those defects are not that story's at all: they are **repository-level
+traps** that have each now bitten more than once, so they are FILED here rather than repaired inside
+a behaviour-change story. ⛔ **`DF-16-6-B` is deliberately NOT allocated by this pass.** Story
+16.6's `AC6.5` reserves that letter for the bare-`raise` residual its own implementation files, and
+taking the next free letter here would have silently invalidated a written AC. These two take `-C`
+and `-D`.
+
+- **`DF-16-6-C` — this ledger is protected from CRLF normalisation by ONE lone `CR` byte rather than
+  by a `.gitattributes` rule, and any editor that opens and re-saves the file destroys that
+  protection and deletes a historical line with it.**
+  Measured 2026-08-23 on this file: it contains **exactly one** lone `CR` (a carriage return not
+  followed by a line feed), sitting as quoted prose inside the `DF-15-2-D` entry, where that entry
+  names a carriage return and a line feed as *"not part of the problem"*. That single byte is the
+  whole reason `git ls-files --eol` reports **`i/-text w/-text`** for this path while every sibling
+  `.md` in the same directory reports **`i/lf w/crlf`**: git classifies the file as **binary** and
+  therefore performs no end-of-line conversion on it at all. The repository sets
+  **`core.autocrlf=true`** and carries **no `.gitattributes` at any level** — `git check-attr -a`
+  returns nothing for this path. So this ledger's append-only guarantee currently rests on one byte
+  defending itself, and on nobody noticing it.
+  ⛔ **THIS HAS ALREADY HAPPENED ONCE, AND IT COST A REVIEW ROUND.** Commit `9aea1be`
+  (*"chore(16-5): the story opens, and the baseline was not green"*) recorded **24 insertions and 1
+  deletion** on this file, while its own message asserted that not one byte of the entry above the
+  append had been edited. The deletion was the lone `CR`: an editor re-saved the file, rewrote that
+  one prose line, and git booked the historical line as removed and a replacement as added. It took
+  a code-review round to notice, and a dedicated commit — `a4de7e7`, *"fix(16-5): restore the
+  historical byte 9aea1be dropped"* — to put the byte back. The same commit also restored the
+  trailing newline that the same re-save had eaten.
+  ⛔ **The failure is SILENT in the direction that matters.** `TC-ArgusAgent-DOCS-001-78` checks a
+  claimed disposition against this ledger, but **nothing** in the suite checks that an append to this
+  file is an append. The `+n / -0` diffstat is the only signal there is, and Epic 12's four false
+  dispositions are this project's own precedent that reviews check the **shape** of a write and never
+  its **existence**. A guarantee enforced by a byte is not enforced.
+  - id: DF-16-6-C
+  - origin_story: **NONE** — found by Story 16.6's independent readiness validation and filed by the
+    2026-08-23 create-story amendment pass, not by a story's own review. Recorded as
+    validation-origin because attributing a finding to a story that did not make it is the
+    `DF-13-3-A` failure shape; `DF-15-2-E` set this precedent for a retrospective-origin entry.
+  - owner: **XAgent007 (Engineering Lead)** (`AI-E9-8`)
+  - target_story: **NONE** — a precondition on whoever next appends to this ledger, not work with a
+    schedule of its own. Pinning it to an unwritten story is how `DF-14-3-H`'s `target_story: 13-5`
+    went stale, and `DF-15-2-E`, `DF-16-5-A` and `DF-16-5-B` each declined to repeat it.
+  - category: governance / append-only integrity · tooling
+  - severity: 🟠 — nothing is failing today and the byte is currently intact, but the loss mode is a
+    **silent edit to a historical entry**, on the one file in this repository whose entire contract
+    is that its history is immutable, and it is triggered by the most ordinary action anyone takes
+    on it: opening it in an editor and saving. It is 🟠 rather than 🟡 because it has fired
+    already, and because what it corrupts is evidence.
+  - ⛔ **PROPOSED REMEDY, NOT IMPLEMENTED HERE.** Add a `.gitattributes` at the repository root that
+    pins the end-of-line handling of `_bmad-output/design-artifacts/ArgusAgent/**.md` **explicitly**,
+    so the behaviour is DECLARED rather than inferred from the presence of one byte; and pair it with
+    a guard asserting the lone-`CR` count and the trailing newline, so the invariant is watched
+    rather than remembered.
+    ⛔ **Whoever implements it must FIRST measure what that `.gitattributes` line does to the
+    existing index entry for this file.** Reclassifying a `-text` blob as text under
+    `core.autocrlf=true` can re-normalise the entire file and produce exactly the whole-file diff
+    this entry exists to prevent. Done carelessly, the remedy is worse than the disease.
+  - ⛔ **INTERIM RULE, binding from now.** Append to this file in **binary**, and assert **before
+    and after** that the count of lone `CR` bytes is exactly **1**, that the file still ends with a
+    newline, and that `git diff --numstat` reports `+n / -0`. Story 16.6's `AC6.5` and Task 6.3
+    carry this as an executable requirement on that story's own ledger append, and this entry was
+    itself filed under that rule.
+  - ⛔ **Nothing else is filed and nothing is disposed of by this entry.** `DF-13-5-A` stays **OPEN
+    and UNSPENT**, `DF-15-2-E`, `DF-16-1-A`, `DF-16-3-A`, `DF-16-5-A`, `DF-16-5-B` and `DF-16-6-A`
+    all stay **OPEN**, and no historical entry on this ledger is edited — this is a pure append
+    (`TC-ArgusAgent-DOCS-001-78`).
+
+- **`DF-16-6-D` — authors keep putting a disposition verb and an OPEN ledger id on the SAME PHYSICAL
+  LINE, and `TC-ArgusAgent-DOCS-001-78` reads that as a claim about every id on the line. The guard
+  is right and load-bearing; the AUTHORING PRACTICE is what keeps reproducing the defect.**
+  `story_closure_claims` (`tests/test_governance_record_integrity.py`) is **line-scoped by design**,
+  and its own docstring says why: *"widening the window to a paragraph swept unrelated ids into the
+  claim."* Narrowing it is not available either — in every legitimate record this repository has
+  produced, the verb and its id genuinely do share a line. So the extractor is correct and
+  essentially unimprovable, and the defect lives entirely in how the surrounding prose is wrapped.
+  ⛔ **THE RECURRENCE COUNT, WITH EVIDENCE.** The guard's own failure message records this class as
+  having been produced **four times by Stories 12.4 and 12.5, with every review passing** — which is
+  what `AI-E12-6` was written for. It has now recurred **four more times inside Epic 16 alone**, all
+  on 2026-08-23, for a total of **eight**:
+  - Story 16.5's round-1 validation report — caught in review.
+  - Story 16.6's story file — a `§References` line carrying one verb and three ledger ids, of which
+    this ledger backs two. It turned the **entire suite RED**, falsified that story's own stated
+    GREEN baseline, and made its `AC7.1` unsatisfiable until the line was wrapped. Repaired by the
+    2026-08-23 amendment pass; the guard was **not** touched.
+  - Story 16.6's round-1 validation report — whose author caught the shape **in their own draft**,
+    wrapped the quotations they saw, and wrote the reason into the report: the guard globs *every*
+    `*.md` under `stories/`, so a report **about** this defect reproduces it the moment it quotes the
+    offending line verbatim.
+  - ⛔ **THE EIGHTH — AND IT IS STILL LIVE, MASKED BY A DEFECT IN THE ANALYZER ITSELF.** ONE
+    quotation in that same round-1 report was **not** wrapped: its line 78, which carries a
+    disposition verb and, on the same physical line, an id this ledger does **not** genuinely
+    account for. ⚠️ **The evidence bullet above previously claimed every quotation had been
+    wrapped. That claim was inaccurate and is corrected here** — Story 16.6's round-2 validation
+    found the survivor by driving the guard's own predicate line by line rather than trusting the
+    suite. **The line was wrapped by the 2026-08-23 pass-2 amendment (line breaks only; not one
+    word, cite, figure or verdict in that audit artifact was altered).** ⛔ **Why the suite never
+    went red on it:** `ledger_closed_ids` reports that id as disposition-bearing from historical
+    ledger prose ~962 lines above the 2026-08-23 append — a **FALSE POSITIVE**, confirmed
+    **pre-existing** by running the analyzer over the HEAD blob and over the working tree and
+    getting the identical 35-id set with an empty symmetric difference. The entry at ledger lines
+    4766/4777 reads OPEN and UNSPENT, so the analyzer and the entry disagree.
+  The last four were written by authors who already knew the guard existed and had read its
+  docstring. That is the finding: knowing about it does not prevent it.
+  ⛔ **The cost is not the RED, it is the CONFUSION.** In Story 16.6's case that story's own Task 0.2
+  tells the dev to re-run every gate before writing a line — so the dev goes RED on the first action
+  of the story, caused by the story file itself, while the story's §0.0 asserts a green baseline.
+  That is precisely the trap Story 16.5 already paid a commit to escape.
+  - id: DF-16-6-D
+  - origin_story: **NONE** — found by Story 16.6's independent readiness validation and filed by the
+    2026-08-23 create-story amendment pass. Validation-origin for the reason `DF-16-6-C` gives.
+  - owner: **XAgent007 (Engineering Lead)** (`AI-E9-8`)
+  - target_story: **NONE** — an authoring rule plus a pre-write check, not a feature with a
+    schedule.
+  - category: governance / authoring practice · guard ergonomics
+  - severity: 🟠 — the guard catches the real defect it was written for, so nothing is silently
+    wrong. But it fails at the **end** of the pipeline, in a full-suite run, long after the sentence
+    was written and often in a different session; it has now fired seven times; and the rule it
+    enforces exists **only** inside its own failure message, which is a place nobody reads until it
+    is already too late.
+  - ⛔ **PROPOSED REMEDY, NOT IMPLEMENTED HERE**, in two parts.
+    (i) A **written authoring rule**, in the places authors actually read before writing a governance
+    record — the story template and `architecture.md` §Enforcement — stated positively: *a
+    disposition verb and a ledger id may share a physical line only when this ledger already backs
+    that id; otherwise wrap the line so the verb sits alone with the ids it does back.*
+    (ii) A **pre-write / pre-commit check** that runs the two existing pure analyzers over a
+    candidate `*.md` before it is committed, so the author sees the failure at authoring time. Both
+    analyzers are already pure and exported for exactly this kind of reuse, which is why this remedy
+    is cheap.
+  - ⛔ **READ THIS BEFORE IMPLEMENTING (ii) — THE INTERACTION IS THE MOST VALUABLE THING IN THIS
+    ENTRY, AND IT WILL AMBUSH YOU OTHERWISE.** Remedy (ii) is coupled to the `ledger_closed_ids`
+    false positive described in the eighth bullet above. **Repairing that false positive — which is
+    the correct repair, and the one an author-time check makes obvious — UNMASKS the surviving
+    instance and turns the FULL SUITE RED**, because the id on that line stops being reported as
+    disposition-bearing and the claim becomes unbacked. ⛔ **So the order is not optional: wrap the
+    RECORD first, re-run `tests/test_governance_record_integrity.py` green, and only then repair the
+    analyzer.** ⚠️ **This is emphatically NOT a reason to leave the analyzer wrong, to weaken it, to
+    widen its window or to register an exemption** — see the next paragraph; the whole point of this
+    entry is that **the record is what is wrong, every single time.** Whoever takes (ii) inherits
+    this note, not a surprise.
+  - ⛔ **The guard is NOT to be amended, weakened or exempted, and this entry is not a request to do
+    so.** Widening its window was measured to sweep unrelated ids into the claim; registering an
+    exemption for a story would be `AI-E12-3`'s defect wearing a fix's clothes; and the historical
+    registry inside that module may only SHRINK. **The record is what is wrong, every single time.**
+  - ⛔ **Nothing else is filed and nothing is disposed of by this entry.** `DF-13-5-A` stays **OPEN
+    and UNSPENT**, `DF-15-2-E`, `DF-16-1-A`, `DF-16-3-A`, `DF-16-5-A`, `DF-16-5-B`, `DF-16-6-A` and
+    `DF-16-6-C` all stay **OPEN**, and no historical entry on this ledger is edited — this is a pure
+    append (`TC-ArgusAgent-DOCS-001-78`).
+
+- **`DF-16-6-B` — the BARE `raise AssertionError` spelling (no parentheses) is invisible to the
+  density numerator, and closing it needs a source-LINE scanner that would double-count the call
+  form.**
+  Story 16.6 admitted `"AssertionError"` into `_ASSERTION_CALLEES`, which reaches the
+  `raise AssertionError("msg")` form because that form is a `Call` node and already emits a call
+  edge. The **bare** `raise AssertionError` is an `ast.Name`, not a call: it emits **no edge**, and
+  no entry in any name table can reach it. Measured at HEAD `6d48c15` against a real
+  `build_ast_index`: `raise AssertionError("must raise")` emits `['AssertionError']`, and
+  `raise AssertionError` emits `[]`.
+  ⛔ **THE RESIDUAL IS DELIBERATE AND IT IS MEASURED, WHICH IS WHY IT IS FILED RATHER THAN FIXED.**
+  Every `ast.Raise` inside every one of the **1,032** recorded `vacuous_test_heuristic` spans was
+  classified read-only over the members' PINNED git objects. The census: **22 findings carry the
+  call form** (26 raise nodes; minions 12 + agent-smith 10) and **0 of 1,032 carry the bare form**.
+  A line scanner therefore buys **ZERO** on the measured population — and, combined with the table
+  entry that shipped, would count all 22 call-form spans **TWICE**, because
+  `assertion_sites = assertion_call_sites + bare_asserts` runs two independent counters (one over
+  index EDGES, one over SOURCE LINES) across the same span. The completeness would be a live
+  numerator inflation wearing a fix's clothes.
+  ⚠️ **The error direction is flag-INCREASING, i.e. the accusation direction**, which is why this is
+  filed at all rather than dismissed: a test whose only assertion is a bare `raise AssertionError`
+  scores zero assertion sites and is falsely flagged today. It is bounded by the census: **0 such
+  tests exist across the five ratified members**, so the defect is real in mechanism and empty in
+  population.
+  - id: DF-16-6-B
+  - origin_story: **16-6-the-assertion-vocabulary-recognises-the-assertion-that-is-a-raise** —
+    reserved for this story by the 2026-08-23 create-story amendment pass, which allocated `-C` and
+    `-D` and left `-B` free for `AC6.5`.
+  - owner: **XAgent007 (Engineering Lead)** (`AI-E9-8`)
+  - target_story: **NONE** — no story is scheduled and pinning one now would repeat
+    `DF-14-3-H`'s stale `target_story: 13-5`. Its **re-review trigger** is the first measurement in
+    which the bare form's incidence over an adjudicated population is **greater than 0**; below that
+    line there is nothing to buy, and above it the double-count analysis must be redone before any
+    scanner is written.
+  - category: detector precision / vacuous-test density numerator — advisory tier only
+  - severity: 🟡 — the mechanism is real and its direction is the accusation direction, but the
+    measured population is **0 of 1,032** and the tier is advisory: `_CORROBORATION_ASSERTION_CALLEES`
+    stays frozen at 23 names (`DN-14-2-1`), so nothing here can reach fact (a) or fact (b) and no
+    finding is or becomes verdict-eligible. It is 🟡 rather than 🟠 because no evidence is
+    corrupted and no gate outcome moves.
+  - ⛔ **PROPOSED REMEDY, NOT IMPLEMENTED HERE, AND NOT TO BE IMPLEMENTED CASUALLY.** If the trigger
+    above ever fires, the scanner and the table entry **cannot both count the same span**. Either
+    the scanner excludes spans whose `raise` target is a `Call`, or the numerator stops summing two
+    counters. Whoever takes it re-derives the census first and re-runs
+    `tests/test_vacuous_vocabulary.py::-139`, which is the executable statement of the double-count
+    constraint.
+  - ⛔ **`TC-ArgusAgent-DETECT-001-141` holds this as a DECISION rather than a gap.** That case
+    asserts by execution that the bare form scores `assertion_sites == 0` under **both** the 88-name
+    and the 89-name table, paired with a `pass`-bodied control scoring identically, so nobody can
+    quietly "complete" the fix into the double count and nobody can rediscover the residual as if it
+    were news.
+  - ⛔ **Nothing else is filed and nothing is disposed of by this entry.** `DF-13-5-A` stays **OPEN
+    and UNSPENT**, `DF-15-2-E`, `DF-16-1-A`, `DF-16-3-A`, `DF-16-5-A`, `DF-16-5-B`, `DF-16-6-A`,
+    `DF-16-6-C` and `DF-16-6-D` all stay **OPEN**, and no historical entry on this ledger is edited
+    — this is a pure append (`TC-ArgusAgent-DOCS-001-78`).
