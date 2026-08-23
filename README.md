@@ -189,8 +189,8 @@ graded, but has no definition for the depth gate to stand on. Pinned language-by
 
 ### What the distribution contains, and what needs the git repository
 
-MEASURED from the built wheel (`argus_agent-0.1.0-py3-none-any.whl`, 101 entries) and sdist
-(`argus_agent-0.1.0.tar.gz`, 100 files), not inferred: `[tool.flit.module] name = "argus"`
+MEASURED from the built wheel (`argus_agent-0.1.0-py3-none-any.whl`, 102 entries) and sdist
+(`argus_agent-0.1.0.tar.gz`, 101 files), not inferred: `[tool.flit.module] name = "argus"`
 packages **the `argus` Python package and nothing else** — which, since Story 12.7, includes
 the command assets under `argus/assets/commands/`: `flit_core` walks the whole `argus/`
 directory and ships every file in it, so a `.md` there reaches the wheel with **no**
@@ -218,7 +218,13 @@ to contradict each other (see the struck sentence under [Slash Commands](#-slash
 
 > **Measured limitation, stated rather than discovered later — and now measured away.** On a
 > freshly built wheel, with this repository removed from `sys.path` and one clean subprocess
-> per module, **93 of the 93 shipped modules import**. None fail. (93, not 92, since
+> per module, **94 of the 94 shipped modules import**. None fail. (94, not 93, since
+> 2026-08-23: Story 16.5 added `argus/precision/gate_independence.py`, which DERIVES from the
+> committed adjudication record whether the adjudication behind the precision figure was
+> independent of the tool's authors, and publishes the answer ON the same sentence as the
+> figure. It is a DISCLOSURE and gates nothing: protocol §5 still carries seven conditions,
+> and today's derived answer is `NOT_INDEPENDENT` — which is the correct output, not a
+> failure. 93, not 92, since
 > 2026-08-22: the `DF-15-2-D` cohesion split moved the two assertion vocabularies and the mock
 > table out of `argus/detectors/vacuous_test.py` — which stood at 1,196 of 1,200 — into
 > `argus/detectors/vacuous_vocabulary.py`. Names only, no scoring, no threshold and no

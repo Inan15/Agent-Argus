@@ -191,6 +191,63 @@ finding (or its absence) is correct — not the arithmetic.
 > Whether any given adjudication was independent is Story **16.5**'s question to record, not this
 > block's to assert.
 
+> ### 🧾 DATED BLOCK — 2026-08-23 — **INDEPENDENCE IS NOW DERIVED AND PUBLISHED, AS A
+> DISCLOSURE AND NOT A CONDITION** (Story 16.5)
+>
+> **This block sits under the existing V1.3 and adds NO change-log row.** Nothing in the
+> protocol's *method* changed: §2's three roles, §3's budget, §4's ladder and §5's **seven**
+> conditions are all byte-unchanged, and not one existing byte of §2, §3, §4 or §5 is edited
+> (§3.4 — strike, never erase). A `V1.4` row would re-stamp `protocol_version` across the 31
+> committed judgements of 2026-08-17 and re-interpret judgements nobody re-made; the change-log
+> head is therefore unmoved and `TC-ArgusAgent-PRECISION-001-45` / `-63` are untouched. This is
+> the **fifth** dated block under V1.3, and it answers the question the fourth one handed on.
+>
+> **What is now recorded.** The gate-decision record DERIVES, from the `"<who> (<role>)"` ids on
+> the live rows of the committed adjudication record, whether the adjudication that produced its
+> precision figure was independent of the implementing team — and publishes the answer **twice**:
+> as a structured `independence` block for a machine reader, and as a clause **on the
+> `gate_status` sentence itself**, immediately after the precision figure. The second placement
+> is the point. The two facts sat thirty lines apart in the same JSON file and were separable by
+> copy-and-paste; the sentence a reader actually quotes said nothing about who judged.
+>
+> **The vocabulary is CLOSED and has four members** — `NOT_ESTABLISHED`, `NOT_INDEPENDENT`,
+> `SECOND_REVIEWER_INTERNAL`, `EXTERNAL_ADJUDICATOR_PARTICIPATED` — each with a registered
+> meaning, and an unregistered member RAISES. ⛔ `NOT_ESTABLISHED` and `NOT_INDEPENDENT` are NOT
+> synonyms: *nobody judged it* and *the author judged all of it* are different findings.
+>
+> **The answer today, derived and not typed: `NOT_INDEPENDENT`** — 31 of 31 live human
+> judgements authored by `"XAgent007 (Engineering Lead)"`, who is also the tool's author. **That
+> is the correct output of the mechanism, not a failure of it**, and it is the state this
+> protocol has described in prose since 2026-06-30 without any surface deriving it.
+>
+> ⛔ **A DISCLOSURE, NOT A CONDITION, and the distinction is load-bearing.** §5 still carries
+> **seven** conditions and this adds no eighth; `precision_evaluable` still has exactly four
+> conjuncts. Nothing here can move a gate outcome, in either direction, for any population, and
+> that is asserted by execution rather than promised: flipping the derived status through every
+> member a non-empty adjudicator set can produce leaves the outcome, the outcome reason, all
+> seven condition verdicts, `precision_evaluable` and `meets_threshold` byte-identical, over both
+> an otherwise-`CLEARED` population and a `BLOCKED` one
+> (`TC-ArgusAgent-PRECISION-001-109`). **Why not a condition:** the honest answer today is *no*,
+> and a condition would convert an honest *no* into a blocked gate that only a hiring decision
+> could unblock. §2 says the externalization sign-off *"SHOULD be outside the implementing
+> team"*. **SHOULD is not MUST**, and promoting it is a threshold change no implementation story
+> may make (§6 R2).
+>
+> ⛔ **The status is a claim about the ADJUDICATION THAT WAS PERFORMED, never about this
+> section's roster** — and the published sentence says so in its own words, because as of the
+> 2026-08-22 block above the **QA Lead is FILLED and has authored ZERO dispositions**. *Filled*
+> and *judged* are now different facts about different roles, and a sentence reading "QA Lead:
+> absent" would be read as *unfilled* and would be false. This block's derivation never reads
+> §2's holder table: that table records who **may** judge; the record records who **did**.
+>
+> ⛔ **What this does NOT do.** It fills no role and requires none. It ratifies nothing,
+> adjudicates nothing, writes no disposition, runs no detector and regenerates no adjudication
+> record — `adjudication-record.json` is byte-unchanged and `protocol_cleared` is still `False`.
+> It does not make the adjudication independent; it says that it is not. The **External
+> adjudicator** tie-break stays *unfilled*, §4's ladder is unchanged, and a story that reaches an
+> unfilled role still **STOPS and reports which rows and why**. `DF-13-5-A`'s one pre-registered
+> bench-expansion round stays **OPEN and UNSPENT**.
+
 ---
 
 ## 3. Expert-hours/repo budget
