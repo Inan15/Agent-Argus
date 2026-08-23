@@ -5892,3 +5892,142 @@ and `-D`.
     and UNSPENT**, `DF-15-2-E`, `DF-16-1-A`, `DF-16-3-A`, `DF-16-5-A`, `DF-16-5-B`, `DF-16-6-A`,
     `DF-16-6-C` and `DF-16-6-D` all stay **OPEN**, and no historical entry on this ledger is edited
     — this is a pure append (`TC-ArgusAgent-DOCS-001-78`).
+
+## Deferred from: code review of 16-6-the-assertion-vocabulary-recognises-the-assertion-that-is-a-raise, iteration 2 (2026-08-23)
+
+> Both entries below were found and disclosed by the story's own commit `dd1e03a` and confirmed
+> real by the 2026-08-23 iteration-1 code review (`[Review][Defer]`), which correctly ruled them
+> out of this story's scope under AC7.4 and left them unfixed. Neither was filed to this ledger by
+> that round or by fix round 1 (`d6625b5`) — both commit messages say so explicitly, disclosing
+> rather than smoothing the gap. This iteration-2 review re-confirmed both by independent execution
+> and files them here to close that process gap. Neither closes anything, neither is a proposal to
+> fix, and no existing entry is edited.
+
+- **`DF-16-6-E` — `SEAL_CITATION_VALUES` has no `pre-seal` member, so an `Evidence-partition: open`
+  trailer on a 100%-pre-seal corpus is a disclosed protocol gap, not a defect any story should
+  fix in passing.** Confirmed by reading `argus/precision/gate_seal.py`:
+  `SEAL_CITATION_VALUES: tuple[str, ...] = (PARTITION_SEALED, PARTITION_OPEN, "none")` — three
+  literal values, no fourth `pre-seal` option. Story 16.6's `dd1e03a` is the first post-seal commit
+  to touch a declared detector-tuning path; all five ratified corpus members carry
+  `partition: pre-seal` (0 sealed / 0 open / 5 pre-seal), so neither `sealed` (would falsely
+  disclose a holdout peek) nor a silent omission was correct, and `open` was cited as the nearest
+  true value — "not the sealed holdout" — with the judgement disclosed in the commit body
+  (`DN-16-2-4` keeps `pre-seal` a distinct partition precisely so an exclusion is never read as an
+  assignment). Re-confirmed harmless by reading the two functions that consume the trailer:
+  `cites_partition` only regex-matches the commit body against the three literal
+  `SEAL_CITATION_VALUES` strings, and `corpus_partition_counts` is computed independently of any
+  commit trailer — so citing `open` cannot corrupt any downstream computed state; it only satisfies
+  (truthfully, if awkwardly) a citation predicate that was never given a fourth option.
+  - id: DF-16-6-E
+  - origin_story: **16-6-the-assertion-vocabulary-recognises-the-assertion-that-is-a-raise** —
+    disclosed in commit `dd1e03a`'s own trailer rationale, confirmed by the 2026-08-23 iteration-1
+    code review, filed here at iteration 2 because iteration 1 and fix round 1 both disclosed but
+    did not file it (their own commit messages record `deferred-work.md` as byte-untouched by
+    either round).
+  - owner: **XAgent007 (Engineering Lead)** — the seal-protocol owner, `argus/precision/gate_seal.py`.
+  - target_story: **NONE** — widening `SEAL_CITATION_VALUES` to add a `pre-seal` member is a
+    protocol-owner decision, not scheduled work. Pinning it to an unwritten story repeats
+    `DF-14-3-H`'s stale `target_story` shape.
+  - category: governance / seal-citation protocol · advisory only
+  - severity: 🟡 — no computed state is corrupted and no gate outcome moves; the gap is a citation
+    vocabulary that was never given a value for the corpus's current, fully-pre-seal state.
+  - ⛔ **Nothing else is filed and nothing is disposed of by this entry.** `DF-13-5-A` stays **OPEN
+    and UNSPENT**, `DF-15-2-E`, `DF-16-1-A`, `DF-16-3-A`, `DF-16-5-A`, `DF-16-5-B`, `DF-16-6-A`,
+    `DF-16-6-C`, `DF-16-6-D` and `DF-16-6-B` all stay **OPEN**, and no historical entry on this
+    ledger is edited — this is a pure append.
+
+- **`tests/test_gate_seal.py::_git` decodes git subprocess output with the LOCALE codec, so a
+  non-cp1252 commit message crashes the seal guard on Windows and passes silently on the ubuntu CI
+  leg.** `_git` runs `subprocess.run([...], capture_output=True, text=True, timeout=120)` with no
+  `encoding=` argument, so Python decodes `stdout`/`stderr` with `locale.getpreferredencoding()` —
+  cp1252 on this Windows box. Independently reproduced in an isolated scratch repo: a commit
+  message containing a character outside cp1252 (e.g. `ā`, U+0101) makes the stdout-reading thread
+  raise `UnicodeDecodeError`, `CompletedProcess.stdout` comes back `None`, and
+  `cites_partition(None)` at `tests/test_gate_seal.py:1140` raises `TypeError` instead of reading
+  the trailer — a crash, not a false read. Confirmed Windows-only and invisible to the ubuntu CI
+  leg (UTF-8 locale decodes the same bytes cleanly), and confirmed none of Story 16.6's four
+  commits (`dd1e03a`, `6304552`, `6bb91ae`, `d6625b5`) trips it — all four are pure ASCII by
+  execution, kept that way deliberately for exactly this reason, disclosed in each commit body.
+  - id: DF-16-6-F
+  - origin_story: **16-6-the-assertion-vocabulary-recognises-the-assertion-that-is-a-raise** —
+    found and disclosed by the 2026-08-23 iteration-1 code review, filed here at iteration 2 for
+    the same reason as `DF-16-6-E` (disclosed but not filed by either the iteration-1 review or
+    fix round 1).
+  - owner: **XAgent007 (Engineering Lead)** — `tests/test_gate_seal.py` is a shipped guard; fixing
+    its own encoding bug is not this story's business (AC7.4).
+  - target_story: **NONE** — the fix is a one-line `encoding="utf-8"` (or equivalent) addition to
+    `_git`'s `subprocess.run` call, small enough that it does not need a story of its own; pinning
+    a `target_story` now would go stale the way `DF-14-3-H`'s did.
+  - category: tooling / test-guard robustness · Windows-only · CI-invisible
+  - severity: 🟡 — no PR has yet carried a non-cp1252 commit message on Windows, so the crash is
+    latent rather than firing; it is filed because the local suite is Windows-only in this repo
+    (this project's own recurring lesson, `AI-E13-1`) while CI runs an ubuntu matrix that cannot
+    see this class of bug at all, so a future non-ASCII commit message would surface as a
+    confusing Windows-only `TypeError` in an unrelated guard rather than as an encoding bug.
+  - ⛔ **PROPOSED REMEDY, NOT IMPLEMENTED HERE.** Add `encoding="utf-8"` (or
+    `errors="replace"`) to `_git`'s `subprocess.run` call in `tests/test_gate_seal.py`, and
+    consider whether `_git`'s call sites elsewhere in the guard suite share the same gap.
+  - ⛔ **Nothing else is filed and nothing is disposed of by this entry.** `DF-13-5-A` stays **OPEN
+    and UNSPENT**, `DF-15-2-E`, `DF-16-1-A`, `DF-16-3-A`, `DF-16-5-A`, `DF-16-5-B`, `DF-16-6-A`,
+    `DF-16-6-B`, `DF-16-6-C`, `DF-16-6-D` and `DF-16-6-E` all stay **OPEN**, and no historical entry
+    on this ledger is edited — this is a pure append.
+
+- **`DF-16-7-B` — two figures this ledger carries are now stale by measurement, and the
+  silent class's true-positive proportion is still unmeasured.** Filed 2026-08-23 by Story 16.7.
+  Two separate residuals, recorded together because one story measured both.
+
+  **(a) `DF-16-7-A`'s V5 figure moved 122 → 125.** Re-derived at HEAD `b3b761f` by
+  [`research/investigate-per-call-scoping.py`](research/investigate-per-call-scoping.py), the
+  *"asserts, but nothing about the SUT"* population is **125**, not the **122** `DF-16-7-A`
+  records. The delta is **exactly three**, and they are exactly the three Story 16.6 moved: once
+  `is_assertion_callee("AssertionError")` became `True`, a span whose only assertion is
+  `raise AssertionError("msg")` stopped being *silent* and became *asserts-but-not-about-the-SUT*.
+  `DF-16-7-A` is **not wrong** — it is correctly dated 2026-08-22 and pre-16.6, and it is
+  **left exactly as it stands**. This is a new dated entry rather than an edit, which is
+  §3.4's *strike, never erase* and `TC-ArgusAgent-DOCS-001-78`'s append-only rule.
+
+  **(b) The V2 silent class is derived, published, and NOT YET JUDGED.** Story 16.7 measured the
+  class at **36** members at HEAD (agent-smith 22 + minions 14, across 19 files, over 1,032
+  recorded `vacuous_test_heuristic` findings with 0 skipped and 0 unresolvable) and seeded one
+  `UNADJUDICATED` row per member into
+  [`validation-corpus/silent-class-record.json`](validation-corpus/silent-class-record.json) with
+  the human worklist at
+  [`validation-corpus/silent-class-worklist.md`](validation-corpus/silent-class-worklist.md).
+  **The TP/FP/BORDERLINE judgement is an OPERATOR ACT and no automated producer may take it**
+  (protocol §2: `UNADJUDICATED` is *the ONLY member an automated producer may write*), so the
+  proportion the class exists to measure — in particular the DELIBERATE SMOKE TEST proportion,
+  where *"does not raise"* IS the assertion — remains **NOT MEASURED**. Until it is, no
+  promotion proposal for this predicate carries evidence.
+  - id: DF-16-7-B
+  - origin: Story 16.7 (`16-7-adjudicate-the-silent-test-class-before-proposing-promotion`),
+    measured at HEAD `b3b761f` 2026-08-23
+  - owner: **XAgent007 (Engineering Lead)** — with **Veer Pratap Singh (QA Lead)** as the
+    registered second reviewer (role filled 2026-08-22). The **External adjudicator tie-break
+    remains UNFILLED**, and a run that reaches protocol §4's third ladder step must STOP.
+  - target_story: **(a)** stays **6.2** with `DF-16-7-A` — this entry creates no new work for
+    it and only re-dates its figure. **(b)** is an **operator act, not a story**: the 36 rows
+    await a named human, and the artifacts to record them in are already committed.
+  - category: measurement residual / verdict-eligibility predicate evidence
+  - severity: 🟠 — nothing false is published, nothing is promoted, `verdict_eligible`
+    stays `False` on all 36, and the gate stays correctly `BLOCKED`. But `DF-13-5-A`'s
+    pre-registered answer to the empty denominator is *"a materially better detector"*, and V2 is
+    the only cheaply-reachable candidate; leaving its true-positive proportion unmeasured leaves
+    that route unevaluable.
+  - ⛔ **A NEW MEASUREMENT THIS ENTRY RECORDS, because a promotion proposal will need it and
+    nobody had written it down.** `V1` (drop fact (b)'s provably-dead mock-referencing clause)
+    reaches **6**, and `V3` (`V1` AND silent) reaches **6** as well — so `V1` is a strict
+    SUBSET of `V2`, and **30 of the 36 lie outside `V1` entirely**, each carrying at least one
+    CONSUMED SUT call (one carries thirteen). **Promoting V2 would therefore be a genuinely
+    DIFFERENT predicate, not a loosening of fact (b) by clause removal**, and it must be argued
+    as one.
+  - ⛔ **A SECOND NEW MEASUREMENT, from Story 16.7's own mutation round.** Routing the *"does
+    this span assert anything at all?"* question through the FROZEN 23-name corroboration table
+    instead of the WIDE one takes the class **36 → 84**. Those 48 extra spans all assert
+    through a name the frozen table has never heard of. That is `DN-14-2-1`'s two-table split
+    quantified for the first time: **48 false accusations is what the moat is worth here.**
+  - ⛔ **Nothing is filed beyond this entry and nothing is disposed of by it.** `DF-16-7-A`,
+    `DF-13-5-A` (**OPEN and UNSPENT** — Story 16.7 ran no detector over any corpus member and
+    fetched nothing), `DF-16-6-A`, `DF-16-6-B`, `DF-16-6-C`, `DF-16-6-D`, `DF-16-6-E`,
+    `DF-16-6-F`, `DF-16-5-A`, `DF-16-5-B`, `DF-16-1-A`, `DF-15-2-E`, `DF-14-1-A` and the three
+    `DF-12-1-*` entries all stay **OPEN**, and no historical entry on this ledger is edited —
+    this is a pure append.
