@@ -355,6 +355,29 @@ _MODULES_NAMING_THE_TEST_TREE_IMPORT: frozenset[str] = frozenset(
         # force someone to say, and the wheel-importability claim remains
         # TC-ArgusAgent-RELEASE-001-20's, asserted there over a real built artifact.
         "argus/precision/gate_independence.py",
+        # ADDED 2026-08-23 (Story 16.7). ``silent_class`` derives the V2 SILENT test class -
+        # spans that reach the SUT, discard the result and assert nothing at all - and
+        # publishes it as a QUESTION for a named human. It joins the set TRANSITIVELY and by
+        # the narrowest edge available: it imports ``adjudication`` (for the CLOSED
+        # disposition vocabulary, ``LOCATOR_RE``, ``adjudicator_role`` and ``finding_row_id``,
+        # borrowed rather than re-declared) and ``gate_independence`` (to CALL the existing
+        # ``assess_independence``), and both have named the repository-only tree in prose
+        # since 2026-08-16 and 2026-08-23 respectively. The module itself writes ``_registry``
+        # nowhere, performs NO I/O of any kind, and resolves NO path at module level
+        # (``DF-9-2-A``): ``SILENT_CLASS_RECORD_PATH`` and ``SILENT_CLASS_WORKLIST_PATH`` are
+        # repository-relative forward-slash STRINGS the caller resolves against its own root,
+        # the same treatment ``adjudication.RECORD_PATH`` gets, and every other input arrives
+        # as an argument. All of its I/O lives in ``scripts/build_silent_class_record.py``,
+        # outside the shipped package, because a builder that shells out to git over five
+        # third-party repositories is the test shell (section 3.3). This addition is
+        # DELIBERATE, which is what this registry exists to force someone to say, and the
+        # wheel-importability claim remains TC-ArgusAgent-RELEASE-001-20's, asserted there
+        # over a real built artifact. The edge into this module runs ONE WAY and that is
+        # asserted separately by TC-ArgusAgent-PRECISION-001-127: nothing under
+        # ``argus/detectors/**`` and no ``argus/precision/gate_*.py`` may import it, because
+        # a predicate that scores test functions sitting on the detector path is a shipped
+        # promotion waiting for someone to wire it up.
+        "argus/precision/silent_class.py",
         # ADDED 2026-08-20 (Story 16.2). §5's SEAL condition and the partition rule. It joins
         # TRANSITIVELY through gate_breadth / gate_disclosure, resolves NO path at module level
         # and performs no I/O at all — asserted STRUCTURALLY by an AST walk of its own imports
