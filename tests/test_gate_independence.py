@@ -249,15 +249,31 @@ def _assert_differs_only_in_adjudicator(
     )
 
 
-def _decide(record: AdjudicationRecord, *, corpus: tuple[dict[str, str], ...]) -> GateDecision:
+def _decide(
+    record: AdjudicationRecord,
+    *,
+    corpus: tuple[dict[str, str], ...],
+    per_finding: bool = False,
+) -> GateDecision:
     """Drive the shipped :func:`decide_gate` — the REAL seam, never a reconstruction.
 
     Passing *corpus* ratifies nothing: ``decide_gate`` takes ``ratified_members`` as an
     argument, and protocol §6 R2 ratification is an operator act no agent performs.
+
+    *per_finding* de-duplicates the expected population by ``finding_id``, preserving
+    order. It defaults to ``False``, so every pre-existing caller passes byte-identical
+    arguments and this parameter cannot move any guard that already existed. It exists for
+    the ONE fixture that carries a SUPERSEDED row (``-114``): a correction and the row it
+    strikes share a ``finding_id`` by construction, and the emitted finding population a
+    real caller passes is per FINDING, never per ROW — so passing the row list there would
+    hand ``exhaustiveness`` a duplicate no real record can produce.
     """
+    expected = [row.finding_id for row in record.rows]
+    if per_finding:
+        expected = list(dict.fromkeys(expected))
     return decide_gate(
         record,
-        expected_finding_ids=[row.finding_id for row in record.rows],
+        expected_finding_ids=expected,
         population_n=validation_set_population_n(),
         floor_n=int(registry_module().VALIDATION_SET_FLOOR_N),
         protocol_change_log_head=record.protocol_version,
@@ -960,3 +976,152 @@ def test_TC_ArgusAgent_PRECISION_001_112_the_disclosure_travels_as_structure_too
         tuple(sorted({r.adjudicator for r in committed.live_rows() if r.adjudicator}))
     ).status == "NOT_INDEPENDENT"
     assert independence_note(None) is None, "the pre-16.5 shape must stay renderable"
+
+
+def _superseded_population(
+    *, struck_by: str, live_author: str, contributing_members: int = 5, size: int = 6
+) -> AdjudicationRecord:
+    """A population carrying ONE row struck by a ``supersedes`` correction (AC1.3, ``-114``).
+
+    Built from :func:`_population` so every pinned term (member spread, size, locators, rule
+    ids, dispositions) is inherited rather than re-typed — the lockstep discipline of §2.8
+    applies here too, and the ONLY thing this helper varies is WHO authored the struck row
+    versus WHO authored the live one that replaces it.
+
+    The correction is expressed the one way the type admits: a NEW row that NAMES the row it
+    replaces. ``AdjudicationRecord.__post_init__`` requires the two to share a
+    ``finding_id`` — so only ``row_id``, ``adjudicator``, ``reason`` and ``supersedes``
+    move, and the five fields ``finding_id`` is derived from are carried over untouched.
+    §3.4's supersede-never-erase rule means the struck row STAYS on ``record.rows`` and
+    disappears only from ``record.live_rows()``. That difference is the whole observable.
+    """
+    base = _population((live_author,), contributing_members=contributing_members, size=size)
+    first, *rest = base.rows
+    struck = replace(
+        first,
+        adjudicator=struck_by,
+        reason="synthetic fixture: the SUPERSEDED judgement, retained and never erased",
+    )
+    revision = first.row_id.rsplit(".", 1)[0]
+    correction = replace(
+        first,
+        row_id=f"{revision}.1",
+        adjudicator=live_author,
+        supersedes=first.row_id,
+        reason="synthetic fixture: the CORRECTION that strikes the row above (§3.4)",
+    )
+    record = replace(base, rows=(struck, correction, *rest))
+    assert record.superseded_row_ids == frozenset({first.row_id}), (
+        "non-vacuity: the fixture did not actually strike a row, so the live/all "
+        "distinction this guard is about never arises"
+    )
+    assert len(record.live_rows()) == len(record.rows) - 1 == size, (
+        "non-vacuity: the struck row is still live, or the correction did not land"
+    )
+    return record
+
+
+#: The two leaks ``-114`` drives, GENERATED as (struck author, role that would leak, status
+#: the leak would forge). Both are the failure the review named in terms: a struck row whose
+#: author differs IN ROLE from the live one quietly UPGRADING an honest ``NOT_INDEPENDENT``
+#: record. One per registered role that is not the Engineering Lead.
+_SUPERSEDED_LEAKS: tuple[tuple[str, str, str], ...] = (
+    (_QA_LEAD, QA_LEAD_ROLE, "SECOND_REVIEWER_INTERNAL"),
+    (_EXTERNAL, EXTERNAL_ADJUDICATOR_ROLE, "EXTERNAL_ADJUDICATOR_PARTICIPATED"),
+)
+
+
+@pytest.mark.parametrize(("struck_by", "leaked_role", "forged"), _SUPERSEDED_LEAKS)
+def test_TC_ArgusAgent_PRECISION_001_114_the_status_is_derived_from_LIVE_rows_only(
+    struck_by: str, leaked_role: str, forged: str
+) -> None:
+    """TC-ArgusAgent-PRECISION-001-114 — AC1.3 / AC5.4: SUPERSEDED rows do not judge.
+
+    **Observable:** the ``status`` and ``adjudicators`` of the
+    :class:`IndependenceAssessment` ``decide_gate`` derives for a record in which one row
+    has been STRUCK by a ``supersedes`` correction whose author differs IN ROLE from the
+    live row that replaces it. Concretely: does the derivation read ``record.live_rows()``
+    or ``record.rows``?
+
+    **Why this guard exists, stated as the gap it closes.** AC1.3 claims the status is
+    derived from the LIVE rows, and the review of this story mutation-tested that claim:
+    replacing ``live = record.live_rows()`` with ``live = record.rows`` in ``decide_gate``
+    produced **ZERO** failures across ``test_gate_independence.py``,
+    ``test_gate_decision.py``, ``test_adjudication_record.py`` and
+    ``test_gate_decision_artifact.py`` — because no generated population anywhere carried a
+    superseded row. Nothing was mis-derived on the committed record (it carries **0**
+    superseded rows), so this is a REGRESSION path rather than a live defect; but a
+    disclosure a reader is asked to trust, whose central claim no guard closes over, is the
+    ``AI-E11-1`` shape this whole module was written to stop. It is also exactly what AC5.4
+    means by *"an adversarial variant GENERATED from the record the guard closes over"*.
+
+    **RED at the REAL SEAM (GUARD-ADEQUACY (ii)).** The mutation is the review's own, made
+    in the shipped module and not against a reconstruction:
+    ``argus/precision/gate_decision.py``, ``live = record.live_rows()`` ->
+    ``live = record.rows``. Under it the struck author re-enters the derived set and the
+    status is FORGED upward, so BOTH parametrised cases go RED on the ``status`` assertion
+    below. Verified by execution with ``PYTHONDONTWRITEBYTECODE=1`` and a cleared
+    ``__pycache__``, the tree restored byte-exact afterwards and ``git status --porcelain``
+    confirmed empty.
+
+    **Adversarial variants, GENERATED with their count: 2** — one per registered role that
+    is NOT the Engineering Lead, with the role half taken from the protocol's own role
+    constants rather than typed. Each drives a DIFFERENT forged status, so a derivation
+    that leaked superseded rows could not satisfy even one of them by accident.
+
+    **Non-vacuity is asserted FIRST**, and in the form that matters: the two views of the
+    SAME record are asserted to derive DIFFERENT statuses. If they ever agreed, every
+    assertion below would pass without observing anything at all.
+    """
+    record = _superseded_population(struck_by=struck_by, live_author=_ENGINEERING_LEAD)
+
+    # ── non-vacuity, before any claim about the derivation ────────────────────────────
+    struck_ids = record.superseded_row_ids
+    struck_row = next(row for row in record.rows if row.row_id in struck_ids)
+    assert struck_row.adjudicator == struck_by, struck_row.adjudicator
+    assert leaked_role != ENGINEERING_LEAD_ROLE, (
+        "non-vacuity: the struck row must differ IN ROLE from the live one, or the two "
+        "views of this record could not disagree and the guard would observe nothing"
+    )
+    assert struck_by not in {row.adjudicator for row in record.live_rows()}, (
+        "non-vacuity: the struck author is still LIVE, so this fixture cannot distinguish "
+        "record.live_rows() from record.rows"
+    )
+
+    # THE observable, stated as the two views of one record. `all_set` is what the mutation
+    # would see; `live_set` is what AC1.3 says the derivation must see.
+    live_set = tuple(sorted({r.adjudicator for r in record.live_rows() if r.adjudicator}))
+    all_set = tuple(sorted({r.adjudicator for r in record.rows if r.adjudicator}))
+    assert live_set == (_ENGINEERING_LEAD,), live_set
+    assert set(all_set) == {_ENGINEERING_LEAD, struck_by}, all_set
+    forged_assessment = assess_independence(all_set)
+    assert forged_assessment.status == forged, forged_assessment.status
+    assert forged_assessment.status != "NOT_INDEPENDENT", (
+        "non-vacuity: the leaked view derives the SAME status as the live view, so this "
+        "population cannot witness the difference it was generated to witness"
+    )
+
+    # ── the claim: decide_gate derives from the LIVE rows ─────────────────────────────
+    decision = _decide(record, corpus=sealed_corpus_members(), per_finding=True)
+    assessment = decision.independence
+    assert isinstance(assessment, IndependenceAssessment)
+    assert assessment.adjudicators == (_ENGINEERING_LEAD,), (
+        f"the struck row's author leaked into the derived adjudicator set: "
+        f"{assessment.adjudicators!r}. §3.4 retains a superseded row so the correction can "
+        f"be audited — it does not restore its author's vote."
+    )
+    assert assessment.status == "NOT_INDEPENDENT", (
+        f"the derived status is {assessment.status!r}, not 'NOT_INDEPENDENT'. A superseded "
+        f"row authored by the {leaked_role!r} has been counted as a judgement, forging "
+        f"{forged!r} — a disclosure claiming MORE independence than the record supports."
+    )
+    assert leaked_role not in assessment.roles_present, assessment.roles_present
+    assert leaked_role in assessment.roles_absent, assessment.roles_absent
+
+    # ── and the struck author reaches NO published surface (AC2.3 / AC2.5) ────────────
+    assert struck_by not in decision.precision_gate_status, (
+        "the struck author is named on the gate-status sentence a reader quotes"
+    )
+    assert struck_by not in repr(decision.to_payload()["independence"]), (
+        "the struck author is named in the machine-readable independence block"
+    )
