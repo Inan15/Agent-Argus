@@ -256,6 +256,85 @@ _ASSERTION_CALLEES: frozenset[str] = frozenset(
         "Errorf",
         "NoError",
         "Equal",
+        # ══ Story 16.6 — the Python assertion that IS a `raise` ═════════════════════════
+        #
+        # `raise AssertionError("msg")` is one of the most rigorous assertions a Python test
+        # can make — it is what pytest's own assertion rewriting produces — and this table
+        # scored it as ZERO. `_ASSERTION_NAMING_CONVENTION` below is CASE-SENSITIVE
+        # (`\A_?assert\w*\Z`), so `AssertionError` never matched it, and the name was absent
+        # here, so `is_assertion_callee("AssertionError")` returned False. A test whose whole
+        # contract is `else: raise AssertionError("a bad verdict must raise")` therefore scored
+        # NO ASSERTION AT ALL, invented a low density, and was FALSELY FLAGGED — the accusation
+        # direction, which is the one the locked asymmetry cares about.
+        #
+        # MEASURED over the 1,032 recorded `vacuous_test_heuristic` findings, read from their
+        # PINNED git objects: 22 carry the idiom (minions 12 + agent-smith 10; the other three
+        # ratified members contribute ZERO), and admitting the name un-flags SEVEN of them —
+        # 1,032 -> 1,025, delta -7, newly flagged 0. ⚠️ NOT -22, and the difference is not a
+        # shortfall: the other 15 DO gain assertion sites, but stay under the `1/4` floor or
+        # are flagged on the `mock_ratio > 1/2` limb this table cannot reach at all. Direction
+        # is strictly DE-accusation — `assertion_sites` can only RISE and the floor fires from
+        # BELOW — so a newly-flagged finding is structurally impossible here, and the measured
+        # 0 is the confirmation rather than the argument.
+        #
+        # ⛔ ONE NAME, NOT A SECOND SCANNER, and this is the consequential part.
+        # `raise AssertionError("msg")` ALREADY emits an `AssertionError` call edge (it is a
+        # `Call` node), so the ENTIRE measured population is reachable from this one table
+        # entry. `assertion_sites = assertion_call_sites + bare_asserts` runs TWO independent
+        # counters over the same span, so ALSO adding a `raise`-matching LINE scanner would
+        # count all 22 TWICE. The BARE `raise AssertionError` (no parentheses) is a `Name`, not
+        # a call, emits no edge, and stays invisible — DELIBERATELY, measured at 0 of 1,032
+        # (`DN-16-6-2`, filed as `DF-16-6-B`). `TC-ArgusAgent-DETECT-001-141` pins that
+        # residual so nobody "completes" it into the double count.
+        #
+        # ⛔ DN-14-3-5, ON ITS OWN POPULATION — a LABELLED sub-note, deliberately NOT a row of
+        # the table below. That table's columns are `py collisions` / `js/ts benefit` over
+        # 4,046 files of three ratified members, and BOTH are the wrong instrument for this
+        # name: a `js/ts benefit` for a PYTHON builtin is 0 by construction, and `py
+        # collisions` there counts EVERY call site of a name (`match` 706, `Error` 164), which
+        # for `AssertionError` is ~184 rather than the 2 that are actually collisions. Writing
+        # these figures into those columns would record a false value in a table later readers
+        # treat as commensurable. So: its own axes, its own population, labelled as such.
+        #
+        #     instrument   stdlib `ast` — deliberately NOT Argus's own index, because deriving
+        #                  a collision argument from the thing under test is circular
+        #     population   5,086 unique `*.py` paths; 0 unparseable, 0 dropped
+        #     inclusion    the Argus tree + the FIVE ratified corpus checkouts, each walked
+        #                  with `.venv` / `venv` / `site-packages` / `node_modules` pruned,
+        #                  PLUS this environment's `site-packages` and the CPython 3.11 stdlib
+        #                  `Lib/`, walked whole. De-duplicated BY RESOLVED ABSOLUTE PATH, so a
+        #                  vendored copy of a third-party package is NOT counted twice — the
+        #                  `site-packages` copy is the single one counted.
+        #
+        #     python benefit    (in-raise sites)     182     `raise AssertionError(...)`
+        #     python collisions (non-raise sites)      2
+        #     benefit/cost                            91x    ✅ admitted
+        #
+        # ⚠️ The re-derivation above measures 182 : 2 over 5,086 files where Story 16.6's §0.5
+        # recorded 183 : 2 over 5,085. The corpus checkouts are LIVE working trees nobody in
+        # this story controls and they moved between measurements; `DN-14-3-5` consumes the
+        # RATIO, which is 91x either way and clears the rule by two orders of magnitude. The
+        # disagreement is recorded rather than smoothed, and the DECISION does not turn on it.
+        #
+        # THE TWO COLLISIONS, NAMED rather than summarised — and neither is a defect direction:
+        #   · `site-packages/stevedore/tests/test_extension.py:118`
+        #   · Argus's own `tests/test_open_llm_adapter.py:391` —
+        #     `post_error=AssertionError("must not POST")`, an `AssertionError` CONSTRUCTED as
+        #     a tripwire value for a fake to raise later. That is still an assertion device,
+        #     and in any case the error direction here is flag-REDUCING.
+        # ⛔ The accepted cost is asserted BY EXECUTION in `tests/test_vacuous_vocabulary.py`
+        # (`TC-ArgusAgent-DETECT-001-140`), never by this prose: recording an accepted cost in
+        # prose ALONE was the mistake `-133`'s own docstring was written to stop repeating.
+        #
+        # ⚠️ `pytest.raises(AssertionError)` is NOT a collision and NOT a double count.
+        # Measured: that span emits `['raises', 'check']` and NO `AssertionError` edge, because
+        # the class name there is a bare `Name` ARGUMENT and not a `Call`. `raises` counted
+        # once before this name was admitted and counts exactly once after.
+        #
+        # ⛔ WIDE TABLE ONLY. `_CORROBORATION_ASSERTION_CALLEES` stays FROZEN at 23 names
+        # (`DN-14-2-1`), so nothing here can reach fact (a) or fact (b): this story promotes
+        # nothing, moves no threshold, and leaves the gate outcome exactly where it was.
+        "AssertionError",
     }
 )
 
