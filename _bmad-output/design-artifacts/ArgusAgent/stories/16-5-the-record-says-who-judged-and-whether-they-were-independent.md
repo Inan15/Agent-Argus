@@ -1161,6 +1161,165 @@ that claim** with `tests/test_gate_ordering.py` rather than asserting it.
       whole-module fenced, so this assertion now carries weight it did not carry before.
 - [x] Fill the Dev Agent Record below; set the story to `review`; update `sprint-status.yaml`.
 
+### Review Findings
+
+**Method note.** This review re-derived the story's own claimed evidence rather than trusting
+it: re-ran the full suite (1,686 passed / 0 failed, exit 0), `mypy argus` (94 files clean),
+`bandit -r argus --severity-level medium` (0 medium / 0 high), both builders `--check` (exit 0
+each), and `tests/test_module_size_ceiling.py` (green). Confirmed by execution: `AC7.1`'s
+must-not-move list is byte-unchanged (`git diff --stat 52143eb..HEAD` over all fenced paths
+returns nothing); the AC7.1a budget on the four §2.3 forwarders is exactly +4/+3/+3/+3 with zero
+deletions and no `gate_independence` import in any of the four; `gate_breadth.py:366-368` is
+byte-as-shipped; the protocol edit is +57/-0 under the existing V1.3 with no `V1.4` row;
+`gate_decision.py` is 1,132 lines with `DF-16-5-A` filed, not split; the README/CHANGELOG module
+figures (93→94 / 101→102 / 100→101) are verified green against a real build
+(`tests/test_instrument_disclosure*.py`). Four mutation spot-checks were run, each restored
+immediately (`git status --porcelain` clean after every one): (1) a fifth `precision_evaluable`
+conjunct gating on independence — RED on `-109`/`-111`; (2) the raising vocabulary lookup
+replaced by a silent `dict.get` default — RED on `-105`; (3) `decide_gate`'s `record.live_rows()`
+replaced by `record.rows` (including superseded rows) — **no test in the targeted surface caught
+this**, see finding below; (4) the byte-identical-when-omitted default widened to inject text —
+RED on both the new `-106` guard and the pre-existing `test_TC_ArgusAgent_DOGFOOD_001_54` guard.
+
+- [x] [Review][Patch] Historical `deferred-work.md` entry byte-edited in the same commit that
+      claims "not one byte of the entry above it is edited"
+      [`_bmad-output/design-artifacts/ArgusAgent/deferred-work.md:5257`] — Commit `9aea1be`
+      (the Task-0 baseline-repair commit this story itself flags as its highest-value review
+      target) silently dropped a literal `\r` byte from a pre-existing, pre-16.5 entry
+      describing `argus/pipeline_stages.py:124` (the `DF-15-2-B` / `DF-14-3-A` discussion).
+      Before: `` the reason `\r` / ` `` (an inline code span whose content is the literal CR
+      byte, followed by one whose content is the literal LF). After: `` the reason ` / ` ``
+      (the CR byte is gone; both spans now read as a bare newline). This is a genuine content
+      edit to a **historical** entry, not a formatting artifact — verified byte-for-byte with
+      `git show 52143eb:...` vs `git show 9aea1be:...`. It violates AC6.4 ("deferred-work.md is
+      append-only… no historical entry is edited") and directly contradicts the commit message
+      and the new `status:` field's own text ("A PURE APPEND: not one byte above is edited"),
+      which the diff itself falsifies (`git diff --stat` on this commit reports
+      `24 insertions(+), 1 deletion(-)`, not 0 deletions). This is exactly the `TC-ArgusAgent-
+      DOCS-001-78` / "16.1's review caught exactly this, remedy was restoration" failure class
+      the story's own Dev Notes warn about, recurring inside this story's own repair commit.
+      **Fix:** restore the literal `\r` byte at that exact position (a one-byte edit), and audit
+      whether the same editing pass touched any other historical byte in this file.
+
+- [x] [Review][Patch] No guard exercises independence-status scoping to LIVE rows (excludes
+      superseded rows) [`argus/precision/gate_decision.py:856`, `tests/test_gate_independence.py`]
+      — AC1.3 claims the status is "reached through the `adjudicators` tuple `decide_gate`
+      already computes" off `record.live_rows()`, explicitly scoped to live (non-superseded)
+      rows. Mutation-tested: replacing `live = record.live_rows()` with `live = record.rows` in
+      `decide_gate` and re-running the full targeted surface (`tests/test_gate_independence.py`,
+      `tests/test_gate_decision.py`, `tests/test_adjudication_record.py`,
+      `tests/test_gate_decision_artifact.py`) produced **zero failures** — every test passed
+      unchanged. No generated population in `tests/test_gate_independence.py` includes a
+      superseded row, so a regression that let a superseded row's adjudicator leak into the
+      independence derivation (e.g. quietly upgrading a `NOT_INDEPENDENT` record to
+      `SECOND_REVIEWER_INTERNAL` or `EXTERNAL_ADJUDICATOR_PARTICIPATED` because a struck row
+      happened to be authored by a different role) would go undetected. This does not manifest
+      on the live committed record today (0 superseded rows), so nothing is currently
+      mis-derived, but it is a real GUARD-ADEQUACY gap against AC5.4's own "adversarial variant
+      generated from the record the guard closes over" requirement, in a module whose whole
+      purpose is a disclosure a reader trusts. **Fix:** add a generated population with at least
+      one row struck by a `supersedes` correction whose adjudicator differs in role from the
+      live row that replaces it, and assert the derived `IndependenceAssessment` reflects only
+      the live row's author.
+
+### Review Fix Round 1 — 2026-08-23, dev-story (Opus 5)
+
+**Both findings resolved. 2 of 2. No finding rebutted, none deferred, no guard weakened.**
+⛔ `argus/**` and `scripts/**` are **byte-unchanged by this round** (`git diff HEAD -- argus/
+scripts/` is empty), so §2.5's artifact-currency order is **not re-armed**: no dogfood
+regeneration, no builder re-run, and `gate_decision.py` stays at **1,132** — no split trigger
+crossed by the fix, and `DF-16-5-A` is neither closed nor amended.
+
+**Finding 1 — the append-only violation (AC6.4), `deferred-work.md:5257`. RESTORED, and the
+audit went well past the one byte.**
+
+The review was right in every particular. `9aea1be` turned a literal **CR** byte into a line
+break, splitting one historical line into two, inside an entry describing
+`argus/pipeline_stages.py:124`. The prose there reads *"the reason `<CR>` / `<LF>` are not part
+of the problem"* — two inline code spans whose CONTENT is the two line-ending bytes being
+discussed. Dropping the CR did not merely reflow a line: it made the sentence contrast a
+newline **with itself**, destroying the very distinction the entry was written to draw. The
+remedy is 16.1's: **restoration**, not an amended guard.
+
+⛔ **The mechanism, found by the audit and worth more than the byte.** `core.autocrlf=true` with
+**no `.gitattributes`** — but git stores this file **verbatim**, because a **lone CR makes
+git classify a file as binary** (`convert_is_binary` returns 1 on `lonecr`), which silently
+switches CRLF normalisation OFF. So: the blob carried LF endings **plus** one lone CR; the
+worktree copy was byte-identical; an editor then rewrote the file as CRLF, which both
+normalised every terminator **and** consumed the lone CR. On commit git saw no lone CR, decided
+the file was text after all, and normalised CRLF→LF — landing exactly one net deletion.
+⛔ **This bit me too, in the fix's first attempt:** restoring the CR into the CRLF worktree flipped
+git back to binary mode and staged **5,643 CRLF terminators** into the blob. The restoration was
+therefore rebuilt **from the blob**, not from the worktree, and the file is now written with LF
+terminators + the single lone CR. `worktree bytes == staged blob bytes` is asserted.
+
+**What the audit covered, and what it found.** A line-level alignment (`difflib`, `autojunk=False`)
+over the **byte** content of every blob in the arc — `52143eb → 9aea1be → c5ca6a7 → cd4cbe4 →
+ca0dee2 → 927548d → 028c3c8` — comparing every commit against its predecessor, plus a whole-file
+comparison of the pre-story baseline against the current file. **Result: exactly ONE change in
+the entire arc modified a pre-existing line — the CR at 5257.** Every other change is a pure line
+INSERT: 22 lines (the `DF-15-2-D` `status:` field, `9aea1be`) and 45 lines (`DF-16-5-A`,
+`927548d`). Zero pre-existing lines deleted or replaced anywhere else; commits `c5ca6a7`,
+`cd4cbe4`, `ca0dee2` and `028c3c8` touched the file not at all. Proven two ways: the alignment
+reports `HISTORICAL LINES DELETED OR REPLACED: 0`, and the baseline was **reconstructed
+byte-exactly** (424,300 bytes) by deleting only the inserted ranges from the current file.
+CR count is back to **1**, matching `52143eb`.
+
+⛔ **One further regression the audit surfaced, reported rather than absorbed:** `927548d` also
+dropped the file's **trailing newline** (`\ No newline at end of file`), which it had carried for
+its entire prior history. Not a historical-byte edit — the old content remained a strict prefix —
+but a POSIX text-file violation on a repo whose CI runs an ubuntu matrix. **Restored** (a one-byte
+pure append at EOF, touching no historical byte). Recorded here rather than done silently.
+
+**Finding 2 — the unguarded LIVE-row derivation (AC1.3 / AC5.4). GUARDED, and the guard is
+proven non-vacuous by the reviewer's own mutation.**
+
+New: `TC-ArgusAgent-PRECISION-001-114` in `tests/test_gate_independence.py`, with a
+`_superseded_population` builder that extends `_population` (so every pinned term — member
+spread, size, locators, rule ids, dispositions — is **inherited, not re-typed**, keeping §2.8's
+lockstep discipline). It strikes one row via a real `supersedes` correction: the struck row and
+its replacement share a `finding_id` by construction, so only `row_id`, `adjudicator`, `reason`
+and `supersedes` move. **GENERATED adversarial variants: 2** — one per registered role that is
+not the Engineering Lead, each forging a *different* status (`SECOND_REVIEWER_INTERNAL`,
+`EXTERNAL_ADJUDICATOR_PARTICIPATED`), which is precisely the *"quietly upgrading a
+`NOT_INDEPENDENT` record"* leak the review named.
+
+⛔ **MUTATION-VERIFIED, at the real seam.** `argus/precision/gate_decision.py:856`,
+`live = record.live_rows()` → `live = record.rows` (the review's own mutation, applied
+length-preservingly): **BOTH parametrised `-114` cases go RED** on the leaked adjudicator set,
+while every other guard in `test_gate_independence.py`, `test_gate_decision.py`,
+`test_adjudication_record.py` and `test_gate_decision_artifact.py` stays **green** — so the guard
+is targeted at exactly the defect that previously escaped, and nothing else changed to mask it.
+Run with `PYTHONDONTWRITEBYTECODE=1` and a cleared `__pycache__`; restored **in the same command**
+so the tree could not be left mutated; `git status --porcelain` for that file confirmed **empty**
+afterwards. Non-vacuity is asserted **first and structurally**: the two views of the *same*
+record are asserted to derive *different* statuses before any claim about the derivation is made.
+
+`_decide` gained one **defaulted** keyword (`per_finding=False`) so the one fixture carrying a
+superseded row can pass a per-**finding** expected population — a correction and the row it
+strikes share a `finding_id`, and a real emitted population is per finding, never per row. Every
+pre-existing caller passes byte-identical arguments; no existing guard's behaviour moves.
+
+**`DF-16-5-B` filed** (pure append): `tests/test_gate_independence.py` **962 → 1,127**, which
+crosses §0.5's *"file an entry between 1,100 and 1,150"* band — the same pre-registered rule that
+produced `DF-16-5-A`, firing as designed rather than being discovered later. **Not split** (1,127
+< 1,150) and **not shaved** — the `-114` docstring carries the GUARD-ADEQUACY content the clause
+requires, and that is named in the entry as the thing not to reclaim.
+
+⛔ **Standing constraints re-verified after the fix:** `SECTION_5_CONDITIONS` still **7**;
+`precision_evaluable` still **4** conjuncts; no `V1.4` row; `adjudication-record.json`
+byte-unchanged; `gate_breadth.py:366-368` byte-as-shipped; `TC-ArgusAgent-DOCS-001-78` and
+`ledger_closed_ids` **unamended and unweakened** (the record was wrong, not the guard); no
+`_EXEMPT_BY_DESIGN` entry added; nothing ratified, no detector run, no disposition written, no
+role filled; `DF-13-5-A` **OPEN and UNSPENT**.
+
+**Gates, all re-run after the fix:** full suite `ARGUS_REQUIRE_LANGUAGE_GRAMMARS=1` —
+**1,688 passed**, exit **0** (1,686 + the 2 new `-114` cases) · `mypy argus` — **94 source files,
+no issues** · `bandit -r argus --severity-level medium` — **0 medium / 0 high** ·
+`tests/test_module_size_ceiling.py` — **6 passed**, no `_EXEMPT_BY_DESIGN` entry added ·
+`scripts/build_gate_decision.py --check` **exit 0** · `scripts/build_adjudication_record.py
+--check` **exit 0**.
+
 ---
 
 ## Dev Agent Record
@@ -1336,7 +1495,8 @@ the diff can falsify.
 **New**
 
 - `argus/precision/gate_independence.py` (328)
-- `tests/test_gate_independence.py` (962)
+- `tests/test_gate_independence.py` (962 at implement; **1,127** after review fix round 1 —
+  `-114` and its `_superseded_population` builder; `DF-16-5-B` filed for the band)
 
 **Modified — `argus/`**
 
@@ -1362,7 +1522,10 @@ the diff can falsify.
   *(all three REGENERATED by `scripts/regenerate_dogfood_artifacts.py`, in the §2.5 order)*
 - `_bmad-output/design-artifacts/ArgusAgent/precision-validation-protocol.md` *(dated block, +57/-0)*
 - `_bmad-output/design-artifacts/ArgusAgent/architecture.md` *(dated addition, 0 bytes removed)*
-- `_bmad-output/design-artifacts/ArgusAgent/deferred-work.md` *(two pure appends, 0 deletions)*
+- `_bmad-output/design-artifacts/ArgusAgent/deferred-work.md` *(implement round: two pure
+  appends. **Review fix round 1: the `\r` byte at `:5257` RESTORED and the EOF newline restored,
+  plus `DF-16-5-B` appended** — the whole arc now audits as `HISTORICAL LINES DELETED OR
+  REPLACED: 0` against `52143eb`)*
 - `README.md` · `CHANGELOG.md` *(published module figures, AC6.5)*
 - `_bmad-output/design-artifacts/ArgusAgent/stories/16-5-the-record-says-who-judged-and-whether-they-were-independent-validation-2026-08-23.md`
   *(one table row split; every word preserved, no finding changed)*
@@ -1376,9 +1539,11 @@ the diff can falsify.
 
 | Date | By | Change |
 |---|---|---|
+| 2026-08-23 | dev-story (Opus 5, **review fix round 1**) | **Addressed code review findings - 2 of 2 items resolved; `in-progress` -> `review`.** ⛔ **`argus/**` and `scripts/**` byte-unchanged by this round**, so §2.5's artifact-currency order is not re-armed and `gate_decision.py` stays at 1,132. **Finding 1 (Patch, High - AC6.4 append-only)** - the literal `\r` byte `9aea1be` dropped from the historical `deferred-work.md:5257` entry is **RESTORED**, the remedy 16.1's review set. The audit went well past the one byte: a byte-level `difflib` alignment of **every blob in the arc** (`52143eb`→`9aea1be`→`c5ca6a7`→`cd4cbe4`→`ca0dee2`→`927548d`→`028c3c8`) plus a whole-file baseline comparison found **exactly ONE change in the entire arc that modified a pre-existing line - that CR** - with every other change a pure INSERT (22 lines, the `DF-15-2-D` `status:` field; 45 lines, `DF-16-5-A`) and four commits not touching the file at all. Proven twice: the alignment reports `HISTORICAL LINES DELETED OR REPLACED: 0`, and the 424,300-byte baseline was **reconstructed byte-exactly** by removing only the inserted ranges. ⛔ **Root cause found and it is a trap, not a slip:** `core.autocrlf=true` with no `.gitattributes`, and **a lone CR makes git classify the file as binary**, silently disabling CRLF normalisation - so an editor rewriting the file as CRLF consumed the lone CR, after which git resumed normalising and booked one net deletion. **The fix's own first attempt hit the same trap in reverse** (restoring the CR into a CRLF worktree would have staged 5,643 CRLF terminators), so the restoration was rebuilt **from the blob**; `worktree bytes == staged blob bytes` asserted. Also **restored the EOF newline** `927548d` dropped - not a historical-byte edit, but a POSIX violation on an ubuntu CI matrix - reported rather than absorbed. ⛔ `TC-ArgusAgent-DOCS-001-78` and `ledger_closed_ids` **unamended and unweakened**: the guard was right, the record was wrong. **Finding 2 (Patch, Medium - AC1.3/AC5.4 guard adequacy)** - NEW **`TC-ArgusAgent-PRECISION-001-114`** with a `_superseded_population` builder extending `_population` (every pinned term inherited, §2.8 lockstep preserved), striking one row by a real `supersedes` correction whose author differs **in role** from the live replacement. **2 GENERATED variants**, one per registered non-Engineering-Lead role, each forging a *different* status - exactly the "quietly upgrading a `NOT_INDEPENDENT` record" leak the review named. ⛔ **Proven non-vacuous by the reviewer's own mutation**: `gate_decision.py:856` `live_rows()`→`rows` drives **both** `-114` cases RED while every other guard in the four targeted files stays green; run under `PYTHONDONTWRITEBYTECODE=1` with cleared `__pycache__`, **restored in the same command** so the tree could never be left mutated, `git status --porcelain` empty after. `_decide` gained one defaulted `per_finding` keyword (a correction shares a `finding_id` with the row it strikes; a real emitted population is per finding, never per row) - every pre-existing caller byte-identical. **`DF-16-5-B` FILED** (pure append): `tests/test_gate_independence.py` **962 → 1,127**, crossing §0.5's 1,100-1,150 filing band - not split (< 1,150), **not shaved** (the `-114` docstring carries mandated GUARD-ADEQUACY content). ⛔ Re-verified after the fix: `SECTION_5_CONDITIONS` still **7**, `precision_evaluable` still **4** conjuncts, no `V1.4` row, `adjudication-record.json` byte-unchanged, `gate_breadth.py:366-368` byte-as-shipped, no `_EXEMPT_BY_DESIGN` entry, nothing ratified, no detector run, no disposition written, no role filled, `DF-13-5-A` **OPEN and UNSPENT**. Gates: full suite **1,688 passed exit 0** · `mypy argus` 94 files clean · `bandit` 0 medium/0 high · ceiling 6 passed · both builders `--check` exit 0. |
 | 2026-08-23 | dev-story (Opus 5) | **IMPLEMENTED; `ready-for-dev` -> `in-progress` -> `review`.** Six commits on the Epic-16 arc. **The derived answer over the live record is `NOT_INDEPENDENT`** - 31 of 31 live human judgements by `"XAgent007 (Engineering Lead)"` - and it now rides **on the `gate_status` sentence itself**, after the precision figure, in all three renderer branches and on all four renderers `precision_gate_status` can return, plus a structured `independence` payload block. NEW `argus/precision/gate_independence.py` (328) and `tests/test_gate_independence.py` (962, `-105`..`-112`), plus `-113` in `test_gate_decision_artifact.py`. **NOTHING IS GATED and it is proven by execution:** `SECTION_5_CONDITIONS` still **7**, `precision_evaluable` still **4** conjuncts (counted out of the shipped AST), and flipping the status through all three non-empty members leaves outcome, reason, all seven verdicts, `precision_evaluable`, `meets_threshold` and the closure path byte-identical over BOTH an otherwise-`CLEARED` and a `BLOCKED` population. **AC7.1a held exactly** - the four forwarders are +4/+3/+3/+3 with **zero** deletions - and NFR-P1 was **proven by rendering**: 26 surfaces, sha256 `27dde086258766f5`, byte-identical against the pre-story tree. **TEN mutations, all RED**, at the real seam, tree restored byte-exact after each. **§0's next false premise, FOUND: the Task-0 baseline was RED**, not green - `TC-ArgusAgent-DOCS-001-78` on two governance-record defects (a machine-INVISIBLE but real `DF-15-2-D` closure, and a line-scoped analyzer sweeping four OPEN ids off one table row), both repaired additively without touching the guard. `gate_decision.py` **1,084 -> 1,132** landed in the 1,100-1,150 band, so **`DF-16-5-A` was FILED, not split** - the rule firing as designed. Two re-arms handled as decisions, not absorbed: the test-tree-reach registry, and the seal-citation rule, answered with `Evidence-partition: none` on the `feat` commit. ⛔ **`gate_breadth.py:366-368` left byte-as-shipped** (`DN-16-5-7` read, correction declined by the operator). ⛔ Nothing ratified, no detector run, no disposition written, no role filled, no threshold moved, no `V1.4` row, `adjudication-record.json` byte-unchanged, `DF-13-5-A` **OPEN and UNSPENT**. Gates: full suite exit 0 · `mypy argus` 94 files clean · `bandit` 0 medium / 0 high · both builders `--check` exit 0 · ceiling guard green with **no `_EXEMPT_BY_DESIGN` entry added** (still 3). |
 | 2026-08-22 | create-story (Opus 5) | Story contexted at HEAD `52143eb`; `backlog -> ready-for-dev`. |
 | 2026-08-23 | validate (read-only) | Story-readiness validation returned **FAIL**. Every §0 figure re-derived **CLEAN**; 3 BLOCKING + 4 minor findings, all in the ACs. Report: `...-validation-2026-08-23.md`. No file modified. |
 | 2026-08-23 | create-story (amendment mode) | **Seven targeted edits. No re-contexting, no re-research, no scope change, status stays `ready-for-dev`.** **B-1** — AC2.3 was unsatisfiable inside AC7.1's fence (none of its four renderers lives in `gate_decision.py`; the three arm renderers short-circuit). `gate_breadth.py` / `gate_seal.py` / `gate_yield.py` moved **AC7.1 -> AC7.2**, joined by `adjudication.py`, under a new **AC7.1a one-forwarded-keyword budget**; §2.3 rewritten with the measured call sites; Task 1's projection extended over all four (**no new NFR-M1 trigger**); §0.5 gained their rows; Tasks 1/4 and AC2.3 restated. **B-2** — AC4.3 contradicted AC5.3: scoped the inertness sweep to the **non-empty** members and recorded §5(4)'s pre-existing `adjudicators` coupling (`gate_decision.py:626-690`, `:1021`, `:977`) as a **found fact**; AC5.3 clarified. **B-3** — *"Nothing in the repository reads it"* measured **FALSE**; reframed as **"unguarded by any test"**, `_recorded_cleared_condition` added to §0.7, §0.1 callout and §1.1 qualified. **M-1** artifact root qualified once in §0.0. **M-2** `replay_harness.py:788`'s `registry_module()` indirection marked deliberate and out of scope. **L-1** `epics.md` cite `:3191` -> `:3199`. **L-2** AC3.1's walk exclusion set named. ⛔ **No `DN-*` overturned; `SECTION_5_CONDITIONS` still 7; `precision_evaluable` still 4 conjuncts; no `argus/`, `tests/` or `scripts/` file touched.** |
 | 2026-08-23 | validate (read-only, **round 2**) | Story-readiness validation returned **CONCERNS** — implementable, two items to fix. **All three round-1 blockers confirmed GENUINELY RESOLVED**, re-derived against the tree rather than against the amendment's claims; the AC7.1a forwarding budget survived adversarial scrutiny including the compatibility check (**no shipped guard closes over the signatures or call kwargs of the four widened modules**); **all 21 rows of §0.5 re-measured EXACT**; all invariants intact. `C-1` un-rebutted `DN-16-1-1` conflict, `C-2` measurably wrong AC4.3 mechanism, plus `L-1`..`L-4`. Report: `...-validation-2026-08-23-round-2.md`. No story byte, source byte or sprint-status value changed. |
 | 2026-08-23 | create-story (amendment mode, **2nd pass**) | **Six targeted edits. No re-contexting, no re-research, no scope change, status stays `ready-for-dev`.** **C-1** — NEW **`DN-16-5-7`** (**OPERATOR-AUTHORISED**), recording BOTH halves: `DN-16-1-1`'s stated rationale (*"a signature shared with the cartridge path"*, shipped at `gate_breadth.py:366-368`) is **FALSE as applied to the fold** — re-verified: `fold_adjudicated_precision` has **exactly one** production caller (`gate_decision.py:811`), and `compute_precision` returns **`PrecisionResult`** (`replay_harness.py:386`) without calling it; what the two paths actually share is `precision_fraction` (`replay_harness.py:291`, its own docstring at `:296`) and `precision_gate_status_for` (`:729`) — **not the fold** — WHILE `DN-16-1-1`'s **holding** (*the fold is not forked*) **STANDS UNREVERSED**, since one inert byte-identical-defaulted keyword is not a fork. Cross-referenced from the *"CITES rather than reopens"* list and carved out of **AC7.4** as a named, already-adjudicated non-trigger. ⛔ **`gate_breadth.py:366-368` deliberately LEFT AS SHIPPED — correcting it was considered and DECLINED; `DN-16-5-7` lives in this story only.** **C-2** — AC4.3 limb 2 (and its AC5.3 repeat) ordered a **measurably wrong mechanism** into a guard docstring *as a found fact*: re-verified that `AdjudicationRow.__post_init__` (`adjudication.py:376-377`) refuses any TP/FP/BORDERLINE row without a registered adjudicator, so an empty adjudicator set implies **all live rows UNADJUDICATED** -> record **NON-EXHAUSTIVE** -> `decide_gate` blocks at **`:956` on exhaustiveness, AHEAD of** the empty-denominator branch at `:977`; limb 2 restated and cite **`:1021` -> `:1022`** (`:1021` is `closure = yield_closure_path(...)`). ⛔ **AC4.3's scoping decision is correct and UNTOUCHED.** **L-1** §0.5 prose `640` -> **`560`** (`gate_yield.py`'s headroom had been transcribed as its line count; the table row and Task 1 were already right). **L-2** Task 4 + AC7.2 now state that the `live`/`adjudicators` derivation at `:820-823` must **move ABOVE** the fold call at `:811` — a **re-order**, not a one-line forward. **L-3** §0.0 / Task 0 working-tree expectation now reads *"plus this story's validation reports"* (**four** entries, not two). **L-4** Task 4's byte-identity confirmation list gained the three direct `precision_gate_status_for` callers — `tests/test_gate_flip_path.py`, `tests/test_precision_replay.py`, `tests/test_validation_corpus.py`. ⛔ **No `DN-*` overturned; `DN-16-5-4`/`DN-16-5-5` untouched; `SECTION_5_CONDITIONS` still 7; `precision_evaluable` still 4 conjuncts; no eighth §5 condition; no `argus/`, `tests/` or `scripts/` file touched.** |
+| 2026-08-23 | code-review (Sonnet 5, iteration 1) | **FAIL — two Patch findings, `review -> in-progress`.** Re-ran every claimed gate independently (full suite 1,686/1,686, `mypy` 94 files clean, `bandit` 0 medium/high, both builders `--check` exit 0, ceiling guard green) and four targeted mutation spot-checks, each restored (`git status --porcelain` clean after every one): a fifth `precision_evaluable` conjunct — RED; the raising vocabulary lookup replaced by a silent default — RED; the byte-identical-when-omitted default widened to inject text — RED on both a new and a pre-existing guard; `decide_gate`'s `record.live_rows()` replaced by `record.rows` — **RED on nothing** (finding below). Confirmed clean: `AC7.1`'s must-not-move list byte-unchanged, `AC7.1a`'s budget exactly +4/+3/+3/+3 with no `gate_independence` import in the four forwarders, `gate_breadth.py:366-368` byte-as-shipped, the protocol edit +57/-0 under V1.3 with no `V1.4` row, `gate_decision.py` 1,132 with `DF-16-5-A` filed not split, the README/CHANGELOG module-figure claims verified against a real build. Two findings written to Review Findings above: (1) **Patch, High** — the Task-0 baseline-repair commit (`9aea1be`) silently dropped a literal `\r` byte from a historical, pre-16.5 `deferred-work.md` entry while its own commit message and new `status:` field claim "not one byte of the entry above it is edited" — a real AC6.4 (append-only) violation the diff itself falsifies (`24 insertions(+), 1 deletion(-)`), recurring inside the very commit this story flagged as its own highest-value review target. (2) **Patch, Medium** — no generated population in `tests/test_gate_independence.py` exercises a superseded row, so nothing in the targeted guard surface catches `decide_gate` deriving independence from all rows instead of live rows only — a guard-adequacy gap against AC5.4, not a live mis-derivation (0 superseded rows on the committed record today). Neither finding is `decision-needed`; both have unambiguous fixes. Nothing operator-owned was touched by this review: no ratification, no detector run, no disposition written, no role filled, no `V1.4` row, seal unopened, `DF-13-5-A` still OPEN and UNSPENT. |
