@@ -343,6 +343,18 @@ _MODULES_NAMING_THE_TEST_TREE_IMPORT: frozenset[str] = frozenset(
         # module these two were cut out of.
         "argus/precision/gate_conditions.py",
         "argus/precision/gate_evidence.py",
+        # ADDED 2026-08-23 (Story 16.5). ``gate_independence`` derives WHO judged the
+        # adjudication and whether they were independent of the tool's authors. It joins the
+        # set TRANSITIVELY and by the narrowest possible edge: its ONLY import is
+        # ``adjudication`` (for ``PROTOCOL_ADJUDICATOR_ROLES`` and ``adjudicator_role``),
+        # which has named the repository-only tree in prose since 2026-08-16. The module
+        # itself writes ``_registry`` nowhere, performs NO I/O of any kind, and resolves NO
+        # path at module level (``DF-9-2-A``) — it cannot, because every input arrives as an
+        # argument: ``assess_independence`` takes the already-derived ``adjudicators`` tuple
+        # and nothing else. This addition is DELIBERATE, which is what this registry exists to
+        # force someone to say, and the wheel-importability claim remains
+        # TC-ArgusAgent-RELEASE-001-20's, asserted there over a real built artifact.
+        "argus/precision/gate_independence.py",
         # ADDED 2026-08-20 (Story 16.2). §5's SEAL condition and the partition rule. It joins
         # TRANSITIVELY through gate_breadth / gate_disclosure, resolves NO path at module level
         # and performs no I/O at all — asserted STRUCTURALLY by an AST walk of its own imports

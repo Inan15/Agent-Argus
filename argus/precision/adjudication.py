@@ -851,6 +851,7 @@ def fold_adjudicated_precision(
     floor_n: int,
     protocol_cleared: bool = False,
     protocol_path: str = PROTOCOL_PATH,
+    independence_note: str | None = None,
 ) -> AdjudicatedPrecision:
     """Fold the human dispositions into the SHARED precision arithmetic (DN-1).
 
@@ -865,6 +866,8 @@ def fold_adjudicated_precision(
     recorded"*), then **exhaustiveness** (§4: full corpus, not sampled), and only then the
     ratio. A precision figure produced ahead of either would be a number resting on
     nothing.
+
+    Story 16.5: ``independence_note`` is FORWARDED verbatim, never derived here (AC7.1a).
     """
     determinism = record.determinism_precondition()
     exhaustive = record.exhaustiveness(expected_finding_ids)
@@ -969,5 +972,6 @@ def fold_adjudicated_precision(
             population_label="eligible validation-set repositories",
             evaluable=precision is not None,
             unevaluable_reason=unevaluable_reason,
+            independence_note=independence_note,
         ),
     )

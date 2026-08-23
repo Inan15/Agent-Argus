@@ -670,6 +670,7 @@ def sealed_precision_gate_status(
     fold: AdjudicatedPrecision,
     seal: SealAssessment,
     protocol_path: str,
+    independence_note: str | None = None,
 ) -> str:
     """The gate-status sentence when the SEAL is what makes precision unevaluable.
 
@@ -692,6 +693,7 @@ def sealed_precision_gate_status(
     population it does not bind (NFR-P1 byte-stability of the precision surface).
 
     PURE (AR8).
+    Story 16.5: ``independence_note`` is FORWARDED verbatim, never derived here (AC7.1a).
     """
     if fold.evaluable == (fold.evaluable and seal.holds):
         return fold.gate_status
@@ -704,6 +706,7 @@ def sealed_precision_gate_status(
         population_label="eligible validation-set repositories",
         evaluable=False,
         unevaluable_reason=seal.unevaluable_reason,
+        independence_note=independence_note,
     )
 
 

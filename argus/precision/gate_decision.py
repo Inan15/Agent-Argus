@@ -134,6 +134,11 @@ from argus.precision.gate_disclosure import (
     derive_residual_completion_bound,
 )
 from argus.precision.gate_evidence import CleanRepoEvidence, CorpusReadProof
+from argus.precision.gate_independence import (
+    IndependenceAssessment,
+    assess_independence,
+    independence_note,
+)
 from argus.precision.gate_seal import (
     SEAL_CONDITION_ID,
     SealAssessment,
@@ -167,13 +172,16 @@ __all__ = [
     "ConditionResult",
     "CorpusReadProof",
     "GateDecision",
+    "IndependenceAssessment",
     "MissingSection5Condition",
     "UnregisteredConditionVerdict",
     "UnregisteredGateOutcome",
     "VacuousDecisionError",
     "condition_verdict_meaning",
     "decide_gate",
+    "assess_independence",
     "gate_outcome_meaning",
+    "independence_note",
     "section_5_condition",
 ]
 
@@ -306,6 +314,15 @@ class GateDecision:
     #: now RECORDED — with the mechanically-recognised ``NOT ESTABLISHED`` marker when it
     #: cannot be established — rather than left to the reader to assume.
     commit_sha_provenance: str = "NOT RECORDED BY THIS RUN"
+    #: Story 16.5. WHO judged this adjudication, DERIVED from :attr:`adjudicators` — the
+    #: tuple this decision already computes off the record's live rows. ⛔ **A DISCLOSURE,
+    #: never a condition:** §5 still carries SEVEN conditions, :attr:`precision_evaluable`
+    #: still has exactly FOUR conjuncts, and nothing on this field can move an outcome in
+    #: either direction for any population. ``None`` is the pre-16.5 shape and stays
+    #: constructible, so no existing construction site moved and every surface built without
+    #: it renders byte-identical bytes. Defaulted last, the ``corpus_read_proof`` /
+    #: ``breadth`` / ``seal`` / ``yield_`` precedent.
+    independence: IndependenceAssessment | None = None
 
     def __post_init__(self) -> None:
         gate_outcome_meaning(self.outcome)
@@ -376,22 +393,39 @@ class GateDecision:
         a population that fails all three is told about breadth. Reporting a later reason
         would tell a reader the evidence was un-sealed — or the detector quiet — when in fact
         there was not enough of it to ask.
+
+        **Story 16.5 — the independence note rides on WHICHEVER renderer is returned.** All
+        four carry it: ``fold.gate_status`` (the fold rendered it in), and each arm renderer
+        forwards the same opaque clause on its RE-RENDER path. The short-circuit path needs
+        nothing — it returns the fold's own string, which already carries it. Wiring the note
+        into one branch would make it vanish exactly when breadth, the seal or the yield floor
+        changes the answer, which is the live state of this repository today.
         """
+        who = independence_note(self.independence)
         if self.breadth is None:
             breadth_status = self.fold.gate_status
         else:
             breadth_status = effective_precision_gate_status(
-                fold=self.fold, breadth=self.breadth, protocol_path=self.protocol_path
+                fold=self.fold,
+                breadth=self.breadth,
+                protocol_path=self.protocol_path,
+                independence_note=who,
             )
         if breadth_status != self.fold.gate_status:
             return breadth_status
         if self.seal is not None and not self.seal.holds:
             return sealed_precision_gate_status(
-                fold=self.fold, seal=self.seal, protocol_path=self.protocol_path
+                fold=self.fold,
+                seal=self.seal,
+                protocol_path=self.protocol_path,
+                independence_note=who,
             )
         if self.yield_ is not None and not self.yield_.holds:
             return yielded_precision_gate_status(
-                fold=self.fold, detector_yield=self.yield_, protocol_path=self.protocol_path
+                fold=self.fold,
+                detector_yield=self.yield_,
+                protocol_path=self.protocol_path,
+                independence_note=who,
             )
         return breadth_status
 
@@ -442,6 +476,9 @@ class GateDecision:
             "breadth": None if self.breadth is None else self.breadth.to_payload(),
             "seal": None if self.seal is None else self.seal.to_payload(),
             "yield": None if self.yield_ is None else self.yield_.to_payload(),
+            "independence": (
+                None if self.independence is None else self.independence.to_payload()
+            ),
             "preconditions": {
                 "determinism": (
                     "SATISFIED" if self.fold.determinism is None else str(self.fold.determinism)
@@ -808,6 +845,20 @@ def decide_gate(
             f"run, never during it (TC-ArgusAgent-PRECISION-001-45)."
         )
 
+    # ── Story 16.5: a RE-ORDER, deliberately, and it is the only structural move here ──
+    # `live` and `adjudicators` were derived BELOW the fold call. They are derived above it
+    # now because the fold renders the gate-status sentence the independence note has to ride
+    # on, and the note is derived from `adjudicators`. Everything the derivation needs
+    # (`record`, and therefore `record.live_rows()`) is already in scope at this point, and
+    # nothing between the old and new positions read either name — so the move is mechanical.
+    # ⛔ Nothing is RECOUNTED: `assess_independence` READS this tuple, it does not walk the
+    # record a second time. A second count would be a second thing that can drift.
+    live = record.live_rows()
+    adjudicators = tuple(
+        sorted({row.adjudicator for row in live if row.adjudicator is not None})
+    )
+    independence = assess_independence(adjudicators)
+
     fold = fold_adjudicated_precision(
         record,
         expected_finding_ids=expected,
@@ -815,11 +866,7 @@ def decide_gate(
         floor_n=floor_n,
         protocol_cleared=False,
         protocol_path=protocol_path,
-    )
-
-    live = record.live_rows()
-    adjudicators = tuple(
-        sorted({row.adjudicator for row in live if row.adjudicator is not None})
+        independence_note=independence_note(independence),
     )
     unattributed = tuple(
         row.row_id
@@ -1074,6 +1121,7 @@ def decide_gate(
         protocol_change_log_head=protocol_change_log_head,
         protocol_path=protocol_path,
         adjudicators=adjudicators,
+        independence=independence,
         expert_hours=record.expert_hours,
         adjudication_run_recorded_cleared=recorded_cleared,
         closure_path=closure,
