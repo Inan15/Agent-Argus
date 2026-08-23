@@ -5254,8 +5254,7 @@ disposed and three new ones are filed, one of which bounds Epic 15.
   never an exemption. The contract docstring was condensed twice during implementation and was
   deliberately **not** shaved below the content `AC2.2` / `AC2.4` / `AC10.1` / `AC10.2` require to
   be **in the code**: the index named as the counterparty, `argus/pipeline_stages.py:124` named as
-  the reason `
-` / `
+  the reason `` / `
 ` are not part of the problem, the adoptability statement a second
   detector would read, the `DF-15-2-B` price, and the `DF-14-3-A` / `-B` / `-C` statement of what
   stays broken. ⛔ **The trigger, stated so it is not a judgement call at the moment it is
