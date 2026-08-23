@@ -1456,7 +1456,65 @@ missing either half is not done.
 
 ### Review Findings
 
-*(none yet — implemented 2026-08-23, awaiting code review. ⛔ Reviewer: read the HALT block at the top of the Dev Agent Record FIRST — the 36 unjudged rows are `DN-16-7-3` / AC4.5's DESIGNED terminal state, not an unmet AC. Story 13.2 / AC7 and Story 16.4 / AC1.4 are the precedent, and 13.2's review ruled explicitly that such a halt is a legitimate designed terminal state.)*
+**Iteration 1 (2026-08-23, code-review gate, Sonnet).** Adversarial review (Blind Hunter / Edge
+Case Hunter / Acceptance Auditor) against the four story commits (`f559650`, `7fec3cd`,
+`bbe1524`, `76ee9fa`, baseline `b3b761f`). The HALT at Task 7 was read correctly as `DN-16-7-3` /
+AC4.5's DESIGNED terminal state (the Story 13.2/AC7 and 16.4/AC1.4 precedent) and is **not**
+treated as an unmet AC. Every quantitative claim in §0/Completion Notes was independently
+re-executed rather than trusted, and all reproduced exactly: `pytest tests/test_silent_class*.py`
+→ 20 passed; `pytest tests/test_gate_*.py` (all nine) → 58 passed; `pytest
+tests/test_release_preflight.py` → 21 passed; `tests/test_dogfood_artifact_currency.py` → 4
+passed; `tests/test_governance_record_integrity.py` → 3 passed; `tests/test_module_size_ceiling.py`
+→ 6 passed; `tests/test_gate_ordering.py` → 4 passed; full suite
+(`ARGUS_REQUIRE_LANGUAGE_GRAMMARS=1 pytest`, via junit) → **1715 tests, 0 failures, 0 errors,
+0 skipped**; coverage → **95.68%**, `argus/precision/silent_class.py` at **100%**; `mypy argus` →
+95 files clean; `bandit -r argus --severity-level medium` → 0 issues, 26,581 LOC (exact match); all
+three builders `--check` → exit 0; the four fenced corpus JSONs confirmed byte-unchanged
+(`git diff --stat` empty over `argus/detectors/`, `argus/precision/adjudication.py`,
+`argus/precision/gate_*.py`); `deferred-work.md` byte checks (462,339 B, 1 lone CR, 0 CRLF, ends
+with newline) confirmed; `README.md`/`CHANGELOG.md` 94→95 deviation confirmed minimal and
+precedented; `AC8.1` write set confirmed exact via `git diff --stat b3b761f..76ee9fa`. Two Low
+findings, both `patch`-grade (unambiguous, non-blocking):
+
+- [x] [Review][Patch] The `--map MEMBER_ID=RELATIVE_PATH` guard's absolute-path check does not
+  do what its own error message claims on this repository's local platform
+  [scripts/build_silent_class_record.py:785]. `if Path(relative).is_absolute(): raise Refused(...)`
+  is meant to stop "pathlib discards the left operand when the right one is absolute — which
+  silently escapes the root entirely" (the script's own words), but on Windows
+  `Path('/etc/x').is_absolute()` is `False` (no drive letter), so a POSIX-style leading-slash
+  override is NOT rejected, and `root / '/etc/x'` resolves to `<root's drive>:\etc\x` — silently
+  outside `--checkout-root`, exactly the failure mode the check exists to prevent. No test
+  exercises this branch at all (`grep` over `tests/test_silent_class*.py` finds zero references to
+  `--map` or `is_absolute`), so the gap is invisible to the suite — the same "local
+  Windows-only gates, ubuntu CI leg" class of bug AC8.4 was written to catch, now present in one
+  of AC8.4's own untested corners. Practical exploitability is bounded (a mis-mapped checkout
+  would very likely fail loudly at the pinned-blob-hash verification a few lines later, since an
+  unrelated repository would not contain the pinned sha), which is why this is Low rather than
+  Medium. Suggested fix: check for a POSIX-style leading `/` explicitly in addition to
+  `Path(...).is_absolute()` (e.g. `relative.startswith(("/", "\\"))  or Path(relative).is_absolute()`),
+  and add a case to `tests/test_silent_class_record.py` driving `main(["--map", "x=/etc",
+  "--checkout-root", ...])` to `Refused`.
+- [x] [Review][Patch] Internal inconsistency in this file's own Change Log: the second Change Log
+  row (dated 2026-08-23, "The instrument built, and the story HALTED…") states the cohesion split
+  as "699 + 641" lines [this file, Change Log table, row 2], while Completion Note 2's table, the
+  File List, and the `7fec3cd` commit message all agree on 699 + 772 (measured on disk: 698 + 771
+  physical lines via `wc -l`, i.e. 699/772 by the story's own inclusive counting convention).
+  Cosmetic only — no code or artifact is affected, and every other record of the figure is
+  correct — but it is a stray number in a story whose entire discipline is "the tree wins, and
+  every figure is checked." Suggested fix: correct "641" to "772" in the Change Log row.
+
+**FIX ROUND 1 (2026-08-23) - BOTH findings resolved, neither refused.** `[1]` was fixed at the
+seam and driven RED there first; `[2]` was corrected, and a SECOND occurrence of the same stale
+figure that the review did not catch was corrected with it. Full detail, with the re-measured gate
+figures, in **Completion Note 9**. Nothing else in this story was reopened: the 36 rows are still
+`UNADJUDICATED`, the gate is still `BLOCKED`, the operator handoff is still un-taken, and the
+fenced corpus artifacts are still byte-unchanged.
+
+No `decision-needed` findings, no Medium/High findings, no unmet AC, no failing gate. The HALT at
+Task 7 is confirmed to be the designed terminal state: the instrument is real, the worklist is
+complete and correctly bounded (AC8.6's carve-out honoured — no span leaked outside the worklist,
+no absolute host path found in either artifact), and nothing that could have been finished was
+left undone behind it.
 
 ---
 
@@ -1588,7 +1646,7 @@ the file was still **untracked**. It went RED only on `git add`. This is `AI-E11
 that enforces NFR-M1: *the defect exists while every observable the guard watches is unchanged.*
 **Remedy: a COHESION SPLIT along `AR8`'s own seam**, which is what NFR-M1 prescribes —
 `tests/test_silent_class.py` (**699 lines**) holds the PREDICATE and its containment,
-`tests/test_silent_class_record.py` (**641 lines**) holds the RECORD, its vocabularies and its
+`tests/test_silent_class_record.py` (**772 lines**) holds the RECORD, its vocabularies and its
 derived figures, and the second **imports** the fixture plumbing from the first rather than
 copying it. ⛔ **No line was shaved and no `_EXEMPT_BY_DESIGN` entry was added** — `MAINT-001-04`
 lets that registry shrink only (AC8.7).
@@ -1614,12 +1672,24 @@ names instead, and both are strictly stronger.
 | File | Lines | What |
 |---|--:|---|
 | `argus/precision/silent_class.py` | **944** | ⬅ NEW. The predicate and the record. **Pure** (`AR8`), no I/O, no module-level path resolution. |
-| `scripts/build_silent_class_record.py` | **804** | ⬅ NEW. The derivation and the two artifacts. All I/O lives here. |
+| `scripts/build_silent_class_record.py` | **834** | ⬅ NEW. The derivation and the two artifacts. All I/O lives here. **804 at iteration 1**; **+30 in fix round 1** — `_discards_the_root`. |
 | `tests/test_silent_class.py` | **699** | ⬅ NEW. `-115`…`-118`, `-126`…`-128` — the PREDICATE and its containment. |
-| `tests/test_silent_class_record.py` | **772** | ⬅ NEW. `-119`…`-125`, `-129`…`-133` — the RECORD. |
+| `tests/test_silent_class_record.py` | **864** | ⬅ NEW. `-119`…`-125`, `-129`…`-134` — the RECORD. **772 at iteration 1**; **+93 in fix round 1** — `-134`. |
 | `validation-corpus/silent-class-record.json` | 26,677 B | ⬅ NEW. 36 seeded rows, canonical serialization. |
 | `validation-corpus/silent-class-worklist.md` | 34,060 B | ⬅ NEW. The human worklist, DERIVED from the record. |
 | `tests/test_release_preflight.py` | +23 | ONE registry entry + its prose comment. Nothing else. |
+
+⚠️ **THE MEASURE, named because iteration 1 did not name it and mixed two.** The fix-round figures
+above are **physical lines** — `wc -l`, which is also what `test_module_size_ceiling.py`'s own
+`_physical_line_count` counts and therefore the only figure NFR-M1's ceiling can be checked
+against. Iteration 1 recorded the two MODULES physically (944 and 804, both exact) but the two TEST
+files one higher than physical (699/772 against 698/771 on disk), i.e. a `split("
+")` count on a
+file that ends with a newline. The review caught the 641 and not the convention. The iteration-1
+figures are **left as they stand** — they are what the record, the File List and commit `7fec3cd`
+all say, and re-basing a historical row is not a correction — but the mismatch is written down here
+rather than left for a third reviewer to re-find. Both files remain far under the **1,200** ceiling
+and no `_EXEMPT_BY_DESIGN` entry was added or needed.
 
 **The predicate is COMPOSED (AC2.1).** `provenance_evidence`, `is_assertion_callee` (the **WIDE**
 table), `opens_bare_assert`, `body_statement_count` and `index_aligned_lines` are **called** over a
@@ -1857,6 +1927,252 @@ a **prefix** of the post-append bytes, and `git diff --numstat` reports **`+139 
 `.gitattributes` was added (`DF-16-6-C`'s remedy is repo-wide and out of scope). §0.0's
 closure-verb rule was honoured: no closure verb shares a physical line with any `DF-*` id.
 
+#### 9. FIX ROUND 1 (2026-08-23) — two `[Low]` `[Patch]` findings, both resolved, nothing else touched
+
+The 2026-08-23 adversarial code review returned **CONCERNS** with exactly two findings, both
+`[Low]`, both `[Patch]`, no `decision-needed`, no unmet AC and no failing gate. **2 of 2 actionable
+findings resolved. 0 refused, 0 deferred, 0 filed to the ledger.** The review also independently
+re-executed every quantitative claim in §0 and the Completion Notes and reproduced all of them
+exactly, and read the Task 7 HALT correctly as `DN-16-7-3` / AC4.5's DESIGNED terminal state — so
+**no part of the adjudication was reopened by this round and no row was judged.**
+
+**FINDING 1 — A GUARD THAT COULD NOT FAIL, IN ONE OF AC8.4's OWN CORNERS.**
+`scripts/build_silent_class_record.py`'s `--map MEMBER_ID=RELATIVE_PATH` refusal read
+`if Path(relative).is_absolute():` and its message promised to stop *"pathlib discards the left
+operand when the right one is absolute - which silently escapes the root entirely."* **On this
+repository's local platform it did not stop it.** Re-measured here by execution on the interpreter
+this suite runs (`3.11.15`, win32):
+
+| Override | `Path(rel).is_absolute()` | `Path("d:/root") / rel` | Escapes the root? |
+|---|:--:|---|:--:|
+| `/etc/passwd` | **`False`** | `d:\etc\passwd` | **YES** |
+| `\etc\passwd` | **`False`** | `d:\etc\passwd` | **YES** |
+| `C:etc` (drive-RELATIVE) | **`False`** | `C:etc` | **YES** |
+| `C:/etc` | `True` | `C:\etc` | yes (already refused) |
+| `Minions` | `False` | `d:\root\Minions` | no |
+
+Three of the five forms pathlib honours as anchors were accepted by a check whose entire purpose
+was to reject them, and the escape lands **outside `--checkout-root`** — precisely the failure the
+message named. It was also **completely undriven**: before this round `grep` over both story test
+files found zero references to `--map` or `is_absolute`, so the suite could not see it. That
+pairing — Windows-only local gates, an ubuntu matrix CI leg, and a portability check nobody
+exercises — is `AI-E13-1`, and finding it inside `AC8.4`'s own scope is the point of the finding.
+
+**THE FIX, and why it is not the one-liner the review suggested.** The review proposed
+`relative.startswith(("/", "\\")) or Path(relative).is_absolute()`. That closes the two
+reported forms and leaves `C:etc` open, and it needs a literal backslash in a file where **`-129`
+forbids one** (AC8.4 scans every string constant in this module for exactly that character). So the
+guard now asks the question that actually decides the join — **is the operand ANCHORED?** — of BOTH
+path flavours:
+
+```
+def _discards_the_root(relative: str) -> bool:
+    return any(
+        bool(pure.root or pure.drive)
+        for pure in (PurePosixPath(relative), PureWindowsPath(relative))
+    )
+```
+
+Drive **or** root, POSIX **or** Windows: it catches all five anchored forms, needs no backslash
+literal and no `ntpath`, and — the reason for asking both flavours rather than the native one —
+**returns the same answer on the Windows machine this suite runs on locally and on the ubuntu
+matrix CI runs.** A check that is true on one leg and false on the other is the defect being fixed;
+reproducing it in the fix would have been absurd. The refusal message now says **`ANCHORED` -
+absolute, root-anchored or drive-relative**, so it describes what it does.
+
+⛔ **DELIBERATELY OUT OF SCOPE, NAMED SO IT IS NOT MISTAKEN FOR FIXED:** `..`. `root / "../x"` also
+leaves `--checkout-root`, and this guard still permits it. That is a different failure — the
+operator typed the traversal and pathlib did what it says — while what is guarded here is the
+**silent** discard, where the left operand vanishes and nothing on the command line says so.
+Widening a refusal into path-traversal containment is not a fix the review asked for and not this
+story's fence; it is written into the function's own docstring rather than left implicit.
+
+**THE NEW CASE, AND IT WAS RED FIRST.** `TC-ArgusAgent-PRECISION-001-134` (next free id; `-133` was
+the previous maximum across the whole `tests/` tree) drives the CLI seam —
+`builder.main(["--map", "minions=/etc/passwd", "--checkout-root", &lt;tmp&gt;])` — and asserts three
+things the suite could not see before: that the escape is **real on this platform** before
+asserting anything about it (`AI-E11-1` non-vacuity: `_checkout_for` is called and the result is
+proved NOT under the root); that the predicate is **two-sided** over five anchored forms and over
+every value the tool's own `DEFAULT_CHECKOUT_MAP` ships; and that the refusal that fires is **this
+one**. ⛔ **The exit code alone would have been a vacuous assertion** — the unfixed guard also exits
+`2`, one step later, on the missing checkout — so the assertion is on the MESSAGE. Driven RED
+against the unfixed guard before the fix was kept, and the RED text is recorded rather than
+claimed:
+
+```
+AssertionError: the run was refused, but not BY THIS GUARD: 'REFUSED - agent-markovich:
+no checkout at ...\checkouts\AgentMarkovich. Point --checkout-root at the directory holding
+the ratified checkouts, or map this member with --map agent-markovich=RELATIVE/PATH. ...'
+assert 'ANCHORED' in 'REFUSED - agent-markovich: no checkout at ...'
+```
+
+That failure text **is** the finding: the unfixed run never even reached `minions`, so it never
+detected the escape at all. The case also drives the two sibling `--map` refusals (`no '='` and
+`empty member id or path`), equally undriven until now, and asserts a well-formed relative override
+gets **past** the guard — which is what keeps the CLI arm two-sided too.
+
+**FINDING 2 — A STRAY NUMBER IN A RECORD WHOSE WHOLE DISCIPLINE IS THAT EVERY FIGURE IS CHECKED.**
+Change Log row 2 gave the NFR-M1 cohesion split as **"699 + 641"** while Completion Note 2's table,
+the File List and commit `7fec3cd` all said **699 + 772**. Corrected to **772**. ⛔ **A SECOND
+OCCURRENCE OF THE SAME STALE FIGURE, WHICH THE REVIEW DID NOT CATCH**, sat in Completion Note 2's
+own prose — *"`tests/test_silent_class_record.py` (**641 lines**) holds the RECORD"* — and is
+corrected with it. Both live occurrences are gone: `641` now survives in this file ONLY inside
+the review's own finding text above and inside this note that quotes it, and in no figure the
+file asserts.
+Text-only: **no executable line changed for this finding**, the same shape as 16.6's fix round 1.
+The counting-convention mismatch found while checking it (iteration 1 recorded the two modules
+physically and the two test files one line high) is recorded under Completion Note 2's table rather
+than silently re-based.
+
+**RE-MEASURED BY EXECUTION THIS ROUND, after clearing `__pycache__` with
+`PYTHONDONTWRITEBYTECODE=1`** (§0.0's writing rule). Iteration 1's figures are carried alongside so
+every movement is accounted for:
+
+| Gate | Iteration 1 | FIX ROUND 1 | |
+|---|---:|---:|---|
+| Full suite (`ARGUS_REQUIRE_LANGUAGE_GRAMMARS=1`) | 1,715 passed | **1,716 passed**, exit **0** | **+1 — `-134`, and nothing else moved** |
+| Coverage (`--cov=argus --cov-fail-under=80`) | 95.68% | **95.68%** | unchanged: the fix is in `scripts/`, outside the measured package |
+| `mypy argus` | 95 files clean | **95 files clean** | CI scope, not widened to `scripts` |
+| `bandit -r argus --severity-level medium` | 0 medium / 0 high | **0 medium / 0 high** | |
+| `tests/test_gate_*.py` (all nine) — AC8.2 | 58 passed | **58 passed** | ⛔ AC8.2's whole discharge, unmoved |
+| `tests/test_module_size_ceiling.py` | 6 | **6** | 834 and 864 lines, both far under **1,200** |
+| `tests/test_gate_ordering.py` | 4 | **4** | |
+| `tests/test_release_preflight.py` | 21 | **21** | |
+| `tests/test_dogfood_artifact_currency.py` | 4 | **4** | no `argus/` file moved, so nothing re-armed |
+| `tests/test_governance_record_integrity.py` | 3 | **3** | |
+| This story's own cases | 20 | **21** | ⛔ **the story's own count MOVED; it is not 20 any more** |
+| All three builders `--check` | exit 0 | **exit 0** | including the patched one |
+
+**THE FENCES HELD, RE-VERIFIED RATHER THAN ASSUMED.** `git status --porcelain` over `argus/`,
+`_bmad-output/.../validation-corpus/` and `deferred-work.md` returned **empty** both before and
+after this round: `adjudication-record.json`, `adjudication-set.json`, `adjudication-set-13-5.json`,
+`gate-decision-record.json`, `silent-class-record.json`, `silent-class-worklist.md`,
+`argus/precision/adjudication.py` and every `argus/**` file are **BYTE-UNCHANGED**, and `-131`
+re-asserts four of them around a live `--check`. Re-read from disk this round: **36 rows, all 36
+`UNADJUDICATED`**, `promotes_nothing` `True`, `gates_anything` `False`, gate outcome still
+**`BLOCKED`**. **No disposition was written, no role was filled, no `DN-*` reopened, no guard
+weakened or exempted, no `_EXEMPT_BY_DESIGN` entry added, no ceiling constant moved, no ledger
+entry appended, no AC9.4 escalation reached, `DF-13-5-A` OPEN and UNSPENT.** ⛔ **The operator HALT
+is UNCHANGED and still the terminal state of this story** — the worklist and the 36 questions await
+the named human exactly as published.
+
+**THE WRITE SET OF FIX ROUND 1, exactly four paths:** `scripts/build_silent_class_record.py`
+(+30/-5), `tests/test_silent_class_record.py` (+93), this story file, and `sprint-status.yaml`.
+
+⚠️ **THE TREE WAS TOUCHED BY ANOTHER PARTY AGAIN, and it is checked at both ends** (§0.7, and
+Premise 2's own lesson). `git status --porcelain` carried four entries belonging to **other work**
+before this round started and exactly the same four after: `architecture.md` (+6),
+`meta-drift-baseline.md` (new), `scripts/check_meta_drift.py` (new, `--intent-to-add`, therefore
+already inside `git ls-files` and inside the ceiling gate's population — measured green at 6) and
+the **16.6** story file (its own iteration-2 review write-back). **None of the four was read,
+written, staged or committed by this round**, and the gate figures above were taken with them
+present, which is the state CI would see. The four paths this round did write are the four named
+above and no others.
+
+#### 10. RE-VERIFICATION AT `c7912a1` (2026-08-23) — the baseline MOVED under this story, every figure was re-measured, and none of them moved
+
+⛔ **Fix round 1 measured its gate set, and was then killed by a session limit BEFORE it committed.**
+Its work survived uncommitted in the working tree. While it was dead, a **concurrent and unrelated
+session committed `c7912a1`** (*"feat(anti-drift): measure the meta-work, and check the outcome a
+user gets"*) onto this same branch. **HEAD is therefore `c7912a1`, not `76ee9fa`**, and every figure
+in Completion Note 9 was taken against a tree that no longer exists. This note re-measures all of
+them at the new HEAD rather than letting the old ones stand by inertia. **Nothing was re-implemented
+and no finding was re-opened** — this round is verification and commit only.
+
+**WHAT `c7912a1` ADDED** (`git show --stat`, six paths, 823 insertions, **0 deletions**):
+`tests/conftest.py` (new, 125 lines, repo-wide), `scripts/check_meta_drift.py` (262),
+`scripts/acceptance_scenarios.py` (335), `_bmad-output/audit-reports/acceptance-scenarios.md` (39),
+`meta-drift-baseline.md` (54) and an `architecture.md` edit (+8). ⛔ **It adds no test file and
+touches nothing under `argus/`** — which is why the denominators below are undisturbed: `mypy`'s
+file count, `bandit`'s LOC and coverage's statement total all measure `argus/` only, and the suite's
+case count moves only when a test is added.
+
+**RE-MEASURED BY EXECUTION AT `c7912a1`, `__pycache__` cleared first and `PYTHONDONTWRITEBYTECODE=1`
+throughout** (§0.0's writing rule, and this story's own recorded false-RED-from-stale-cache lesson).
+Fix round 1's claim is carried alongside every figure so that "did not move" is a comparison and not
+an assurance:
+
+| Gate | FIX ROUND 1 claim (at `76ee9fa`) | RE-MEASURED at `c7912a1` | Moved? |
+|---|---:|---:|:--:|
+| Full suite (`ARGUS_REQUIRE_LANGUAGE_GRAMMARS=1 pytest`) | 1,716 passed, exit 0 | **1,716 tests / 0 failures / 0 errors / 0 skipped**, 288.7 s, exit **0** (junit-parsed, not eyeballed) | **NO** |
+| Coverage (`--cov=argus --cov-fail-under=80`) | 95.68% | **95.68%** — 7,313 stmts, 316 missed, exit **0** | **NO** |
+| `argus/precision/silent_class.py` coverage | 100% | **100%** — 218 stmts, 0 missed | **NO** |
+| `mypy argus` (CI scope) | 95 files clean | **95 source files, clean**, exit **0** | **NO** |
+| `bandit -r argus --severity-level medium` | 0 medium / 0 high | **Medium 0 / High 0**, **26,581 LOC** (exact) | **NO** |
+| `tests/test_gate_*.py` (all nine) — AC8.2 | 58 passed | **58 across 9 files** | **NO** |
+| `tests/test_module_size_ceiling.py` | 6 | **6** | **NO** |
+| `tests/test_gate_ordering.py` | 4 | **4** | **NO** |
+| `tests/test_release_preflight.py` | 21 | **21** | **NO** |
+| `tests/test_dogfood_artifact_currency.py` | 4 | **4** | **NO** |
+| `tests/test_governance_record_integrity.py` | 3 | **3** | **NO** |
+| This story's own (`tests/test_silent_class*.py`) | 21 | **21** (20 carry a `TC-` id + the fixture preamble) | **NO** |
+| `build_adjudication_record.py --check` | exit 0 | **exit 0** — *"current (31 row(s))"* | **NO** |
+| `build_gate_decision.py --check` | exit 0 | **exit 0** — *"CURRENT — BLOCKED"* | **NO** |
+| `build_silent_class_record.py --check` | exit 0 | **exit 0** — *"round-trips unchanged (36 row(s))"* | **NO** |
+
+⛔ **TWO FIGURES DID MOVE, AND NEITHER IS A GATE — they are fix round 1's own write-set line counts,
+and they were simply recorded wrong.** `c7912a1` does not touch either file, so this is not baseline
+drift; it is a mis-transcription that re-measurement caught. Measured now by `git diff --numstat`:
+
+| Path | Note 9 / Change Log claim | `git diff --numstat`, measured | |
+|---|---:|---:|---|
+| `scripts/build_silent_class_record.py` | +30 / -5 | **+35 / -5** | superseded, not erased |
+| `tests/test_silent_class_record.py` | +93 | **+94 / -1** | the `-1` is the module docstring's guard-range line `-132` → `-134`; **+93** was the new case alone |
+
+**The superseded figures are left standing above and in Note 9**, per §3.4 — this file corrects by
+dated supersession, never by overwrite. It is the same defect class as fix round 1's own finding 2
+(the `641`/`772` stray figure), found in fix round 1's own record by the round that verified it, and
+it is recorded rather than smoothed.
+
+⛔ **DOES THE NEW `tests/conftest.py` INTERACT WITH THIS STORY'S GUARDS? MEASURED BOTH WAYS, AND THE
+ANSWER IS: IT OBSERVES THEM AND CANNOT PERTURB THEM.** The hook is guard-fire telemetry —
+`pytest_runtest_logreport` appending one JSONL row per guard observed RED.
+
+- **It OBSERVES this story's guards.** Its `_GUARD_IN_NAME` regex was run over the 21 nodeids this
+  story's two test files contributed to the junit report: **20 of 21 resolve to a canonical guard
+  id**, `TC-ArgusAgent-PRECISION-001-115` .. `-134`, and the 21st is the fixture preamble, which
+  carries no `TC-` id and is correctly not recorded. ⛔ **`TC-ArgusAgent-PRECISION-001-134` — fix
+  round 1's own new case — is recognised**, and is in fact the *worked example in the conftest's own
+  docstring*, since it was sitting uncommitted in the tree while `c7912a1` was written.
+- **It CANNOT perturb them, and this was proved by execution, not reasoned.** The hook fires only on
+  `when == "call"` **and** `report.failed`; a green run records nothing. Confirmed: after the full
+  1,716-case green run, **`.argus/guard-fires.jsonl` did not exist at all**. A synthetic RED report
+  for `-134` was then fed to `pytest_runtest_logreport` directly; it wrote the row, and
+  **`git status --porcelain` was byte-identical before and after** — `.argus/` is gitignored
+  (`.gitignore:19`, confirmed by `git check-ignore -v`). The probe row was then removed.
+- ⛔ **Therefore AC7.2 still holds unchanged.** AC7.2's restoration test is *"capture
+  `git status --porcelain` immediately BEFORE each mutation and assert it byte-identical after"* —
+  and the one thing a mutation drill now additionally does is append to a gitignored path, which
+  `git status --porcelain` does not report. The three AC7.1 mutations (36→39, 36→84, 36→45) are
+  neither observed differently nor invalidated: their RED is recorded to telemetry as an
+  *observation*, which is the hook's explicit and only claim. Every path in the hook is
+  exception-wrapped and `ARGUS_GUARD_FIRES=0` disables it; it is not load-bearing for any gate.
+- **It also cannot break the fences it sits next to** — a hook that dirtied the tree would break
+  `release_preflight`'s E1 dirty-worktree refusal and `tests/test_dogfood_artifact_currency.py`,
+  which is why its author put it under `.argus/`. Both gates measured green above (**21** and **4**).
+
+**THE BYTE-FENCES, RE-CONFIRMED AT THE NEW HEAD RATHER THAN CARRIED FORWARD.**
+`git status --porcelain` over `argus/`, over
+`_bmad-output/design-artifacts/ArgusAgent/validation-corpus/` and over `deferred-work.md` all
+returned **empty**, and `git diff --stat HEAD` over `argus/precision/adjudication.py`,
+`argus/precision/gate_decision.py` and the whole `validation-corpus/` directory returned **empty**:
+`adjudication-record.json`, `adjudication-set.json`, `adjudication-set-13-5.json`,
+`gate-decision-record.json`, `silent-class-record.json`, `silent-class-worklist.md` and every
+`argus/**` file are **BYTE-UNCHANGED at `c7912a1`**. Re-read from the artifact this round:
+**36 rows, all 36 `UNADJUDICATED`**, `class_size` **36**, `promotes_nothing` **`True`**,
+`gates_anything` **`False`**, `independence.status` **`NOT_ESTABLISHED`** with `roles_present` **`[]`**,
+and the gate record still **`BLOCKED`**. ⛔ **The operator handoff is UN-TAKEN and remains the
+terminal state of this story.** No disposition written, no role filled, no `DN-*` reopened, **no
+guard weakened, exempted or given an `_EXEMPT_BY_DESIGN` entry, no ceiling constant moved**, no
+ledger entry appended, `DF-13-5-A` **OPEN and UNSPENT**.
+
+**THE 16.6 LEDGER QUESTION, CHECKED RATHER THAN ASSUMED.** 16.6's iteration-2 review filed
+`DF-16-6-E` and `DF-16-6-F` to `deferred-work.md`. Both were found **already committed** — they
+landed in `76ee9fa` (this story's own `docs` commit swept the ledger file up with `DF-16-7-B`), and
+`deferred-work.md` is clean against HEAD. **Nothing further was appended to the ledger by this
+round**, and 16.6's uncommitted story-file write-back was committed **separately**, under its own
+message, as a record of 16.6's review and not as part of this story.
+
 ### File List
 
 **New**
@@ -1894,6 +2210,8 @@ closure-verb rule was honoured: no closure verb shares a physical line with any 
 | Date | Change | Author |
 |---|---|---|
 | 2026-08-23 | **Story opened; §0 re-measured by execution BEFORE a line was written.** `ready-for-dev` → `in-progress`. Baseline re-run GREEN at HEAD **`b3b761f`** after clearing `__pycache__` (§0.0's writing rule): full suite exit 0, `mypy argus` 94 files clean, `bandit` no issues, both builders `--check` exit 0. The whole variant lattice reproduced exactly — **V0 0 · V1 6 · V2 36 · V3 6 · V4 676 · V5 125 · silent-any 45**, agent-smith **22** + minions **14** across **19** files, **1,032** walked / **0** skipped / **0** unresolvable, **39** pre-16.6 with the three 16.6 removed named byte-for-byte, **18 of 36** spans carrying a comment. §0.3's blast radius reproduced exactly (`total_tp` 0→36, population 31→67, rule classes 1→2, independence `NOT_INDEPENDENT`→`SECOND_REVIEWER_INTERNAL`) with `adjudication-record.json` proved byte-identical across the simulation and `rec.to_bytes() == <committed bytes>` `True`. Both closed-schema traps confirmed. ⛔ **Premise 1 fell:** HEAD is `b3b761f`, and that commit is the REAL fix for the very case §0.0 called a false RED from stale bytecode — the diagnosis was half right. ⛔ **Premise 2 fell:** another party held THIS working tree 18:53–18:57, moved it to `dev`/`master`, rebased, stashed 16.6's in-flight artifacts and restored them; one suite run was poisoned and re-run. §0.7's `DN-16-7-4` reasoning applies to `ArgusAgent` itself, not only to the corpus members. | dev-story (Opus 5) |
-| 2026-08-23 | **The instrument built, and the story HALTED at the handoff — which is `DN-16-7-3` / AC4.5 succeeding, not failing.** NEW: `argus/precision/silent_class.py` (944, pure, `AR8`), `scripts/build_silent_class_record.py` (804, all I/O), `tests/test_silent_class.py` (699) + `tests/test_silent_class_record.py` (772), and the two `validation-corpus/` artifacts carrying **36 `UNADJUDICATED`** rows and the human worklist. The predicate is COMPOSED from `provenance_evidence`, `is_assertion_callee` (WIDE), `opens_bare_assert`, `body_statement_count` and a real `build_ast_index` — no second AST walk, no second assertion regex, asserted structurally. The vocabulary is BORROWED: `DISPOSITIONS`, `LOCATOR_RE`, `adjudicator_role`, `finding_row_id` et al. asserted **`is`-identical** to `adjudication.py`'s, and `counts()`/`live_rows()`/`exhaustiveness()` DELEGATED to `AdjudicationRecord`. `idiom` is an ORTHOGONAL axis on a NEW row type, never a fifth disposition. ⛔ **Three mutations driven RED at the real seam, each restored with `git status --porcelain` proved byte-identical:** remove `"AssertionError"` from the wide table → **36→39** (the three 16.6 removed, by name); route silence through the frozen table → **36→84**; drop `disc ≥ 1` → **36→45**. ⛔ **`36→84` is a NEW measurement and the most interesting number this story produced: 48 false accusations is what `DN-14-2-1`'s two-table split is worth over this corpus.** ⛔ **Premise 3 fell:** `tests/test_silent_class.py` came to **1,241** lines — a real NFR-M1 breach — while `test_module_size_ceiling.py` stayed GREEN, because its population is `git ls-files` and the file was untracked; it went red only on `git add`. Remedy was a COHESION SPLIT along `AR8`'s seam (699 + 641), **no shave and no `_EXEMPT_BY_DESIGN` entry** (`MAINT-001-04`). | dev-story (Opus 5) |
+| 2026-08-23 | **The instrument built, and the story HALTED at the handoff — which is `DN-16-7-3` / AC4.5 succeeding, not failing.** NEW: `argus/precision/silent_class.py` (944, pure, `AR8`), `scripts/build_silent_class_record.py` (804, all I/O), `tests/test_silent_class.py` (699) + `tests/test_silent_class_record.py` (772), and the two `validation-corpus/` artifacts carrying **36 `UNADJUDICATED`** rows and the human worklist. The predicate is COMPOSED from `provenance_evidence`, `is_assertion_callee` (WIDE), `opens_bare_assert`, `body_statement_count` and a real `build_ast_index` — no second AST walk, no second assertion regex, asserted structurally. The vocabulary is BORROWED: `DISPOSITIONS`, `LOCATOR_RE`, `adjudicator_role`, `finding_row_id` et al. asserted **`is`-identical** to `adjudication.py`'s, and `counts()`/`live_rows()`/`exhaustiveness()` DELEGATED to `AdjudicationRecord`. `idiom` is an ORTHOGONAL axis on a NEW row type, never a fifth disposition. ⛔ **Three mutations driven RED at the real seam, each restored with `git status --porcelain` proved byte-identical:** remove `"AssertionError"` from the wide table → **36→39** (the three 16.6 removed, by name); route silence through the frozen table → **36→84**; drop `disc ≥ 1` → **36→45**. ⛔ **`36→84` is a NEW measurement and the most interesting number this story produced: 48 false accusations is what `DN-14-2-1`'s two-table split is worth over this corpus.** ⛔ **Premise 3 fell:** `tests/test_silent_class.py` came to **1,241** lines — a real NFR-M1 breach — while `test_module_size_ceiling.py` stayed GREEN, because its population is `git ls-files` and the file was untracked; it went red only on `git add`. Remedy was a COHESION SPLIT along `AR8`'s seam (699 + 772), **no shave and no `_EXEMPT_BY_DESIGN` entry** (`MAINT-001-04`). | dev-story (Opus 5) |
 | 2026-08-23 | **Gates, the ledger, and the four-commit arc.** Final: **1,715 passed / 0 failed / exit 0** — exactly **+20**, this story's own case count, so the pre-story baseline at `b3b761f` derives to **1,695** and agrees with §0.0's measured figure at `d6625b5` to the case, coverage **95.68%** (baseline 95.55% — this story RAISED it) with the new module at **100%**, `mypy argus` **95 files** clean (+1, the new module), `bandit` no issues over 26,581 LOC, ceiling 6, `tests/test_gate_*.py` **58 passed across all nine** — which IS AC8.2's whole discharge — ordering 4, preflight 21, dogfood currency 4, governance 3, this story's own **20**. All three builders `--check` exit 0, and the four committed corpus JSONs are **byte-unchanged**, re-asserted by `-131` around a live `--check` run. `DF-16-7-B` appended to `deferred-work.md` **in binary**: 457,560 → 462,339 B, lone `CR` still exactly **1**, `CRLF` still **0**, still ends with a newline, pre-append bytes a strict PREFIX of the result, `git diff --numstat` **`+139 / -0`**. Commit arc as AC9.2 forces: `chore` → `feat` → `chore(dogfood regeneration, which `TC-ArgusAgent-DOGFOOD-001-50` re-armed exactly as §0.6 predicted)` → `docs`. ⛔ **One deviation from AC8.1's write set, recorded rather than smoothed:** a FOURTH registry §0.6 does not name — `TC-ArgusAgent-DOCS-001-54` — went RED because four DERIVED distribution figures in `README.md` / `CHANGELOG.md` moved when a shipped module was added (94→95 modules, 102→103 wheel entries, 101→102 sdist members). The guard's own instruction is *the artifact is the fact, fix the document*, and it forbids deleting the sentence; the only alternatives were a red suite or a weakened guard. Story 16.5's identical 93→94 edit is the precedent followed. See Completion Note 4b. **Nothing promoted, nothing adjudicated, no role filled, no `DN-*` reopened, no AC9.4 escalation reached, `DF-13-5-A` OPEN and UNSPENT.** `in-progress` → `review`. | dev-story (Opus 5) |
+| 2026-08-23 | **FIX ROUND 1** — code review returned **CONCERNS** with two findings, both `[Low]` and both `[Patch]`. **2 of 2 actionable findings resolved; 0 refused, 0 deferred, 0 filed to the ledger.** ⛔ **A GUARD THAT COULD NOT FAIL, inside `AC8.4`'s own scope:** `--map`'s escape refusal read `Path(relative).is_absolute()`, which is **`False` on Windows** for `/etc/passwd`, for a backslash-anchored path and for drive-relative `C:etc` — so `root / '/etc/passwd'` resolved to `d:\etc\passwd`, **outside `--checkout-root`**, which is the exact escape the refusal's own message promised to prevent — and **no test referenced `--map` or `is_absolute` at all**. Replaced by `_discards_the_root`, which asks whether the operand carries a **drive or a root under BOTH `PurePosixPath` and `PureWindowsPath`**: it catches all five anchored forms, needs no backslash literal (`-129` forbids one in this module) and **answers identically on the Windows local leg and the ubuntu CI leg**, which is the whole defect. `..` is left permitted and is named in the docstring as out of scope: that escape is visible, this one was silent. `TC-ArgusAgent-PRECISION-001-134` drives it at the real CLI seam and was **RED first** — and the RED proves why the exit code alone is vacuous: the unfixed run also exits `2`, one step later, refusing on a missing checkout it reached **without ever detecting the escape**. Second finding: Change Log row 2's cohesion split **`699 + 641` → `699 + 772`**, plus **a second occurrence of the same stale figure in Completion Note 2 that the review did not catch**; `641` now appears nowhere outside the finding text. Re-measured after clearing `__pycache__`: full suite **1,716 passed / exit 0** — **+1 over iteration 1's 1,715, this round's one new case, so this story's own count is now 21 and not 20** — coverage **95.68%** (unchanged; the fix is in `scripts/`), `mypy argus` **95 files** clean, `bandit` **0 medium / 0 high**, `tests/test_gate_*.py` **58 across all nine**, ceiling 6, ordering 4, preflight 21, dogfood currency 4, governance 3, all three builders `--check` **exit 0**. ⛔ **Nothing else was reopened:** 36 rows still `UNADJUDICATED`, gate still `BLOCKED`, operator handoff still un-taken, `argus/**` and all six corpus artifacts **byte-unchanged** (`git status --porcelain` empty over them at both ends), `deferred-work.md` untouched, no guard weakened or exempted, no `DN-*` reopened. Four paths written and no others. `in-progress` → `review`. | dev-story (Opus 5) |
+| 2026-08-23 | **RE-VERIFICATION AT A MOVED BASELINE — every FIX ROUND 1 figure re-measured at HEAD `c7912a1`, and none of the gate figures moved.** Fix round 1 was killed by a session limit **before it committed**; its work survived uncommitted, and while it was dead a **concurrent, unrelated session committed `c7912a1`** (*"feat(anti-drift): measure the meta-work…"*) onto this branch, adding a **repo-wide `tests/conftest.py`** (125 lines of guard-fire telemetry hooking every test), `scripts/check_meta_drift.py`, `scripts/acceptance_scenarios.py` and three documents. **HEAD is `c7912a1`, not `76ee9fa`, so every figure in Completion Note 9 had been taken against a tree that no longer existed.** All of them were re-run with `__pycache__` cleared: full suite **1,716 tests / 0 failures / 0 errors / 0 skipped**, exit **0** (junit-parsed), coverage **95.68%** (7,313 stmts / 316 missed) with `silent_class.py` at **100%**, `mypy argus` **95 files** clean, `bandit` **0 medium / 0 high** over **26,581** LOC, `tests/test_gate_*.py` **58 across all nine**, ceiling **6**, ordering **4**, preflight **21**, dogfood currency **4**, governance **3**, this story's own **21**, all three builders `--check` **exit 0** (31 rows · **BLOCKED** · 36 rows). ⛔ **Nothing moved, and the reason is measured, not assumed: `c7912a1` adds no test file and touches nothing under `argus/`**, so every denominator (`mypy` file count, `bandit` LOC, coverage statements, suite case count) is undisturbed. ⛔ **THE CONFTEST INTERACTION, ANSWERED BOTH WAYS BY EXECUTION: it OBSERVES this story's guards and CANNOT PERTURB THEM.** Its `_GUARD_IN_NAME` regex resolves **20 of this story's 21 cases** to canonical ids `-115`..`-134` (the 21st is the fixture preamble, correctly unrecorded), and `TC-ArgusAgent-PRECISION-001-134` — fix round 1's own new case — is the **worked example in the conftest's own docstring**, having sat uncommitted in the tree while `c7912a1` was written. It fires **only** on `when=="call"` *and* `failed`: after the green 1,716-case run **`.argus/guard-fires.jsonl` did not exist at all**, and a synthetic RED report fed to the hook wrote a row while **`git status --porcelain` stayed byte-identical** (`.argus/` is gitignored, `.gitignore:19`), so **AC7.2's before/after porcelain invariance still holds** and the three AC7.1 mutations (36→39, 36→84, 36→45) are neither invalidated nor observed differently. ⛔ **TWO FIGURES DID MOVE AND NEITHER IS A GATE:** fix round 1's own write-set line counts were mis-transcribed — `scripts/build_silent_class_record.py` is **+35/-5** (recorded +30/-5) and `tests/test_silent_class_record.py` is **+94/-1** (recorded +93; the `-1` is the docstring guard-range `-132`→`-134`, and +93 was the new case alone), measured by `git diff --numstat` against a HEAD that does not touch either file. **Superseded figures preserved, not erased** (§3.4) — the same defect class as fix round 1's own `641`/`772` finding, caught this time in fix round 1's record by the round verifying it. **Fences re-confirmed at the new HEAD:** `argus/**` and all six corpus artifacts **byte-unchanged**, **36 rows all `UNADJUDICATED`**, `promotes_nothing` `True`, `gates_anything` `False`, gate **`BLOCKED`**, **operator handoff UN-TAKEN**, `deferred-work.md` untouched (`DF-16-6-E`/`-F` found already committed in `76ee9fa`), no guard weakened or exempted, no ceiling moved, `DF-13-5-A` OPEN and UNSPENT. Status stays **`review`**; the fix round's four paths and 16.6's review write-back were committed as **two separate commits**. | dev-story (Opus 5) |
 | 2026-08-23 | Story contexted at HEAD `d6625b5`. **Every §0 figure measured by execution, none copied.** ⛔ **§0.3 is the story's central finding and it is proved rather than argued:** appending these 36 advisory dispositions to `adjudication-record.json` takes `total_tp` **0 → 36**, `adjudicated_population` **31 → 67**, `distinct_rule_class_count` **1 → 2** and `independence.status` **`NOT_INDEPENDENT` → `SECOND_REVIEWER_INTERNAL`** — two of which the epic's own AC forbids outright — and it is wrong on the protocol's terms besides, since all 1,032 findings are advisory and three shipped surfaces say advisory findings are not in the denominator. `DN-16-7-1` sends them to new artifacts instead, **without** answering 16.4's still-moot HALT-2. Both closed schemas measured fatal to widen: adding a field to `ROW_FIELDS` makes `load_record()` on the committed record RAISE (`DN-16-7-2`). **The class re-derived at HEAD is 36** (agent-smith 22 + minions 14, 19 files), **39 pre-16.6 with the three 16.6 removed NAMED** — the epic, the change proposal and the sprint-status comment all REPRODUCE, which is the rare case in this epic where the artifact is right. `V1 ⊆ V2` and 30 of 36 lie outside V1, so promoting V2 later would be a different predicate, not a loosening. ⛔ **Two premises DID fall:** `DF-16-7-A`'s V5 figure is **122 on the ledger, 125 on the tree** (16.6's three moved silent → asserts-not-about-the-SUT), recorded for a new dated entry rather than an edit; and **Story 16.6's AC4.5 invariance contract is unsatisfiable here** — `minions` went 7 → 1 dirty entries under this session by another party's hand, so `DN-16-7-4` replaces it with content-addressed reads proved by blob hash plus an asserted read-only git allow-list, which is strictly stronger and actually satisfiable. **The baseline is GREEN (1,695 passed / mypy 94 files / bandit 0 medium / 95.55% coverage / both builders exit 0) — but the FIRST run of this session was a false RED from stale `__pycache__`**, §2.5's own recorded 16.2 lesson reproducing today, so `PYTHONDONTWRITEBYTECODE=1` is now a writing rule. Three registry guards measured to fire on this story's shape: the import-reach set (14 → 15), the dogfood currency guard (re-arming 16.6's extra commit — hence a **four**-commit arc), and the wheel-import guard. ⛔ **`DN-16-7-3` records the load-bearing scoping decision: the 36 judgements are an OPERATOR ACT no agent may take** (protocol §2: `UNADJUDICATED` is the only member an automated producer may write), so the story builds the instrument, publishes the worklist and **HALTS** — the 13.2 / AC7 and 16.4 / AC1.4 precedent, where reaching the halt and reporting **is** the story succeeding. ⛔ **§3's AC↔Task map was self-audited before this file was finalised and the FIRST DRAFT OF IT WAS WRONG — nine mis-citations and one AC (AC2.1/AC2.3's import-graph guard) with no task at all.** All ten are repaired here and the finding is recorded in §3 rather than smoothed: it is 16.6's own *"an AC repaired on one side of the file while its executable twin kept the defect"* firing inside the table built to catch it. Task **4.7** exists because of it. One reuse trap closed at the same time, by execution: `argus.index.ast_index.Definition` already carries **`name`**, so the builder needs no `ast` walk of its own — and AC2.1 forbids one, which would have made the AC unsatisfiable if the field had not been there. Locked decisions cited and not reopened: `DN-14-2-1`, `DN-3`, `DN-2a`, `DN-6`, `DN-16-3-3`, §3.4, §6 R2. `DF-13-5-A` **OPEN and UNSPENT**; `N` 5; `SECTION_5_CONDITIONS` 7; change-log head **V1.3**; gate **BLOCKED**. `backlog` → `ready-for-dev`. | create-story (Scrum Master) |

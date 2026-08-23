@@ -67,7 +67,7 @@ import argparse
 import subprocess
 import sys
 import tempfile
-from pathlib import Path
+from pathlib import Path, PurePosixPath, PureWindowsPath
 from typing import Any
 
 _REPO_ROOT = Path(__file__).resolve().parents[1]
@@ -203,6 +203,35 @@ def _decode(raw: bytes) -> str:
     class of bug this repository has already shipped once and has an OPEN ledger entry for.
     """
     return raw.decode("utf-8", errors="replace")
+
+
+def _discards_the_root(relative: str) -> bool:
+    """Would ``root / relative`` THROW THE ROOT AWAY? Asked of BOTH path flavours, on purpose.
+
+    ``Path(relative).is_absolute()`` is the obvious question and it is the WRONG one, in a
+    way that is invisible on exactly one of this project's two legs. On Windows
+    ``Path("/etc/x").is_absolute()`` is ``False`` - there is no drive - and yet
+    ``Path("D:/root") / "/etc/x"`` is ``D:/etc/x``. pathlib honours the ANCHOR, not the
+    absoluteness, so a POSIX-style override sails straight past an ``is_absolute`` check and
+    lands OUTSIDE ``--checkout-root``, which is the precise escape the caller's refusal
+    message claims to prevent. ``C:x`` is the same bug from the other side: drive-relative,
+    not absolute, and it still discards the root.
+
+    So this asks about the ANCHOR - drive or root - under both ``PurePosixPath`` and
+    ``PureWindowsPath``, and refuses if either flavour says the operand is anchored. Asking
+    both is what makes the answer the SAME on the Windows machine this suite runs on locally
+    and on the ubuntu matrix CI runs; a check that is true on one leg and false on the other
+    is the ``AI-E13-1`` class AC8.4 exists to catch, and it is how this one was found.
+
+    Out of scope deliberately, and by name: ``..``. ``root / "../x"`` also leaves the root,
+    but it leaves it VISIBLY - the operator typed the traversal and pathlib did exactly what
+    it says. What is guarded here is the SILENT discard, where the left operand vanishes and
+    nothing on the command line says so.
+    """
+    return any(
+        bool(pure.root or pure.drive)
+        for pure in (PurePosixPath(relative), PureWindowsPath(relative))
+    )
 
 
 def _checkout_for(root: Path, member_id: str, overrides: dict[str, str]) -> Path:
@@ -782,11 +811,12 @@ def main(argv: list[str] | None = None) -> int:
             member_id, _, relative = pair.partition("=")
             if not member_id.strip() or not relative.strip():
                 raise Refused(f"--map {pair!r} has an empty member id or path")
-            if Path(relative).is_absolute():
+            if _discards_the_root(relative):
                 raise Refused(
-                    f"--map {pair!r} names an ABSOLUTE path. It must be relative to "
-                    f"--checkout-root, because pathlib discards the left operand when the "
-                    f"right one is absolute - which silently escapes the root entirely."
+                    f"--map {pair!r} names an ANCHORED path - absolute, root-anchored or "
+                    f"drive-relative. It must be relative to --checkout-root, because "
+                    f"pathlib discards the left operand when the right one is anchored - "
+                    f"which silently escapes the root entirely."
                 )
             overrides[member_id] = relative
         return build(
