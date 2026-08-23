@@ -614,6 +614,8 @@ def test_the_collision_rule_is_applied_to_every_name_not_only_to_match(
     # un-flag a synthetic Python collision, and the decision rests on the measured RARITY of
     # that shape rather than on it being impossible. Recorded so it can never be discovered
     # again as if it were news.
+    # ⚠️ NOT THE COMPLETE REGISTER: `AssertionError` is the SIXTH admitted name and its
+    # accepted cost is registered in `tests/test_vacuous_vocabulary.py` (`-140`, Story 16.6).
     for name, call, measured in (
         ("ok", "ok(result)", "10 py sites vs 764 js edges"),
         ("equal", "equal(result, 5)", "34 vs 1,548"),
