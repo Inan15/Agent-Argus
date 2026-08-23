@@ -1,6 +1,6 @@
 # Story 16.5: The record says who judged, and whether they were independent
 
-Status: in-progress
+Status: review
 
 <!-- Contexted 2026-08-22 at HEAD `52143eb` by the create-story workflow (Opus 5). Every figure in
      §0 was READ OFF THE TREE, not copied from the epic. Where the epic and the tree disagree, §0
@@ -1021,17 +1021,17 @@ that claim** with `tests/test_gate_ordering.py` rather than asserting it.
 
 ### ⛔ Task 0 — REPRODUCE §0 BEFORE WRITING ANYTHING
 
-- [ ] Baseline: full suite (`ARGUS_REQUIRE_LANGUAGE_GRAMMARS=1`), `mypy argus`, `bandit`, **both**
+- [x] Baseline: full suite (`ARGUS_REQUIRE_LANGUAGE_GRAMMARS=1`), `mypy argus`, `bandit`, **both**
       builders `--check`. Record collected count and every exit code. **A stale `--check` at this
       point is an escalation (AC7.4), not something to fix in passing.**
-- [ ] Re-derive **every row of §0.1** from the two committed JSON artifacts by execution — the 31
+- [x] Re-derive **every row of §0.1** from the two committed JSON artifacts by execution — the 31
       rows, the disposition tally, and that the distinct adjudicator set has **exactly one** member.
-- [ ] Re-confirm **§0.2** against `precision-validation-protocol.md` §2 on disk and against
+- [x] Re-confirm **§0.2** against `precision-validation-protocol.md` §2 on disk and against
       `git show 1bb7088`: QA Lead **filled**, External adjudicator **unfilled**, change-log head
       **V1.3**.
-- [ ] Re-measure **§0.5** with `test_module_size_ceiling.py::_physical_line_count`, and re-derive
+- [x] Re-measure **§0.5** with `test_module_size_ceiling.py::_physical_line_count`, and re-derive
       **§0.6**'s next free ids by `grep`. **Report any row that differs.**
-- [ ] Confirm `git status --porcelain` shows **only** this story file and `sprint-status.yaml`
+- [x] Confirm `git status --porcelain` shows **only** this story file and `sprint-status.yaml`
       **plus this story's validation reports** (create-story wrote the first two at `52143eb` and did
       not commit them; the validation rounds added `…-validation-2026-08-23.md` and
       `…-validation-2026-08-23-round-2.md`, untracked — **four entries, not two**). ⛔ **These are
@@ -1040,10 +1040,10 @@ that claim** with `tests/test_gate_ordering.py` rather than asserting it.
 
 ### Task 1 — THE HEADROOM DECISION, TAKEN BEFORE THE FIRST LINE (AC5.1, §0.5)
 
-- [ ] Estimate the `gate_decision.py` delta (field + payload key + property wiring + the note
+- [x] Estimate the `gate_decision.py` delta (field + payload key + property wiring + the note
       derivation + the forwarded argument at `:811` + their comment blocks, at this module's
       measured density).
-- [ ] ⛔ **PROJECT THE FOUR §2.3 FORWARDERS TOO — ADDED 2026-08-23.** The earlier version of this
+- [x] ⛔ **PROJECT THE FOUR §2.3 FORWARDERS TOO — ADDED 2026-08-23.** The earlier version of this
       task projected only `gate_decision.py`, so **the modules the dev must actually edit to satisfy
       AC2.3 were outside the projection entirely**. Measured with the guard's own
       `_physical_line_count`: `adjudication.py` **973/227**, `gate_seal.py` **777/423**,
@@ -1054,35 +1054,35 @@ that claim** with `tests/test_gate_ordering.py` rather than asserting it.
       adds NO new NFR-M1 trigger, and `gate_decision.py` at 1,084 remains the ONLY one to watch.**
       ⛔ **Re-measure all four and confirm anyway** — if any projection contradicts this line, that is
       §0's next false premise and it is **reported (AC7.4), not absorbed**.
-- [ ] **If projected > 1,150:** perform the cohesion split **FIRST, alone, in its own commit**, with
+- [x] **If projected > 1,150:** perform the cohesion split **FIRST, alone, in its own commit**, with
       no behaviour change, on the `gate_conditions`/`gate_evidence` precedent — every symbol
       re-exported, every import line unchanged, proven a pure move by AST span comparison + sha256,
       and `MAINT-001-04` respected (**no `_EXEMPT_BY_DESIGN` entry**).
-- [ ] **If projected 1,100–1,150:** file a new ledger entry naming the trigger (pure append).
-- [ ] Record the projection and the decision either way.
+- [x] **If projected 1,100–1,150:** file a new ledger entry naming the trigger (pure append).
+- [x] Record the projection and the decision either way.
 
 ### Task 2 — THE MODULE (AC1)
 
-- [ ] `argus/precision/gate_independence.py`: the closed vocabulary + raising lookup, the frozen
+- [x] `argus/precision/gate_independence.py`: the closed vocabulary + raising lookup, the frozen
       assessment dataclass with `to_payload()`, the pure `assess_independence(...)`, and the
       status-note renderer. Docstring records the **derivation and every rejected alternative**.
-- [ ] Reuse `PROTOCOL_ADJUDICATOR_ROLES` and `adjudicator_role()`. **No second parser or role list.**
-- [ ] `AI-E11-1`: an empty adjudicator set yields `NOT_ESTABLISHED`, never `NOT_INDEPENDENT`.
-- [ ] AC1.5's roster/record distinction is in the **published sentence**, not only in a comment.
+- [x] Reuse `PROTOCOL_ADJUDICATOR_ROLES` and `adjudicator_role()`. **No second parser or role list.**
+- [x] `AI-E11-1`: an empty adjudicator set yields `NOT_ESTABLISHED`, never `NOT_INDEPENDENT`.
+- [x] AC1.5's roster/record distinction is in the **published sentence**, not only in a comment.
 
 ### Task 3 — THE RENDERER (AC2.1, AC2.2)
 
-- [ ] One optional keyword on `precision_gate_status_for`, defaulting so existing callers are
+- [x] One optional keyword on `precision_gate_status_for`, defaulting so existing callers are
       byte-identical. Rendered in **all three** branches.
-- [ ] Prove byte-stability by **rendering and comparing strings** for the dogfood and cartridge call
+- [x] Prove byte-stability by **rendering and comparing strings** for the dogfood and cartridge call
       sites — before and after — not by reading the diff.
 
 ### Task 4 — THE WIRING (AC1.3, AC2.3, AC2.5)
 
-- [ ] `GateDecision` gains one field, **defaulted last and `None`-able**, on the
+- [x] `GateDecision` gains one field, **defaulted last and `None`-able**, on the
       `corpus_read_proof` / `breadth` / `seal` / `yield_` precedent, so **no existing construction
       site moves**.
-- [ ] `decide_gate` derives it from the `adjudicators` tuple it **already** computes. **No recount.**
+- [x] `decide_gate` derives it from the `adjudicators` tuple it **already** computes. **No recount.**
       ⛔ **This is a RE-ORDER, not a one-line forward — noted 2026-08-23.** `decide_gate` calls
       `fold_adjudicated_precision` at **`:811`** but derives `live = record.live_rows()` and the
       `adjudicators` tuple at **`:820-823`, AFTER it**. To pass the note **into** the fold, that
@@ -1090,19 +1090,19 @@ that claim** with `tests/test_gate_ordering.py` rather than asserting it.
       `record.live_rows()`) is already in scope there, so the move is mechanical and lands inside an
       AC7.2 module — but it is an edit to the gate's central function, so make it deliberately and
       confirm nothing between `:811` and `:823` depended on the old order.
-- [ ] `precision_gate_status` threads the note through **all four** renderer branches. ⛔ **NONE of
+- [x] `precision_gate_status` threads the note through **all four** renderer branches. ⛔ **NONE of
       the four renders in `gate_decision.py`** (§2.3): `decide_gate` derives the note and passes it
       into `fold_adjudicated_precision` — **its only production caller**, verified repo-wide — and
       each arm module **forwards the same one keyword on its RE-RENDER path**. The **short-circuit**
       path (`return fold.gate_status`) needs no edit: it inherits the note from the fold. ⛔ No
       string post-processing; no arm module derives or words the note (AC7.1a, `DN-16-5-5`).
-- [ ] ⛔ Confirm **by rendering and comparing strings** that every EXISTING caller of the fold
+- [x] ⛔ Confirm **by rendering and comparing strings** that every EXISTING caller of the fold
       builder and of the three arm renderers is byte-identical and **NOT edited**:
       `tests/test_adjudication_record.py`, `tests/test_gate_breadth.py`,
       `tests/test_gate_decision.py`, `tests/test_gate_decision_artifact.py` and
       `scripts/build_gate_decision.py`. Any of them needing an edit means the keyword is not
       defaulted inertly — fix the default, do not edit the caller.
-- [ ] ⛔ **AND the three DIRECT callers of `precision_gate_status_for` the list above omitted —
+- [x] ⛔ **AND the three DIRECT callers of `precision_gate_status_for` the list above omitted —
       added 2026-08-23.** AC2.1 requires **every existing caller** to render byte-identically, and
       the list above named only callers of the **fold builder**. Also confirm, by the same
       render-and-compare method and **without editing them**:
@@ -1112,54 +1112,54 @@ that claim** with `tests/test_gate_ordering.py` rather than asserting it.
       fence**, so an edit to any of them is an AC7.1 breach, not a fix. *(`argus/dogfood/proof_run.py`
       `:591`/`:653` and `replay_harness.py:570` are already covered — AC7.1's `argus/dogfood/**` and
       AC3.4. Nothing here is unsatisfiable; the confirmation list was simply incomplete.)*
-- [ ] `to_payload()` gains one top-level key. `__all__` updated. **`SECTION_5_CONDITIONS` untouched.**
+- [x] `to_payload()` gains one top-level key. `__all__` updated. **`SECTION_5_CONDITIONS` untouched.**
 
 ### Task 5 — THE GUARDS (AC5)
 
-- [ ] `tests/test_gate_independence.py` **(new)**, from `-105`. Generated populations, breadth /
+- [x] `tests/test_gate_independence.py` **(new)**, from `-105`. Generated populations, breadth /
       seal / yield / counts **pinned** (§2.8). Assert **where the status flips**.
-- [ ] Every vocabulary member reached; the unregistered lookup driven to its raise; both directions.
-- [ ] AC2.4's separation guard, RED in **both** mutation directions at the real seam.
-- [ ] AC4.3's inertness proof, over **both** an otherwise-`CLEARED` population and the live
+- [x] Every vocabulary member reached; the unregistered lookup driven to its raise; both directions.
+- [x] AC2.4's separation guard, RED in **both** mutation directions at the real seam.
+- [x] AC4.3's inertness proof, over **both** an otherwise-`CLEARED` population and the live
       `BLOCKED` one.
-- [ ] AC4.4's byte-unchanged constants guard, by value, in one place.
-- [ ] AC3.1's no-second-renderer walk; AC3.2 / 3.3 / 3.4's byte-identity assertions.
-- [ ] AC5.5's artifact guard in `tests/test_gate_decision_artifact.py`, re-derived from the
+- [x] AC4.4's byte-unchanged constants guard, by value, in one place.
+- [x] AC3.1's no-second-renderer walk; AC3.2 / 3.3 / 3.4's byte-identity assertions.
+- [x] AC5.5's artifact guard in `tests/test_gate_decision_artifact.py`, re-derived from the
       committed adjudication record.
-- [ ] Every docstring discharges the **GUARD-ADEQUACY CLAUSE** (i)/(ii)/(iii) with counts.
+- [x] Every docstring discharges the **GUARD-ADEQUACY CLAUSE** (i)/(ii)/(iii) with counts.
       Mutations under `PYTHONDONTWRITEBYTECODE=1`, tree restored, `git status` clean after each.
 
 ### Task 6 — THE ARTIFACTS, IN THE §2.5 ORDER (AC6.1)
 
-- [ ] Commit `argus/` first.
-- [ ] `python scripts/regenerate_dogfood_artifacts.py`; commit the regenerated artifacts separately.
-- [ ] `python scripts/build_gate_decision.py` to **regenerate** `gate-decision-record.json`; confirm
+- [x] Commit `argus/` first.
+- [x] `python scripts/regenerate_dogfood_artifacts.py`; commit the regenerated artifacts separately.
+- [x] `python scripts/build_gate_decision.py` to **regenerate** `gate-decision-record.json`; confirm
       `--check` exit **0**; commit separately. ⛔ Never hand-edit the artifact.
-- [ ] Re-run `TC-ArgusAgent-PRECISION-001-61` (NFR-S1) against the regenerated artifact.
+- [x] Re-run `TC-ArgusAgent-PRECISION-001-61` (NFR-S1) against the regenerated artifact.
 
 ### Task 7 — THE RECORD (AC6.2–6.5)
 
-- [ ] Protocol §2 **dated block under V1.3** — no `V1.4` row, no existing byte edited.
-- [ ] `architecture.md` §Enforcement dated addition under *Gate-decision enforcement*,
+- [x] Protocol §2 **dated block under V1.3** — no `V1.4` row, no existing byte edited.
+- [x] `architecture.md` §Enforcement dated addition under *Gate-decision enforcement*,
       **struck-never-erased**; confirm `TC-ArgusAgent-DOCS-001-77` green.
-- [ ] `deferred-work.md` **pure append** only (`TC-ArgusAgent-DOCS-001-78`).
-- [ ] `README.md` / `CHANGELOG.md` only if a rendered surface actually moved — **say so either way.**
+- [x] `deferred-work.md` **pure append** only (`TC-ArgusAgent-DOCS-001-78`).
+- [x] `README.md` / `CHANGELOG.md` only if a rendered surface actually moved — **say so either way.**
 
 ### Task 8 — GATES AND HAND-OFF (AC7.3)
 
-- [ ] All of AC7.3, each with its command and output recorded in the Dev Agent Record.
-- [ ] Confirm AC7.1's must-not-move list byte-unchanged (`git diff --stat` against Task 0's HEAD).
-- [ ] ⛔ **Confirm AC7.1a's FORWARDING BUDGET on the four §2.3 modules — added 2026-08-23.** Read
+- [x] All of AC7.3, each with its command and output recorded in the Dev Agent Record.
+- [x] Confirm AC7.1's must-not-move list byte-unchanged (`git diff --stat` against Task 0's HEAD).
+- [x] ⛔ **Confirm AC7.1a's FORWARDING BUDGET on the four §2.3 modules — added 2026-08-23.** Read
       the actual diff for `adjudication.py`, `gate_breadth.py`, `gate_seal.py` and `gate_yield.py`
       and confirm **each** is exactly (a) one optional keyword, (b) forwarded to the one existing
       `precision_gate_status_for` call, (c) one docstring line — **and nothing else**. Then confirm
       by **rendering and comparing strings** (not by reading the diff) that with the keyword omitted
       each is **byte-identical** to the pre-story build. ⛔ **A diff wider than the budget is an
       AC7.4 escalation, even if the suite is green.**
-- [ ] ⛔ Confirm §2.1's constants are still byte-unchanged **by value** (AC4.4) — note
+- [x] ⛔ Confirm §2.1's constants are still byte-unchanged **by value** (AC4.4) — note
       `PROTOCOL_ADJUDICATOR_ROLES` and `DISPOSITIONS` live in `adjudication.py`, which is no longer
       whole-module fenced, so this assertion now carries weight it did not carry before.
-- [ ] Fill the Dev Agent Record below; set the story to `review`; update `sprint-status.yaml`.
+- [x] Fill the Dev Agent Record below; set the story to `review`; update `sprint-status.yaml`.
 
 ---
 
@@ -1167,16 +1167,216 @@ that claim** with `tests/test_gate_ordering.py` rather than asserting it.
 
 ### Agent Model Used
 
+Claude Opus 5 (1M context) — `claude-opus-5[1m]`, via the BMAD `dev-story` workflow.
+
 ### Debug Log References
+
+Baseline at HEAD `52143eb`, and ⛔ **it was RED — §0's next false premise, found on the first
+command.** `TC-ArgusAgent-DOCS-001-78` reported **five** unbacked ledger-closure claims. Two
+governance-record defects, neither of them a reason to touch the guard, both repaired in the arc's
+first commit (`9aea1be`):
+
+1. **`DF-15-2-D` really was CLOSED on 2026-08-22, with its date and its evidence — and the closure
+   was MACHINE-INVISIBLE.** `ledger_closed_ids` recognises two shapes (the id ON the closure line,
+   or a trailing `- status:` field) and the disposition was written as a `- **✅ CLOSED …**` bullet
+   carrying neither. So this story's own TRUE Dev Notes claim read as unbacked. Repaired by the
+   remedy the guard's own failure message prescribes: a **pure append** of the machine-readable
+   field, closing nothing new. Verified by executing the analyzer: `DF-15-2-D` now resolves CLOSED;
+   `DF-15-2-E`, `DF-16-1-A`, `DF-16-3-A` still resolve **open**.
+2. **The round-1 validation report put four OPEN ids and one CLOSED id on ONE physical line**, and
+   `story_closure_claims` is line-scoped **by design** — its docstring says widening the window
+   *"swept unrelated ids into the claim"*. The table row was split in two; every word, cite and
+   verdict preserved verbatim, no finding changed, and a dated note records the split and why.
+
+⛔ **Everything else in §0 re-derived EXACT and nothing was amended.** 31 live rows · 26 FP / 5
+BORDERLINE / 0 TP / 0 UNADJUDICATED · **exactly one** distinct adjudicator `"XAgent007 (Engineering
+Lead)"` · `protocol_version` V1.3, `expert_hours` null · committed decision `BLOCKED`,
+`precision.evaluable` / `fold_evaluable` false/false, breadth/seal/yield **false/false/true** ·
+**ZERO** `adjudicators` assertions in `tests/**` or `scripts/**` · §0.2 confirmed (QA Lead FILLED
+by `1bb7088`, External adjudicator UNFILLED, change-log head V1.3) · §0.6 next free ids confirmed
+`-105` and `-80` · **both builders `--check` exit 0 at Task 0**, so AC7.4's stale-artifact trigger
+did not fire · all §0.5 line counts exact (`gate_decision.py` 1,084 · `adjudication.py` 973 ·
+`gate_seal.py` 777 · `gate_yield.py` 560 · `gate_breadth.py` 436 · `test_gate_seal.py` 1,145 ·
+`test_vacuous_density.py` 1,159), measured with the ceiling guard's own `_physical_line_count`.
+
+**Task 1 — the headroom decision, taken BEFORE the first line.** Projected and then measured:
+`gate_decision.py` **1,084 → 1,132** (headroom 116 → 68). That is the **1,100–1,150 band**, so the
+rule is *file a ledger entry*, **not** split — `DF-16-5-A`, a pure append. The four §2.3 forwarders
+landed at **977 / 780 / 563 / 439** against the 1,200 ceiling, +4/+3/+3/+3 each, confirming §0.5's
+stated projection rather than contradicting it: **no new NFR-M1 trigger, no split-first trigger
+crossed, and no `_EXEMPT_BY_DESIGN` entry added** (registry still 3, and it may only shrink).
+
+**AC7.1a byte-identity — PROVEN BY RENDERING, not by reading the diff.** `argus/` at `52143eb` was
+extracted with `git archive` into a scratch tree and **26 surfaces** were rendered against both it
+and the working tree with the keyword omitted — all three `precision_gate_status_for` branches
+(plus the reasoned, corpus-noted and `precision=None` variants), the fold's `gate_status` /
+`precision_ratio` / `evaluable` / `expert_hours_report` over the committed record on two
+exhaustiveness paths, and each of the three arm renderers on BOTH its re-render and short-circuit
+path. **sha256 `27dde086258766f56172f81cd21fa61e2129180a4bc9349f2cca3c184521b4d3` both times,
+13,798 bytes, BYTE-IDENTICAL.**
+
+**TEN mutations, all RED, at the real seam.** Every one executed with `PYTHONDONTWRITEBYTECODE=1`
+and a cleared `__pycache__`, with the target file's sha256 verified **before and after** so the
+restore is proven rather than assumed. `_derive_status`'s empty arm collapsed into
+`NOT_INDEPENDENT` (RED on `-105` **and** `-110`) · the raising lookup replaced by a silent
+`dict.get` default (RED `-105`) · the `cleared` branch dropping the note (RED `-106`) · the
+`unevaluable` branch withholding the figure (RED `-106`) · a SECOND function emitting the
+`precision=` surface, added to `gate_independence.py` itself (RED `-107`) · the
+`sealed_precision_gate_status` forward dropped (RED `-108` **and green on `-109`**, which is what
+proves the four branches are genuinely distinguished) · a FIFTH `precision_evaluable` conjunct (RED
+`-109` **and** `-111`) · an EIGHTH `SECTION_5_CONDITIONS` member (RED `-111`) · the `independence`
+payload key dropped (RED `-112`) · a DN-16-5-6-violating `independence_note` passed into the
+dogfood renderer (RED `-112`) · the committed artifact hand-edited to
+`EXTERNAL_ADJUDICATOR_PARTICIPATED` (RED `-113`). `git status --porcelain` clean after every one.
+
+**Two re-arms found by execution, both handled as deliberate decisions rather than absorbed:**
+`TC-ArgusAgent-RELEASE-001-11`'s test-tree-reach registry needed the new module (it joins
+TRANSITIVELY through its single `adjudication` import and resolves no path at module level), and
+`TC-ArgusAgent-PRECISION-001-94`'s **seal-citation rule** required an `Evidence-partition:` trailer
+on the `feat` commit, because `argus/precision/replay_harness.py` is a declared detector-tuning
+path. The trailer was **written, never the rule amended** — the guard says amending it *"is the
+corpus-shopping failure mode with an extra step"*. Value: **`none`**, because no corpus evidence of
+either partition informed this change. The three affected commits were rebuilt in place so the
+trailer sits on the commit it describes and the dogfood artifacts cite the right provenance sha.
 
 ### Completion Notes List
 
+**AC1 — DERIVED, never typed.** `argus/precision/gate_independence.py` (328 lines) owns the closed
+four-member vocabulary, its raising `UnregisteredIndependenceStatus` lookup, the frozen
+`IndependenceAssessment` with `to_payload()`, the pure `assess_independence` and the note renderer.
+PURE (AR8): no I/O, no clock, no network, no module-level repository-only path — every input
+arrives as an argument. The three role names are **destructured** out of
+`PROTOCOL_ADJUDICATOR_ROLES`, so a fourth registered role fails at import rather than drifting; ids
+are parsed by the **existing** `adjudicator_role`; the derived value is READ off the `adjudicators`
+tuple `decide_gate` already computes and the record is never recounted. Import direction is one
+way only. **AC1.6, re-derived by execution: `NOT_INDEPENDENT`, from 31 of 31 live human judgements
+authored by `"XAgent007 (Engineering Lead)"`.** AC1.5 / `DN-16-5-4` lands in the *published
+sentence* and is asserted there, not in a comment: the note says in its own words that it is a
+claim about **this adjudication run** and not about §2's roster, *"which is not read here: a
+registered role may be FILLED and have authored nothing on this record"* — because the QA Lead has
+been filled since `1bb7088` and has judged nothing.
+
+**AC2 — the two cannot be separated.** One optional keyword on `precision_gate_status_for`,
+rendered in **all three** branches including the `cleared` one no production call site reaches
+(`-106` drives 4 statuses × 3 branches = **12** renders and asserts both halves on every one).
+`-108` drives all **four** renderer branches — `fold.gate_status`, and each arm renderer's
+re-render path — **selected by construction**, over 3 statuses = **12** decisions, and asserts each
+re-render **is** the arm renderer's own output rather than merely a different string. AC2.5's
+structured block is on the committed payload under a new top-level `independence` key.
+
+**AC3 — nothing is forked.** `-107` walks all `argus/**` modules (≥50 modules, ≥200 functions) and
+finds **exactly one** function emitting the `precision=`/`N=` surface. The exclusion set is NAMED
+and each excluded sentence is **asserted to still exist**, so "excluded" can never quietly become
+"deleted". `negative_assurance.py` is byte-unchanged and `InstrumentStatus` is still closed at two.
+The dogfood surface renders byte-identically and carries no clause, asserted by rendering.
+
+**AC4 — nothing is gated, proven by execution.** `SECTION_5_CONDITIONS` is **SEVEN**,
+`gate_conditions.py` byte-unchanged; `precision_evaluable` has **exactly four** conjuncts, COUNTED
+out of the shipped AST rather than compared to a typed number; `_precision_condition` gains no
+branch. `-109` flips the status through all three non-empty members over BOTH an otherwise-`CLEARED`
+generated population and a `BLOCKED` one built from the real committed rows, and finds `outcome`,
+`outcome_reason`, all seven condition verdicts, `precision_evaluable`, `meets_threshold` and the
+closure path **byte-identical** — while asserting first that the *sentence* did move (so the
+fixtures are not inert overall) and that the fixtures **differ only in the adjudicator field**.
+AC4.3's `NOT_ESTABLISHED` exclusion is honoured and its **corrected** mechanism is what went into
+the guard docstring: the population blocks on **EXHAUSTIVENESS**, ahead of the empty-denominator
+branch and §5(4) — and `-110` asserts exactly that `outcome_reason` by measurement.
+
+**AC5 — guards that cannot be vacuous.** `tests/test_gate_independence.py` (**new**, 962 lines),
+`TC-ArgusAgent-PRECISION-001-105`..`-112`, plus `-113` in `tests/test_gate_decision_artifact.py`.
+⛔ Nothing landed in `tests/test_gate_seal.py`, which is byte-unchanged at 1,145. Populations are
+GENERATED with member spread, size, locators, rule ids and dispositions **pinned**, so the
+adjudicator field is the only term that can move — and `_assert_differs_only_in_adjudicator`
+asserts that **mechanically, row by row**, before any guard reasons about a difference. That is
+§2.8's lockstep trap, which caught 16.1, 16.2 and 16.3 in turn. Every guard docstring discharges
+GUARD-ADEQUACY (i)/(ii)/(iii) with its adversarial-variant **count** stated, and (ii) is discharged
+by the ten executed mutations above rather than by assertion.
+
+**AC6 — the records.** Protocol §2 gained a **fifth dated block under V1.3** (57 insertions, **0**
+deletions — no `V1.4` row, no existing byte edited). `architecture.md` §Enforcement gained a dated
+addition to *Gate-decision enforcement* (6,053 bytes added, **0** removed; the original line is a
+verbatim prefix of the new one). `deferred-work.md` took **two pure appends** (0 deletions):
+`DF-16-5-A` and the `DF-15-2-D` machine-readable status field. **AC6.5 answered explicitly:** a
+rendered surface DID move — `TC-ArgusAgent-DOCS-001-54`'s published module figures — so `README.md`
+and `CHANGELOG.md` were updated with the four figures the new module moved (importable and shipped
+modules 93→94, wheel entries 101→102, sdist members 100→101), each derived from a freshly built
+wheel. No FR34 surface moved.
+
+**AC7 — scope.** The AC7.1 must-not-move list is **byte-unchanged against `52143eb`**: `git diff
+--stat 52143eb HEAD` over all 20 fenced paths returns **nothing**. The AC7.1a budget holds exactly:
+`adjudication.py` **+4/-0**, `gate_breadth.py` **+3/-0**, `gate_seal.py` **+3/-0**, `gate_yield.py`
+**+3/-0** — one optional keyword, one forward to the one existing call, one docstring line, **zero**
+deletions, no second parameter, no `__all__` change and **no `gate_independence` import in any of
+the four**. ⛔ `gate_breadth.py:366-368`'s shipped `DN-16-1-1` sentence is **byte-as-shipped**
+(sha256 `20d3b1f18a74c555` at `52143eb` and at HEAD): `DN-16-5-7` was read, the conflict was
+recognised as already adjudicated, and correcting the docstring was **not** done because the
+operator declined it.
+
+⛔ **Nothing operator-owned was touched.** No bench member ratified, no third-party repository
+fetched, no detector run over a member, no disposition written, no role filled, no threshold moved,
+`precision-validation-protocol.md`'s existing bytes unedited. `N` stays 5, the seal stays closed,
+`protocol_cleared` stays `False`, `adjudication-record.json` is byte-unchanged, no `V1.4` row, and
+**`DF-13-5-A`'s one pre-registered round stays OPEN and UNSPENT.**
+
+**Gates (AC7.3), each run and each number recorded.** Full suite with
+`ARGUS_REQUIRE_LANGUAGE_GRAMMARS=1`: **1,686 passed, 0 failed, exit 0 (248s)**. `mypy argus`: **Success, no
+issues in 94 source files**, exit 0. `bandit -r argus --severity-level medium`: **0 medium, 0
+high** (20 low, below the threshold), exit 0. `scripts/build_gate_decision.py --check`: **exit 0**.
+`scripts/build_adjudication_record.py --check`: **exit 0**. `tests/test_module_size_ceiling.py`:
+green, **`_EXEMPT_BY_DESIGN` still 3 entries — no entry added**.
+
+⛔ **Two things a reviewer should look at first**, because they are the judgement calls: (1) the
+two governance-record repairs in `9aea1be`, which are edits this story's AC7.2 did not anticipate —
+they were forced by a RED baseline and both are strictly additive or verbatim-preserving; and (2)
+the `Evidence-partition: none` trailer, which is a claim about this change that only a reader of
+the diff can falsify.
+
 ### File List
+
+**New**
+
+- `argus/precision/gate_independence.py` (328)
+- `tests/test_gate_independence.py` (962)
+
+**Modified — `argus/`**
+
+- `argus/precision/gate_decision.py` (+56 / -8; 1,084 → 1,132)
+- `argus/precision/replay_harness.py` (+29 / -3; 825 → 851)
+- `argus/precision/adjudication.py` (+4 / -0; 973 → 977) — AC7.1a budget
+- `argus/precision/gate_breadth.py` (+3 / -0; 436 → 439) — AC7.1a budget
+- `argus/precision/gate_seal.py` (+3 / -0; 777 → 780) — AC7.1a budget
+- `argus/precision/gate_yield.py` (+3 / -0; 560 → 563) — AC7.1a budget
+
+**Modified — `tests/`**
+
+- `tests/test_gate_decision_artifact.py` (+81 / -0; 451 → 532) — `-113`
+- `tests/test_release_preflight.py` (+12 / -0) — the deliberate test-tree-reach registration
+
+**Modified — records and artifacts**
+
+- `_bmad-output/design-artifacts/ArgusAgent/validation-corpus/gate-decision-record.json`
+  *(REGENERATED by `scripts/build_gate_decision.py`, never hand-edited)*
+- `_bmad-output/design-artifacts/ArgusAgent/minions-dogfood-proof.md`
+- `_bmad-output/design-artifacts/ArgusAgent/minions-dogfood-partition-plan.md`
+- `_bmad-output/design-artifacts/ArgusAgent/minions-dogfood-budget-plan.md`
+  *(all three REGENERATED by `scripts/regenerate_dogfood_artifacts.py`, in the §2.5 order)*
+- `_bmad-output/design-artifacts/ArgusAgent/precision-validation-protocol.md` *(dated block, +57/-0)*
+- `_bmad-output/design-artifacts/ArgusAgent/architecture.md` *(dated addition, 0 bytes removed)*
+- `_bmad-output/design-artifacts/ArgusAgent/deferred-work.md` *(two pure appends, 0 deletions)*
+- `README.md` · `CHANGELOG.md` *(published module figures, AC6.5)*
+- `_bmad-output/design-artifacts/ArgusAgent/stories/16-5-the-record-says-who-judged-and-whether-they-were-independent-validation-2026-08-23.md`
+  *(one table row split; every word preserved, no finding changed)*
+- `_bmad-output/design-artifacts/ArgusAgent/stories/16-5-the-record-says-who-judged-and-whether-they-were-independent.md` *(this file)*
+- `_bmad-output/design-artifacts/ArgusAgent/sprint-status.yaml`
+
+**Byte-unchanged and asserted so** — every path on AC7.1's list, verified by
+`git diff --stat 52143eb HEAD`.
 
 ### Change Log
 
 | Date | By | Change |
 |---|---|---|
+| 2026-08-23 | dev-story (Opus 5) | **IMPLEMENTED; `ready-for-dev` -> `in-progress` -> `review`.** Six commits on the Epic-16 arc. **The derived answer over the live record is `NOT_INDEPENDENT`** - 31 of 31 live human judgements by `"XAgent007 (Engineering Lead)"` - and it now rides **on the `gate_status` sentence itself**, after the precision figure, in all three renderer branches and on all four renderers `precision_gate_status` can return, plus a structured `independence` payload block. NEW `argus/precision/gate_independence.py` (328) and `tests/test_gate_independence.py` (962, `-105`..`-112`), plus `-113` in `test_gate_decision_artifact.py`. **NOTHING IS GATED and it is proven by execution:** `SECTION_5_CONDITIONS` still **7**, `precision_evaluable` still **4** conjuncts (counted out of the shipped AST), and flipping the status through all three non-empty members leaves outcome, reason, all seven verdicts, `precision_evaluable`, `meets_threshold` and the closure path byte-identical over BOTH an otherwise-`CLEARED` and a `BLOCKED` population. **AC7.1a held exactly** - the four forwarders are +4/+3/+3/+3 with **zero** deletions - and NFR-P1 was **proven by rendering**: 26 surfaces, sha256 `27dde086258766f5`, byte-identical against the pre-story tree. **TEN mutations, all RED**, at the real seam, tree restored byte-exact after each. **§0's next false premise, FOUND: the Task-0 baseline was RED**, not green - `TC-ArgusAgent-DOCS-001-78` on two governance-record defects (a machine-INVISIBLE but real `DF-15-2-D` closure, and a line-scoped analyzer sweeping four OPEN ids off one table row), both repaired additively without touching the guard. `gate_decision.py` **1,084 -> 1,132** landed in the 1,100-1,150 band, so **`DF-16-5-A` was FILED, not split** - the rule firing as designed. Two re-arms handled as decisions, not absorbed: the test-tree-reach registry, and the seal-citation rule, answered with `Evidence-partition: none` on the `feat` commit. ⛔ **`gate_breadth.py:366-368` left byte-as-shipped** (`DN-16-5-7` read, correction declined by the operator). ⛔ Nothing ratified, no detector run, no disposition written, no role filled, no threshold moved, no `V1.4` row, `adjudication-record.json` byte-unchanged, `DF-13-5-A` **OPEN and UNSPENT**. Gates: full suite exit 0 · `mypy argus` 94 files clean · `bandit` 0 medium / 0 high · both builders `--check` exit 0 · ceiling guard green with **no `_EXEMPT_BY_DESIGN` entry added** (still 3). |
 | 2026-08-22 | create-story (Opus 5) | Story contexted at HEAD `52143eb`; `backlog -> ready-for-dev`. |
 | 2026-08-23 | validate (read-only) | Story-readiness validation returned **FAIL**. Every §0 figure re-derived **CLEAN**; 3 BLOCKING + 4 minor findings, all in the ACs. Report: `...-validation-2026-08-23.md`. No file modified. |
 | 2026-08-23 | create-story (amendment mode) | **Seven targeted edits. No re-contexting, no re-research, no scope change, status stays `ready-for-dev`.** **B-1** — AC2.3 was unsatisfiable inside AC7.1's fence (none of its four renderers lives in `gate_decision.py`; the three arm renderers short-circuit). `gate_breadth.py` / `gate_seal.py` / `gate_yield.py` moved **AC7.1 -> AC7.2**, joined by `adjudication.py`, under a new **AC7.1a one-forwarded-keyword budget**; §2.3 rewritten with the measured call sites; Task 1's projection extended over all four (**no new NFR-M1 trigger**); §0.5 gained their rows; Tasks 1/4 and AC2.3 restated. **B-2** — AC4.3 contradicted AC5.3: scoped the inertness sweep to the **non-empty** members and recorded §5(4)'s pre-existing `adjudicators` coupling (`gate_decision.py:626-690`, `:1021`, `:977`) as a **found fact**; AC5.3 clarified. **B-3** — *"Nothing in the repository reads it"* measured **FALSE**; reframed as **"unguarded by any test"**, `_recorded_cleared_condition` added to §0.7, §0.1 callout and §1.1 qualified. **M-1** artifact root qualified once in §0.0. **M-2** `replay_harness.py:788`'s `registry_module()` indirection marked deliberate and out of scope. **L-1** `epics.md` cite `:3191` -> `:3199`. **L-2** AC3.1's walk exclusion set named. ⛔ **No `DN-*` overturned; `SECTION_5_CONDITIONS` still 7; `precision_evaluable` still 4 conjuncts; no `argus/`, `tests/` or `scripts/` file touched.** |
