@@ -4,7 +4,7 @@ baseline_commit: 6d48c15
 
 # Story 16.6: The assertion vocabulary recognises the assertion that is a `raise`
 
-Status: review
+Status: done
 
 <!-- Contexted 2026-08-23 at HEAD `6d48c15` by the create-story workflow (Opus 5).
 
@@ -1289,6 +1289,20 @@ NAME from the fixture's SHAPE (§2.5's lockstep trap). A case missing either hal
 
 ### Review Findings
 
+#### Iteration 1 (2026-08-23) — as originally written, PRESERVED VERBATIM below
+
+⚠️ **RECONCILIATION NOTE, added at iteration 2, 2026-08-23 — read this before the paragraph below.**
+The sentence *"Verdict: pass"* immediately below is iteration 1's own text, unedited. It is
+**inconsistent with the verdict iteration 1 actually enacted**: `sprint-status.yaml`'s
+iteration-1 comment records `CONCERNS; review -> in-progress`, and this workflow's own
+pass/concerns/fail mapping is unambiguous — an unresolved `[Review][Patch]` finding (the
+`36`-vs-`58` miscount, unchecked at the moment iteration 1 finished writing findings) blocks `pass`
+by definition, which is exactly why the story was sent back to `in-progress` for a fix round rather
+than closed. So: the enacted, load-bearing verdict of iteration 1 was **CONCERNS**, not `pass`; the
+word "pass" in the paragraph below is an iteration-1 authoring slip that was never corrected and is
+left exactly as written, per the instruction to preserve iteration-1 history rather than silently
+overwrite it. Iteration 2 (below the bullets) records the actual, current verdict.
+
 Adversarial code review (Blind Hunter / Edge Case Hunter / Acceptance Auditor) against commits
 `dd1e03a` · `6304552` · `6bb91ae`. Every claim below was checked by independent execution, not by
 trusting the Completion Notes — full suite re-run (1,695 passed / 0 failed / exit 0), `mypy argus`
@@ -1338,6 +1352,82 @@ are informational and do not gate `done`.
       execution (`.decode('ascii')` succeeds on all three `git log --format=%B` outputs). Correctly
       left unfixed — amending the guard is out of this story's scope (AC7.4) and the orchestrator's
       brief records it will be filed to the ledger separately — deferred, pre-existing, real.
+
+#### Iteration 2 (2026-08-23) — re-review of fix round 1 (`d6625b5`), against `dd1e03a` · `6304552`
+      · `6bb91ae` · `d6625b5`, baseline `6d48c15`
+
+**Every claim below was checked by independent execution against the tree as it stands now, not by
+trusting the Completion Notes or iteration 1's write-up.**
+
+- **The one iteration-1 `[Patch]` finding is CONFIRMED FIXED.** Independently re-ran
+  `pytest tests/test_gate_breadth.py tests/test_gate_condition_lookup.py tests/test_gate_decision.py
+  tests/test_gate_decision_artifact.py tests/test_gate_flip_path.py tests/test_gate_independence.py
+  tests/test_gate_ordering.py tests/test_gate_seal.py tests/test_gate_yield.py -v` myself: **58
+  passed, exit 0**, matching the corrected figure now in §7's table and the Change Log. Fix round 1's
+  own diff (`d6625b5`) touches only the story record and `sprint-status.yaml` — confirmed by `git
+  show --stat d6625b5`, no `argus/`, `tests/`, `scripts/` or `…/validation-corpus/` path in it. This
+  was a record-accuracy fix, correctly scoped, correctly executed, and independently reproduces.
+- **Both iteration-1 `[Defer]` findings were re-confirmed real by independent execution** (not
+  re-trusted): `argus/precision/gate_seal.py`'s `SEAL_CITATION_VALUES` is read directly and contains
+  exactly `(PARTITION_SEALED, PARTITION_OPEN, "none")` — no `pre-seal` member; and
+  `tests/test_gate_seal.py::_git` is read directly and confirmed to call `subprocess.run(...,
+  capture_output=True, text=True, timeout=120)` with no `encoding=` argument, at
+  `tests/test_gate_seal.py:1012-1019`. Both remain correctly out of this story's fence under AC7.4:
+  neither is caused by this story's diff, neither corrupts computed state or an AC's discharge, and
+  fixing either here would be exactly the AR7/scope-creep shape this epic's guards exist to prevent.
+- ⛔ **PROCESS GAP FOUND AND CLOSED BY THIS REVIEW ROUND.** Both `[Defer]` findings were correctly
+  triaged by iteration 1 but **never filed to `deferred-work.md`** — fix round 1's own commit message
+  discloses this explicitly ("both are being filed separately, outside this story's write-set fence")
+  but no separate filing commit followed, and `grep` for their subject matter in `deferred-work.md`
+  returned zero hits before this round. Filing a `defer` finding to the ledger is this review
+  workflow's own step (not the dev's), so this iteration files them now: **`DF-16-6-E`** (the
+  `SEAL_CITATION_VALUES` `pre-seal`-citation gap) and **`DF-16-6-F`** (the `tests/test_gate_seal.py`
+  cp1252 decode bug) are appended to `deferred-work.md` under a new dated heading, filed with the
+  same byte-invariant discipline `DF-16-6-C` requires (lone-`CR` count 1 → 1, `git diff --numstat`
+  `+79/-0`, no CRLF introduced, trailing newline intact — verified by execution both before and
+  after the append). No existing ledger entry is edited and no `DF-*` other than `-E`/`-F` is
+  created.
+- **Independent full re-verification, this round, by execution — not copied from any prior record:**
+
+  | Gate | Command | Result | Exit |
+  |---|---|---|---|
+  | Table state | `is_assertion_callee("AssertionError")`, `len(_ASSERTION_CALLEES)`, `"AssertionError" in _CORROBORATION_ASSERTION_CALLEES`, `len(_MOCK_CALLEES)` | `True`, **89**, `False`, **10** | n/a ✅ |
+  | Full suite | `ARGUS_REQUIRE_LANGUAGE_GRAMMARS=1 pytest` | **1,695 passed**, 241.56s | **0** ✅ |
+  | Types | `mypy argus` (CI scope) | *"Success: no issues found in **94** source files"* | **0** ✅ |
+  | Security | `bandit -r argus --severity-level medium` | Low 20, **Medium 0, High 0** | **0** ✅ |
+  | Ceiling | `pytest tests/test_module_size_ceiling.py` | **6 passed** | **0** ✅ |
+  | AC3.3 | `pytest tests/test_gate_*.py` (all nine) | **58 passed** | **0** ✅ |
+  | Governance | `pytest tests/test_governance_record_integrity.py` | **3 passed** | **0** ✅ |
+  | New module | `pytest tests/test_vacuous_vocabulary.py` | **7 passed** | **0** ✅ |
+  | Collateral | `pytest tests/test_vacuous_cross_language.py tests/test_vacuous_density.py tests/test_vacuous_detector.py tests/test_vacuous_detector_index.py` | **51 passed**, no regression | **0** ✅ |
+  | Builder | `python scripts/build_adjudication_record.py --check` | *"current (**31** row(s))"* | **0** ✅ |
+  | Builder | `python scripts/build_gate_decision.py --check` | *"CURRENT — BLOCKED"* | **0** ✅ |
+
+- **AC-by-AC spot audit, by reading the shipped code and the shipped test module (not the prose
+  describing them):** AC1.1–AC1.3/AC1.6 confirmed by direct interpreter execution (table above).
+  AC1.4 confirmed unchanged (`_ASSERTION_NAMING_CONVENTION.pattern == r"\A_?assert\w*\Z"`, asserted
+  by `-142`). AC1.5's `DN-14-3-5` block is a labelled sub-note naming its own population and axes
+  (`python benefit (in-raise sites)` / `python collisions (non-raise sites)`) rather than a row of
+  the existing table at `vacuous_vocabulary.py:290` — read directly, confirmed correctly separated.
+  AC2 (`-139`) varies only the callee name with the denominator pinned via an explicit control
+  fixture, and asserts `assertion_sites` (not the flag) exactly where AC2.4 requires — read the test
+  body directly, confirmed non-vacuous. AC3.1 (`-142`) asserts `corroborated_seen >= 1` as an
+  explicit non-vacuity floor before drawing any "unmoved" conclusion (the `AI-E3-1` shape this
+  project has shipped before) — confirmed present and correct. AC3.2–AC3.4 read directly in the same
+  case. AC5.1's mutation evidence (six of seven RED, full pre-existing vacuous suite green under the
+  same mutation, `git status --porcelain` byte-identical before/after) is recorded with the actual
+  failure text in Completion Notes §4 — this is real seam mutation via `monkeypatch.setattr` on the
+  module global, not a reconstruction. AC6 module placement (`tests/test_vacuous_vocabulary.py`, new,
+  per `DN-16-6-3`) confirmed to exist and pass; `tests/test_vacuous_density.py` confirmed
+  byte-unchanged (not touched by this story's diff). No AC found unmet; no High/Medium-severity
+  defect found in the implementation or the tests.
+- **No new `decision-needed` or `patch` finding.** Nothing beyond the two now-filed `defer` items
+  above.
+
+**VERDICT: PASS.** All ACs independently verified met, tests/lint/build green by fresh execution,
+no unresolved `decision-needed`/`patch`/High/Medium finding remains. The two `defer` items are
+Low-severity, pre-existing, correctly out of this story's scope, and now properly filed to the
+ledger. Story moves to `done`.
 
 ### Agent Model Used
 
