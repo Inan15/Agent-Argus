@@ -45,6 +45,11 @@ from pathlib import Path
 from argus.reports.plain_english import TERMINAL_OUTCOMES
 from argus.verdict.verdict_gate import Verdict, exit_code_for_verdict
 
+# The SINGLE definition of "which environment variables does the live adapter read?", derived by
+# `ast` from the adapter's own source (Story 12.2 / AC2.3). Imported rather than re-derived so the
+# two guards that care cannot come to disagree — the same reason `TERMINAL_OUTCOMES` is imported.
+from tests.test_no_web_imports import adapter_environment_variables
+
 _REPO_ROOT = Path(__file__).resolve().parents[1]
 _CHANGELOG = _REPO_ROOT / "CHANGELOG.md"
 _ARTIFACT_DIR = _REPO_ROOT / "_bmad-output" / "design-artifacts" / "ArgusAgent"
@@ -721,7 +726,18 @@ def test_TC_ArgusAgent_DOCS_001_63_the_verdict_vocabulary_on_the_page_is_derived
     # which is a guard failing on the wrong observable. `AUDIT_FAILED` is admitted because it
     # is `plain_english.TERMINAL_OUTCOMES`' fourth member — a real, published non-verdict
     # outcome token — and it is read from that tuple rather than typed here.
-    allowed = members | set(TERMINAL_OUTCOMES)
+    #
+    # WIDENED 2026-08-23: the page now documents the deep pass's provider configuration, and an
+    # environment variable name is SCREAMING_SNAKE_CASE too, so `OPENAI_BASE_URL` and its five
+    # siblings tripped a guard about VERDICTS. That is the same wrong-observable failure the
+    # `README` note above records, one class further out. The exemption is DERIVED by `ast` from
+    # `OpenLLMAdapter`'s own `os.getenv` calls — reusing `adapter_environment_variables()`, the
+    # single definition Story 12.2 / AC2.3 already established for this question rather than
+    # forking a second list — so a variable is admitted here only while the adapter genuinely
+    # reads it, and the seventh someone adds is covered the day it lands. A variable REMOVED from
+    # the adapter but left on the page becomes an invented token again, which is the direction
+    # that matters: the page may not document configuration the tool does not read.
+    allowed = members | set(TERMINAL_OUTCOMES) | set(adapter_environment_variables())
     shaped = set(re.findall(r"\b[A-Z]+(?:_[A-Z]+)+\b", page))
     invented = sorted(word for word in shaped if word not in allowed)
     assert not invented, (
