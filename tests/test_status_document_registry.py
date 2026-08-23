@@ -268,6 +268,41 @@ _STATUS_DOCUMENTS: tuple[str, ...] = (
     # ⚠️ It must be committed TOGETHER with this line — `-22` closes in BOTH directions, so the
     # document without this entry and this entry without the document red `master` equally.
     "sprint-change-proposal-2026-08-22.md",
+    # Registered 2026-08-23 for the Epic-16 retrospective — `AI-E12-1`'s second half ("make the
+    # registration part of the retrospective step's own DoD") on its FIFTH consecutive
+    # retrospective, after the Epic-13 INTERIM, Epic-14, FINAL Epic-13 and Epic-15 entries above.
+    # It is also the FIRST registration NOT written by the session that wrote the document, and
+    # that break is recorded here rather than smoothed over: the retrospective worker was chartered
+    # READ-ONLY over `tests/` on a working tree shared with another active session, so it could not
+    # add this line, and instead filed the omission against itself as `AI-E16-15` — item 0 of its
+    # own critical path — stating that the tree was RED from the moment the document was written.
+    # This entry is that action item discharged by a separate chartered session: registration, and
+    # nothing else. The document's content, its action items and every `development_status` value
+    # were left untouched by the session that added this line.
+    # Same one-line edit and same verification-before-registration as every entry above: `-22` was
+    # observed RED against this document before this line (`status-asserting document(s) exist but
+    # are not registered: ['epic-16-retro-2026-08-23.md']`) and GREEN after, on the live tree, with
+    # the full suite re-run green afterwards. Verified by execution: `_split_sentences()` returns
+    # 498 sentences, so `-21` is genuinely reading the document rather than passing over an
+    # unparseable one; `_status_assertions()` returns 0 — no phrase in `_STATUS_CLAIMS` occurs in it
+    # at all, denied or otherwise — so `-21`'s per-document loop short-circuits and this
+    # registration is inert rather than load-bearing; and `_executed_gate_citations()` returns 0, so
+    # it mints an excuse for nothing. ⛔ No `_EXCLUDED_BY_DESIGN` entry was added and not one
+    # assertion in `-22` was weakened, reworded or exempted — `AI-E16-15` names that as the escape
+    # route to refuse, and `-22`'s written-reason rule exists to close it.
+    # WHAT THE DOCUMENT ASSERTS, so the registration is judged against its contents: the gate is
+    # UNCHANGED and still `BLOCKED`, with 7 recorded conditions and an empty precision denominator;
+    # the precision figure STILL DOES NOT EXIST; `eligible_member_count()` is 5 and all 14
+    # candidates remain `eligible_for_n=False`; nothing was ratified and the protocol was not
+    # re-versioned; `DF-13-5-A`'s ONE pre-registered round is OPEN and UNSPENT, with its re-review
+    # trigger recorded as FIRED and the spend-or-decline branch explicitly NOT taken here; FR34's
+    # DISCLOSED tier stands unchanged as the honest fallback; and deployment/release is recorded as
+    # NOT ESTABLISHED for anything outward-facing. It dispositions NO ledger entry — §10 RE-DERIVES
+    # the ledger against `deferred-work.md` on disk and edits it not at all — and it amends no FR,
+    # no threshold, no epic container and no planning document.
+    # ⚠️ It must be committed TOGETHER with this line — `-22` closes in BOTH directions, so the
+    # document without this entry and this entry without the document red `master` equally.
+    "epic-16-retro-2026-08-23.md",
 )
 
 # Exactly the set the epic's AC names — "any future change proposal or retrospective".
