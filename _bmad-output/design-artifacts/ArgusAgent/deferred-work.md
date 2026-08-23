@@ -5254,7 +5254,8 @@ disposed and three new ones are filed, one of which bounds Epic 15.
   never an exemption. The contract docstring was condensed twice during implementation and was
   deliberately **not** shaved below the content `AC2.2` / `AC2.4` / `AC10.1` / `AC10.2` require to
   be **in the code**: the index named as the counterparty, `argus/pipeline_stages.py:124` named as
-  the reason `` / `
+  the reason `
+` / `
 ` are not part of the problem, the adoptability statement a second
   detector would read, the `DF-15-2-B` price, and the `DF-14-3-A` / `-B` / `-C` statement of what
   stays broken. ⛔ **The trigger, stated so it is not a judgement call at the moment it is
@@ -5319,6 +5320,28 @@ disposed and three new ones are filed, one of which bounds Epic 15.
       split re-armed, repaired in the order Story 16.4 §2.7 documents: `argus/` first, regenerate,
       artifacts committed separately)
     - closure_verified_by: re-measurement and execution on 2026-08-22, not by report
+    - status: **`DF-15-2-D` CLOSED 2026-08-22** by `4123931` + `ba5e8df` — the trailing
+      machine-readable field, APPENDED 2026-08-23 by Story 16.5. ⛔ **A PURE APPEND: not one
+      byte above is edited, and this states nothing the entry did not already state.**
+      Why it exists at all is a defect this story FOUND by execution, recorded rather than
+      worked around. `TC-ArgusAgent-DOCS-001-78` cross-checks every closure a story record
+      claims against the ones `deferred-work.md` machine-readably carries, and its
+      `ledger_closed_ids` analyzer recognises exactly two shapes: the id ON the closure line,
+      or a trailing `- status:` field. The 2026-08-22 disposition above was written as a
+      `- **✅ …**` bullet carrying NO id, followed by `- closed_by:` / `- closure_verified_by:`
+      fields, so the guard could not see it — the disposition was real, dated and evidenced,
+      and machine-INVISIBLE. Story 16.5's Dev Notes cite this entry's 2026-08-22 disposition,
+      truthfully, and `-78` correctly reported it unbacked: *a disposition recorded in prose
+      and not in the ledger is not a disposition* (`AI-E12-3` / `AI-E12-6`), which is this
+      entry's founding reason turned on itself. The remedy is the one the guard's own failure
+      message prescribes — *"append the closure to the ledger with its date and evidence"* —
+      never a widened analyzer, and never an `_UNBACKED_AT_LANDING` registration, which `-78`
+      permits to SHRINK only.
+    - scope_of_this_append: ⛔ **nothing new is disposed of.** It restates the 2026-08-22
+      disposition on `argus/detectors/vacuous_test.py` in a machine-readable shape and does no
+      more. Every other entry on this ledger keeps the disposition it already had; in
+      particular the four Story 16.5 reads are re-measured 2026-08-23 and all four are still
+      **OPEN** — see their own entries, which this append does not touch.
 
 ## Deferred from: the Epic 15 retrospective (2026-08-19), filed 2026-08-20
 
