@@ -12,8 +12,8 @@ and every `argus …` command line on this page are checked by a test against th
 transcribed from it. The rest is prose: where a command is documented but is not an exercised
 capability, this page says so at that command rather than here.
 
-It covers exactly four things: install, your first audit, reading the ledger, and what each
-verdict means. For the full integration surface — CI, the GitHub Action, the report types,
+It covers exactly five things: install, your first audit, reading the ledger, what each
+verdict means, and — only if you opt into the deep pass — how to configure a provider. For the full integration surface — CI, the GitHub Action, the report types,
 the assistant commands — read [`README.md`](../README.md). There is no tutorial here; the
 tool's own `--help` and its own output are the reference, by design (FR37: what you need to
 do next is in the output you are already holding).
@@ -70,7 +70,8 @@ Two streams, and they do different jobs:
   what to do next.
 
 Nothing is transmitted anywhere. The deep, LLM-backed pass is off by default, always, and
-`--deep-audit` is the only thing that turns it on.
+`--deep-audit` is the only thing that turns it on. If you intend to pass it, read §5 first —
+it carries a limitation worth knowing before you configure a paid provider.
 
 To see every accepted argument with its default:
 
@@ -124,3 +125,81 @@ statement about a run that never happened.
 `RELEASE_READY` is a bounded claim: it says the enabled deterministic passes found nothing
 blocking within the assessed population. It is never a claim that the code is correct, and
 the instrument-status notice at the top of this page bounds how much weight it carries.
+
+## 5. Configuring a provider (only if you opt into `--deep-audit`)
+
+**Skip this section unless you are passing `--deep-audit`.** A default run needs no key, no
+endpoint and no account, and transmits nothing. Everything below is inert until the flag is
+present on the command line.
+
+> ⚠️ **Read this before you configure a paid provider.** The bundled adapter does not return
+> the model's answer in the field the pass requires, so a correctly configured provider still
+> yields **zero** delivered deep reads today: every dispatch — including a fully successful one
+> against a healthy provider — degrades as `empty-response`, and the files are recorded
+> `audited_shallow`. The request really is sent and a paid provider really will bill for it.
+> This is a known limitation of the shipped adapter (`DF-12-2-D`), not a misconfiguration on
+> your side, and no value of the variables below changes it. Configure this to exercise the
+> egress path; do not configure it expecting depth.
+
+### The three variables
+
+Credentials are read from the environment only — there is no config file, no CLI flag and no
+keyring. The adapter reads them when it is constructed, and it is constructed only by
+`--deep-audit`.
+
+| Variable | What it sets | Default if unset |
+|---|---|---|
+| `OPENAI_BASE_URL` / `OLLAMA_HOST` / `OLLAMA_URL` | The provider endpoint. **First non-empty wins.** | none — the pass degrades |
+| `OPENAI_API_KEY` | Sent as an `Authorization: Bearer` header | the literal `mock-key` |
+| `ARGUS_LLM_MODEL` / `OLLAMA_MODEL` | The model id | `gpt-4o-mini` |
+
+**The endpoint variable is the switch, not the key.** With all three endpoint variables unset,
+no adapter is constructed at all: the run says so on stderr, records a
+`deep_pass_degraded:provider_unconfigured` finding per file, and downgrades their coverage. If
+you export `OPENAI_API_KEY` alone and nothing appears to happen, this is why. Argus refuses to
+construct the adapter in that state on purpose — an adapter with no endpoint returns a
+synthetic recording that is indistinguishable from a real one, so refusing is what keeps a
+fabricated deep read out of the verdict.
+
+**Setting these variables is not consent.** They are configuration and nothing else. With
+`--deep-audit` absent, the module that reads them is never imported and no adapter exists,
+whatever the environment holds.
+
+### An OpenAI-compatible endpoint
+
+```bash
+export OPENAI_BASE_URL=https://api.openai.com
+export OPENAI_API_KEY=sk-...
+export ARGUS_LLM_MODEL=gpt-4o-mini
+argus audit . --deep-audit
+```
+
+**Omit the `/v1` suffix.** The adapter appends `/v1/chat/completions` to whatever you set, so
+the near-universal habit of exporting a base URL ending in `/v1` produces a doubled path and a
+404 — which reaches you as a `dispatch-failed` degradation, not as a configuration error.
+
+### A local Ollama endpoint
+
+```bash
+export OLLAMA_HOST=http://localhost:11434
+export ARGUS_LLM_MODEL=llama3.1
+argus audit . --deep-audit
+```
+
+No key is needed locally; the `mock-key` default is sent and ignored. Note the request timeout
+is 10 seconds and is not configurable, which a cold local model can exceed.
+
+### What this path does not reach
+
+The live pass speaks one dialect: OpenAI-style chat completions with `Bearer` auth. The
+Anthropic API is not reachable this way — it expects an `x-api-key` header and an
+`anthropic-version` header, neither of which the adapter sends. The `litellm` multi-provider
+layer in the `[llm]` extra is not used by this path either; the pass constructs its adapter
+with litellm disabled, so installing that extra widens nothing here.
+
+### What leaves your machine
+
+Repo-relative file paths, a tier hint, and a prompt-template version. File contents are not
+sent, and neither are secrets. Before the first byte, the run prints what will be transmitted
+and the scheme and host of the recipient — the full URL is never echoed, because a URL can
+carry a token in its userinfo or query string.
