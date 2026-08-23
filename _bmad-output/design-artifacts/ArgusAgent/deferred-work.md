@@ -4778,6 +4778,80 @@ remains the recorded candidate should it ever be needed.
     - protocol_edit: **NONE** — §6's R2 row already reads `NOT PERFORMED`, which stays true; no
       `V1.4` row was added and the change-log head is unmoved (`-45` / `-63` untouched)
 
+  - **⛔ DECLINED 2026-08-24 by XAgent007 — the round is NOT spent, the rule is NOT amended, and the
+    replacement trigger is SUBSTANTIVE rather than calendar-shaped.** (Append-only note; the entry
+    above is not rewritten, §3.4.) The 2026-08-22 deferral's re-review trigger, condition 1 —
+    *"the proposed Stories 16.6 and 16.7 both reaching `done`"* — was satisfied on 2026-08-23 and
+    observed by [epic-16-retro-2026-08-23.md](epic-16-retro-2026-08-23.md) (SD-2 / `AI-E16-6`). That
+    retrospective took neither branch, correctly: it is an automated producer and this is an operator
+    act. **This note is that act.** The pre-registered rule of 2026-08-17 stands **verbatim and
+    unchanged**; what is declined, for the second time and on fresh measurement, is the *execution*
+    of its branch (a).
+
+    **Why decline: the 2026-08-22 reason was re-checked against Epic 16's result and it still holds.**
+    That note declined because branch (a) buys a precision number measured *through* a predicate that
+    reaches **6 of 1,032** flagged findings, and expanding the bench samples more repositories through
+    the same aperture rather than widening it. **Epic 16 did not widen it** `[re-derived 2026-08-24]`:
+    `eligible_member_count()` is still **5**; the 14 candidates all still carry `eligible_for_n=False`;
+    the corroborable ceiling across the five ratified members is still **six** against a yield floor of
+    **five**; the dead clause of fact (b) — *at least one assertion referencing a mock-bound name* —
+    still fires **0 times in 1,032**; and the binding `consumed == 0` whole-function scope is untouched
+    (**676** findings carry a discarded SUT call, **14** carry no consumed one). ⚠️ **Story 16.6's fix is
+    real and is not this.** Recognising `raise AssertionError` corrected **22** findings in the
+    **over-flagging** direction — it makes the detector one defect cleaner, which is precision, not
+    aperture. Nothing in Epic 16 moved the six-in-a-thousand number that the deferral was about.
+
+    ⛔ **A second reason, measured by Epic 16 and NOT available on 2026-08-22: branch (a) is not
+    executable as written today.** 16.2 measured *sealed ∩ ratified* as **EMPTY**, so §6's R2 must
+    ratify **≥3 of the six named sealed candidates** or `CLEARED` is unreachable. 16.4 measured that
+    ratifying three drops the candidate population **14 → 11** — beneath **this entry's own**
+    pre-registered **12–20** band — and turns **12 shipped guards RED** (13 measured, 12 after 16.4's
+    refactor), of which `DOCS-001-75` (`prd.md` must state the live eligible-member count) 16.4 records
+    as **the operator's and unresolved**. **Executing (a) today would therefore require amending the
+    pre-registered rule in the act of executing it**, and this entry closes by EXECUTION of that rule,
+    never by re-opening it. Declining is the only branch that leaves the rule intact.
+
+    ⛔ **Branch (b) is NOT taken and is NOT ruled out.** Its pre-registered conditions are *zero
+    blocking findings* **or** *precision below 80%*, and **neither has been observed, because the round
+    has never run.** Declaring (b) now would execute a stopping rule whose trigger never fired — the
+    same re-reading-a-rule-to-fit-the-moment that 2026-08-17 exists to prevent, merely in the
+    conservative direction. No position is taken on (b), exactly as on 2026-08-22.
+
+    **REPLACEMENT RE-REVIEW TRIGGER — substantive first, with the ORIGINAL backstop carried unmoved.**
+    This entry returns to the operator for a spend/decline decision on the **earlier** of:
+    1. **a merged change to the verdict-eligible predicate that raises the corroborable ceiling over
+       the five ALREADY-RATIFIED members above the six measured on 2026-08-22** — measured with the
+       harnesses already committed under `research/` (which that note validated in **both** directions),
+       **with no member ratified, no third-party source fetched and no round spent**; or
+    2. **2026-11-22** — the 2026-08-22 backstop, **carried unchanged and deliberately NOT re-dated.**
+
+    **Both halves of that trigger are load-bearing, and here is why each is shaped as it is.**
+    ⛔ **The backstop is not reset.** Re-dating it to three months from today would convert a bounded
+    deferral into a rolling one, which is precisely the silence this entry forbids; the clock keeps
+    running from where 2026-08-22 started it. ⚠️ **The bar in condition 1 is deliberately LOW — any
+    ceiling above six — and that is not an oversight.** The trigger returns the entry *to the operator
+    for a decision*; it does not spend the round. A low bar to **look again** is correct; a low bar to
+    **spend** would not be, and this note sets no threshold for spending. ⛔ **This note does not
+    schedule the widening work either.** Naming it as a trigger is not chartering it — if it is never
+    done, condition 2 fires on 2026-11-22 and the entry returns to the operator regardless. That is the
+    whole purpose of leaving the backstop where it was.
+
+    ⛔ **No expansion is proposed by this note** — not here, not in a story file, not in a change
+    proposal. No member is ratified, no protocol row is edited, and **nothing published changes**: the
+    FR34 disclosure stands exactly as it already did, and the attested tier stays blocked.
+
+    ⛔ **THE ENTRY STAYS OPEN.** `DF-13-5-A` is **UNSPENT**. Neither (a) nor (b) has been taken.
+    - declined_by: **XAgent007 (Engineering Lead)**
+    - declined_on: 2026-08-24
+    - branch_taken: **NEITHER** — (a) not executed, (b) not declared
+    - members_ratified: **NONE** — `eligible_member_count()` is unchanged at **5**
+    - round_state: **UNSPENT** (second consecutive declination; the rule of 2026-08-17 is unamended)
+    - protocol_edit: **NONE** — §6's R2 row still reads `NOT PERFORMED`, which stays true; no `V1.5`
+      row was added and the change-log head is unmoved
+    - trigger_class: **SUBSTANTIVE** (predicate aperture) **+ the original 2026-11-22 backstop, NOT
+      re-dated** — this is the change from 2026-08-22, whose trigger was story-completion-shaped and
+      fired without the underlying condition having moved
+
 ## Correct-course 2026-08-17b — the three multi-language gaps Story 14.3 does NOT fix
 
 > **All three were found by EXECUTION**, not by reading: an out-of-tree probe imported the shipped
