@@ -44,7 +44,7 @@ because it is a live tree other people are editing, and a check nobody can satis
 Story 16.5 defect class (``DN-16-7-4``).
 
 Verification area: precision validation — the silent-class RECORD
-(``TC-ArgusAgent-PRECISION-001-119`` .. ``-125``, ``-129`` .. ``-132``).
+(``TC-ArgusAgent-PRECISION-001-119`` .. ``-125``, ``-129`` .. ``-134``).
 """
 
 from __future__ import annotations
@@ -769,3 +769,96 @@ def test_TC_ArgusAgent_PRECISION_001_133_every_refusal_this_record_makes_is_reac
     assert proportion.measured is True and proportion.proportion == Fraction(0, 36)
     assert "0/36 of the ASSESSED" in proportion.note, proportion.note
     assert complete.independence().status == "NOT_INDEPENDENT"
+
+
+def test_TC_ArgusAgent_PRECISION_001_134_a_map_override_cannot_escape_the_checkout_root(
+    tmp_path: Path, capsys: pytest.CaptureFixture[str]
+) -> None:
+    """TC-ArgusAgent-PRECISION-001-134 — AC8.4/``DF-10-4-E``: the containment guard on
+    ``--map`` is driven, and it is driven with the input that used to walk through it.
+
+    **Observable:** :func:`build_silent_class_record._discards_the_root` over anchored and
+    legitimate overrides — including every shipped ``DEFAULT_CHECKOUT_MAP`` value — and the
+    exit code and stderr of ``build_silent_class_record.main(["--map", ...])`` at the real
+    CLI seam.
+
+    **Defect it moves:** a guard that could not fail, found by the iteration-1 review of this
+    story. The refusal read ``if Path(relative).is_absolute()`` and its message promised to
+    stop *"pathlib discards the left operand ... which silently escapes the root entirely"*.
+    On this repository's LOCAL platform it did not: ``Path("/etc/x").is_absolute()`` is
+    ``False`` on Windows — no drive — so a POSIX-style override was accepted and
+    ``root / "/etc/x"`` resolved to ``<root's drive>:/etc/x``, outside ``--checkout-root``,
+    which is the exact escape the message named. It was also entirely UNTESTED, so the suite
+    could not see it. That pairing — a Windows-only local gate, an ubuntu matrix CI leg, and
+    a portability check nobody drives — is ``AI-E13-1``, in one of ``AC8.4``'s own corners.
+
+    Deliberately NOT asserted here: that ``..`` is refused. ``root / "../x"`` leaves the root
+    too, but it leaves it visibly, and widening this guard to path traversal is a different
+    story than the one the review filed.
+    """
+    root = tmp_path / "checkouts"
+    root.mkdir()
+
+    # NON-VACUITY FIRST (``AI-E11-1``): the escape this guard exists to stop is REAL on this
+    # interpreter and this platform. If the join below did not discard the root, every
+    # assertion after it would be theatre.
+    escaped = builder._checkout_for(root, "minions", {"minions": "/etc/passwd"})
+    assert root not in escaped.parents, (
+        f"{escaped!r} is still under {root!r}: this platform does not discard the left "
+        f"operand, so this case would be guarding a failure mode it cannot reproduce"
+    )
+
+    # TWO-SIDED. Every anchored form pathlib honours - POSIX root, Windows root, drive
+    # absolute, drive RELATIVE, UNC - and the root itself.
+    anchored = (
+        "/etc/passwd",
+        "/",
+        chr(92) + "etc" + chr(92) + "passwd",
+        "C:/etc",
+        "C:etc",
+        "//server/share",
+    )
+    for relative in anchored:
+        assert builder._discards_the_root(relative), (
+            f"{relative!r} is anchored and would discard --checkout-root, and the guard "
+            f"let it through"
+        )
+    assert not Path("/etc/passwd").is_absolute() or sys.platform != "win32", (
+        "sanity: on win32 a leading-slash override must NOT read as absolute, which is why "
+        "the is_absolute() form of this guard was vacuous here"
+    )
+
+    # ... and it fires on NOTHING legitimate, including every checkout this tool ships with.
+    legitimate = (*builder.DEFAULT_CHECKOUT_MAP.values(), "minions", "a/b/c")
+    assert len(legitimate) == 7, "the legitimate population shrank; the negative side thins"
+    for relative in legitimate:
+        assert not builder._discards_the_root(relative), (
+            f"{relative!r} is a legitimate relative checkout and the guard refused it; a "
+            f"guard that refuses the tool's own defaults is worse than none"
+        )
+        contained = builder._checkout_for(root, "minions", {"minions": relative})
+        assert root in contained.parents, f"{contained!r} escaped {root!r}"
+
+    # THE REAL CLI SEAM. Note the exit code alone proves nothing - every refusal exits 2,
+    # including the one an unfixed guard would reach later - so the MESSAGE is the assertion.
+    exit_code = builder.main(["--map", "minions=/etc/passwd", "--checkout-root", str(root)])
+    assert exit_code == 2, f"an escaping --map exited {exit_code}; it must be REFUSED"
+    refusal = capsys.readouterr().err
+    assert "REFUSED" in refusal and "--map" in refusal, refusal
+    assert "ANCHORED" in refusal, (
+        f"the run was refused, but not BY THIS GUARD: {refusal!r}. An unfixed guard also "
+        f"exits 2 - one step later, on the missing checkout - so this case would pass "
+        f"while the escape stayed open"
+    )
+
+    # The two sibling --map refusals, equally undriven until now.
+    for malformed, expected in (("minions", "no '='"), ("minions=   ", "empty member id")):
+        assert builder.main(["--map", malformed]) == 2, f"{malformed!r} was accepted"
+        assert expected in capsys.readouterr().err, f"{malformed!r} refused for the wrong reason"
+
+    # And the guard does not fire on a well-formed relative override: main() gets PAST it and
+    # fails on something else entirely, which is what keeps the CLI arm two-sided too.
+    assert builder.main(["--map", "minions=Minions"]) == 2, "the write path needs a root"
+    passed_the_guard = capsys.readouterr().err
+    assert "ANCHORED" not in passed_the_guard, passed_the_guard
+    assert "--checkout-root is required" in passed_the_guard, passed_the_guard
