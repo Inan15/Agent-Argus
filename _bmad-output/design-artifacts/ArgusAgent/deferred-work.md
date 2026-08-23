@@ -5641,3 +5641,47 @@ disposed and three new ones are filed, one of which bounds Epic 15.
   - ⛔ **Nothing else is filed and nothing is closed by this entry.** `DF-13-5-A` stays **OPEN and
     UNSPENT**, `DF-16-1-A`, `DF-16-3-A` and `DF-15-2-E` stay **OPEN**, and no historical entry on
     this ledger is edited — this is a pure append (`TC-ArgusAgent-DOCS-001-78`).
+
+## Deferred from: Story 16.5 — REVIEW FIX ROUND 1 (2026-08-23)
+
+- **`DF-16-5-B` — `tests/test_gate_independence.py` ends the fix round at 1,127 of NFR-M1's
+  1,200 lines, in the same band `DF-16-5-A` was filed for and by the same pre-registered rule.**
+  Filed for the same reason and under the same threshold §0.5 set before the story's first line:
+  *split first if the projection exceeds 1,150; file an entry if it lands between 1,100 and
+  1,150.* Review fix round 1 added `TC-ArgusAgent-PRECISION-001-114` — the guard closing the
+  LIVE-rows derivation gap the review found unguarded — together with its `_superseded_population`
+  fixture builder, and the module moved **962 → 1,127, headroom 238 → 73**. That crosses the
+  filing band, so it is FILED here rather than discovered by whoever opens the module next.
+  - id: DF-16-5-B
+  - origin_story: 16-5-the-record-says-who-judged-and-whether-they-were-independent (review fix
+    round 1; the condition is created by that round's own delta, 962 → 1,127)
+  - owner: **XAgent007 (Engineering Lead)** (`AI-E9-8`)
+  - target_story: **NONE** — a precondition on whoever opens this module next, not a scheduled
+    piece of work. Pinning it to a story nobody has written yet is how `DF-14-3-H`'s
+    `target_story: 13-5` went stale, and `DF-16-5-A` declined to repeat it for the same reason.
+  - category: maintainability / NFR-M1 headroom
+  - severity: 🟡 — 73 lines, nothing is failing, and `tests/test_module_size_ceiling.py` is the
+    live safety net: it fails loudly at 1,201, never silently. It becomes a forced choice the
+    moment the next independence guard lands, and the tempting answer then is the exemption
+    `MAINT-001-04` forbids.
+  - ⛔ **The remedy is a COHESION split, never a shave and never an exemption.** ⛔ **In
+    particular the `-114` docstring is NOT the place to reclaim lines**: the GUARD-ADEQUACY
+    CLAUSE requires the observable, the RED-at-the-real-seam demonstration and the generated
+    adversarial variant with its count to be IN the guard's own docstring, and shaving that is
+    how a guard becomes unauditable while still passing. **`MAINT-001-04` binds: the
+    `_EXEMPT_BY_DESIGN` registry may only SHRINK**, and the fix round added no entry to it.
+  - ⛔ **The cohesion boundary is NOT proposed here**, on `DF-16-5-A`'s own reasoning: naming one
+    now would be a design decision taken by a ledger entry at the moment of least information.
+    The observable boundary is that the module now carries two kinds of fixture — the pinned
+    single-revision populations `-105`..`-112` share, and the superseded-row populations `-114`
+    introduces. Whoever splits it decides where.
+  - ⛔ **`DF-16-5-A` is NOT superseded, closed or amended by this entry**, and its measured
+    figures stay as recorded: `argus/precision/gate_decision.py` is **byte-unchanged** by the fix
+    round and remains at **1,132**. `DF-16-5-A`'s line reporting `tests/test_gate_independence.py`
+    at **962** was true when written and is deliberately LEFT AS SHIPPED — this ledger is
+    append-only, and restating a superseded measurement in a new entry is the mechanism
+    (`TC-ArgusAgent-DOCS-001-78`, §3.4 strike-never-erase).
+  - ⛔ **Nothing else is filed and nothing is closed by this entry.** `DF-13-5-A` stays **OPEN and
+    UNSPENT**, `DF-16-1-A`, `DF-16-3-A`, `DF-15-2-E` and `DF-16-5-A` stay **OPEN**, and no
+    historical entry on this ledger is edited — this is a pure append
+    (`TC-ArgusAgent-DOCS-001-78`).
