@@ -5596,3 +5596,49 @@ disposed and three new ones are filed, one of which bounds Epic 15.
     **not adjudicated** and no claim is made that any of the 122 is a true positive.
   - ⛔ **Not a proposal to loosen fact (b).** Its asymmetry is correct and was the Story 14.1
     conformance repair. The fix is a **finer** predicate, never a weaker one.
+
+## Deferred from: Story 16.5 (2026-08-23)
+
+- **`DF-16-5-A` — `argus/precision/gate_decision.py` ends Story 16.5 at 1,132 of NFR-M1's 1,200
+  lines, inside the band this project's own rule says must be FILED rather than discovered.**
+  Filed because §0.5 of Story 16.5 told the dev to file it, in advance, at a threshold set before
+  the first line was written: *split first if the projection exceeds 1,150; file an entry if it
+  lands between 1,100 and 1,150.* The projection was taken at Task 1, before any code, and the
+  measured result — **1,084 → 1,132, headroom 116 → 68** — landed in the second band. So this
+  entry is the pre-registered outcome of a rule that fired as designed, not a surprise found
+  afterwards. **Every one of the four stories before this one was handed an unfiled split-first
+  trigger at the least convenient moment** (`DF-15-2-D`, `DF-15-2-E`, `DF-16-3-A`, and 16.3's own
+  `test_gate_decision.py` split); `DF-16-3-A` exists precisely to stop a fifth, and this entry
+  exists to stop a sixth.
+  - id: DF-16-5-A
+  - origin_story: 16-5-the-record-says-who-judged-and-whether-they-were-independent (the condition
+    is created by that story's own delta, 1,084 → 1,132)
+  - owner: **XAgent007 (Engineering Lead)** (`AI-E9-8`)
+  - target_story: **NONE** — it is a precondition on whoever opens this module next rather than a
+    piece of work with a schedule of its own. Pinning it to a story nobody has written yet is how
+    `DF-14-3-H`'s `target_story: 13-5` went stale, and `DF-15-2-D`, `DF-15-2-E` and `DF-16-3-A`
+    each declined to repeat it.
+  - category: maintainability / NFR-M1 headroom
+  - severity: 🟡 — 68 lines is more room than `DF-15-2-D`'s four or `DF-15-2-E`'s 41, nothing is
+    failing today, and `tests/test_module_size_ceiling.py` is the live safety net: it fails loudly
+    at 1,201, never silently. It becomes a forced choice the moment the next §5 amendment lands,
+    and the tempting answer at that moment is the exemption `MAINT-001-04` forbids.
+  - ⛔ **The remedy is a COHESION split, never a shave and never an exemption**, on the
+    `gate_conditions` / `gate_evidence` precedent `DF-16-1-B` already set on this very module:
+    every symbol re-exported, every import line unchanged, proven a pure move by AST span
+    comparison plus sha256. **`MAINT-001-04` binds: the `_EXEMPT_BY_DESIGN` registry may only
+    SHRINK**, and Story 16.5 added no entry to it.
+  - ⛔ **The cohesion boundary is NOT proposed here, deliberately.** Naming one now would be a
+    design decision taken by a ledger entry, at the moment of least information, and the honest
+    observation is only that the module has grown a fourth kind of content — the dataclass, the
+    payload, the dispatch, and now four §5 arm wirings — which is a boundary a reader can already
+    see. Whoever splits it decides where.
+  - ⛔ **Story 16.5's own delta was not the trigger's cause so much as its occasion**, and the
+    story stayed inside its budget: the four widened sibling modules ended at **977 / 780 / 563 /
+    439** against the 1,200 ceiling — each +3 or +4 lines under the AC7.1a forwarding budget —
+    exactly as §0.5 projected before the change, so none of them approaches any trigger and this
+    is the ONLY module the story leaves in a band. The new modules land at **328**
+    (`argus/precision/gate_independence.py`) and **962** (`tests/test_gate_independence.py`).
+  - ⛔ **Nothing else is filed and nothing is closed by this entry.** `DF-13-5-A` stays **OPEN and
+    UNSPENT**, `DF-16-1-A`, `DF-16-3-A` and `DF-15-2-E` stay **OPEN**, and no historical entry on
+    this ledger is edited — this is a pure append (`TC-ArgusAgent-DOCS-001-78`).
