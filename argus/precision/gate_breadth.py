@@ -353,6 +353,7 @@ def effective_precision_gate_status(
     fold: AdjudicatedPrecision,
     breadth: BreadthAssessment,
     protocol_path: str,
+    independence_note: str | None = None,
 ) -> str:
     """The gate-status sentence for the EFFECTIVE evaluability — one object, never two.
 
@@ -375,6 +376,7 @@ def effective_precision_gate_status(
     bind (NFR-P1 byte-stability of the precision surface).
 
     PURE (AR8).
+    Story 16.5: ``independence_note`` is FORWARDED verbatim, never derived here (AC7.1a).
     """
     if fold.evaluable == (fold.evaluable and breadth.holds):
         return fold.gate_status
@@ -387,6 +389,7 @@ def effective_precision_gate_status(
         population_label=ADJUDICATED_POPULATION_LABEL,
         evaluable=False,
         unevaluable_reason=breadth.unevaluable_reason,
+        independence_note=independence_note,
     )
 
 

@@ -737,6 +737,7 @@ def precision_gate_status_for(
     population_label: str = "labeled cartridges",
     evaluable: bool = True,
     unevaluable_reason: str | None = None,
+    independence_note: str | None = None,
 ) -> str:
     """The 6.6 gate-status string — REUSES the 6.5 marker convention (no forked marker).
 
@@ -784,6 +785,27 @@ def precision_gate_status_for(
     generator overrides it, because under DN-1 its ``n`` counts **repositories**, and a status
     line that reported a repository count using the word "cartridges" would be a new false
     statement introduced by the change that removed an old one.
+
+    **Story 16.5 — one additive change, in the honest direction, default byte-identical.**
+
+    ``independence_note`` carries WHO judged the population this figure was computed over, and
+    whether they were independent of the tool's authors. It is rendered in **ALL THREE**
+    branches, because the precision figure appears in all three and the whole point is that
+    the two cannot be quoted apart: a note wired into the ``unevaluable`` branch alone would be
+    correct today and silently wrong on the day the gate clears, which is the one day it
+    matters most. The clause is **supplied already-derived and already-worded** by
+    :func:`~argus.precision.gate_independence.independence_note` — this function PLACES it and
+    never authors it, so there is still exactly one status renderer (AR7) and exactly one
+    module that words the disclosure. It defaults to ``None``, rendering the empty string, so
+    every existing caller renders the bytes it always did (NFR-P1 byte-stability of the
+    precision surface) — which is what lets the same keyword be forwarded through the
+    adjudication fold and §5's three arm renderers without any of them changing behaviour.
+
+    ⛔ It is attached ONLY where the status is rendered from an adjudication record
+    (DN-16-5-6). :func:`compute_precision`'s cartridge fold has golden keys rather than
+    adjudicators, and ``argus/dogfood/proof_run.py`` passes ``precision=None`` and no record at
+    all; a sentence about independence on either would describe a judgement that never
+    happened. Both pass nothing and both are byte-identical after Story 16.5.
     """
     floor_n = registry_module().VALIDATION_SET_FLOOR_N if floor_n is None else floor_n
     if precision is None and not provisional:
@@ -801,6 +823,10 @@ def precision_gate_status_for(
         )
     ratio = ratio_string(precision)
     note = "" if corpus_note is None else f" ({corpus_note})"
+    # Story 16.5. ONE derivation, placed in all three branches below, so the independence
+    # answer cannot be separated from the precision figure by copy-and-paste. ``None`` renders
+    # the empty string and therefore the exact pre-16.5 bytes (NFR-P1).
+    who = "" if independence_note is None else f"; {independence_note}"
     if not evaluable:
         return (
             f"unevaluable (Story 6.6 precision harness, Story 13.2 / AC1b; precision "
@@ -808,7 +834,7 @@ def precision_gate_status_for(
             f"precision={ratio} is NOT a measurement; N={n} {population_label}, floor "
             f"N={floor_n}{note}; the >=80% externalization gate is NEITHER cleared NOR "
             f"met — it is UNEVALUABLE and is recorded as such; adjudication method: "
-            f"{protocol_path})"
+            f"{protocol_path}{who})"
         )
     if provisional:
         return (
@@ -816,10 +842,10 @@ def precision_gate_status_for(
             f"not repos; N={n} {population_label} populated, floor N={floor_n}{note}; "
             f"the >=80% externalization gate stays PROVISIONAL until N>={floor_n} "
             f"with the validation protocol applied — this number is an EARLY/PROVISIONAL "
-            f"signal, NOT a cleared gate; adjudication method: {protocol_path})"
+            f"signal, NOT a cleared gate; adjudication method: {protocol_path}{who})"
         )
     return (
         f"cleared (Story 6.6 precision harness; precision={ratio} >= 4/5 over FINDINGS; "
         f"N={n} {population_label} >= floor N={floor_n}{note}; the validation "
-        f"protocol's per-metric pass/fail is recorded cleared — {protocol_path})"
+        f"protocol's per-metric pass/fail is recorded cleared — {protocol_path}{who})"
     )
