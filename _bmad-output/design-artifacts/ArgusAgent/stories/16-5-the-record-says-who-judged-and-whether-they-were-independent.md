@@ -1,6 +1,6 @@
 # Story 16.5: The record says who judged, and whether they were independent
 
-Status: review
+Status: done
 
 <!-- Contexted 2026-08-22 at HEAD `52143eb` by the create-story workflow (Opus 5). Every figure in
      §0 was READ OFF THE TREE, not copied from the epic. Where the epic and the tree disagree, §0
@@ -1319,6 +1319,78 @@ no issues** · `bandit -r argus --severity-level medium` — **0 medium / 0 high
 `tests/test_module_size_ceiling.py` — **6 passed**, no `_EXEMPT_BY_DESIGN` entry added ·
 `scripts/build_gate_decision.py --check` **exit 0** · `scripts/build_adjudication_record.py
 --check` **exit 0**.
+
+### Review Findings — Iteration 2 (2026-08-23, code-review, Sonnet 5)
+
+**Method note.** This is a fix-round review, not a fresh one. Iteration 1's own PASSED premises
+(AC7.1/AC7.1a byte budgets, the closed four-member vocabulary and its reachable RAISE path, the
+AC4.3 inertness proof, NFR-P1 byte-identity, the operator-act boundary) were spot-checked rather
+than re-litigated. Both iteration-1 findings were the primary subject and were independently
+re-derived, not trusted from the dev's own audit.
+
+**Finding 1 (AC6.4 append-only) — RE-VERIFIED, both the byte and the audit around it.**
+Re-ran a byte-level `difflib` alignment of every blob in the arc
+(`52143eb → 9aea1be → c5ca6a7 → cd4cbe4 → ca0dee2 → 927548d → 028c3c8 → a4de7e7 → ca3853e →
+5f194da`) independently of the dev's own script. Result matches the dev's claim exactly: the
+**only** opcode across the whole arc that replaces a pre-existing line is
+`52143eb → 9aea1be`, `deferred-work.md:5257`, dropping the literal CR
+(`` the reason `\r` `` → `` the reason `\n` ``); every other change in the arc is a pure line
+insert (22 lines at `9aea1be`, 46 lines at `927548d`); four of the ten blobs in the arc
+(`9aea1be→c5ca6a7`, `c5ca6a7→cd4cbe4`, `cd4cbe4→ca0dee2`, `927548d→028c3c8`,
+`ca3853e→5f194da`) are byte-identical to their predecessor. `a4de7e7` restores exactly that one
+line (`` the reason `\n` `` → `` the reason `\r` ``) and separately appends the missing EOF
+newline `927548d` had dropped (confirmed: `028c3c8`'s blob has no trailing `\n`, `a4de7e7`'s
+does). Confirmed independently (not from the dev's own count): `HEAD`'s `deferred-work.md`
+carries exactly **1** lone CR byte, matching `52143eb`'s exactly **1** lone CR byte — byte-count
+identity, not merely "a CR exists somewhere." `git diff --stat 028c3c8..HEAD -- argus/ scripts/
+tests/` confirms `a4de7e7` touches only `deferred-work.md` (isolated, no other change riding
+along). `TC-ArgusAgent-DOCS-001-78`'s guard (`tests/test_governance_record_integrity.py`,
+`ledger_closed_ids`) is untouched by any commit in the fix round — the only test file the fix
+round modifies is `tests/test_gate_independence.py`. **Resolved.**
+
+**Finding 2 (AC1.3/AC5.4 live-row guard) — RE-VERIFIED NON-VACUOUS by an independently-run
+mutation.** Mutated `argus/precision/gate_decision.py:856` (`live = record.live_rows()` →
+`live = record.rows`) myself, with `PYTHONDONTWRITEBYTECODE=1` and cleared `__pycache__`, and ran
+`tests/test_gate_independence.py`, `tests/test_gate_decision.py`,
+`tests/test_adjudication_record.py` and `tests/test_gate_decision_artifact.py` together (42
+tests). Result: **exactly 2 failures**, both parametrised cases of
+`TC-ArgusAgent-PRECISION-001-114` (`SECOND_REVIEWER_INTERNAL` and
+`EXTERNAL_ADJUDICATOR_PARTICIPATED`), and all 40 other tests across the four files stayed
+**green** — confirming both halves the dev claimed: the guard reds under the mutation, and
+nothing unrelated reds alongside it, so the mutation is isolating exactly what the guard
+purports to isolate. Restored via `git checkout --` immediately after; `git status --porcelain`
+confirmed empty. Read `_superseded_population` (`tests/test_gate_independence.py:981`): it calls
+`_population((live_author,), contributing_members=…, size=…)` and only overwrites the struck row's
+`adjudicator`/`reason` plus adds one correction row — it genuinely **inherits** `_population`'s
+pinned terms (member spread, size, locators, rule ids, dispositions) rather than forking them,
+so §2.8 lockstep discipline holds. **Resolved.**
+
+**Also verified independently:**
+- `DF-16-5-B` filed in `deferred-work.md` for `tests/test_gate_independence.py` 962 → 1,127 —
+  inside the 1,100–1,150 band, below the 1,150 split-first trigger, not split, not shaved (the
+  `-114` docstring's GUARD-ADEQUACY content is intact). `wc -l` confirms 1,127.
+  `argus/precision/gate_decision.py` confirmed still **1,132** and `git diff --stat
+  028c3c8..HEAD -- argus/` is empty — the byte-unchanged claim holds and §2.5's artifact-currency
+  order was never re-armed.
+- Line-ending hygiene: checked all four touched files (`deferred-work.md`,
+  `sprint-status.yaml`, this story file, `tests/test_gate_independence.py`) for lone CR bytes —
+  zero stray lone CRs found (only the one intentional, restored CR in `deferred-work.md`), and
+  all four end with a trailing newline. `sprint-status.yaml` parses as valid UTF-8 YAML with
+  **109** `development_status` keys and the `STATUS DEFINITIONS` block intact.
+- Operator-act boundary: `gate-decision-record.json`'s `independence` block shows
+  `roles_present: ["Engineering Lead"]` only, `gates_anything: False`; corpus `N=5`;
+  `adjudication-record.json` and `gate-decision-record.json` are both byte-unchanged across the
+  fix round (`git diff --stat 028c3c8..HEAD -- validation-corpus/` empty); `DF-13-5-A` still
+  OPEN in `deferred-work.md`; no `V1.4` protocol row; no role filled; no detector run.
+- Gates, re-run independently on the restored tree: full suite with
+  `ARGUS_REQUIRE_LANGUAGE_GRAMMARS=1` — **1,688 passed**, exit 0; `mypy argus` — 94 source files,
+  no issues; `bandit -r argus --severity-level medium` — exit 0 (0 medium/high); `pytest
+  tests/test_module_size_ceiling.py` — 6 passed; `scripts/build_gate_decision.py --check` —
+  exit 0; `scripts/build_adjudication_record.py --check` — exit 0.
+
+**Verdict: PASS.** Both iteration-1 findings are genuinely resolved (not merely re-asserted); the
+fix round introduced no new defect, weakened no guard, and touched no `argus/`/`scripts/` byte.
+All ACs remain met; all gates green on independent re-run. Status set to `done`.
 
 ---
 
