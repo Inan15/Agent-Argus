@@ -1287,9 +1287,57 @@ NAME from the fixture's SHAPE (§2.5's lockstep trap). A case missing either hal
 - [x] **7.4** Commit arc `chore → feat → docs`. **No split commit.**
 - [x] **7.5** Completion Notes per AC7.3.
 
----
+### Review Findings
 
-## Dev Agent Record
+Adversarial code review (Blind Hunter / Edge Case Hunter / Acceptance Auditor) against commits
+`dd1e03a` · `6304552` · `6bb91ae`. Every claim below was checked by independent execution, not by
+trusting the Completion Notes — full suite re-run (1,695 passed / 0 failed / exit 0), `mypy argus`
+(94 files clean), `bandit -r argus --severity-level medium` (0 medium / 0 high), ceiling (6 passed),
+`tests/test_gate_*.py` (58 passed — see Patch item below), governance-record integrity (green),
+both builders `--check` (exit 0), the `-7` delta re-derived from scratch over the real 1,032
+pinned findings (exact match, all seven rows to the `Fraction`), the `pytest.raises(AssertionError)`
+non-edge claim reproduced live, the DOGFOOD regeneration re-run and confirmed renderer-produced, and
+both mutations (remove the name; case-insensitive convention) driven RED and restored byte-exact.
+**Verdict: pass.** No `decision-needed` or unresolved `patch` blocks acceptance; the two items below
+are informational and do not gate `done`.
+
+- [x] [Review][Patch] Completion Notes §7's gate table misreports `tests/test_gate_*.py` as "36
+      passed" [stories/16-6-…-raise.md:§7 Gates table]. Independently re-run: `pytest
+      tests/test_gate_*.py -v` collects and passes **58** tests across all nine
+      `test_gate_*.py` files (breadth 5, condition_lookup 2, decision 8, decision_artifact 7,
+      flip_path 7, independence 10, ordering 4, seal 9, yield 6 = 58), none of which were touched
+      by this story and all of which predate its baseline commit `6d48c15`. AC3.3's discharge
+      still holds (the suite is green either way), so this is a reporting-accuracy defect in the
+      story's own record, not a functional one — the same shape as the already-known
+      sprint-status "182 vs 109 keys" miscount. Fix: correct the figure to 58 in Completion Notes
+      §7 (or state the narrower selection actually run, if one was intended) — trivial text-only
+      patch, no re-test needed.
+- [x] [Review][Defer] The `Evidence-partition: open` trailer citation for a `partition: pre-seal`
+      corpus is a genuine, disclosed protocol gap, not a defect this story should fix
+      [argus/detectors/vacuous_vocabulary.py commit `dd1e03a` trailer]. Confirmed by reading
+      `argus/precision/gate_seal.py`: `SEAL_CITATION_VALUES = (sealed, open, none)` has no
+      `pre-seal` member, `cites_partition` only regex-matches the commit body against those three
+      literal strings, and `corpus_partition_counts` is computed independently of any commit
+      trailer — so citing `open` cannot corrupt any downstream computed state, it only satisfies
+      (truthfully, if awkwardly) a citation predicate that was never given a fourth option. The
+      judgement is disclosed in the commit body rather than smoothed over, which is the correct
+      behavior under AC7.4's escalation list (this exact gap is not one of the listed escalation
+      triggers). Deferred rather than patched here because widening `SEAL_CITATION_VALUES` is a
+      protocol-owner decision outside this story's scope (AC7.4) — deferred, pre-existing gap in
+      the seal-citation vocabulary, surfaced for whoever owns `argus/precision/gate_seal.py`'s
+      protocol.
+- [x] [Review][Defer] `tests/test_gate_seal.py::_git` decodes git subprocess output with
+      `text=True` and no `encoding=`, so it uses the locale codec (cp1252 on this Windows box);
+      reproduced independently in an isolated scratch repo — a commit message containing a
+      character outside cp1252 (e.g. `ā`, U+0101) makes the stdout-reader thread raise
+      `UnicodeDecodeError`, `CompletedProcess.stdout` comes back `None`, and
+      `cites_partition(None)` at `tests/test_gate_seal.py:1140` raises `TypeError` (not merely a
+      theoretical claim — reproduced by execution) instead of reading the trailer. Confirmed
+      Windows-only and invisible to the ubuntu CI leg (UTF-8 locale decodes cleanly). Confirmed no
+      commit in this diff trips it: `dd1e03a`, `6304552` and `6bb91ae` are all pure ASCII by
+      execution (`.decode('ascii')` succeeds on all three `git log --format=%B` outputs). Correctly
+      left unfixed — amending the guard is out of this story's scope (AC7.4) and the orchestrator's
+      brief records it will be filed to the ledger separately — deferred, pre-existing, real.
 
 ### Agent Model Used
 
@@ -1496,7 +1544,7 @@ an open id anywhere in this story's writing.
 | Security | `bandit -r argus --severity-level medium` | No issues (Medium 0, High 0) | **0** ✅ |
 | Ceiling | `pytest tests/test_module_size_ceiling.py` | **6 passed**; no `_EXEMPT_BY_DESIGN` entry added | **0** ✅ |
 | Ordering | `pytest tests/test_gate_ordering.py` | green — no `CANDIDATE_OUTPUT_PATHS` entry touched | **0** ✅ |
-| **AC3.3** | `pytest tests/test_gate_*.py` | **36 passed** — `SECTION_5_CONDITIONS` stays **7** and `precision_evaluable` keeps **4** conjuncts. **Discharged by these existing guards and by nothing this story wrote**: `argus.precision` is not imported by the new module (AR7). | **0** ✅ |
+| **AC3.3** | `pytest tests/test_gate_*.py` — the selection is **all NINE** `tests/test_gate_*.py` files (`breadth`, `condition_lookup`, `decision`, `decision_artifact`, `flip_path`, `independence`, `ordering`, `seal`, `yield`) | **58 passed** — ⚠️ **CORRECTED in fix round 1 from a misreported "36 passed"** (§9 below; reviewer `[Patch]` item). Re-measured by execution 2026-08-23: **5 + 2 + 8 + 7 + 7 + 10 + 4 + 9 + 6 = 58**, `58 passed in 3.24s`. `SECTION_5_CONDITIONS` stays **7** and `precision_evaluable` keeps **4** conjuncts. **Discharged by these existing guards and by nothing this story wrote**: `argus.precision` is not imported by the new module (AR7). | **0** ✅ |
 | Governance | `pytest tests/test_governance_record_integrity.py` | green with this story file and the ledger append on disk | **0** ✅ |
 | Builder | `python scripts/build_adjudication_record.py --check` | *"the adjudication record is current (**31** row(s))"* | **0** ✅ |
 | Builder | `python scripts/build_gate_decision.py --check` | *"CURRENT — **BLOCKED** (NOT COMPUTED BY THIS RUN)"* | **0** ✅ |
@@ -1608,6 +1656,90 @@ goes through `pathlib` under `tmp_path`. The one platform-sensitive artifact thi
 `deferred-work.md`, and it was appended **in binary** with the lone-`CR` count and the trailing
 newline asserted on both sides precisely so `core.autocrlf` cannot differ between the two legs.
 
+#### 9. FIX ROUND 1 (2026-08-23) — the one reviewer `[Patch]` finding, and nothing else
+
+The 2026-08-23 adversarial code review returned **CONCERNS** with three findings: one `[Patch]` and
+two `[Defer]`. **Exactly one was actionable inside this story, and exactly one was actioned.**
+
+**THE DEFECT: a wrong number in this story's own record.** §7's gate table and the Change Log both
+reported `pytest tests/test_gate_*.py` as **"36 passed"**. The real figure is **58**. The reviewer
+re-ran it independently and got 58; the orchestrator re-ran it independently and got 58; this fix
+round re-ran it a third time and got 58. **The "36" was never reproducible, and it is not a
+narrower selection that someone forgot to name** — the story's own AC3.3 wording
+(`pytest tests/test_gate_*.py`) is a whole-glob selection over all nine files. It was a
+transcription error in the record. It is corrected to **58**, and the selection is now spelled out
+in the table cell so the number and its scope cannot drift apart again.
+
+**Re-measured here by execution, 2026-08-23** (`python -m pytest <the nine files> -v --tb=no` →
+`58 passed in 3.24s`, exit **0**), with the per-file collection counted separately so the total is
+checkable rather than asserted:
+
+| File | Tests |
+|---|---:|
+| `tests/test_gate_breadth.py` | 5 |
+| `tests/test_gate_condition_lookup.py` | 2 |
+| `tests/test_gate_decision.py` | 8 |
+| `tests/test_gate_decision_artifact.py` | 7 |
+| `tests/test_gate_flip_path.py` | 7 |
+| `tests/test_gate_independence.py` | 10 |
+| `tests/test_gate_ordering.py` | 4 |
+| `tests/test_gate_seal.py` | 9 |
+| `tests/test_gate_yield.py` | 6 |
+| **TOTAL** | **58** |
+
+⚠️ **AC3.3's discharge is UNAFFECTED.** The selection is green either way — exit **0** whether
+the record says 36 or 58 — and none of the nine files was touched by this story; all nine predate
+its baseline commit `6d48c15`. `SECTION_5_CONDITIONS` stays at **SEVEN** and `precision_evaluable`
+keeps exactly **FOUR** conjuncts, discharged by these pre-existing guards and by nothing this story
+wrote. This was a **record-accuracy** defect, not a functional one — the same shape as the
+already-known sprint-status "182 vs 109 keys" miscount, and the same shape this epic has been
+bitten by repeatedly. That is precisely why it was worth a round.
+
+**THE TWO `[Defer]` FINDINGS WERE DELIBERATELY NOT TOUCHED.** Both were confirmed real by the
+reviewer and both were correctly ruled outside this story's fence (AC7.4):
+
+1. **The `Evidence-partition: open` trailer on a 100%-pre-seal corpus.** `SEAL_CITATION_VALUES` in
+   `argus/precision/gate_seal.py` carries no `pre-seal` member, so the citation predicate was never
+   given a fourth option. Re-confirmed harmless: `cites_partition` regex-matches only the three
+   literal strings, and `corpus_partition_counts` is computed independently of any commit trailer,
+   so no computed state is corrupted. Widening that enum is the seal-protocol owner's decision, not
+   this story's.
+2. **`tests/test_gate_seal.py::_git` decodes git output with the Windows locale codec**
+   (`subprocess.run(text=True)` with no `encoding=`), so a non-cp1252 commit message yields
+   `stdout is None` and `cites_partition(None)` raises `TypeError` at `tests/test_gate_seal.py:1140`.
+   Windows-only, invisible to the ubuntu CI leg. All three of this story's commits are pure ASCII
+   and none trips it; **fix round 1's commit message was likewise kept pure ASCII for the same
+   reason.**
+
+⛔ **Neither was fixed, and neither was filed to the ledger by this round.** They are being filed
+separately, outside this story's write-set fence. `deferred-work.md` is **BYTE-UNTOUCHED** by fix
+round 1 — `git status --porcelain` carries no entry for it.
+
+**THE WRITE SET OF FIX ROUND 1 IS THE RECORD ONLY.** No `argus/`, `tests/`, `scripts/` or
+`…/validation-corpus/` file was opened for writing; `git status --porcelain` carried exactly the
+two expected entries (this story file and `sprint-status.yaml` — both the reviewer's own findings
+writes) before this round and exactly those two after. No guard was amended, weakened or exempted.
+No `DN-*` was reopened. `_CORROBORATION_ASSERTION_CALLEES` is still **23** and `_ASSERTION_CALLEES`
+is still **89**, both re-asserted by execution this round. `N` stays **5**, nothing was ratified, no
+detector was run over a bench member, no third-party fetch, no disposition, no role filled, no
+`V1.4` row, `adjudication-record.json` byte-unchanged, `protocol_cleared` still `False`.
+**`DF-13-5-A` remains OPEN and UNSPENT.**
+
+**Gates re-run in full for fix round 1** — every number below was measured this round, not copied:
+
+| Gate | Command | Result | Exit |
+|---|---|---|---|
+| Full suite | `ARGUS_REQUIRE_LANGUAGE_GRAMMARS=1 pytest` | **1,695 passed** in 205.42s | **0** ✅ |
+| Types | `mypy argus` (CI scope, deliberately not widened) | *"Success: no issues found in **94** source files"* | **0** ✅ |
+| Security | `bandit -r argus --severity-level medium` | Medium **0**, High **0** | **0** ✅ |
+| Ceiling | `pytest tests/test_module_size_ceiling.py` | **6 passed**; the guard file is byte-unchanged, so **no `_EXEMPT_BY_DESIGN` entry was added** | **0** ✅ |
+| **AC3.3** | `pytest tests/test_gate_*.py` (all nine) | **58 passed** — the corrected figure | **0** ✅ |
+| Builder | `python scripts/build_adjudication_record.py --check` | *"the adjudication record is current (**31** row(s))"* | **0** ✅ |
+| Builder | `python scripts/build_gate_decision.py --check` | *"CURRENT — **BLOCKED** (NOT COMPUTED BY THIS RUN)"* | **0** ✅ |
+
+The suite figure is **1,695**, identical to the implementation round's — as it must be, since fix
+round 1 changed no executable line.
+
 ### File List
 
 | Path | Change |
@@ -1645,4 +1777,6 @@ renderers, never hand-edited, and committed **separately** from the behaviour ch
 | 2026-08-23 | `DF-16-6-B` appended to `deferred-work.md` in binary; lone-`CR` count 1 → 1, trailing newline intact, HEAD blob still a strict prefix, `+207 / -0`. |
 | 2026-08-23 | Three unforeseen items found by execution and resolved inside domain authority (§7b): AC6.1's fence is unsatisfiable alongside AC7.1 for any `argus/` change, so the three DOGFOOD artifacts were regenerated through their own renderers in a separate commit; the first-ever post-seal detector commit needed an `Evidence-partition:` trailer for which the corpus has no matching value (all five members are `pre-seal`); and `tests/test_gate_seal.py::_git` decodes git output with the Windows locale codec, so the commit message was kept ASCII. **No guard was amended, weakened or exempted.** |
 | 2026-08-23 | Commit arc: `feat` (the one name + the guards, alone and first) → `chore` (the regenerated dogfood artifacts, separately, as the guard's own remedy and `ba5e8df`'s precedent require) → `docs` (this record + the ledger). **No split commit** — the split already landed in `4123931`. |
-| 2026-08-23 | All gates green with their actual numbers recorded (§7 above): suite **1,695 passed / exit 0**, coverage **95.55%**, `mypy argus` clean over **94** files, bandit Medium 0 / High 0, ceiling **6 passed** with no `_EXEMPT_BY_DESIGN` entry added, `tests/test_gate_*.py` **36 passed**, both builders `--check` exit 0, corpus artifacts byte-unchanged. `in-progress` → `review`. |
+| 2026-08-23 | All gates green with their actual numbers recorded (§7 above): suite **1,695 passed / exit 0**, coverage **95.55%**, `mypy argus` clean over **94** files, bandit Medium 0 / High 0, ceiling **6 passed** with no `_EXEMPT_BY_DESIGN` entry added, `tests/test_gate_*.py` **~~36~~ 58 passed** (⚠️ the **36** was WRONG as written and is corrected here in fix round 1 — §9), both builders `--check` exit 0, corpus artifacts byte-unchanged. `in-progress` → `review`. |
+| 2026-08-23 | **FIX ROUND 1** — code review returned **CONCERNS** with 1 `[Patch]` + 2 `[Defer]`. **1 of 1 actionable findings resolved.** §7's gate table and the Change Log misreported `pytest tests/test_gate_*.py` as **36 passed**; re-measured by execution as **58 passed / exit 0** (5+2+8+7+7+10+4+9+6 across all nine `test_gate_*.py` files) and corrected, with the selection now named in the table cell. AC3.3's discharge is unaffected — the selection is green at either figure and none of the nine files was touched by this story. **Record-accuracy fix only: no executable line changed.** The two `[Defer]` findings (the `SEAL_CITATION_VALUES` `pre-seal` gap; the `tests/test_gate_seal.py::_git` cp1252 decode) were deliberately left exactly as they are, were not fixed, and were not filed to the ledger by this round — `deferred-work.md` is byte-untouched. |
+| 2026-08-23 | Fix round 1 gates re-run in full: suite **1,695 passed / exit 0**, `mypy argus` clean over **94** files, bandit Medium 0 / High 0, ceiling **6 passed** with no `_EXEMPT_BY_DESIGN` entry added, `tests/test_gate_*.py` **58 passed**, both builders `--check` exit 0. `_ASSERTION_CALLEES` re-asserted at **89** and `_CORROBORATION_ASSERTION_CALLEES` at **23**. `in-progress` → `review`. |
