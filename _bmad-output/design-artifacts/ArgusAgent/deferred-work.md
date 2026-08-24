@@ -6589,6 +6589,25 @@ itself on the same string. **The entry is sound and every citation in it resolve
     local to a working tree and to a wheel built from one. ⛔ **This is not a claim that shipping such
     a wheel would be harmless** — it is a claim that no such wheel has been shipped, because releases
     build from a clean checkout.
+  - ⚠️ **CORRECTION 2026-08-24, same day, by the audit that followed this entry — the ATTRIBUTION
+    above is WITHDRAWN. The observable stands; the cause does not.** (Append-only; the text above is
+    not rewritten, §3.4.) This entry asserted *"the polluter is running **Argus itself** (or a
+    research harness that calls it), which is what that session did five times."* ⛔ **That was an
+    inference presented as a finding, and it is now FALSIFIED.** All five harnesses under `research/`
+    were run individually against a clean tree and `argus/verdict/.argus/` was checked after each:
+    `revalidate-fact-b-widening`, `measure-flag-rate-inversion`, `investigate-per-call-scoping`,
+    `measure-heuristic-arms` and `measure-mock-binding-idioms` — **none of them reproduce it**, and
+    neither does a full `pytest` run.
+  - ⛔ **WHAT REMAINS VERIFIED, stated separately from what does not.** The DEFECT is unchanged and
+    reproducible: with the directory present a freshly built wheel measures **127** entries against
+    `README.md`'s **103**, and removing it returns **103** — the build packages untracked, gitignored
+    paths. **What is NOT established is which process writes them.** The 24 files carried a
+    2026-08-24 04:29 timestamp; the candidate set that session named has been eliminated, and no
+    replacement candidate has been demonstrated.
+  - ⚠️ **The fixing story owes the trigger, and must not inherit this entry's guess.** Reproducing
+    the write is a precondition for asserting any cause. **The packaging fix — excluding untracked
+    and gitignored paths from the wheel — does not depend on knowing the trigger** and should not
+    wait for it.
 
 ⛔ **Nothing else is filed and nothing is closed by this section.** `DF-13-5-A` stays **OPEN and
 UNSPENT** with its 2026-08-24 substantive trigger; `DF-INV-VACUOUS-B` stays **OPEN** pending Story
