@@ -6772,3 +6772,47 @@ append.
     the detector audit and five governance commits — while the entry it is named for was dispositioned
     on master two days ago. **A branch named for work that finished elsewhere is a poor place to keep
     thirty-one commits nobody else can see.**
+  - ⛔ **CORRECTION 2026-08-24, hours later, by the delivery act this entry asked for. THREE of its
+    claims are WITHDRAWN, and the entry was wrong in the direction that flatters the finding.**
+    (Append-only; nothing above is rewritten, §3.4.) The push was attempted, and the attempt produced
+    the evidence the audit should have gathered first.
+
+  - ⛔ **WITHDRAWN (1): *"this branch has never been pushed."* FALSE.** The push reported
+    `52143eb..937addc` — **the remote branch already existed**, at `52143eb`, since **2026-08-22**,
+    and it got there through **PR #4, which is MERGED**. ⚠️ **The audit's evidence did not say what
+    the audit read into it:** `git branch -r --contains HEAD` returns empty whenever the remote
+    branch is merely *behind* local, which is a different fact from the branch not existing.
+    **Absence of containment was read as absence of a branch.** The true figure was **32 unpushed
+    commits**, not a branch nobody had ever seen.
+
+  - ⛔ **WITHDRAWN (2): the duplicate-disposition finding, and this is the one that mattered.** The
+    entry claimed `DF-15-2-D` *"carries two independent dispositions written by two sessions that
+    could not see each other"* and filed it as the `AI-E12-6` class. **It is one disposition,
+    authored once.** `git patch-id --stable` returns **`01d436875d6fc9635774211142d8060d990895fa`
+    for BOTH** `52143eb` (this branch) and `797bba8` (`origin/master`) — **the identical patch under
+    two shas**, because PR #4 was merged with a sha-rewriting strategy. `git cherry origin/master
+    HEAD` confirms the shape: **2 commits equivalent-upstream, 31 genuinely new.** ⛔ **There is no
+    governance defect here and there never was.** ⚠️ The forecast conflict is real but is a **textual
+    duplicate of one record**, resolvable by keeping a single copy — **NOT** the evidence-destroying
+    judgement the entry warned against. That warning is withdrawn with the finding.
+
+  - ⚠️ **WITHDRAWN IN PART (3): *"CI cannot have seen any of it."*** CI **did** run, green, on
+    `52143eb` — both `ArgusAgent Repository Audit & Assurance CI` and the student-audit workflow, on
+    2026-08-22, `pull_request`-triggered. ⛔ **But the corrected version is WORSE, not better.**
+    `.github/workflows/audit-ci.yml` triggers on `push` to `master`/`main` and on `pull_request`
+    **targeting** `master`/`main` — **a push to a feature branch triggers nothing**, verified by
+    execution: the 2026-08-24 push produced **no new run**.
+
+  - ⛔ **WHAT SURVIVES, restated so it is not softened by three withdrawals.** **31 commits are not on
+    `master` and have never been executed on POSIX.** Pushing them did not change that and cannot:
+    **the only route to CI is an open pull request against `master`.** The local suite — 1,716 passed
+    at every commit — remains **Windows-only**, and `AI-E16-3`'s ask for a second OS leg or a dated
+    decision saying why not is **still load-bearing**. The severity stays 🟠 on that ground alone.
+
+  - ⚠️ **THE METHOD FAILURE IS THE LESSON, and it is the second in one session.** `DF-INV-WHEEL-A`
+    asserted a cause without isolating it; this entry read a single ambiguous git command as
+    dispositive and built a governance narrative on it, reaching for `AI-E12-6` when `git patch-id`
+    — one command, available throughout — would have refuted it in seconds. ⛔ **Both errors ran in
+    the same direction: toward a more serious finding than the evidence carried.** An audit that
+    only ever revises *upward* in severity is not measuring, and the correction belongs in the record
+    at least as prominently as the claim did.
