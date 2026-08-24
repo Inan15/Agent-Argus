@@ -23,8 +23,10 @@ The keystone: producer-side redaction
 --------------------------------------
 Redaction happens AT THE PRODUCER, before any model is constructed or any byte is
 written. The detector is the single point that KNOWS the secret value, so it is
-the single point at which the value must be DROPPED. The masked indicator + the
-location are the ONLY things that survive into a finding. The secret value's bytes
+the single point at which the value must be DROPPED. The LOCATION is the ONLY thing
+that survives into a finding: the masked indicator is computed by
+:meth:`SecretScanDetector.scan_evidence`'s in-memory carrier and NEVER enters one —
+no emitted model has a field that could hold it. The secret value's bytes
 NEVER enter a ``FindingDraft`` field, a ``Locator``, a ``rule_id``, a
 ``coverage_envelope_slice``, the :class:`SecretFindingEvidence`, a
 ``DegradedCondition.reason``, a log line, or a raised exception message. The
@@ -502,8 +504,25 @@ class SecretScanDetector:
                 continue
 
             ast_span = _ast_span_for_line(ast_entry.definitions, match.start_line)
-            # ── PRODUCER-SIDE REDACTION (the keystone) ──
-            self._evidence_for(match)
+            # ── PRODUCER-SIDE REDACTION IS STRUCTURAL — THERE IS NO STEP TO PERFORM HERE ──
+            # The value is dropped by never being CARRIED, not by a call made here. No emitted
+            # model has a field that could hold it: `FindingDraft` (below), `Recording` /
+            # `Locator` (built by the 1.5 `build_recording`) and `DetectorResult` (returned
+            # below) are all `frozen=True, extra="forbid"`, so there is nowhere to put a value
+            # and no way to add one at runtime. `match.value` never reaches a constructor —
+            # only the LOCATION does. `scan_evidence()` remains the IN-MEMORY evidence carrier
+            # (masked indicator + length + kind + entropy, never the value); the pipeline does
+            # not call it, and Story 2.5 locked it that way — evidence is NOT folded into
+            # `DetectorResult` and is NOT persisted.
+            #
+            # This banner read "PRODUCER-SIDE REDACTION (the keystone)" over a
+            # `self._evidence_for(match)` expression statement whose return value was bound to
+            # nothing (Story 18.2 / `DF-AUD-DETECT-B`): it computed the mask, the length, the
+            # kind, the pattern id and an exact-`Fraction` entropy and discarded all five,
+            # while reading as the load-bearing guarantee. Deleting it changed 0 of 251 tracked
+            # files' `DetectorResult`s. ⛔ Do not reinstate it — `TC-ArgusAgent-SECRET-001-29`
+            # asserts by AST that no `_evidence_for` call site discards its return, and `-28`
+            # asserts `run()`'s output does not depend on that computation at all.
             draft = FindingDraft(
                 file_path=file_path,
                 start_line=match.start_line,
