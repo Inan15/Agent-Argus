@@ -6240,3 +6240,416 @@ and `-D`.
   - ⚠️ **A validation-practice observation, filed without blame.** The one idiom the resolver
     implements is the shape of the fixture that proves it works. The fixture passes and the world
     returns zero. Worth remembering when the replacement predicate gets its own control.
+
+## Deferred from: the 2026-08-24 detector-suite audit (operator-directed, NO story)
+
+Read of all eight modules of `argus/detectors/` at HEAD `7d8c9ba`, against the question *"are the
+detectors written with the best known algorithms, data structures and design practices?"* Every
+entry below was **reproduced by execution** before it was filed; three candidate findings were
+**refuted or already owned** and are recorded here as such rather than filed, because a register
+that only carries what survived hides how the surviving entries were selected.
+
+⛔ **NOT FILED — already owned.** `_mock_bound_names` reads PHYSICAL lines, so a wrapped
+`fake = (` / `Mock()` / `)` binds nothing. This is **`DF-INV-VACUOUS-B`**, filed the same day from
+the measurement session, which already covers the binding-route gap and — decisively — already
+measured the extended resolver at **0 to 1** over 1,032 findings. The wrapped-assignment shape is a
+*fifth* idiom that entry does not name; it is recorded here as an addendum and is **not** worth an
+id of its own, for exactly the reason `DF-INV-VACUOUS-B` gives about itself.
+
+⛔ **NOT FILED — subsumed.** *"Python-specific statement decomposition (`;`, backslash,
+triple-quote, `except:`/`case`, `@`) is applied to JavaScript, TypeScript, Java and Go source."*
+True, but its observable consequences are already `DF-14-3-A` / `-B` / `-C`, and Story 14.3's own
+record carries the K&R-vs-Allman measurement. A new id would split one subject across two entries.
+
+⛔ **NOT FILED — REFUTED.** *"`provenance_evidence` re-derives `_code_prefix` at 5.4x the span's
+line count, and that is the detector's dominant redundancy."* The first half reproduces on a
+synthetic span; the second half is FALSE against the real population, where the cost sits in the
+density denominator instead. The corrected measurement is carried inside `DF-AUD-DETECT-C` rather
+than filed as its own entry.
+
+- **`DF-AUD-DETECT-A` — the public-sentinel test is SUBSTRING containment and it runs ABOVE the
+  Live-Key Safeguard, so a value that merely CONTAINS `localhost` / `example.com` / `127.0.0.1`
+  suppresses the secret inside it. `DF-10-3-B`'s safety claim is false as written.**
+  `argus/detectors/secret_suppression.py:116` tests `sentinel in snippet` over a table (`:61`) that
+  holds five sentinels shorter than 20 characters — `localhost` (9), `127.0.0.1` (9),
+  `example.com` / `.org` / `.net` (11). It is consulted at **step 2** (`:210`), above the Live-Key
+  Safeguard at **step 3** (`:217`), and `is_live_production_key` (`:125`) carries the SAME
+  short-circuit: it returns `False` when any sentinel appears anywhere in the snippet, so the
+  safeguard disables itself on the same string.
+  - id: DF-AUD-DETECT-A
+  - origin_story: **NONE — operator-directed detector audit 2026-08-24** (the audit is the origin)
+  - owner: **XAgent007 (Engineering Lead)**
+  - target_story: **NONE — unscheduled; Engineering Lead to schedule.** Deliberately not asserted
+    onto an existing story id (AI-E9-8). Unlike `DF-10-3-C`, this is **not** a redesign of shipped
+    flag semantics: no operator flag is involved, the table is internal, and the repair is a
+    containment-to-equality change plus a regression test
+  - category: security — false negative (a real secret is silently not reported)
+  - severity: 🟠 — a hardcoded credential in a production file is dropped with no disclosure. Not 🔴
+    because the realistic vector is confined to the `generic_assigned_secret` /
+    `high_entropy_string` classes; reaching a LIVE key additionally requires an improbable
+    coincidence (see below)
+  - ⛔ **THE MEASUREMENT**, through the shipped `SecretScanDetector.run()` on a non-test path
+    (`argus/prod/settings.py`), each line audited alone:
+
+        DATABASE_URL  = "postgres://admin:Tr0ub4dor3@localhost:5432/prod"  -> 0 findings
+        SMTP_PASSWORD = "aBcD1234EfGh5678@example.com"                     -> 0 findings
+        DATABASE_URL  = "postgres://admin:Tr0ub4dor3@dbhost:5432/prod"     -> 1 hardcoded_secret
+
+    The third line is the CONTROL: the same value with the sentinel substring removed IS reported.
+    `evaluate_suppression(...)` returns `(True, 'known_sentinel')` for the first.
+  - ⛔ **IT REACHES A LIVE KEY, AND THAT FALSIFIES `DF-10-3-B` AS WRITTEN.** That entry states *"no
+    live production key can be suppressed by any of these paths except an explicit inline
+    annotation, which is reviewable in the diff"*, and classifies the built-in layers as *"a
+    reporting enhancement, not a correctness defect"*. Measured: a token matching
+    `LIVE_KEY_PATTERNS`' own `ghp_[A-Za-z0-9_]{36}` regex — confirmed matching — returns
+    `is_live_production_key(...) == False` and `run()` emits **0 findings**, because the 36 body
+    characters happen to contain `localhost`. The same holds for a 40-character `[A-Za-z0-9/+=]`
+    AWS secret key.
+  - ⚠️ **THE PROBABILITY IS STATED RATHER THAN SUPPRESSED, because it cuts both ways.** A GitHub
+    PAT body is effectively random base62, so containing that exact 9-character run is
+    astronomically unlikely — the live-key half is **structural, not probable**. What IS probable is
+    the `generic_assigned_secret` / `high_entropy_string` half, where the value is an
+    operator-authored connection string or URL and `localhost` / `example.com` are among the most
+    common substrings such a value can carry. **The entry does not rest on the improbable half;
+    `DF-10-3-B`'s wording does, and that is why the wording has to move.**
+  - ⚠️ **NOTHING PINS THE CURRENT BEHAVIOUR.** A grep over `tests/` finds no `is_public_sentinel`
+    case at all, so the containment semantics are neither asserted nor an accepted cost — they are
+    unexamined. Suggested repair: exact comparison against a `frozenset` (also O(1) rather than the
+    present O(table x snippet) scan), keeping containment — if wanted — only for the three
+    full-length published keys, whose length makes accidental containment impossible.
+
+- **`DF-AUD-DETECT-B` — `run()`'s producer-side redaction call computes evidence and discards it, so
+  every shipped `hardcoded_secret` finding carries NO evidence. The comment claims a guarantee the
+  line does not provide.**
+  `argus/detectors/secret_scan.py:506` reads `self._evidence_for(match)` under the banner
+  `# ── PRODUCER-SIDE REDACTION (the keystone) ──`. The return value is bound to nothing.
+  `_evidence_for` is a pure `@staticmethod` returning a frozen model, so the statement is a no-op
+  that computes a Shannon entropy per match and throws it away. (`:376`, inside `scan_evidence`, is
+  the OTHER call site and is genuine — that one's return IS used. Only `:506` is dead.)
+  - id: DF-AUD-DETECT-B
+  - origin_story: **NONE — operator-directed detector audit 2026-08-24**
+  - owner: **XAgent007 (Engineering Lead)**
+  - target_story: **NONE — unscheduled; Engineering Lead to schedule**
+  - category: spec conformance / dead code
+  - severity: 🟡 — ⛔ **no secret leaks and none can.** The redaction guarantee is STRUCTURAL — the
+    absence of a value field on `Recording` / `Locator` / `FindingDraft` — and holds with this line
+    deleted. What fails is FR10's *"findings carrying their evidence counts"*, on the shipped path
+  - ⛔ **THE MEASUREMENT.** Replacing `_evidence_for` with `lambda m: None` leaves `findings`,
+    `entries` and `degraded` **identical**. `DetectorResult` has no evidence slot, so a
+    `SecretFindingEvidence` can only reach a caller through `scan_evidence()` — and the pipeline
+    calls `run()`. `masked`, `value_length`, `kind`, `pattern_id` and `entropy_bits` are computed
+    and dropped on every match of every audit.
+  - ⚠️ **THE STORY DESCRIBES THIS AS THE REDACTION STEP**, which is why it is filed rather than
+    deleted as tidy-up: `2-5-hardcoded-secret-detector-producer-side-redaction.md:349` records
+    *"Redaction in `_evidence_for`"* as part of the `run()` flow, and `:613` describes it computing
+    the mask, length and entropy. A reader checking the AC against the code finds a call that
+    appears to satisfy it. **Two defensible repairs, and they are not equivalent:** delete the call
+    and correct the comment (evidence genuinely is not carried in V1), or widen `DetectorResult` to
+    carry it (an additive schema change under NFR-M2). ⛔ The second is the one that matches what
+    Story 2.5 says; the first is the one that matches what ships. Choosing is the Engineering
+    Lead's.
+
+- **`DF-AUD-DETECT-C` — the detector layer costs MORE than tree-sitter parsing, and its hot path is
+  the statement counter re-scanning the same characters.**
+  Profiled over 60 of this repository's own test files: `build_ast_index` **255 ms (21%)**,
+  `VacuousTestDetector.run` **484 ms (40%)**, `SecretScanDetector.run` **465 ms (39%)**. Inside the
+  vacuous detector, `_count_statements` to `body_statement_count`
+  (`argus/detectors/vacuous_test.py:485` to `provenance_scan.py:482`) is **1.692 s of `_score`'s
+  2.207 s (77%)**, and the character-level primitives run at: `_blank_strings` **33,405 calls**,
+  `_consume_string` **32,365**, `_continued_code_prefix` **26,139**, `_bracket_delta` **18,025** —
+  for **628 scored functions**, i.e. ~53 `_blank_strings` calls per scored function over text that
+  does not change between them.
+  - id: DF-AUD-DETECT-C
+  - origin_story: **NONE — operator-directed detector audit 2026-08-24**
+  - owner: **XAgent007 (Engineering Lead)**
+  - target_story: **NONE — unscheduled; Engineering Lead to schedule**
+  - category: performance
+  - severity: 🟡 — ⛔ **no output changes; this is cost, not correctness.** Filed at 🟡 rather than
+    🟢 only because the layer is the DOMINANT cost of a scan and the mechanism is redundancy rather
+    than work
+  - ⛔ **THE MECHANISM, and why it is a data-structure choice rather than a micro-optimisation.**
+    `_scan_span` (`provenance_scan.py:377`) already computes, once, the authoritative decomposition
+    of a span and carries each line's comment-stripped text on `_SpanLine.code`.
+    `logical_statement_starts` then projects away everything except `opens`, so every later consumer
+    — `_statement_texts`, `_is_continuation_clause_header`, `_is_decorator`,
+    `_logical_statement_end`, `_statement_code` — re-derives the same text and re-blanks the same
+    literals. Carrying the blanked form on `_SpanLine`, or memoising `_blank_strings` per statement,
+    removes most of it without touching a single predicate.
+  - ⚠️ **AN EARLIER NUMBER FROM THIS AUDIT IS CORRECTED HERE RATHER THAN QUIETLY REPLACED.** A
+    synthetic 41-line span measured `_code_prefix` at **5.4x** the span's line count, and that was
+    first reported as the dominant redundancy. Profiling the REAL population says otherwise: the
+    bulk is the density DENOMINATOR (`body_statement_count`), not `provenance_evidence`. The
+    synthetic figure was not wrong, it was **unrepresentative** — recorded because a shape argument
+    drawn from a fixture is exactly what this project's own §0.4 keeps catching.
+  - ⚠️ **TWO SMALLER ITEMS, SAME CATEGORY, folded in rather than given ids.** `_line_span`
+    (`secret_scan.py:332`) does `source.count("\n", 0, match_start)` **per match** — O(N) each,
+    where one precomputed newline-offset list plus `bisect_right` is O(N + M log N).
+    `_edges_in_span` (`vacuous_test.py:464`) is a linear filter **per test function** (O(D x E))
+    over a list the index already sorts by `(line, callee)` (AR11), where `bisect` gives
+    O(log E + k). Neither is measurable next to the above; both are recorded so a future pass does
+    not re-derive them.
+
+- **`DF-AUD-DETECT-D` — `_logical_statement_end` and `_scan_span` are two spellings of "where does a
+  statement end" and they disagree on 5.96% of statements. LATENT: no behavioural effect could be
+  produced, INCLUDING by a purpose-built trigger.**
+  `_scan_span` (`provenance_scan.py:377`) tracks brackets **and** backslash **and** an open
+  triple-quoted literal. `_logical_statement_end` (`:345`) tracks brackets and backslash only,
+  because it calls `_code_prefix`, which hard-codes `pending=None` and so cannot carry the
+  cross-line string state. `_scan_span`'s own docstring records that this state was added there
+  precisely because the continuation syntaxes had already been broken separately once; the second
+  function was never brought along.
+  - id: DF-AUD-DETECT-D
+  - origin_story: **NONE — operator-directed detector audit 2026-08-24**
+  - owner: **XAgent007 (Engineering Lead)**
+  - target_story: **NONE** — it rides with whatever story next reworks `provenance_scan`; it is not
+    worth a story of its own, on the `DF-INV-VACUOUS-B` precedent
+  - category: maintainability / one-derivation discipline (AR7 §3.3)
+  - severity: 🟢 — ⛔ **it changes nothing measurable, and the attempt to make it change something
+    FAILED.** It becomes load-bearing only if a future predicate reads statement extents differently
+  - ⛔ **THE MEASUREMENT, in three stages, and the last two are the ones that matter.**
+    (i) Differential over all 228 tracked `argus/**` + `tests/**` Python files, every logical
+    statement: **1,844 divergences of 30,941 (5.96%)**, every sampled one a multi-line docstring —
+    `_logical_statement_end` returns the OPENING line where `_scan_span` spans the whole literal.
+    (ii) **Reachability, through the shipped scorer**: re-running fact (b) over **1,543 test
+    functions** with the statement end derived from `_scan_span` instead yields **0 evidence
+    differences and 0 corroboration flips**. (iii) **A synthetic trigger built specifically to
+    exploit it** — a SUT call whose logical statement starts on a line opening an unterminated
+    triple-quote at depth 0 — produces **identical `ProvenanceEvidence` from both implementations**.
+  - ⚠️ **WHY IT IS FILED AT ALL, GIVEN (ii) AND (iii).** Because 5.96% is not zero, the direction of
+    the divergence is not guaranteed by anything (it happens to truncate, which happens to read as
+    CONSUMED, which happens to be the safe direction), and *"two spellings of one question"* is the
+    disagreement class this module's own docstrings say it exists to close. ⛔ **It is NOT filed as
+    a correctness defect and must not be quoted as one.** Suggested repair is a deletion, not an
+    addition: the end of the statement opening at `s` is the last line whose `opens == s` in the
+    `_scan_span` result, which inherits the string state instead of restating the rule.
+
+- **`DF-AUD-DETECT-E` — two regex precision defects in `secret_scan`: no left word boundary on the
+  key alternation, and mismatched quote delimiters accepted as one literal.**
+  `_GENERIC_ASSIGN_RE` (`argus/detectors/secret_scan.py:285`) anchors nothing to the left of
+  `api[_-]?key|secret|token|password|passwd|pwd`, so `topsecret = "..."`, `mytoken = "..."` and
+  `notapassword = "..."` all match, as does prose in a comment. `_ANY_LITERAL_RE` (`:294`) is
+  `['\"](?P<secret>[^'\"\n]+)['\"]` — the opening and closing delimiters are independent character
+  classes, so a literal opened with `'` and closed with `"` is accepted.
+  - id: DF-AUD-DETECT-E
+  - origin_story: **NONE — operator-directed detector audit 2026-08-24**
+  - owner: **XAgent007 (Engineering Lead)**
+  - target_story: **NONE — unscheduled; Engineering Lead to schedule**
+  - category: detector precision
+  - severity: 🟢 — ⛔ **error direction is OVER-reporting, never a false green**, and the measured
+    volume is small. It is filed because the module's own docstring rests its design on alarm
+    fatigue (the 1108-to-12 argument), and noise is the currency that argument is denominated in
+  - ⛔ **THE MEASUREMENT, over `argus/**` own source** (the 5,086-file corpora were not needed; the
+    defect is structural and volume is the only open question). Word boundary: **3** matches with a
+    word character immediately left of the key, of which **1** is inside a comment line —
+    `argus/cache/key.py:181`, the comment holding
+    `detectors/secret_scan.py::RULE_HARDCODED_SECRET = "hardcoded_secret"`. Mismatched delimiters:
+    **462** spans, of which **3** survive `_is_entropy_candidate` and would actually be reported —
+    one of them, pleasingly, being `secret_scan.py:280`'s own regex source.
+  - ⚠️ **NEITHER IS AN ACCEPTED COST.** `tests/test_secret_scan_precision.py` pins
+    `_is_entropy_candidate`, `_has_no_whitespace` and `_has_letter_digit_mix` thoroughly and says
+    nothing about either regex, and Story 2.5 records no such cost. Repairs are one token each: a
+    negative lookbehind before the alternation, and a backreference for the closing delimiter.
+
+- **`DF-AUD-DETECT-F` — the `Detector` Protocol is asserted by exactly one test and used by nothing;
+  it cannot dispatch, because no two detectors share a `run` signature.**
+  `argus/detectors/base.py:127` declares `Detector` as a `runtime_checkable` Protocol with
+  `run(self, *args: object, **kwargs: object) -> DetectorResult`. The five concrete detectors take
+  mutually incompatible keyword-only signatures (`index=`; `file_path/source/ast_entry=`;
+  `targets/already_graded_paths=`), so the widened signature is what makes them all "satisfy" it.
+  The only reference in the tree is `tests/test_detector_base.py:89`,
+  `assert isinstance(VacuousTestDetector(), Detector)` — no production module imports the name.
+  - id: DF-AUD-DETECT-F
+  - origin_story: **NONE — operator-directed detector audit 2026-08-24**
+  - owner: **XAgent007 (Engineering Lead)**
+  - target_story: **NONE — unscheduled; Engineering Lead to schedule**
+  - category: architecture / typing
+  - severity: 🟢 — nothing is wrong at runtime; the cost is a contract that reads as load-bearing
+    and is not, so a reader trusts a uniformity the code does not have
+  - ⚠️ **THE HONEST COUNTER-ARGUMENT, recorded because it may well win.** The detectors are
+    genuinely heterogeneous — one folds a whole index, three score a file, one runs an external
+    tool — and forcing a common signature would be a worse design than admitting they have none. In
+    that case the repair is to **delete the Protocol and the test**, not to strengthen it. What
+    should not persist is the present middle position, where `rule_id` + `DetectorResult` is the
+    real shared contract and `run` is decoration.
+  - ⚠️ **A SECOND, NARROWER ITEM IN THE SAME MODULE.** `build_recording`'s
+    `depth_supported: object | None` (`base.py:166`) is passed to `Recording` under a
+    `# type: ignore[arg-type]` (`:200`), erasing the type at the single construction point every
+    finding in the system passes through. `mypy` is clean because the ignore silences it.
+
+## Epic 17 / Epic 18 re-homing and scheduling — 2026-08-24
+
+> Filed by the `bmad-correct-course` session that created Epics 17 and 18
+> ([sprint-change-proposal-2026-08-24.md](sprint-change-proposal-2026-08-24.md), **APPROVED
+> 2026-08-24 by XAgent007**). **This section is the deferral that proposal named and owed.** It was
+> deferred at `b85e597` because this file then held another session's uncommitted audit work and
+> staging it by path would have swept unfinished work into that commit; it is discharged here once
+> that was no longer true. ⛔ **A deferral WITH a named owner and a written scope, now closed by the
+> owner — not a silence.**
+>
+> ⛔ **THIS SECTION RE-HOMES AND SCHEDULES. It closes nothing, disposes of nothing, promotes nothing
+> and rewrites no entry above it** (§3.4). Every entry named keeps its status, severity and text;
+> what changes is the `target_story` it was waiting on. **`DF-13-5-A` stays OPEN and UNSPENT.**
+
+### (a) Six entries pointed at Story 6.2 — a story that is `done` and never had that scope
+
+⛔ **THE FACT THAT FORCES THIS.** `6-2-full-python-ast-grounding-of-audited-deep-claims` is **`done`**,
+Epic 6's retrospective is **signed**, and its story file carves the work out in terms: it does **NOT**
+re-parse source, does **NOT** add a second tree-sitter call, and *"only GRADES grounding"*. It was
+scoped to claim-grounding for **NON-TEST** Python files; the entry it discharged was `DF-1-7-B`.
+**"Real assertion
+provenance is Story 6.2's" was a forward reference to a scope 6.2 never had once it was written**, and
+it propagated into four shipped modules and six ledger entries.
+
+| entry | was waiting on | **RE-HOMED TO** |
+|---|---|---|
+| `DF-12-2-D` | *"6-2-style claim-grammar work"* | **Epic 17** (Story 17.2 — the successor predicate spec) |
+| `DF-12-3-A` | *"the same 6.2-style claim-grammar work"* | **Epic 17** (Story 17.2) |
+| `DF-14-1-A` | `6-2` (full multi-construct AST grounding / dataflow provenance) | **Epic 17** (Story 17.3 — assertion-strength grading) |
+| `DF-16-7-A` | `6.2` | **Epic 17** (Story 17.3) |
+| `DF-16-7-B` | *"(a) stays 6.2 with `DF-16-7-A`"* | **Epic 17** (Story 17.2 for the predicate argument; 17.4 for the re-measurement) |
+| `DF-INV-VACUOUS-A` | `6.2` — ⚠️ **filed by this same session earlier the same day, repeating the error it later found** | **Epic 17** (the epic exists because of this entry) |
+
+⛔ **`DF-1-7-B` IS NOT IN THIS TABLE AND IS NOT TOUCHED.** Its existing disposition already stands and
+correctly names 6.2 — the one reference to 6.2 in this ledger that is true. Re-homing it would falsify
+a signed record.
+
+⚠️ **The 2026-08-21 research is affected and is NOT rewritten** (§3.4). Its recommendation #1 reads
+*"Complete Story 6.2 (dataflow / scope-resolved grounding) and extend it to assertion strength …
+Highest yield, zero architectural change, **already scheduled**."* The last two words rest on this
+same stale reference: **the work was never scheduled anywhere.** The recommendation's substance is
+unaffected and is what Epic 17 now does; only its premise about a container was wrong. Recorded as a
+dated correction here; the research document stands as written.
+
+⚠️ **Four shipped modules still carry the stale reference** — `argus/detectors/provenance_scan.py:55`,
+`argus/audit/deep_pass.py:93` and `:314`, `argus/audit/deep_audit.py:23`,
+`argus/audit/__init__.py:13`. **Story 17.5 owns correcting them**, with no behaviour change, plus a
+guard asserting no `target_story` in this ledger names a story whose `sprint-status.yaml` key is
+`done`. That guard is what stops this recurring.
+
+### (b) The 2026-08-24 detector audit gets containers
+
+The six audit entries above were filed *"unscheduled; Engineering Lead to schedule"*. They are
+scheduled here. ⛔ **Scheduling only — no entry's finding, severity or status is altered.**
+
+| entry | severity | **SCHEDULED TO** |
+|---|---|---|
+| `DF-AUD-DETECT-A` | 🟠 | **Epic 18, Story 18.1** — and Epic 18 is sequenced **FIRST**, ahead of Epic 17 |
+| `DF-AUD-DETECT-B` | 🟡 | **Epic 18, Story 18.2** |
+| `DF-AUD-DETECT-E` | 🟢 | **Epic 18, Story 18.3** |
+| `DF-AUD-DETECT-F` | 🟢 | **Epic 18, Story 18.4** |
+| `DF-AUD-DETECT-D` | 🟢 | **Epic 17, Story 17.3** — its own entry asked for exactly this, saying it *"rides with whatever story next reworks `provenance_scan`"* |
+| `DF-AUD-DETECT-C` | 🟡 | ⛔ **NOT scheduled. Named as CONTEXT on Story 17.3 and STAYS OPEN.** 17.3 must record span-scan cost before and after its addition so a regression is disclosed, but it is not a performance story and this entry is not dispositioned by it |
+
+⛔ **`DF-AUD-DETECT-A` WAS INDEPENDENTLY RE-VERIFIED BEFORE BEING SCHEDULED, by execution rather than
+by reading**, because a 🟠 security claim that gates an epic ordering decision should not be taken on
+trust. Re-run 2026-08-24 through the shipped `SecretScanDetector.run()`: the `localhost` line returns
+**0** findings, the `example.com` line **0**, and the CONTROL — the same value with the sentinel
+substring removed — returns **1**. All three match the entry exactly. Read against the source:
+`is_public_sentinel` (`secret_suppression.py:116`) tests `sentinel in snippet_clean`; it is consulted
+at **step 2**, above the Live-Key Safeguard at **step 3**; and `is_live_production_key` (`:125`)
+carries the same `if sentinel in snippet: return False` short-circuit, so the safeguard disables
+itself on the same string. **The entry is sound and every citation in it resolves.**
+
+### (c) One new entry, found by the charter session itself
+
+- **`DF-INV-WHEEL-A` — the wheel packages GITIGNORED runtime output, so running Argus inside its own
+  repository reddens `TC-ArgusAgent-DOCS-001-54` for a reason unrelated to what that guard asserts.**
+  - id: DF-INV-WHEEL-A
+  - origin: found 2026-08-24 by the `bmad-correct-course` session as an unrelated RED in the
+    pre-commit full-suite run; diagnosed and cleared before `b85e597` was committed
+  - owner: **XAgent007 (Engineering Lead)**
+  - target_story: **NONE — unscheduled.** ⛔ Deliberately **not** asserted onto Epic 17 or Epic 18
+    (`AI-E9-8`): it is neither epic's subject, and attaching it to one of them to give it a home
+    would be the same mis-homing this very section exists to repair
+  - category: packaging / build hygiene
+  - severity: 🟡 — nothing published is wrong, no secret is involved, and CI cannot reach it; the cost
+    is a shipped guard that fails for a reason that has nothing to do with what it asserts
+  - ⛔ **THE MEASUREMENT.** `_live_figures()` measured a freshly built wheel at **127** entries against
+    `README.md`'s published **103**. The 24-entry difference was exactly
+    `argus/verdict/.argus/{assignments,cache,decisions,findings,state}` — **24 files, all created that
+    day, all UNTRACKED and all matched by `.gitignore:19` (`.argus/`)**. Removing the directory
+    returned the wheel to **103** and the suite to **1,716 passed / exit 0**.
+  - ⛔ **THE DEFECT IS THE BUILD, NOT THE GUARD.** The wheel includes untracked, gitignored paths, so
+    any run of the tool with a working directory inside this repository writes output that the next
+    wheel build packages. ⚠️ **A plain `pytest` run does NOT reproduce it** — verified after clearing:
+    the directory was **not** regenerated by a full suite run. The polluter is running **Argus itself**
+    (or a research harness that calls it), which is what that session did five times.
+  - ⚠️ **CI CANNOT SEE IT, AND THAT IS WHY IT HAS NEVER BEEN CAUGHT.** A fresh checkout has no
+    `.argus/` directory, so this guard is green on every CI run and reddens only in a working tree
+    somebody has actually used the tool in. ⛔ **The green CI record is therefore not evidence the
+    packaging is clean** — it is evidence CI never runs the tool in its own tree.
+  - ⛔ **IT IS THE MIRROR OF `AI-E16-5`, AND THE TWO SHOULD BE READ TOGETHER.** That item found
+    `test_module_size_ceiling.py` **blind to untracked files** because its population is
+    `git ls-files` — the INDEX. This one finds the **wheel including untracked files** that the
+    index-based guards cannot see. Same seam, opposite directions: one guard under-reaches the
+    filesystem, one build over-reaches it. **A fix for either that does not name the other will leave
+    the seam half-closed.**
+  - ⚠️ **NOT filed as a security issue, and the reason is stated rather than assumed.** `.argus/`
+    output is redacted by construction (FR28) and no published artifact carries it; the pollution is
+    local to a working tree and to a wheel built from one. ⛔ **This is not a claim that shipping such
+    a wheel would be harmless** — it is a claim that no such wheel has been shipped, because releases
+    build from a clean checkout.
+
+⛔ **Nothing else is filed and nothing is closed by this section.** `DF-13-5-A` stays **OPEN and
+UNSPENT** with its 2026-08-24 substantive trigger; `DF-INV-VACUOUS-B` stays **OPEN** pending Story
+17.2's decision on whether mock binding remains an input at all; `DF-AUD-DETECT-A` through `-F` keep
+every word of their findings; and no historical entry on this ledger is edited — this is a pure
+append.
+
+### (d) A second new entry, found by the guard reacting to this very section
+
+- **`DF-INV-LEDGER-A` — `ledger_closed_ids` cannot see one of the three disposition forms this
+  ledger actually uses, so
+  **9 of the 17** `_UNBACKED_AT_LANDING` rows are FALSE POSITIVES and the guard's headline backlog is
+  majority artifact.**
+  - id: DF-INV-LEDGER-A
+  - origin: found 2026-08-24 by the Epic 17 / Epic 18 charter session, when a **documentation edit**
+    made `TC-ArgusAgent-DOCS-001-78` change verdict — which is itself the symptom
+  - owner: **XAgent007 (Engineering Lead)**
+  - target_story: **NONE — unscheduled.** ⛔ Deliberately not asserted onto Epic 17 or Epic 18
+    (`AI-E9-8`); it is neither epic's subject
+  - category: guard correctness / extractor coverage
+  - severity: 🟡 — ⛔ **the error direction is OVER-reporting unbacked claims, never under-reporting.**
+    No closure is invented, no story record is wrongly cleared, and nothing published is affected.
+    The cost is a registry that **cannot shrink to the truth**, and a guard whose backlog reads as
+    governance debt when half of it is an extraction artifact
+  - ⛔ **THE MEASUREMENT.** `ledger_closed_ids` (`tests/test_governance_record_integrity.py:75`)
+    recognises exactly two forms, and its own docstring says so: an id and a closure verb **on the
+    same line**, and a trailing `- status:` line resolved against the most recently seen id. This
+    ledger writes closures a **THIRD** way — `- **CLOSED 2026-06-29 by story 6-2-…**` — where the
+    closure verb is present, there is **no `DF-` id on the line**, and the line is not
+    `- status:`-shaped. Measured over this ledger on 2026-08-24: **7** entries carry a true
+    disposition in that third form which the extractor cannot see, against **35** it can. The seven:
+    `DF-1-3-A`, `DF-2-3-B`, `DF-1-7-B`, `DF-8-1-A`, `DF-AUD-APAA-C`, `DF-AUD-APAA-D`, `DF-14-3-H`.
+  - ⚠️ **THE DEFECT REPRODUCED ITSELF WHILE THIS ENTRY WAS BEING WRITTEN, and the line above is the
+    repair — and it was needed TWICE.** A first draft put the closure verb and three of those ids on
+    ONE line and the extractor's count went **35 → 39**; correcting that left **36**, because this
+    entry's own TITLE named the form beside its own id, marking `DF-INV-LEDGER-A` — an OPEN entry —
+    as closed. So the blind spot was tripped **three times in one sitting**: once by §(a)'s prose,
+    once by the paragraph describing it, and once by the title of the entry filing it. ⛔ **Three
+    independent accidents is not carelessness three times; it is a predicate that is too easy to
+    satisfy by writing about it.**
+    That is the strongest evidence this entry carries, and it belongs to the fixing story.
+  - ⛔ **CONSEQUENCE, and it is larger than the entry that exposed it.** Five of those seven appear in
+    `_UNBACKED_AT_LANDING`, and they account for **9 of its 17 rows (53%)**: the three `DF-1-7-B`
+    rows (stories 6-1, 6-2, 6-3), three `DF-2-3-B` rows (4-1, 4-3, 4-4), plus
+    `4-2/DF-1-3-A`, `8-3/DF-8-1-A` and `10-1/DF-AUD-APAA-C`. **The ledger DID receive every one of
+    those closures**, on dates between 2026-06-27 and 2026-08-10.
+  - ⛔ **HOW IT WAS FOUND, recorded because the manner is the lesson.** A prose sentence in §(a) of
+    this same dated section originally read *"… , closing `DF-1-7-B`"* — a closure verb and an id on
+    one line — which the extractor read as a ledger closure. `-78`'s shrink assertion immediately went
+    RED, demanding three registry rows be deleted. ⚠️ **The sentence was REWORDED and NOT ONE ROW WAS
+    REMOVED.** Making a guard green by editing prose is `AI-E12-3`'s defect committed inside the guard
+    written to stop it, and the comment above `_UNBACKED_AT_LANDING` names precisely that move as
+    considered and rejected. ⛔ **A documentation edit was able to flip a governance guard's verdict,
+    and that is the finding — not the three rows.**
+  - ⛔ **THE FIX IS THE EXTRACTOR, NOT THE REGISTRY, AND THE ORDER IS LOAD-BEARING.** Teach
+    `ledger_closed_ids` the `- **CLOSED …**` form by carrying `current`, exactly as the `- status:`
+    branch already does; prove the new branch RED against the pre-fix extractor over the live ledger;
+    and **only then** let `_UNBACKED_AT_LANDING` shrink by the rows it legitimately backs — which the
+    shrink assertion will then demand on its own. ⚠️ **Removing rows first would be
+    indistinguishable, in the record, from the defect described above.**
+  - ⚠️ **Two things this entry does NOT claim.** It does not claim the remaining 8 rows are wrong —
+    they were not measured and may be genuine. And it does not claim `_UNBACKED_AT_LANDING` was
+    written carelessly: the registry is dated, reasoned and honest about what it found; the extractor
+    under it simply could not see one of the three forms its own ledger uses.
