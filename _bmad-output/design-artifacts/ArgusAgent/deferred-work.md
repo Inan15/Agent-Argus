@@ -6882,3 +6882,64 @@ append.
     simply did not cash in this time. A second OS leg would have made that a non-question.
   - ⛔ **WHAT REMAINS OPEN.** The work is **not on `master`** — PR #5 is open, not merged — and merging
     is an operator act. `DF-INV-REFS-A` is untouched by any of this.
+
+## Merge-strategy decision — 2026-08-24 (operator act, XAgent007)
+
+- **`DF-INV-MERGE-A` — squash and rebase merging are structurally incompatible with
+  `TC-ArgusAgent-DOGFOOD-001-49`, and the incompatibility cannot be caught before the merge lands.**
+  - id: DF-INV-MERGE-A
+  - origin: `master` went RED the moment PR #5 landed; diagnosed and repaired by PR #6 the same day
+  - owner: **XAgent007 (Engineering Lead)** — the remedy is a repository setting, not code
+  - target_story: **NONE — a repository configuration act, not a story.** ⛔ It cannot be re-homed to
+    one: a story chartered to *make the guard stop failing* is the assertion-loosening move
+    `DF-8-5-B` forbids
+  - category: delivery / repository configuration
+  - severity: 🟠 — every occurrence takes `master` RED, and **no local run and no PR check can see it
+    coming**
+  - ⛔ **THE MECHANISM.** `TC-ArgusAgent-DOGFOOD-001-49` requires each committed dogfood artifact to
+    cite a provenance sha that is an **ancestor of HEAD**. A merge commit keeps the branch's commits
+    as ancestors, so the citation stays true. **Squash and rebase rewrite the shas**, so an artifact
+    citing a pre-merge sha is orphaned the instant it lands. PR #5 cited
+    `7fec3cdc67e8540f793af854af546cc7594500c5` — a real commit, an ancestor of the branch, and not
+    of `master` afterwards.
+  - ⛔ **IT IS INVISIBLE UNTIL IT IS TOO LATE, WHICH IS WHY THE SETTING AND NOT A HABIT.** The
+    identical tree passed **all four checks** on PR #5, because there the sha was still an ancestor.
+    A local run passes for the same reason. **Only the push to `master` can observe it**, so the
+    failure is always found after the fact, on the default branch, by whoever looks next.
+  - ⚠️ **THE HISTORY SHOWS EXACTLY WHEN PRACTICE CHANGED, and it was not announced.** PRs **#2 and
+    #3** landed as merge commits and `master` stayed green. PRs **#4, #5 and #6** landed
+    sha-rewritten. **PR #4 is also the reason a 2026-08-24 audit finding had to be withdrawn**: its
+    rewrite made `52143eb` and `797bba8` — one patch under two shas — look like two independent
+    dispositions of the same entry. **The same strategy change cost a false finding and a red
+    `master` within two days.**
+  - ⛔ **THE EXCEPTION THAT MAKES THE RULE PRECISE, and it must not be over-read.** PR #6 was *also*
+    sha-rewritten and did **not** take `master` red — because its regeneration cited **`932cec9`,
+    `master`'s own HEAD**, which survives any rewrite of the branch. ⚠️ **So the hazard is narrower
+    than "sha-rewriting merges are unsafe": it is *an artifact regenerated on a branch, citing a
+    branch sha*.** That is also the normal case, because regeneration happens where the work happens.
+  - ✅ **DECISION 2026-08-24 by XAgent007: restrict the repository to MERGE COMMITS.** Disable squash
+    and rebase merging; enable automatic head-branch deletion. **Rationale, with the cost stated:**
+    linear history is lost, and that is a real cost. It is accepted because this repository's guards
+    are built on **sha ancestry of artifact provenance**, and linear history and provenance citation
+    are genuinely incompatible here — of the two, provenance is the one carrying the assurance
+    argument. The repository already merged #2 and #3 this way, so the decision restores its own
+    prior practice rather than inventing one.
+  - ⛔ **STATUS: DECIDED, NOT YET APPLIED — and this entry stays OPEN until it is.** The change was
+    attempted on 2026-08-24 and the API returned **404**, which GitHub returns for a repository
+    settings update when the caller lacks **admin** on the repository. Push, pull-request and merge
+    all function, so the gap is admin scope specifically. **The remedy is manual:** *Settings →
+    General → Pull Requests* — untick *Allow squash merging* and *Allow rebase merging*, leave
+    *Allow merge commits*, tick *Automatically delete head branches*.
+  - ⚠️ **THE REJECTED ALTERNATIVE, recorded so it is not proposed again as though it were new.** A CI
+    job on `master` that regenerates and fails on a dirty tree **was considered and rejected**: it
+    converts a preventable class into a detected-after-the-fact one, and `master` still goes red
+    first every time. ⛔ **Loosening `-49` is not available at all** — `DF-8-5-B`: *"do not close it
+    by loosening an assertion."*
+  - ⚠️ **UNTIL THE SETTING IS APPLIED, the interim rule is the one PR #6 demonstrated:** after any
+    sha-rewriting merge that touched a dogfood artifact, run
+    `python scripts/regenerate_dogfood_artifacts.py` on `master` and commit the result. **This is a
+    workaround with a known failure mode — it depends on someone remembering** — which is the whole
+    reason the setting is the decision.
+  - ⛔ **Nothing else is filed and nothing is disposed of by this entry.** `DF-13-5-A` stays **OPEN
+    and UNSPENT**; `DF-INV-REFS-A`, `DF-INV-WHEEL-A`, `DF-INV-LEDGER-A` and `DF-INV-DELIVERY-A` all
+    keep the status they had; no historical entry is edited — this is a pure append.
