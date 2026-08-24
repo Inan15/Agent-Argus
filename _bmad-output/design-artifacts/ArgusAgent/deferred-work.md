@@ -6672,6 +6672,58 @@ append.
     they were not measured and may be genuine. And it does not claim `_UNBACKED_AT_LANDING` was
     written carelessly: the registry is dated, reasoned and honest about what it found; the extractor
     under it simply could not see one of the three forms its own ledger uses.
+  - ⛔ **ATTRIBUTION CORRECTION 2026-08-24 — this entry presented as NEW a class this ledger had
+    already filed the day before, and its prescription contradicts the prior position.**
+    (Append-only; nothing above is rewritten, §3.4.) Found while resolving a merge conflict, which
+    is the only reason it surfaced at all: the prior record sits on this branch in a region the
+    audit never read.
+
+  - ⛔ **PRIOR ART, NAMED. `DF-16-6-D` (2026-08-23)** — *"authors keep putting a disposition verb and
+    an OPEN ledger id on the SAME PHYSICAL line"* — already carries: the authoring defect itself; the
+    `ledger_closed_ids` **false positive** produced by historical prose ~962 lines from an append;
+    verification by *"running the analyzer over the HEAD blob and over the working tree and getting
+    the identical 35-id set with an empty symmetric difference"* — **the same method this entry used
+    and reported as its own**; and the observation *"the last four were written by authors who
+    already knew the guard existed and had read its docstring. That is the finding: knowing about it
+    does not prevent it."*
+  - ⛔ **AND IT ALREADY COUNTED THE RECURRENCES.** `DF-16-6-D` records **eight**: four by Stories 12.4
+    and 12.5 with every review passing, and **four more inside Epic 16 alone, all on 2026-08-23**.
+    ⚠️ **So this entry's "three independent accidents in one sitting" are instances NINE, TEN and
+    ELEVEN of a counted series — not a new phenomenon.** The correct reading is not *"a predicate too
+    easy to satisfy by writing"* as a discovery, but **a ninth, tenth and eleventh confirmation of a
+    finding already written down, by an author who had not read it.**
+  - ⚠️ **Story 16.5 (2026-08-23) is the other prior record**, at ledger lines 5437-5458: it hit the
+    same extractor gap, states the two shapes the analyzer recognises, and prescribes the remedy
+    *"append the closure to the ledger with its date and evidence"* — explicitly **"never a widened
+    analyzer, and never an `_UNBACKED_AT_LANDING` registration."**
+
+  - ⛔ **THE PRESCRIPTION IN THIS ENTRY IS THEREFORE CONTESTED, AND THE PRIOR POSITION WINS ON
+    PROCEDURE.** This entry says *"THE FIX IS THE EXTRACTOR, NOT THE REGISTRY."* `DF-16-6-D` says the
+    opposite in terms: *"the extractor is correct and essentially unimprovable, and the defect lives
+    entirely in how the surrounding prose is wrapped… the record is what is wrong, every single
+    time."* ⛔ **A later entry does not overturn an earlier one by not having read it.** Whoever
+    schedules this work must reconcile the two deliberately, and `DF-16-6-D` is the senior record.
+  - ⛔ **`DF-16-6-D` ALSO CARRIES AN ORDERING HAZARD THIS ENTRY DID NOT KNOW ABOUT, AND IT IS THE
+    expensive part.** Repairing the analyzer *"UNMASKS the surviving instance and turns the FULL
+    SUITE RED, because the id on that line stops being reported as disposition-bearing and the claim
+    becomes unbacked. So the order is not optional: wrap the RECORD first, re-run
+    `tests/test_governance_record_integrity.py` green, and only then repair the analyzer."*
+    ⚠️ **Anyone acting on this entry alone would have hit that ambush.**
+
+  - ⚠️ **WHAT SURVIVES AS GENUINELY NEW, stated narrowly so the entry is not defended past its
+    worth.** The prior records describe the **false-positive** direction — prose making an id look
+    disposition-bearing when it is not. This entry measured the **opposite** direction: a real
+    `- **…**` bullet disposition that the analyzer cannot see because the line carries no id, which
+    makes the analyzer under-report. **The quantification appears to be new**: seven such records
+    invisible against thirty-five visible, and **nine of `_UNBACKED_AT_LANDING`'s seventeen rows
+    (53%) are false positives** in consequence. ⛔ **The diagnosis is not new; the measurement of its
+    blast radius is.** That is the only part of this entry a fixing story should treat as original.
+  - ⚠️ **THE PROCESS LESSON, and it is the third of this session.** The audit that produced this entry
+    searched the CODE for the defect and never searched the LEDGER for prior art on it — in a
+    repository whose ledger is the primary record and which had filed the class **the previous day**.
+    ⛔ **Two of this session's three self-corrections would have been prevented by one grep of this
+    file before filing.** An audit that does not audit the record it is appending to is measuring
+    with one eye shut.
 
 ## Deferred from: the 2026-08-24 documentation audit (operator-directed, NO story)
 
