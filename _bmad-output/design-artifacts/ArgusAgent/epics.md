@@ -338,6 +338,17 @@ M1 enforced repo-wide E12/12.1; S2/S4/C3/R1/SC1→E2; C1/C2/R2/P1/P2→E3; S1/S3
 > Epics 11/12/13 written in full)"* — the index layer of this document was never in scope. Recorded as a
 > dated correction rather than a silent rewrite (§3.4 evidence immutability).
 
+> **Observation, 2026-08-24** *(sprint-change-proposal-2026-08-24.md)*. This map, the Requirements
+> Inventory above and the Final Validation Summary below all stop at **Epic 13** — Epics 14, 15 and
+> 16 never updated them, so the 2026-08-10 correction's root cause recurred three more times without
+> being recorded. ⛔ **Epics 17 and 18 add NO row here, and that is correct rather than a repeat of
+> the omission:** this map answers *"which epic DELIVERS this FR"*, and neither epic delivers a new
+> one. Epic 17 **repairs** FR10's detector — its verdict-eligible stage promotes **0 of 1,032**
+> (`DF-INV-VACUOUS-A`) — and Epic 18 **repairs** FR11's, where a real hardcoded secret is suppressed
+> by a substring (`DF-AUD-DETECT-A`). ⚠️ **Do not read `FR10 | Epic 1` or `FR11 | Epic 2` as
+> "finished there."** The Epic 14–16 index drift is **NOT** fixed by this proposal: it predates it
+> and fixing it here would be scope creep. Recorded for the Epic 17 retrospective.
+
 ## Epic List
 
 ### Epic 1: Signature-Demo Vertical Slice — "the false-green catch"
@@ -3385,3 +3396,301 @@ takes no A2A token, registers no FastAPI route* (ADR #20). The registration must
 route — that would break the `argus.* ⊬ fastapi` import-isolation gate, the pure/impure boundary, and the
 headless-only classification in one move. Full Flow-Orchestrator workflow-step wiring and programmatic
 verdict consumption are **deferred** (depth LOCKED descriptor-only, 2026-08-03).
+
+## Epic 17: Say What The Assertion Constrains — grade strength, not wiring · *Argus repo*
+
+*Created 2026-08-24 by [sprint-change-proposal-2026-08-24.md](sprint-change-proposal-2026-08-24.md).
+Filed at `backlog`; **AWAITING OPERATOR APPROVAL**. ⛔ This epic does NOT spend `DF-13-5-A`'s round
+and approving it is not approval to spend it — the entry was DECLINED a second time on 2026-08-24
+(`7edf74e`) and stays OPEN and UNSPENT.*
+
+Epic 14 repaired the instrument. Epic 15 built a bench. Epic 16 strengthened the gate and did not
+spend the round. **This epic fixes the reason the round was not worth spending.**
+
+**Capability delivered:** the vacuous-test detector grades **what a test's assertions actually
+constrain about the value the code under test returned**, replacing a mock-provenance vacuity signal
+that cannot fire.
+
+**Covers:** FR10 (advisory vacuous-test detector) · FR7 (AST grounding of a claim) · cross-cutting #6
+(advisory-by-contract; the false-accusation moat) · `DF-INV-VACUOUS-A` · `DF-14-1-A` · `DF-16-7-A` ·
+`DF-16-7-B` · `DF-12-2-D` · `DF-12-3-A` · `DF-AUD-DETECT-D`
+**Depends on:** Epic 14 (the instrument), Epic 16 (the seven gate conditions). It depends on **no
+bench round** — that is the point.
+**Blocks:** nothing currently scheduled. It is the named condition of `DF-13-5-A`'s 2026-08-24
+trigger: the entry returns to the operator when shipped promotions rise above zero.
+
+> ⛔ **THE MEASURED REASON THIS EPIC EXISTS** (`7d8c9ba`,
+> [research/technical-argusagent-stage-mismatch-measurement-2026-08-24.md](research/technical-argusagent-stage-mismatch-measurement-2026-08-24.md)).
+> Over all **1,032** flagged findings at the five pinned shas, stage 1 selects `density_only`
+> **1,025 (100%)** and the mock arm has **never fired**; stage 2 asks an exclusively mock-provenance
+> question and promotes **0**. The two stages are graded on different definitions of vacuity and
+> their intersection on the ratified corpus is **empty**. A bigger bench samples more repositories
+> through an aperture that is structurally shut.
+
+> ⛔ **`consumed == 0` IS NOT LOOSENED BY THIS EPIC.** The asymmetry is what keeps the
+> false-accusation moat closed, and the 2026-08-21 research is explicit that nothing argues for
+> relaxing it. This epic **REPLACES** the vacuity signal; it does not widen fact (b) by clause
+> removal. Per `DF-16-7-B`, a different predicate must be **argued** as one — Story 17.2 is that
+> argument.
+
+> 🔒 **BINDING ORDERING CONSTRAINT.** Story 17.1 — the pre-registered precision criterion — must land
+> in a commit that **precedes every commit containing a successor predicate's output over any corpus
+> member**, evidenced by git ancestry exactly as Story 15.1's `TC-ArgusAgent-PRECISION-001-75`
+> evidences its own. Yield and precision move in opposite directions; a criterion written once a
+> number is in view is not a criterion. A guard asserting the ancestry is part of 17.4, **not a
+> promise made in prose**.
+
+> ⚠️ **`Story 6.2` IS DONE AND IS NOT REOPENED.** Four shipped modules and six open ledger entries
+> name it as the owner of *"real assertion provenance"*. **It never had that scope** — its story file
+> carves out dataflow explicitly and it was scoped to claim-grounding for NON-TEST Python files — and
+> Epic 6's retrospective is signed. Story 17.5 re-homes those references here rather than editing a
+> closed record. ⛔ `DF-1-7-B` is **not** in that set: it is CLOSED and correctly names 6.2 as its
+> closer.
+
+> ⚠️ **PRECONDITION, not a story: `AI-E16-7`.** Protocol §4's ladder still has no step-3 holder. If
+> Story 17.4's measurement produces borderlines needing adjudication, the External adjudicator role
+> must be filled first, or 17.4 **STOPS** and reports which rows and why.
+
+### Story 17.1: Write down what would count as precision, before the number exists
+
+As an Engineering Lead,
+I want the precision criterion for any successor predicate pre-registered before that predicate
+exists,
+So that a yield increase cannot be graded against a standard chosen once the result is in view.
+
+**Acceptance Criteria:**
+
+**Given** the 2026-08-17 rule's own discipline — the branch was chosen before Story 13.5 ran, before
+the bench was chosen, and before any number existed
+**When** this story completes
+**Then** a committed, dated pre-registration states the population precision will be measured over,
+the adjudication protocol version, the acceptance threshold, and the named consequence of falling
+below it — **with no successor predicate implemented and no new finding in existence**.
+
+**Given** yield and precision move in opposite directions
+**When** the pre-registration is written
+**Then** it states the maximum acceptable **false-accusation exposure**, not only a precision floor —
+a ratio alone is satisfiable by a tiny denominator.
+
+**Given** `DF-13-5-A` is OPEN and UNSPENT
+**Then** the pre-registration ratifies no member, fetches no third-party source, spends no round, and
+says so in terms.
+
+### Story 17.2: A different predicate, argued as one
+
+As an Engineering Lead,
+I want the successor vacuity signal specified and argued as a genuinely different predicate,
+So that it cannot be mistaken for a loosening of fact (b) by clause removal.
+
+**Acceptance Criteria:**
+
+**Given** `DF-16-7-B` records that promoting `V2` would be a genuinely DIFFERENT predicate, and that
+**30 of its 36 rows lie outside `V1` entirely**
+**When** this story completes
+**Then** a committed specification states the successor's definition, the defect shape it claims to
+detect, and **which findings each admits that the other does not**.
+
+**Given** `consumed == 0` is what keeps the false-accusation moat closed
+**Then** the specification states in terms that the clause is **NOT** loosened, and that the
+successor does not reach corroboration by removing it.
+
+**Given** the mock-referencing clause fires **0 times in 1,032**
+**Then** the specification records whether mock binding remains an input at all; if it does not,
+`DF-INV-VACUOUS-B` is dispositioned **moot-by-replacement** with a dated note rather than left open.
+
+### Story 17.3: Grade what the assertion constrains
+
+As an Engineering Lead,
+I want each assertion in a flagged test graded on whether — and how strongly — it constrains a value
+derived from the code under test,
+So that a test which runs the SUT and tolerates any result is distinguishable from one that checks it.
+
+**Acceptance Criteria:**
+
+**Given** a test span, its source lines and the 1.4 edge set
+**When** the detector scores it
+**Then** each assertion is graded on a stated, committed scale — at minimum *does not reference an
+SUT-derived value* / *constrains only its existence or type* / *constrains its value* — stored as
+counts, **never rendered sets** (NFR-D2 / AR4).
+
+**Given** the scorer is PURE (AR8)
+**Then** grading reads the source text and the index and nothing else — no re-parse, no second
+grammar call, no clock/uuid/random.
+
+**Given** a parse or resolution failure
+**Then** it degrades to a recorded condition, never an uncaught raise (NFR-R1); and **given** strength
+cannot be established **then** the finding does **NOT** gain verdict-eligibility. The conservative
+default stays the moat.
+
+**Given** `DF-AUD-DETECT-D` records that `_logical_statement_end` and `_scan_span` are two derivations
+of the same statement-boundary question (AR7 §3.3, one-derivation discipline)
+**When** this story extends the span scanner
+**Then** the two collapse to **ONE** derivation *before* assertion-grading is layered on it, and the
+collapse is proven output-neutral by re-running the 1,032-finding harness and diffing — **byte-identical,
+or it is not a collapse**.
+
+**Given** `DF-AUD-DETECT-C` measures the detector layer's hot path in the density denominator
+**Then** this story records span-scan cost **before and after** its addition, so a regression is
+disclosed rather than discovered later. ⛔ **This is not a performance story** — `-C` stays OPEN and
+is not dispositioned here.
+
+### Story 17.4: Run it once, and let the pre-registered criterion decide
+
+As an Engineering Lead,
+I want the successor predicate measured over the five already-ratified members and graded against
+17.1's criterion,
+So that the outcome is decided by arithmetic written before the number existed.
+
+**Acceptance Criteria:**
+
+**Given** the five ratified members at their pinned shas
+**When** the measurement runs
+**Then** it reports the eligible population, its distribution across contributing members and rule
+classes, and the precision measured under the protocol version 17.1 named — with **NO member
+ratified, NO third-party source fetched and NO round spent**.
+
+**Given** Epic 16's breadth condition
+**Then** a population drawn from too few members or rule classes returns `UNEVALUABLE` — the state
+already exists and already forces the gate provisional. **No new terminal state is invented.**
+
+**Given** the binding ordering constraint above
+**Then** a committed guard asserts **by git ancestry** that 17.1's commit precedes every commit
+carrying successor-predicate output, proven RED against a violating arrangement.
+
+**Given** protocol §4's ladder has no step-3 holder (`AI-E16-7`)
+**Then** a persistent adjudication disagreement **STOPS** and reports which rows and why — never
+resolves by default.
+
+**Given** the result
+**Then** `DF-13-5-A`'s 2026-08-24 trigger is **evaluated and the observation recorded**; the entry
+returns to the operator if shipped promotions rose above zero. ⛔ **This story takes no branch.**
+
+### Story 17.5: Nothing points at a closed story
+
+As an Engineering Lead,
+I want the dangling forward-references to Story 6.2 re-homed and a guard that stops new ones,
+So that work with no container stops being recorded as work that is already scheduled.
+
+**Acceptance Criteria:**
+
+**Given** Story 6.2 is `done`, its epic retrospective signed, and its story file carving out dataflow
+explicitly
+**When** this story completes
+**Then** the six open ledger entries naming it — `DF-12-2-D`, `DF-12-3-A`, `DF-14-1-A`, `DF-16-7-A`,
+`DF-16-7-B`, `DF-INV-VACUOUS-A` — carry **dated append-only** re-homing notes pointing at Epic 17,
+and `DF-1-7-B` is **left untouched** because it is CLOSED and correctly names 6.2 as its closer.
+
+**Given** the same commit owes the scheduling notes deferred by the change proposal
+**Then** `DF-AUD-DETECT-A`/`-B`/`-E`/`-F` are pointed at Epic 18 and `-D` at this epic's Story 17.3 —
+**scheduling notes only; nothing is dispositioned, closed or edited above.**
+
+**Given** four shipped modules forward-reference Story 6.2 for work it never contained
+**Then** the comments in `argus/detectors/provenance_scan.py`, `argus/audit/deep_pass.py`,
+`argus/audit/deep_audit.py` and `argus/audit/__init__.py` name the real owner, with **no behaviour
+change** and `argus/**` otherwise byte-unchanged.
+
+**Given** the 2026-08-21 research recommends *"complete Story 6.2 … already scheduled"*
+**Then** a dated correction note records that the recommendation rested on the stale reference and
+that the work was never scheduled — **the research document is NOT rewritten** (§3.4).
+
+**Given** the defect class this story exists to end
+**Then** a committed guard asserts that **no ledger entry's `target_story` names a story whose
+`sprint-status.yaml` key is `done`**, proven RED against the pre-fix state.
+
+## Epic 18: The Secret Detector Reports What It Finds — discharge the detector audit · *Argus repo*
+
+*Created 2026-08-24 by [sprint-change-proposal-2026-08-24.md](sprint-change-proposal-2026-08-24.md).
+Filed at `backlog`; **AWAITING OPERATOR APPROVAL**.*
+
+⛔ **SEQUENCED BEFORE EPIC 17, DESPITE THE HIGHER NUMBER.** Epic numbers are CREATION order in this
+repo and always have been; execution order is stated, not inferred from the number. Epic 18 runs
+first because `DF-AUD-DETECT-A` is a **live security false negative** and Epic 17 is five stories of
+detector architecture. **Nothing in Epic 17 depends on Epic 18** — the ordering is urgency, not
+coupling, and either may be re-sequenced without rework.
+
+**Capability delivered:** a hardcoded credential is no longer silently dropped because the value it
+sits in happens to contain the substring `localhost`.
+
+**Covers:** FR11 (detect hardcoded secrets) · FR28 (redaction) · `DF-AUD-DETECT-A` · `-B` · `-E` ·
+`-F`
+**Depends on:** nothing. Every entry is measured, reproduced and self-contained.
+**Blocks:** nothing. ⛔ It does **not** block Epic 17 and must not be used to delay it.
+
+> ⛔ **`DF-10-3-B`'s SAFETY CLAIM IS FALSIFIED, and this epic is where that is repaired.** The
+> 2026-08-24 detector audit reproduced it through the shipped `SecretScanDetector.run()`: a real
+> credential in `postgres://admin:Tr0ub4dor3@localhost:5432/prod` returns **0 findings**, while the
+> same value with the sentinel substring removed returns **1**. The public-sentinel test is
+> **substring containment** and it runs at step 2, **above** the Live-Key Safeguard at step 3 — and
+> `is_live_production_key` carries the same short-circuit, so the safeguard disables itself on the
+> same string.
+
+### Story 18.1: The sentinel table matches values, not substrings of them
+
+As an Engineering Lead,
+I want the public-sentinel suppression to match a value rather than appear anywhere inside it,
+So that a real credential is not dropped because its host happens to be named `localhost`.
+
+**Acceptance Criteria:**
+
+**Given** `argus/detectors/secret_suppression.py:116` tests `sentinel in snippet` over a table holding
+five sentinels shorter than 20 characters
+**When** this story completes
+**Then** the test is containment-**to-equality** (or a bounded match that cannot fire on a substring
+of a larger secret), and the Live-Key Safeguard's own short-circuit is removed so it can no longer
+disable itself.
+
+**Given** the audit's three-line reproduction
+**Then** a regression test is committed carrying all three lines, proven **RED** before the fix and
+**GREEN** after, **including the control line** — the same value with the sentinel removed — which
+must still be reported.
+
+**Given** `DF-10-3-B` states a safety claim this measurement falsifies
+**Then** it carries a **dated append-only falsification note**; the entry above it is **not
+rewritten** (§3.4).
+
+### Story 18.2: The redaction call keeps the evidence it computes
+
+As an Engineering Lead,
+I want `run()`'s producer-side redaction to retain the evidence it computes,
+So that a call that looks load-bearing either is, or is removed.
+
+**Acceptance Criteria:**
+
+**Given** `DF-AUD-DETECT-B` records that the call computes evidence and discards it
+**Then** either the evidence is retained and used, or the call is deleted — and the choice is
+recorded with its reason.
+
+**Given** the entry states in terms that **no secret leaks and none can**, the redaction guarantee
+being structural
+**Then** this story asserts that guarantee still holds after the change, and does not weaken FR28.
+
+### Story 18.3: Two regex precision defects
+
+As an Engineering Lead,
+I want the two measured regex defects in `secret_scan` corrected,
+So that the detector over-reports less without ever moving toward a false green.
+
+**Acceptance Criteria:**
+
+**Given** `DF-AUD-DETECT-E` records a missing left word boundary and its sibling defect
+**Then** both are corrected with a regression test per defect, proven RED before and GREEN after.
+
+**Given** the entry records the error direction is **OVER-reporting, never a false green**
+**Then** the change is proven not to remove any finding the pre-fix detector reported for a real
+secret.
+
+### Story 18.4: The `Detector` Protocol is load-bearing or it is deleted
+
+As an Engineering Lead,
+I want the `Detector` Protocol either used or removed,
+So that a contract that reads as load-bearing is not asserted by one test and used by nothing.
+
+**Acceptance Criteria:**
+
+**Given** `DF-AUD-DETECT-F` records the Protocol is asserted by exactly one test and used by nothing
+**Then** either the detectors are typed against it — so it constrains something — or it is deleted
+and its lone test with it, and the choice is recorded with its reason.
+
+**Given** nothing is wrong at runtime today
+**Then** this story changes **no detector output**, proven by re-running the suite and the
+1,032-finding harness.

@@ -303,6 +303,38 @@ _STATUS_DOCUMENTS: tuple[str, ...] = (
     # ⚠️ It must be committed TOGETHER with this line — `-22` closes in BOTH directions, so the
     # document without this entry and this entry without the document red `master` equally.
     "epic-16-retro-2026-08-23.md",
+    # Registered 2026-08-24 by the `bmad-correct-course` session that wrote it — the registration is
+    # part of writing the document, not a later cleanup (`AI-E12-1`'s second half). This is the
+    # SECOND consecutive registration written by the authoring session after `AI-E16-15` broke the
+    # streak for a stated reason, and unlike that one this session was NOT read-only over `tests/`,
+    # so the line lands in the same commit as the document.
+    # Same verification-before-registration as every entry above, by execution: `_split_sentences()`
+    # returns 133 sentences, so `-21` is genuinely reading the document rather than passing over an
+    # unparseable one; `_status_assertions()` returns 0 — no phrase in `_STATUS_CLAIMS` occurs in it
+    # at all, denied or otherwise — so `-21`'s per-document loop short-circuits and this
+    # registration is inert rather than load-bearing; and `_executed_gate_citations()` returns 0, so
+    # it mints an excuse for nothing. `-22` was observed RED against this document before this line
+    # (`status-asserting document(s) exist but are not registered:
+    # ['sprint-change-proposal-2026-08-24.md']`) and GREEN after, on the live tree, with the full
+    # suite re-run green afterwards. ⛔ No `_EXCLUDED_BY_DESIGN` entry was added and not one
+    # assertion in `-22` was weakened, reworded or exempted.
+    # WHAT THE DOCUMENT ASSERTS, so the registration is judged against its contents: it CREATES two
+    # epic containers (17 and 18) and thirteen `backlog` keys, and it changes NO release status of
+    # any kind. The >=80% precision gate is UNCHANGED, still `BLOCKED` and still NOT CLEARED; the
+    # precision figure STILL DOES NOT EXIST; `eligible_member_count()` is 5 and all 14 candidates
+    # remain `eligible_for_n=False`; nothing is ratified, no third-party source is fetched and the
+    # protocol is not re-versioned; `DF-13-5-A`'s ONE round is OPEN and UNSPENT, DECLINED a second
+    # time on 2026-08-24 with a substantive replacement trigger, and this proposal explicitly does
+    # NOT spend it; FR34's DISCLOSED tier stands unchanged as the honest fallback. It amends no FR,
+    # no threshold and no delivered epic — Epics 1–16 are NOT reopened and Story 6.2's closed record
+    # is left standing rather than edited.
+    # ⚠️ It dispositions NO ledger entry, and says so with a named owner: the `deferred-work.md`
+    # re-homing is DEFERRED to a follow-up commit owned by Story 17.5, because at authoring time
+    # that file held a concurrent session's uncommitted `DF-AUD-DETECT-A..F` and staging it by path
+    # would have swept unfinished work into this commit.
+    # ⚠️ It must be committed TOGETHER with this line — `-22` closes in BOTH directions, so the
+    # document without this entry and this entry without the document red `master` equally.
+    "sprint-change-proposal-2026-08-24.md",
 )
 
 # Exactly the set the epic's AC names — "any future change proposal or retrospective".
