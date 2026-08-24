@@ -4,7 +4,7 @@
 
 ## Provenance
 
-- Commit descriptor (`git rev-parse HEAD` at generation): `932cec97681b54144c101b08da3007e0e3af43ec`
+- Commit descriptor (`git rev-parse HEAD` at generation): `ee7e25234f45e3ce4f5ba843f996d21eea360cb3`
 - Enumerated population (the HONEST label — Story 12.1, closing `DF-10-4-D`): the file list in this artifact is enumerated from the git INDEX (`git ls-files`), NOT from the tree at the commit descriptor above. The two are the same tree exactly when `argus/` carries no staged-or-uncommitted change, and `TC-ArgusAgent-DOGFOOD-001-50` fails unless they agree — so this artifact cannot quietly describe one tree while citing another.
 - Source files (tracked `argus/`): **95**
 
@@ -17,17 +17,17 @@
 - **V1 deterministic total: 475 credits**
 - **Headroom (5/4): +118 credits**
 - **Sized ceiling `$X`: 593 credits** (int — never a float, AR4)
-- Build-cost proxy (total physical LOC): 33578
-- **NFR-C1 baseline ratio (audit-cost / build-cost proxy): `475/33578`** (Fraction/marker — never a float)
+- Build-cost proxy (total physical LOC): 33648
+- **NFR-C1 baseline ratio (audit-cost / build-cost proxy): `475/33648`** (Fraction/marker — never a float)
 
 ## Per-unit contribution basis
 
 | partition_id (12ch) | files | python_files | unit_credits | clears 20% floor |
 |---|---|---|---|---|
+| `0b252f09b9a7` | 32 | 32 | 160 | True |
+| `295153beb9aa` | 35 | 35 | 175 | True |
 | `519bfef95b85` | 7 | 7 | 35 | True |
-| `66504ab3bb22` | 36 | 36 | 180 | True |
 | `b393cc33ad36` | 21 | 21 | 105 | True |
-| `ed894c7d8c11` | 31 | 31 | 155 | True |
 
 ## 3.2 halt demonstration (the ceiling halts + downgrades if breached)
 
