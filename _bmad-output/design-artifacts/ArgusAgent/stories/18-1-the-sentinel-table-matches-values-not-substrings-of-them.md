@@ -4,7 +4,7 @@ baseline_commit: 7a3cc7c
 
 # Story 18.1: The sentinel table matches values, not substrings of them
 
-Status: in-progress
+Status: review
 
 <!-- Contexted 2026-08-24 at HEAD `7a3cc7c` (branch `docs/merge-strategy-decision`) by the
      create-story workflow (Opus 5).
@@ -834,88 +834,88 @@ Recent arc (last 12 commits) is entirely **governance and planning** — `docs(g
 
 ### Task 2 — THE FIX, IN ONE MODULE (AC1, AC2, AC6.1–AC6.4)
 
-- [ ] Split the table into two named constants + `MIN_CONTAINMENT_SENTINEL_LENGTH = 20`; keep
+- [x] Split the table into two named constants + `MIN_CONTAINMENT_SENTINEL_LENGTH = 20`; keep
       `KNOWN_PUBLIC_SENTINELS` as their **order-preserving union** (AC1.2).
-- [ ] Rewrite `is_public_sentinel`: exact equality of `snippet.strip()` against the short table;
+- [x] Rewrite `is_public_sentinel`: exact equality of `snippet.strip()` against the short table;
       containment against the long table. Same name, same signature, same purity (AC1.1, AC1.5).
-- [ ] Delete `is_live_production_key`'s sentinel short-circuit (`:130`–`:132`) and **correct its
+- [x] Delete `is_live_production_key`'s sentinel short-circuit (`:130`–`:132`) and **correct its
       docstring** — §0.8/(c): its `AKIAIOSFODNN7EXAMPLE` example was never in the table (AC2.1,
       AC2.2).
-- [ ] Extend the module docstring's step-2 bullet to say what step 2 now *decides*. ⛔ **Do not
+- [x] Extend the module docstring's step-2 bullet to say what step 2 now *decides*. ⛔ **Do not
       renumber or reorder the steps** (AC2.5). Leave the `DF-10-3-C` paragraph (`:36`–`:39`) intact.
-- [ ] ⛔ No `lower()`, no `casefold()`, no `re.IGNORECASE` (AC6.4).
+- [x] ⛔ No `lower()`, no `casefold()`, no `re.IGNORECASE` (AC6.4).
 
 ### Task 3 — THE GUARD (AC1.3, AC1.4, AC2.3, AC2.4, AC3, AC6.2)
 
-- [ ] Create `tests/test_secret_sentinel_matching.py`, opening `TC-ArgusAgent-SECRET-001-23` and
+- [x] Create `tests/test_secret_sentinel_matching.py`, opening `TC-ArgusAgent-SECRET-001-23` and
       continuing upward. Docstring in the `-15`..`-22` register: the defect, the measurement, the
       RED evidence, and *"key material is synthetic and built in the module"*.
-- [ ] `-23` — the audit's **three lines** through `run()` on a non-test path, each alone, each
+- [x] `-23` — the audit's **three lines** through `run()` on a non-test path, each alone, each
       `>= 1` `hardcoded_secret`, **CONTROL included** (AC3.2, `DN-18-1-5`).
-- [ ] `-24` — the **table invariant**: long table all `>= 20`, short table all `< 20`, disjoint,
+- [x] `-24` — the **table invariant**: long table all `>= 20`, short table all `< 20`, disjoint,
       union `== KNOWN_PUBLIC_SENTINELS` (AC1.3).
-- [ ] `-25` — **no suppression lost**: all eight members alone still give
+- [x] `-25` — **no suppression lost**: all eight members alone still give
       `(True, 'known_sentinel')`; and each of the three long sentinels embedded in a larger line is
       still suppressed (AC1.4, AC2.4).
-- [ ] `-26` — the **enumerated live-key × short-sentinel space**: `is_live_production_key` True for
+- [x] `-26` — the **enumerated live-key × short-sentinel space**: `is_live_production_key` True for
       every regex-valid cell, `evaluate_suppression` suppresses none (AC2.3).
-- [ ] `-27` — the **two call shapes** of `is_public_sentinel`, value-shaped and line-shaped, both
+- [x] `-27` — the **two call shapes** of `is_public_sentinel`, value-shaped and line-shaped, both
       pinned (AC3.6).
-- [ ] Every case asserts its population non-empty first (AC3.4); no assertion on a value (AC3.5).
+- [x] Every case asserts its population non-empty first (AC3.4); no assertion on a value (AC3.5).
 
 ### Task 4 — DRIVE IT RED (AC3.3)
 
-- [ ] Revert **only** the `secret_suppression.py` change and run the new module. **Record the exact
+- [x] Revert **only** the `secret_suppression.py` change and run the new module. **Record the exact
       failure text of every case that goes RED, and which do not.**
-- [ ] ⛔ **Two safe mechanisms, and one unsafe one.** SAFE: (a) keep a pre-fix copy of the module
+- [x] ⛔ **Two safe mechanisms, and one unsafe one.** SAFE: (a) keep a pre-fix copy of the module
       outside the repository and monkeypatch `SecretSuppressionEngine.is_public_sentinel` /
       `.is_live_production_key` back to their shipped bodies inside a throwaway interpreter; or
       (b) `git stash push -- argus/detectors/secret_suppression.py` — **explicit path**, and only
       after `git status --porcelain -- argus/detectors/secret_suppression.py` confirms the only
       change there is yours (§2.6: a peer session shares this branch). ⛔ UNSAFE: `git stash` with
       no pathspec.
-- [ ] ⛔ A case that stays GREEN against the unfixed engine is **not a guard** — fix the case, not
+- [x] ⛔ A case that stays GREEN against the unfixed engine is **not a guard** — fix the case, not
       the assertion, and record that you found it (`AI-E14-1`, and 16.3 found one of its own).
-- [ ] Restore, re-run, record GREEN.
+- [x] Restore, re-run, record GREEN.
 
 ### Task 5 — PROVE THE DIRECTION (AC4)
 
-- [ ] Re-run Task 1's sweep post-fix. **LOST must be empty.** Record `{86 → 87, LOST 0, NEW 1}` or
+- [x] Re-run Task 1's sweep post-fix. **LOST must be empty.** Record `{86 → 87, LOST 0, NEW 1}` or
       whatever this tree actually gives.
-- [ ] Prove the new finding(s) non-blocking via `blocking_finding_count` / `is_verdict_blocking`.
-- [ ] Re-run `tests/test_secret_suppression_recording.py` (`-15`..`-22`) **with no edit to any
+- [x] Prove the new finding(s) non-blocking via `blocking_finding_count` / `is_verdict_blocking`.
+- [x] Re-run `tests/test_secret_suppression_recording.py` (`-15`..`-22`) **with no edit to any
       assertion, docstring or fixture in it** — that is AC2.5's whole discharge, and the proof the
       evaluation ORDER did not move.
-- [ ] Full suite, green, **no assertion loosened**. ⛔ `tests/test_secret_containment.py` must be run
+- [x] Full suite, green, **no assertion loosened**. ⛔ `tests/test_secret_containment.py` must be run
       as part of the whole-directory collection (§0.0).
-- [ ] ⛔ Confirm `tests/test_deep_pass_wiring.py` is **unmodified** (AC4.3) — `git status --porcelain`
+- [x] ⛔ Confirm `tests/test_deep_pass_wiring.py` is **unmodified** (AC4.3) — `git status --porcelain`
       must not list it.
 
 ### Task 6 — THE LEDGER (AC5)
 
-- [ ] ⛔ **Grep first.** Then append, **in binary mode**: the `DF-AUD-DETECT-A` closure note and the
+- [x] ⛔ **Grep first.** Then append, **in binary mode**: the `DF-AUD-DETECT-A` closure note and the
       `DF-10-3-B` falsification note, both dated, both leaving the original entries unrewritten.
-- [ ] Verify afterwards: 0 CRLF pairs, exactly one lone `\r`, and a `git diff` confined to the
+- [x] Verify afterwards: 0 CRLF pairs, exactly one lone `\r`, and a `git diff` confined to the
       appended lines.
-- [ ] ⛔ Confirm `architecture.md`, `E-PRD/prd.md` and `epics.md` are **unmodified** (AC5.6) —
+- [x] ⛔ Confirm `architecture.md`, `E-PRD/prd.md` and `epics.md` are **unmodified** (AC5.6) —
       `git status --porcelain` must not list any of them.
 
 ### Task 7 — GATES AND THE DOGFOOD REGENERATION (AC6.6, AC7.1, AC7.2)
 
-- [ ] Commit `argus/` + `tests/` **by explicit path**. ⛔ Never `git add -A`.
-- [ ] `python scripts/regenerate_dogfood_artifacts.py` on the now-clean `argus/` tree; commit the
+- [x] Commit `argus/` + `tests/` **by explicit path**. ⛔ Never `git add -A`.
+- [x] `python scripts/regenerate_dogfood_artifacts.py` on the now-clean `argus/` tree; commit the
       three artifacts separately. ⛔ Exit 2 means the tree is dirty — fix the tree, never pass
       `--allow-dirty-argus`.
-- [ ] Run the full AC7.1 gate list. **Record every exit code.** Mark the run **LOCAL / Windows-only**
+- [x] Run the full AC7.1 gate list. **Record every exit code.** Mark the run **LOCAL / Windows-only**
       (AC6.5).
 
 ### Task 8 — HAND-OFF (AC7.3, AC7.4)
 
-- [ ] `git status --porcelain` — the write set equals AC6.1 exactly.
-- [ ] Completion notes: every re-measured §0 figure, the observed REDs with their text, the
+- [x] `git status --porcelain` — the write set equals AC6.1 exactly.
+- [x] Completion notes: every re-measured §0 figure, the observed REDs with their text, the
       pre/post sweep pair, the new finding disclosed by path and cause, the 1/2/1 triple, every exit
       code, and **any §0 premise found false**.
-- [ ] ⛔ If the PR lands squashed or rebased, re-run the regeneration on `master` (`DF-INV-MERGE-A`).
+- [x] ⛔ If the PR lands squashed or rebased, re-run the regeneration on `master` (`DF-INV-MERGE-A`).
 
 ---
 
@@ -923,11 +923,286 @@ Recent arc (last 12 commits) is entirely **governance and planning** — `docs(g
 
 ### Agent Model Used
 
+`claude-opus-5[1m]` (Opus 5, 1M context), via the `bmad-dev-story` workflow, 2026-08-24.
+
 ### Debug Log References
+
+All measurement harnesses were throwaway scripts in a scratch directory OUTSIDE the repository;
+nothing under `argus/`, `tests/` or `scripts/` was written to produce evidence. `git status
+--porcelain` was checked before every commit and the write set is AC6.1 exactly.
+
+- `measure.py` — the §0.1 reproduction, the §0.3 enumeration and the §0.4 250-file sweep, run
+  pre-fix and post-fix against the same file population from `git ls-files -- '*.py'`.
+- `redplugin.py` — Task 4 mechanism (a): a pytest plugin that restores the SHIPPED (`7a3cc7c`)
+  bodies of `is_public_sentinel` / `is_live_production_key` by monkeypatch, so the per-case RED
+  text is attributable to a case rather than to an import failure.
+- `variantb.py` — the falsifiability probe for `-25`: `DN-18-1-1`'s REJECTED uniform-equality
+  alternative, installed the same way.
+- Task 4 mechanism (b) was also run: `git stash push -- argus/detectors/secret_suppression.py`
+  (EXPLICIT PATH, after `git status --porcelain` confirmed the only change in that file was
+  mine), then `git stash pop`. The operator's pre-existing `stash@{0}` on `master` was never
+  touched.
+- `PYTHONDONTWRITEBYTECODE=1` was exported and every `__pycache__` cleared before each gate run
+  (Story 16.5's false RED).
 
 ### Completion Notes List
 
+#### 1. ⛔ TASK 0 — EVERY §0 FIGURE RE-MEASURED, AND WHAT CAME OUT DIFFERENT
+
+Re-derived by execution at `7a3cc7c`, not cited. **Every §0 figure held**, which is itself worth
+recording because the story predicted at least one would not:
+
+| §0 figure | expected | measured |
+|---|---|---|
+| three-line reproduction through `run()` | 0 / 0 / 1 | **0 / 0 / 1** |
+| per-match detail | `high_entropy_string` 47; `generic_assigned_secret` + `high_entropy_string` 28; CONTROL 44 | **identical**, all three `(True, 'known_sentinel')`, CONTROL `(False, None)` |
+| live-key × short-sentinel cells | 7 cells, 7 disabled | **7 cells, 7 disabled, 7 suppressed** |
+| e2e `ghp` / `xoxb` / PEM carrying `localhost` | 0 / 0 / 1 | **0 / 0 / 1** |
+| 250-file sweep | 86 findings / 36 files | **86 / 36 over 250 files** |
+| four secret test modules | 53 passed | **53 passed, exit 0** |
+| full suite | green | **1,716 collected, exit 0** |
+| `deferred-work.md` bytes | 537,063 · 0 CRLF · 1 lone CR at 407,906 | **identical** |
+| max `TC-ArgusAgent-SECRET-001` id | `-22` | **`-22`** |
+| module line counts | 231 / 575 / 103 / 276 / 222 / 121 | **identical** |
+| last `argus/` commit | `3183e2a` | **`3183e2a`** |
+
+⚠️ **TWO §0 PREMISES WERE FOUND FALSE — both about WHICH GUARD FIRES, not about the defect.**
+
+1. **§0.6 named `TC-ArgusAgent-DOGFOOD-001-50` (`tests/test_dogfood_artifact_currency.py:174`) as
+   the guard that reddens when `argus/**` moves. It did NOT fire** — that module was green
+   throughout, before and after. The guards that actually fired were
+   `tests/test_dogfood_plan.py::test_committed_partition_plan_artifact_exists_and_matches_live_derivation`
+   and `tests/test_dogfood_proof.py::test_committed_proof_artifact_exists_and_matches_live_run`,
+   on the derived figures (`33648` total LOC, 95 files). The *consequence* §0.6 drew — that the
+   commit arc is forced to four commits because the regeneration script refuses a dirty `argus/`
+   — was correct; only the guard id was wrong.
+2. **§0's gate list did not predict `tests/test_gate_seal.py::TC-ArgusAgent-PRECISION-001-94`,
+   and it reddened the `feat` commit.** Any post-seal commit touching a declared detector-tuning
+   path (`argus/detectors`, `argus/precision/replay_harness.py`) must carry a machine-checkable
+   whole-line trailer `Evidence-partition: <sealed|open|none>`. The honest value here is **`none`**:
+   this change was driven by a CODE AUDIT and by executing the shipped `run()` over three synthetic
+   lines built in a scratch interpreter. No finding from any corpus member, sealed or open, informed
+   the design, the threshold of 20 or the table split; the 250-file sweep was a BLAST-RADIUS
+   measurement taken *after* `DN-18-1-1` fixed the design, and it tuned nothing. The remedy was the
+   one the rule itself prescribes — **write the trailer**, never amend the rule. See §5 for the
+   sha-rewrite that followed.
+
+⛔ **`DF-AUD-DETECT-A` is CLOSED by this story** at fix sha `ee7e252`, and `deferred-work.md` carries the matching dated append-only closure note — the story record and the ledger agree, which is what `TC-ArgusAgent-DOCS-001-78` checks (`AI-E12-6`: a disposition recorded in prose and not in the ledger is not a disposition).
+
+#### 2. THE FIX (Task 2 — AC1, AC2, AC6.1–AC6.4)
+
+`argus/detectors/secret_suppression.py`, 231 → **301** lines (NFR-M1 ceiling 1,200):
+
+- `MIN_CONTAINMENT_SENTINEL_LENGTH = 20`.
+- `CONTAINMENT_PUBLIC_SENTINELS` — the three published full-length credentials (39–40 chars), still
+  matched by containment.
+- `EQUALITY_PUBLIC_SENTINELS` — the five short members, matched by **exact equality of
+  `snippet.strip()`** through a private derived `frozenset` (O(1) instead of the previous
+  O(table × snippet) scan — an incidental side effect, and ⛔ it does **not** disposition the
+  detector-cost entry, which stays OPEN as context only).
+- `KNOWN_PUBLIC_SENTINELS` survives as their **order-preserving union**, byte-equal to the tuple the
+  module exported before (`DN-18-1-2` / NFR-M2). All eight members stay; none added, none removed.
+- `is_live_production_key`'s sentinel short-circuit is **deleted**, and its docstring is **corrected**
+  per §0.8/(c): it cited `AKIAIOSFODNN7EXAMPLE` as an excluded sentinel and that value is not in the
+  table and never was (the table holds the AWS *secret* key, not the *access-key id*). Recorded and
+  corrected — ⛔ **NOT** implemented by adding it to the table, which would widen suppression.
+- The module docstring's **step-2 bullet** was extended to say what step 2 now DECIDES. ⛔ No step was
+  renumbered or reordered, and the `DF-10-3-C` paragraph is intact.
+- ⛔ No `lower()`, no `casefold()`, no `re.IGNORECASE` anywhere on the sentinel path; the compare is
+  plain `str.__eq__` (NFR-P1). No new import, no new dependency; the module is still PURE (AR8).
+
+#### 3. THE GUARD AND ITS RED (Tasks 3–4 — AC1.3, AC1.4, AC2.3, AC2.4, AC3)
+
+`tests/test_secret_sentinel_matching.py` (NEW, 293 lines) opens `TC-ArgusAgent-SECRET-001-23` and
+continues to `-27`. ⛔ **Nothing was renumbered.** Every case runs on the non-test path
+`argus/prod/settings.py` (§2.3), asserts its population non-empty first (`AI-E11-1`), builds every
+key value in the module (NFR-S1/S2), and asserts only counts, rule ids and `(bool, reason)` tuples.
+
+⚠️ **The REDs are AUTHOR-DRIVEN, so per the guard-fire rule they are VACUITY EVIDENCE — proof the
+cases can fail — and NOT "these guards caught a defect".**
+
+**Against the shipped `7a3cc7c` bodies (monkeypatch, mechanism (a)) — 3 RED, 2 GREEN:**
+
+```
+FAILED -23 ... AssertionError: the localhost line reports no hardcoded_secret: a credential is
+               being dropped because its value carries a public-sentinel SUBSTRING
+               (DF-AUD-DETECT-A)
+               assert 0 >= 1
+                +  where 0 = len([])
+FAILED -26 ... AssertionError: the Live-Key Safeguard DISABLES ITSELF for a github_pat value
+               carrying 'localhost': the backstop does not merely get bypassed, it declines to fire
+               assert False is True
+                +  where False = _shipped_is_live_production_key('ghp_localhost000000000000000000000000000')
+FAILED -27 ... AssertionError: a short sentinel still matches as a SUBSTRING of a larger value
+               — DF-AUD-DETECT-A
+               assert True is False
+                +  where True = _shipped_is_public_sentinel('postgres://admin:Tr0ub4dor3@example.com:5432/prod')
+```
+
+**Against a FULL revert of the module (mechanism (b), `git stash push -- <explicit path>`) — the
+whole module fails to collect:**
+
+```
+ERROR collecting tests/test_secret_sentinel_matching.py
+E   ImportError: cannot import name 'CONTAINMENT_PUBLIC_SENTINELS' from
+    'argus.detectors.secret_suppression'
+```
+
+so `-24` (the table invariant) has no pre-fix meaning either — it is a guard over a structure the
+pre-fix module does not have. Restored with `git stash pop`; re-run: **5 passed, exit 0.**
+
+⛔ **ONE CASE STAYS GREEN AGAINST THE UNFIXED ENGINE AND IT IS RECORDED RATHER THAN GLOSSED.**
+`-25` (no suppression lost) cannot go RED against the shipped engine, because containment trivially
+satisfies a no-loss invariant. That is by design — `-25` is the AC1.4 direction guard and must hold
+BEFORE and AFTER — but "cannot fail against the pre-fix engine" is not "cannot fail". It was
+therefore probed against `DN-18-1-1`'s REJECTED uniform-equality variant, and it **catches it**:
+
+```
+FAILED -25 ... AssertionError: a published full-length credential embedded in a larger snippet is
+               answered below step 2 ... assert (False, None) == (True, 'known_sentinel')
+FAILED -27 ... assert False is True
+                +  where False = _variant_b_is_public_sentinel('MOCK_KEY = "wJalrXUtnFEMI/K7MDENG/bPxRfiCYEXAMPLEKEY"')
+FAILED tests/test_secret_suppression.py::test_public_sentinel_suppression
+```
+
+That run also **independently re-confirms §0.5's variant-B measurement**: exactly one shipped-suite
+failure, `test_public_sentinel_suppression`, and no other. **No case in the module is vacuous.**
+
+#### 4. THE DIRECTION IS UNDER-REPORTING → CORRECT (Task 5 — AC4)
+
+| measurement | pre-fix | post-fix |
+|---|---|---|
+| three-line reproduction (findings per line) | 0 / 0 / 1 | **1 / 2 / 1** |
+| live-key × short-sentinel cells: safeguard disabled | 7 of 7 | **0 of 7** |
+| live-key × short-sentinel cells: suppressed | 7 of 7 | **0 of 7** |
+| e2e `ghp` / `xoxb` / PEM carrying `localhost` | 0 / 0 / 1 | **1 / 2 / 2** |
+| 250-file sweep | 86 findings / 36 files | **87 / 36** |
+| **LOST** | — | **0** |
+| **NEW** | — | **1** |
+
+⛔ **The 1 / 2 / 1 triple is RECORDED here and asserted as `>= 1` per line** (`DN-18-1-5`): the
+`example.com` line legitimately yields TWO findings because `run()` de-duplicates on
+`(start_line, end_line, pattern_id)` and `generic_assigned_secret` + `high_entropy_string` both hit
+that span. An exact assertion would redden the moment Story 18.3 narrows those regexes.
+
+⚠️ **A MEASUREMENT-METHOD CORRECTION, disclosed because the first answer was wrong.** A naive
+`(file, start_line, rule_id)` set difference reported three LOST and three NEW findings inside
+`argus/detectors/secret_suppression.py` itself. Both were artifacts: the file's own findings shifted
+line numbers (76/78/128 → 121/123/197) because **this story inserted lines into it**, and every
+`rule_id` is `hardcoded_secret` so a *set* also collapsed two distinct findings on one line into
+one. Re-derived correctly as a **multiset**, with the edited module compared by COUNT rather than by
+line identity (3 pre → 3 post, unchanged): **LOST = {} and NEW = {`tests/test_deep_pass_wiring.py:397`: 1}.**
+
+**The one new finding, disclosed by path and cause** (`DN-18-1-6`, AC4.2): it is
+`tests/test_deep_pass_wiring.py:397`, a synthetic literal. Two patterns hit that span. The
+`aws_access_key_id` match already reports today. The `high_entropy_string` match is the whole
+73-character URL, which contains `example.com`, so step 2 used to answer `(True, 'known_sentinel')`
+and drop it; it is now reported at step 3. **Proven non-verdict-eligible, not asserted:** all four
+findings on that file carry `advisory=True, depth_supported=None`, `is_verdict_blocking` is `False`
+for each, and `blocking_finding_count` over the whole result is **0**. ⛔ `tests/test_deep_pass_wiring.py`
+was **NOT edited, annotated or relocated** — `git status --porcelain` never listed it (AC4.3 / `DF-8-5-B`).
+
+⛔ **AC2.5 discharged:** `tests/test_secret_suppression_recording.py` (`-15`..`-22`) was re-run with
+**no edit to any assertion, docstring or fixture in it** — 8 passed, and `git status --porcelain`
+never listed the file. The evaluation ORDER did not move. ⛔ **No assertion anywhere was loosened.**
+
+#### 5. GATES, THE COMMIT ARC AND THE SHA REWRITE (Tasks 7–8 — AC6.5, AC7)
+
+⚠️ **LOCAL / WINDOWS-ONLY** (`AI-E13-1`, AC6.5). Python 3.11.15, `PYTHONDONTWRITEBYTECODE=1`,
+`__pycache__` cleared. The cross-platform claim belongs to the CI ubuntu matrix at the pushed sha
+and is **not made here**. The code was written POSIX-safe: no new path handling at all, and the
+sentinel compare is a plain host-invariant `str.__eq__`.
+
+| gate | command | exit |
+|---|---|---:|
+| full suite | `python -m pytest tests/ -q` | **0** (1,716 collected) |
+| full suite, grammars required | `ARGUS_REQUIRE_LANGUAGE_GRAMMARS=1 python -m pytest tests/ -q` | **0** |
+| coverage | `python -m pytest tests/ -q --cov=argus --cov-fail-under=80` | **0** (95.69%) |
+| types | `python -m mypy argus` | **0** (95 files, no issues) |
+| security | `python -m bandit -r argus --severity-level medium` | **0** |
+| module ceiling | `python -m pytest tests/test_module_size_ceiling.py -q` | **0** |
+| release preflight | `python -m pytest tests/test_release_preflight.py -q` | **0** |
+| dogfood currency | `python -m pytest tests/test_dogfood_artifact_currency.py -q` | **0** |
+| governance record | `python -m pytest tests/test_governance_record_integrity.py -q` | **0** |
+| every `tests/test_gate_*.py` (nine modules) | `python -m pytest tests/test_gate_*.py -q` | **0** |
+| dogfood regeneration | `python scripts/regenerate_dogfood_artifacts.py` | **0** |
+
+⚠️ `tests/test_secret_containment.py` was run only as part of the whole-directory collection (§0.0);
+its standalone `ModuleNotFoundError: No module named '_cartridge'` was re-confirmed at HEAD and is a
+pre-existing property of the file, not this story's.
+
+**The commit arc is four commits, as AC7.2 forced** — messages pure ASCII (`DF-16-6-F`), staged **by
+explicit path** every time, ⛔ never `git add -A` (§2.6: a peer session shares this branch):
+
+1. `8b6c304` `chore(18-1)` — story file + `sprint-status` → `in-progress`, carrying Task 0's figures.
+2. `ee7e252` `feat(18-1)` — `argus/detectors/secret_suppression.py` + `tests/test_secret_sentinel_matching.py`.
+3. `fa5e463` `chore(18-1)` — the three regenerated dogfood artifacts, provenance sha `ee7e252`,
+   95 files / 33,648 LOC.
+4. `docs(18-1)` — the ledger append and this record, **ledger first in the diff and in the same
+   commit** (§0.6: `TC-ArgusAgent-DOCS-001-78` reads the on-disk story files, so the closure must
+   already be in the ledger the moment this file claims one).
+
+⛔ **A SHA REWRITE HAPPENED INSIDE THIS STORY AND IS DISCLOSED.** Commit 2 first landed as `30aa12b`;
+the artifacts were regenerated against it and committed. `TC-ArgusAgent-PRECISION-001-94` then
+reddened on `30aa12b` for the missing `Evidence-partition` trailer, so commit 3 was unwound
+(`git reset --soft` + `git restore` of the three artifacts by explicit path), commit 2 was **amended**
+to `ee7e252`, and the artifacts were regenerated a **second** time against the new sha. That is
+`DF-INV-MERGE-A`'s failure shape reproduced locally by an amend instead of by a squash — the lived
+proof that AC7.3 is not theoretical.
+
+⛔ **AC7.3 stands as a hand-off, and the condition has NOT occurred yet.** If this PR lands squashed
+or rebased, `ee7e252` is orphaned and `TC-ArgusAgent-DOGFOOD-001-49` reddens `master` **after** the
+merge, where no PR check can see it coming. **Re-run `python scripts/regenerate_dogfood_artifacts.py`
+on `master` and commit the result.** Recorded here and in commit 3's message.
+
+#### 6. WHAT THIS STORY DID **NOT** DO — named so it is not mistaken for done
+
+- ⛔ `argus/detectors/secret_scan.py` — **not touched.** The dead `_evidence_for` (18.2), the two
+  regex precision defects (18.3) and the `Detector` Protocol (18.4) keep their RED.
+- ⛔ `--ignore-pattern`'s bare-substring semantics — **`DF-10-3-C` stays OPEN and untouched**, and it
+  is still architecture §G's accepted residual risk.
+- ⛔ **`DF-10-3-B` stays OPEN.** Only its *safety claim* was falsified, by dated append-only note. Its
+  actual subject — that built-in suppressions are not disclosed to a reader — is untouched. A
+  repaired sentinel test is still a **silent** test.
+- ⛔ `DF-AUD-DETECT-B` / `-C` / `-D` / `-E` / `-F` — **not dispositioned.** In particular the equality
+  arm's incidental O(1) improvement does **not** disposition the detector-cost entry.
+- ⛔ **No verdict moved.** Every recovered finding is `advisory=True, depth_supported=None` by
+  construction. The ≥80% precision keystone is still **NOT CLEARED** and the gate is still `BLOCKED`.
+- ⛔ `architecture.md`, `E-PRD/prd.md`, `epics.md` and every `done` story's record — **unmodified**,
+  verified with `git status --porcelain`. §G's claim is about the two operator FLAGS and is true
+  before and after (`DN-18-1-7` / AC5.6).
+- ⛔ **`DF-13-5-A` stays OPEN and UNSPENT** — no member ratified, no protocol re-version, no FR
+  amended. The epics.md "AWAITING OPERATOR APPROVAL" paragraphs were not edited.
+- ⛔ **Nothing new was filed.** The ledger was greped by id first (`DF-INV-LEDGER-A`): it already
+  carries the sentinel table, the disclosure gap, the `--ignore-pattern` semantics and the detector
+  cost, so prior art was cited rather than re-filed. The AWS-access-key-id false positive found at
+  §0.8/(c) is `AI-E9-8`-owned by the Engineering Lead and belongs to 18.3, the precision story — it
+  is recorded in the corrected docstring and here, and it is **not** filed by this story.
+
+#### 7. AC5.4 — THE LEDGER'S BYTE INVARIANT, VERIFIED AFTER WRITING
+
+`deferred-work.md` was edited in **binary mode**. After the append: **544,667 bytes**, **0** CRLF
+pairs, **exactly one** lone `\r` (the content one, inside a backtick span discussing line endings),
+and `git diff --stat` shows **76 insertions, 0 deletions** — a pure append, with both original
+entries above the notes unrewritten. The ledger's closed-id extractor was run pre- and post-edit:
+the set gained **exactly one** id, `DF-AUD-DETECT-A`, and lost none.
+
 ### File List
+
+| path | change |
+|---|---|
+| `argus/detectors/secret_suppression.py` | UPDATE — 231 → 301 lines |
+| `tests/test_secret_sentinel_matching.py` | NEW — 293 lines, `TC-ArgusAgent-SECRET-001-23`..`-27` |
+| `_bmad-output/design-artifacts/ArgusAgent/deferred-work.md` | APPEND-ONLY — +76 lines |
+| `_bmad-output/design-artifacts/ArgusAgent/minions-dogfood-partition-plan.md` | REGENERATED by its own renderer |
+| `_bmad-output/design-artifacts/ArgusAgent/minions-dogfood-budget-plan.md` | REGENERATED by its own renderer |
+| `_bmad-output/design-artifacts/ArgusAgent/minions-dogfood-proof.md` | REGENERATED by its own renderer |
+| `_bmad-output/design-artifacts/ArgusAgent/stories/18-1-the-sentinel-table-matches-values-not-substrings-of-them.md` | this file |
+| `_bmad-output/design-artifacts/ArgusAgent/sprint-status.yaml` | status transitions only |
+
+⛔ The write set equals **AC6.1 exactly**, verified with `git status --porcelain` (not `git diff
+--name-only`, which is blind to the new untracked module). `argus/detectors/secret_scan.py` is not
+in it; nothing under `minions_core/apaa/` is in it.
 
 ---
 
@@ -935,4 +1210,5 @@ Recent arc (last 12 commits) is entirely **governance and planning** — `docs(g
 
 | Date | Version | Description | Author |
 |---|---|---|---|
+| 2026-08-24 | 0.2 | IMPLEMENTED. `is_public_sentinel` is length-gated (`MIN_CONTAINMENT_SENTINEL_LENGTH = 20`, equality below it, containment above); `is_live_production_key`'s self-disabling short-circuit deleted and its docstring corrected; `TC-ArgusAgent-SECRET-001-23`..`-27` added and driven RED (3 cases vs the shipped bodies, the whole module vs a full revert, `-25` vs the rejected uniform-equality variant) then GREEN. Measured: reproduction 0/0/1 -> 1/2/1; live-key cells 7-disabled -> 0-disabled; sweep 86/36 -> 87/36 with LOST 0 and NEW 1 (disclosed, non-blocking). Ledger: DF-AUD-DETECT-A closed, DF-10-3-B's safety claim falsified while the entry stays OPEN, both append-only in binary mode. Two Section 0 premises found false, both about WHICH guard fires (DOGFOOD-001-50 did not; test_dogfood_plan/proof and PRECISION-001-94 did). Full suite exit 0 with and without grammars, coverage 95.69%, mypy/bandit clean - LOCAL, Windows-only. Status `review`. | bmad-dev-story (Opus 5) |
 | 2026-08-24 | 0.1 | Story contexted at HEAD `7a3cc7c`; §0 measured by execution (three-line reproduction 0/0/1, 7-of-7 live-key matrix, 250-file sweep 86→87 LOST 0, three candidate repairs executed, full suite green under the candidate repair at exit 0). Status `ready-for-dev`. | create-story (Opus 5) |

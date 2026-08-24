@@ -1784,6 +1784,31 @@ document that specifies it.
     yet exist (AI-E9-8: a wrong owner-story is how a deferral becomes nobody's).
   - category: capability
   - severity: 🟢
+  - ⛔ **SAFETY CLAIM FALSIFIED 2026-08-24 by story `18-1-the-sentinel-table-matches-values-not-substrings-of-them`**
+    — append-only note. ⛔ **THIS ENTRY STAYS OPEN, and it is NOT CLOSED by that story.** Its `id`,
+    `owner`, `target_story`, `category` and `severity` above are NOT edited, and its actual subject —
+    that the BUILT-IN suppression layers are still not disclosed to a reader of a report — is entirely
+    untouched by it. A repaired sentinel test is still a SILENT test.
+    - **The falsified clause, quoted verbatim:** *“no live production key can be suppressed by any of
+      these paths except an explicit inline annotation, which is reviewable in the diff”*, and with it
+      the classification *“a reporting enhancement, not a correctness defect”*.
+    - **The measurement that falsifies it.** Enumerating every value that genuinely matches a
+      `LIVE_KEY_PATTERNS` member AND carries one of the five short sentinels gives **7 cells** — one
+      `ghp_` body, one Slack tail, and five PEM headers, the PEM pattern being a `search` so any
+      sentinel anywhere in the snippet reaches it. Measured on the shipped engine: the Live-Key
+      Safeguard was DISABLED for **7 of 7** and `evaluate_suppression` suppressed **7 of 7**. None of
+      the seven involves an operator flag, and none involves an inline annotation. So a live production
+      key COULD be suppressed by a path the entry said could not suppress one, and the built-in layer
+      WAS a correctness defect and not only a reporting gap.
+    - **The repair repairs it.** After story 18.1 the same seven cells measure **0 disabled / 0
+      suppressed**, and the three published full-length sentinels are still answered at step 2 and
+      never reach the safeguard, so no documented non-secret started being reported.
+    - ⚠️ **The probability is stated rather than suppressed, because it cuts both ways.** A GitHub PAT
+      body is effectively random base62, so carrying that exact nine-character run is astronomically
+      unlikely: the live-key half is **structural, not probable**. What was probable — and what actually
+      dropped a credential — is the `generic_assigned_secret` / `high_entropy_string` half, where the
+      value is an operator-authored connection string. The entry's wording rested on the improbable
+      half, and that is exactly why the wording had to move rather than the entry.
 
 - **DF-10-3-C** — **`--ignore-pattern` matches by bare substring, so a short pattern is a wide net.**
   After Story 10.3 no `--ignore-pattern` can reach a high-confidence live production key, and any
@@ -6317,6 +6342,57 @@ than filed as its own entry.
     unexamined. Suggested repair: exact comparison against a `frozenset` (also O(1) rather than the
     present O(table x snippet) scan), keeping containment — if wanted — only for the three
     full-length published keys, whose length makes accidental containment impossible.
+  - ⛔ **`DF-AUD-DETECT-A` — CLOSED 2026-08-24 by story `18-1-the-sentinel-table-matches-values-not-substrings-of-them` at fix sha `ee7e252`.**
+    Append-only note; the original entry above it is NOT rewritten (§3.4 evidence immutability — the `DF-1-3-A` note is the form).
+    - **THE REPAIR IS THE ONE THIS ENTRY ITSELF PROPOSED**, and it is LENGTH-GATED rather than
+      uniform (story `DN-18-1-1`). `secret_suppression.py` now carries `MIN_CONTAINMENT_SENTINEL_LENGTH = 20`
+      and two disjoint tables: `EQUALITY_PUBLIC_SENTINELS` (the five short members, matched by exact
+      equality of `snippet.strip()` through a `frozenset`, so also O(1) rather than the previous O(table
+      × snippet) scan) and `CONTAINMENT_PUBLIC_SENTINELS` (the three published full-length credentials,
+      39–40 chars, which keep containment because a value that long cannot be an accidental
+      substring). `KNOWN_PUBLIC_SENTINELS` survives as their ORDER-PRESERVING union, byte-equal to the
+      tuple the module exported before (NFR-M2). ⛔ **No member was added or removed** — in particular
+      `AKIAIOSFODNN7EXAMPLE` was NOT added, because adding it would widen suppression, the opposite of
+      this repair's direction.
+    - **The self-disabling short-circuit inside `is_live_production_key` is DELETED**, and its docstring
+      is corrected rather than trimmed: it claimed to exclude `AKIAIOSFODNN7EXAMPLE`, and that value is
+      not in the table and never was — the table holds the AWS *secret* key, not the *access-key id*.
+      So the text named an exclusion the code did not implement. Recorded, corrected, not implemented.
+    - ⛔ **THE EVALUATION ORDER IS BYTE-UNCHANGED.** Steps 1–5 keep their positions and their reason
+      tokens; only what step 2 DECIDES moved. `TC-ArgusAgent-SECRET-001-15`..`-22` were re-run with no
+      edit to any assertion, docstring or fixture in `tests/test_secret_suppression_recording.py`: 8 passed.
+    - **THE MEASURED BEFORE/AFTER**, re-derived by execution at the story's own HEAD rather than cited:
+      the three-line reproduction goes **0 / 0 / 1 → 1 / 2 / 1** through the shipped `run()` on the
+      non-test path (the `example.com` line legitimately yields TWO findings — `run()` de-duplicates on
+      `(start_line, end_line, pattern_id)` and two patterns hit that span — which is why the guard
+      asserts `>= 1` per line and the exact triple is RECORDED here instead). The live-key × short-sentinel
+      enumeration goes **7 cells / 7 safeguard-disabled / 7 suppressed → 7 cells / 0 disabled / 0
+      suppressed**. The 250-file sweep over `git ls-files -- '*.py'` goes **86 findings / 36 files → 87 /
+      36**, with **LOST = 0**.
+    - **THE ONE NEW FINDING IS DISCLOSED, NOT REMOVED** (`DF-8-5-B`): it is `tests/test_deep_pass_wiring.py:397`,
+      a synthetic literal whose sibling `aws_access_key_id` match on the same line is ALREADY reported
+      today; the `high_entropy_string` match of the whole 73-character URL was being dropped for
+      containing `example.com`. It is `advisory=True, depth_supported=None` and `blocking_finding_count`
+      over it is **0**, so it is not verdict-eligible. That file was **not edited, annotated or relocated**.
+    - **THE CLOSING GUARDS:** `TC-ArgusAgent-SECRET-001-23`..`-27` in `tests/test_secret_sentinel_matching.py`,
+      CONTINUING the SECRET index whose prior maximum was `-22`. `-23` the audit's three lines through
+      `run()`, control included; `-24` the TABLE INVARIANT that makes this defect unable to recur by a
+      table edit; `-25` no suppression lost; `-26` the enumerated live-key space; `-27` both call shapes
+      of `is_public_sentinel`. ⚠️ The REDs were AUTHOR-DRIVEN, so per the guard-fire rule they are
+      **vacuity evidence** — proof the cases can fail — and not “these guards caught a defect”. Against the
+      shipped bodies restored by monkeypatch: `-23`, `-26`, `-27` fail. Against a full revert of the
+      module: collection `ImportError`, so `-24` has no pre-fix meaning either. `-25` stays GREEN against
+      the shipped engine BY DESIGN (it is the no-loss invariant, which holds before and after) and was
+      probed separately against the rejected uniform-equality variant, which it catches.
+    - ⛔ **NOTHING ELSE IS DISPOSITIONED BY THIS CLOSURE.** The `--ignore-pattern` semantics entry stays
+      OPEN and untouched; `DF-AUD-DETECT-B` / `-C` / `-D` / `-E` / `-F` keep the status and the target
+      story they had; the ≥80% precision keystone is still NOT CLEARED and the gate is still `BLOCKED`;
+      `DF-13-5-A` stays **OPEN and UNSPENT**. ⚠️ The equality arm's incidental O(1) improvement does NOT
+      dispose of the detector-cost entry, which stays OPEN as context only.
+    - ⚠️ **Verified LOCALLY on Windows only** (`AI-E13-1`): full suite 1,716 collected, exit 0, with and
+      without `ARGUS_REQUIRE_LANGUAGE_GRAMMARS=1`; coverage 95.69% against a floor of 80; `mypy argus`
+      clean over 95 files; `bandit -r argus --severity-level medium` clean. The cross-platform claim
+      belongs to the CI ubuntu matrix and is not made here.
 
 - **`DF-AUD-DETECT-B` — `run()`'s producer-side redaction call computes evidence and discards it, so
   every shipped `hardcoded_secret` finding carries NO evidence. The comment claims a guarantee the
