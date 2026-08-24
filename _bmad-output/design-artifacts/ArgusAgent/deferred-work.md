@@ -6672,3 +6672,103 @@ append.
     they were not measured and may be genuine. And it does not claim `_UNBACKED_AT_LANDING` was
     written carelessly: the registry is dated, reasoned and honest about what it found; the extractor
     under it simply could not see one of the three forms its own ledger uses.
+
+## Deferred from: the 2026-08-24 documentation audit (operator-directed, NO story)
+
+> The operator asked whether the four commits of 2026-08-24 were consistent and complete against
+> the project objective and production readiness. **The documents passed; the repository did not**,
+> and the two entries below are what the audit found outside the prose. Method was resolution and
+> execution rather than reading: every id, FR and path in the new documents was resolved against the
+> artifact that owns it (**0 unresolved**), every headline figure was re-derived by re-running the
+> harnesses, and every guard verdict was diffed against the committed baseline.
+>
+> ⛔ **One defect the audit found in its own session's work is NOT filed here — it is already
+> corrected in place.** `DF-INV-WHEEL-A`'s attribution was withdrawn by append-only note after all
+> five `research/` harnesses were run individually and none reproduced the write.
+
+- **`DF-INV-REFS-A` — six ledger ids are REFERENCED across the artifacts and shipped source but were
+  never filed as entries; two of them are cited by binding documents.**
+  - id: DF-INV-REFS-A
+  - origin: the 2026-08-24 documentation audit; measured by resolving every `DF-*` occurrence in
+    `_bmad-output/design-artifacts/ArgusAgent/**`, `argus/**` and `tests/**` against the set of
+    declared `- id:` entries
+  - owner: **XAgent007 (Engineering Lead)**
+  - target_story: **NONE — unscheduled.** ⛔ Not asserted onto Epic 17 or Epic 18 (`AI-E9-8`)
+  - category: governance record completeness
+  - severity: 🟡 — nothing published is wrong and no verdict depends on these, but a reader following
+    a citation reaches nothing, and two of the six are cited from documents that bind
+  - ⛔ **THE MEASUREMENT.** **124** declared entries against **143** distinct ids referenced. Six do
+    not resolve, after excluding three that are correct by construction (a test literal, a family
+    reference of the `DF-4-x` form, and a label in a retro table) and one the record already
+    declares — story 16-3 states in terms that *"`deferred-work.md` has zero `DF-16-2` ids"*.
+
+    | id | referenced in | first written |
+    |---|---:|---|
+    | `DF-8-4-D` | **17 files, including `architecture.md`** | `506bb73`, Epic 8 |
+    | `DF-8-4-C` | 11 files | `506bb73`, Epic 8 |
+    | `DF-1-7-A` | 16 files | `084c6a7` |
+    | `DF-2-3-A` | 10 files | `084c6a7` |
+    | `DF-3-1-A` | 10 files | `084c6a7` |
+    | `DF-22-15-A` | 3 files, including shipped `argus/audit/deep_audit.py` | `084c6a7` |
+
+  - ⛔ **THREE OF THEM SHARE ONE ORIGIN, AND IT IS A KNOWN ONE.** `DF-1-7-A`, `DF-2-3-A` and
+    `DF-3-1-A` all first appear at **`084c6a7`, the separation seed commit** — the same commit whose
+    ungated content created Epic 10. Their entries did not survive the split. **This is Epic 10's
+    subject class, found again by a different instrument**, and it is recorded here rather than
+    re-opening Epic 10, whose retrospective is signed.
+  - ⛔ **`DF-22-15-A` IS NOT AN ARGUS ID AT ALL.** It is cited beside *"story 22-15, M9 decision"*;
+    this project's plan ends at Epic 18. It is a **Minions-repo** id whose entry lives in a tracker
+    this repository does not contain, and it is quoted from **shipped source**
+    (`argus/audit/deep_audit.py`, marking the module EXPERIMENTAL). ⚠️ A reader of that module cannot
+    reach the record that justifies the marking.
+  - ⚠️ **What this entry does NOT claim.** It does not claim the underlying work is undone — several
+    of these are probably discharged and merely unfiled. **It claims the pointers do not resolve**,
+    which is a different and cheaper defect to fix: each needs a dated entry recording what became of
+    it, or a note saying the id was never real.
+  - ⚠️ **Story 17.5's guard does NOT cover this direction.** That guard asserts no `target_story`
+    names a story whose `sprint-status.yaml` key is `done`. This is the orthogonal case — an id
+    referenced with no entry at all — and closing it needs its own assertion.
+
+- **`DF-INV-DELIVERY-A` — 31 commits sit on an unpushed branch that has never met CI, master has
+  moved underneath them, and one ledger entry now carries two independent dispositions.**
+  - id: DF-INV-DELIVERY-A
+  - origin: the 2026-08-24 documentation audit, production-readiness half
+  - owner: **XAgent007 (Engineering Lead)**
+  - target_story: **NONE — this is a delivery act, not a story.** ⛔ It cannot be re-homed to one:
+    pushing, reconciling and merging are operator acts, and a story chartered to *make the branch
+    mergeable* would be resolving a governance divergence by code
+  - category: delivery / integration risk
+  - severity: 🟠 — ⛔ **nothing published is wrong, and this is the highest-severity finding of the
+    audit anyway.** Every gate this project owns is green on a **Windows working copy that no other
+    machine has seen**, and the CI that would contradict it has never run against this work
+  - ⛔ **THE MEASUREMENT, 2026-08-24.** `origin/master...HEAD` = **2 31** — thirty-one commits ahead,
+    two behind. `git branch -r --contains HEAD` returns **empty**: this branch has **never been
+    pushed**. Merge-base is `2e3fd59` (2026-08-22).
+  - ⛔ **CI CANNOT HAVE SEEN ANY OF IT, AND CI IS THE ONLY POSIX THIS PROJECT HAS.**
+    `.github/workflows/audit-ci.yml` runs `ubuntu-latest`; its matrix varies the **Python version,
+    not the OS**. The local suite — 1,716 passed at every commit today — is Windows-only. ⚠️ **A
+    green local suite has previously shipped POSIX-only defects here**, which is why `AI-E16-3`
+    already asks for a second OS leg or a dated decision saying why not. **That action item is now
+    load-bearing rather than tidy.**
+  - ⛔ **FOUR FILES ARE TOUCHED ON BOTH SIDES**, and two of them are the append-heavy governance
+    records: `deferred-work.md`, `sprint-status.yaml`, `docs/first-run.md` and
+    `tests/test_release_surface_honesty.py`. `git merge-tree` against the merge-base reports
+    conflicts. ⚠️ **Every commit of 2026-08-24 appended to `deferred-work.md`**, so the conflict
+    grows with each further session on this branch.
+  - ⛔ **`DF-15-2-D` NOW CARRIES TWO INDEPENDENT DISPOSITIONS, WRITTEN BY TWO SESSIONS THAT COULD NOT
+    SEE EACH OTHER.** This branch records one citing `4123931` + `ba5e8df`; `origin/master`'s
+    `797bba8` records another citing `4123931`, under the message *"the trigger fired, so the ledger
+    says so"*. **Both are append-only, both are dated, both are honest, and they are duplicates.**
+    ⚠️ **This is the AI-E12-6 class arriving by a route the guards cannot watch** — not a disposition
+    recorded in prose instead of the ledger, but the same disposition recorded in the ledger
+    **twice, on two branches**. No guard in this repository compares a branch against its remote.
+  - ⛔ **THE RECONCILIATION IS A JUDGEMENT AND MUST NOT BE AUTOMATED.** Two append-only records of one
+    event cannot both stand after a merge, and neither may be silently dropped (§3.4). The merge owes
+    a **dated note naming both, keeping the earlier as the record and the later as corroboration**,
+    or the reverse with a reason. ⚠️ **Resolving it by taking one side of a conflict hunk destroys
+    evidence**, which is the one thing this ledger forbids everywhere else.
+  - ⚠️ **The branch name is now false, and that is a symptom rather than the defect.**
+    `epic-16/discharge-df-15-2-d` carries the Epic 17 and Epic 18 charters, the 2026-08-24 research,
+    the detector audit and five governance commits — while the entry it is named for was dispositioned
+    on master two days ago. **A branch named for work that finished elsewhere is a poor place to keep
+    thirty-one commits nobody else can see.**
