@@ -6816,3 +6816,17 @@ append.
     the same direction: toward a more serious finding than the evidence carried.** An audit that
     only ever revises *upward* in severity is not measuring, and the correction belongs in the record
     at least as prominently as the claim did.
+  - ✅ **OUTCOME 2026-08-24 — the actionable half of this entry is DISCHARGED, and the result is
+    recorded whichever way it went.** PR **#5** was opened against `master`, which is the only trigger
+    `audit-ci.yml` offers. **The 35 commits executed on Linux for the first time and all four checks
+    PASS**: `Run Argus Quality Gates & Audit Suite` on Python **3.10 (2m50s)**, **3.11 (2m37s)** and
+    **3.12 (2m39s)**, plus the security audit (30s). `origin/master` was merged in as **ancestry
+    only** — `git diff HEAD` after resolution was empty — so the branch is **0 behind, 35 ahead** and
+    `MERGEABLE`.
+  - ⚠️ **NO POSIX DEFECT SURFACED, and that is reported rather than quietly enjoyed.** The Windows-only
+    suite and the Linux matrix agree on this change set. ⛔ **This does NOT retire `AI-E16-3`.** The
+    risk it names is that a divergence is found *after* a long run of unexercised commits rather than
+    at the commit that introduced it; **35 commits went unexercised and the exposure was real** — it
+    simply did not cash in this time. A second OS leg would have made that a non-question.
+  - ⛔ **WHAT REMAINS OPEN.** The work is **not on `master`** — PR #5 is open, not merged — and merging
+    is an operator act. `DF-INV-REFS-A` is untouched by any of this.
