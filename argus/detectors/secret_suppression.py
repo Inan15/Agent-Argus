@@ -21,7 +21,21 @@ it, so the two flags were never the same risk. The order is now:
    in-diff, reviewable override: it lands in a pull request beside the line it
    exempts, where a reviewer sees it. That is a different accountability class
    from an argv flag nobody reads afterwards.
-2. **known public sentinel** — a published, non-secret value.
+2. **known public sentinel** — a published, non-secret value. What step 2
+   DECIDES is BOUNDED BY LENGTH (Story 18.1 / ``DF-AUD-DETECT-A``, 2026-08-24):
+   the only production caller passes the extracted VALUE, so a bare containment
+   test over a nine-character member such as ``localhost`` answered True for
+   every credential that merely sat in a ``localhost`` URL. Measured through the
+   shipped ``run()`` before the repair, each line alone on a non-test path::
+
+       postgres://admin:<pw>@localhost:5432/prod   -> 0 findings
+       aBcD1234EfGh5678@example.com                -> 0 findings
+       postgres://admin:<pw>@dbhost:5432/prod      -> 1 finding   [CONTROL]
+
+   A sentinel shorter than ``MIN_CONTAINMENT_SENTINEL_LENGTH`` must now EQUAL the
+   stripped snippet; the three published full-length credentials keep containment,
+   because a 39-to-40-character value cannot be an accidental substring. The step's
+   POSITION and its reason token are unchanged — only its verdict is.
 3. **Live-Key Safeguard** — a high-confidence live key is REPORTED. Nothing below
    this line can suppress it.
 4. **operator ``--ignore-pattern``** — bounded by (3).
@@ -57,17 +71,48 @@ from typing import Sequence
 # Case-sensitive also errs toward REPORTING a secret rather than suppressing it.
 from fnmatch import fnmatchcase
 
-# Known public documentation / test sentinels (RFC 2606 & Cloud provider docs)
-KNOWN_PUBLIC_SENTINELS: tuple[str, ...] = (
+# Known public documentation / test sentinels (RFC 2606 & Cloud provider docs).
+#
+# ONE table, TWO match semantics, split BY LENGTH so the boundary is a value and not a
+# convention someone has to remember (Story 18.1 / DF-AUD-DETECT-A). Below this length a
+# sentinel is a commonplace substring of real credentials, so containment over it is a
+# security false negative rather than an allowlist.
+MIN_CONTAINMENT_SENTINEL_LENGTH = 20
+
+# Matched by CONTAINMENT — published, full-length credentials. A 39-to-40-character value
+# cannot be an ACCIDENTAL substring of a larger secret, and a whole assignment line that
+# carries one of them is still a documented non-secret.
+CONTAINMENT_PUBLIC_SENTINELS: tuple[str, ...] = (
     "wJalrXUtnFEMI/K7MDENG/bPxRfiCYEXAMPLEKEY",
     "0123456789abcdef0123456789abcdef01234567",
     "xoxb-123456789012-1234567890123-example",
+)
+
+# Matched by EXACT EQUALITY of the stripped snippet — short, commonplace values that occur
+# INSIDE real credentials. `localhost` alone is a published sentinel; a production password
+# whose host happens to be named `localhost` is not, and conflating the two dropped it in
+# silence. NFR-P1: plain `str.__eq__`, never `lower()` / `casefold()` / `re.IGNORECASE` — a
+# host-dependent answer would report a credential on Linux and hide it on Windows, and a
+# case-insensitive one would WIDEN suppression, the opposite of this repair's direction.
+EQUALITY_PUBLIC_SENTINELS: tuple[str, ...] = (
     "example.com",
     "example.org",
     "example.net",
     "127.0.0.1",
     "localhost",
 )
+
+# The frozen public contract (NFR-M2, additive-only): the ORDER-PRESERVING union, byte-equal
+# to the single tuple this module exported before the split, because it is a module-level
+# public name and something may read it. `TC-ArgusAgent-SECRET-001-24` pins the invariant
+# (every containment member >= the threshold, every equality member <, disjoint, union equal)
+# so a future table edit that reopens DF-AUD-DETECT-A gets a RED instead of silence.
+KNOWN_PUBLIC_SENTINELS: tuple[str, ...] = (
+    CONTAINMENT_PUBLIC_SENTINELS + EQUALITY_PUBLIC_SENTINELS
+)
+
+# Derived membership index for the equality arm — O(1), and never a second source of truth.
+_EQUALITY_SENTINEL_SET: frozenset[str] = frozenset(EQUALITY_PUBLIC_SENTINELS)
 
 
 # High-confidence live production key patterns that bypass path-glob exemptions
@@ -114,9 +159,21 @@ class SecretSuppressionEngine:
 
     @staticmethod
     def is_public_sentinel(snippet: str) -> bool:
-        """Check if *snippet* matches a known public documentation/test sentinel."""
+        """Check if *snippet* matches a known public documentation/test sentinel.
+
+        The match is BOUNDED BY LENGTH so it cannot fire on a substring of a larger
+        secret (Story 18.1 / DF-AUD-DETECT-A): a sentinel shorter than
+        ``MIN_CONTAINMENT_SENTINEL_LENGTH`` must EQUAL the stripped snippet, while the
+        published full-length credentials keep containment. Case-SENSITIVE (NFR-P1).
+
+        Both call shapes stay valid and are pinned by ``TC-ArgusAgent-SECRET-001-27``:
+        the VALUE-shaped call ``secret_scan.py`` actually makes, and the LINE-shaped
+        call the older suite makes.
+        """
         snippet_clean = snippet.strip()
-        for sentinel in KNOWN_PUBLIC_SENTINELS:
+        if snippet_clean in _EQUALITY_SENTINEL_SET:
+            return True
+        for sentinel in CONTAINMENT_PUBLIC_SENTINELS:
             if sentinel in snippet_clean:
                 return True
         return False
@@ -125,11 +182,24 @@ class SecretSuppressionEngine:
     def is_live_production_key(snippet: str) -> bool:
         """Check if *snippet* matches a high-confidence live key format.
 
-        Excludes known public sentinels (e.g. AKIAIOSFODNN7EXAMPLE).
+        Step 3's own predicate, and it answers exactly one question: does *snippet*
+        match a ``LIVE_KEY_PATTERNS`` member. Nothing else.
+
+        It used to short-circuit to ``False`` on any snippet CONTAINING any member of
+        ``KNOWN_PUBLIC_SENTINELS``, so the Live-Key Safeguard DISABLED ITSELF on the very
+        string step 2 had already matched. Measured 2026-08-24 over the enumerated space of
+        values that genuinely match a pattern AND carry a short sentinel: 7 of 7 had the
+        backstop decline to fire, and 7 of 7 were suppressed — with no operator flag and no
+        inline annotation involved. Removed by Story 18.1. Public sentinels are still
+        answered ABOVE this function, at step 2, so a documented non-secret never reaches it
+        and removing the short-circuit cannot start reporting one.
+
+        ⛔ The removed text claimed to exclude ``AKIAIOSFODNN7EXAMPLE``. Measured: that value
+        is NOT in ``KNOWN_PUBLIC_SENTINELS`` and never was — the table holds the AWS *secret*
+        key, not the *access-key id* — so the docstring named an exclusion the code did not
+        implement. CORRECTED here rather than implemented: adding it to the table would widen
+        suppression, which is the opposite of this repair.
         """
-        for sentinel in KNOWN_PUBLIC_SENTINELS:
-            if sentinel in snippet:
-                return False
         for pattern in LIVE_KEY_PATTERNS:
             if pattern.search(snippet):
                 return True
