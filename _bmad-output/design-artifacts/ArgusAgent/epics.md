@@ -3404,6 +3404,15 @@ Filed at `backlog`; **AWAITING OPERATOR APPROVAL**. ⛔ This epic does NOT spend
 and approving it is not approval to spend it — the entry was DECLINED a second time on 2026-08-24
 (`7edf74e`) and stays OPEN and UNSPENT.*
 
+> ✅ **APPROVED 2026-08-24 by XAgent007 (Engineering Lead).** The paragraph above is left exactly as
+> written (§3.4 evidence immutability) rather than rewritten to say "approved" — it was the true state
+> when the section was authored. **What the approval unblocks:** Story 17.1 may start, and only 17.1
+> — the BINDING ORDERING CONSTRAINT below is not relaxed by approval, and no successor-predicate
+> output may exist over any corpus member until 17.1's pre-registration is committed.
+> ⛔ **What it does NOT unblock:** `DF-13-5-A`'s round. The entry stays OPEN and UNSPENT, and approval
+> of this epic is not approval to spend it. ⚠️ Story 17.4 additionally requires `AI-E16-7` — protocol
+> §4's External adjudicator — to be filled before it can produce an adjudicated borderline, or it STOPS.
+
 Epic 14 repaired the instrument. Epic 15 built a bench. Epic 16 strengthened the gate and did not
 spend the round. **This epic fixes the reason the round was not worth spending.**
 
@@ -3601,6 +3610,18 @@ that the work was never scheduled — **the research document is NOT rewritten**
 
 *Created 2026-08-24 by [sprint-change-proposal-2026-08-24.md](sprint-change-proposal-2026-08-24.md).
 Filed at `backlog`; **AWAITING OPERATOR APPROVAL**.*
+
+> ✅ **APPROVED 2026-08-24 by XAgent007 (Engineering Lead).** The paragraph above is left exactly as
+> written (§3.4). **What the approval unblocks:** all four stories, with **18.1 first** — it is the
+> live security false negative and the only one of the four where something real is dropped today.
+> ⛔ **`DF-AUD-DETECT-A` WAS INDEPENDENTLY RE-VERIFIED BEFORE THIS APPROVAL, by execution rather than
+> by reading.** Re-run through the shipped `SecretScanDetector.run()` on 2026-08-24: the `localhost`
+> line returns **0** findings, the `example.com` line returns **0**, and the CONTROL — the same value
+> with the sentinel substring removed — returns **1**. All three match the entry. Read against the
+> source: `is_public_sentinel` (`secret_suppression.py:116`) tests `sentinel in snippet_clean`, it is
+> consulted at **step 2** above the Live-Key Safeguard at **step 3**, and `is_live_production_key`
+> (`:125`) carries the same `if sentinel in snippet: return False` short-circuit, so the safeguard
+> disables itself on the same string. **The entry is sound and its citations resolve.**
 
 ⛔ **SEQUENCED BEFORE EPIC 17, DESPITE THE HIGHER NUMBER.** Epic numbers are CREATION order in this
 repo and always have been; execution order is stated, not inferred from the number. Epic 18 runs
