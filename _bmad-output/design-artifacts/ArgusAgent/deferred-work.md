@@ -6424,6 +6424,104 @@ than filed as its own entry.
     carry it (an additive schema change under NFR-M2). ⛔ The second is the one that matches what
     Story 2.5 says; the first is the one that matches what ships. Choosing is the Engineering
     Lead's.
+  - ⛔ **`DF-AUD-DETECT-B` — CLOSED 2026-08-24 by story `18-2-the-redaction-call-keeps-the-evidence-it-computes` at fix sha `2cc5128`.**
+    Append-only note; the original entry above it is NOT rewritten (§3.4 evidence immutability — the
+    `DF-AUD-DETECT-A` / `DF-1-3-A` notes are the form).
+    - **THE REPAIR TAKEN IS THE FIRST OF THE TWO THIS ENTRY OFFERS** — *delete the call and correct the
+      comment* (story `DN-18-2-1`) — on four measured grounds. (i) **Story 2.5's own record forecloses the
+      widening arm**: `2-5-hardcoded-secret-detector-producer-side-redaction.md:613` states
+      *"`SecretFindingEvidence` is **NOT** folded into `DetectorResult` and is **NOT** persisted"*, so widening
+      would reverse a `done` story's locked decision — an escalation, not a story decision. (ii) **No FR
+      requires the evidence to be carried.** FR11 (`E-PRD/prd.md:528`), this detector's FR, asks for hardcoded
+      secrets reported *with the secret value redacted* and requires no evidence at all; FR28 is satisfied
+      STRUCTURALLY, which is what this entry itself says at 🟡 (*"no secret leaks and none can"*).
+      (iii) Widening would produce **a field no consumer reads** — precisely `DF-10-4-B`'s already-filed
+      defect class (`DetectorResult.degraded` *"recorded and no production code reads it back"*), reproduced
+      one layer up in the same model. (iv) Reaching an operator would additionally require moving the frozen
+      1.2 `Recording` and the report renderer, making it a cross-detector schema story rather than this one.
+      ⛔ The widening arm remains **available by escalation** if the Engineering Lead reads `:613` differently.
+    - ⚠️ **THIS ENTRY'S REASONING IS CORRECTED; ITS FINDING IS NOT.** The finding — the call computes evidence
+      and discards it — was re-measured by execution and is TRUE. What is falsified is the closing sentence
+      *"The second is the one that matches what Story 2.5 says"*: that sentence rests on `2-5-…md:349`
+      (*"Redaction in `_evidence_for`"*) alone, while `:613` **in the same record** states the widening as a
+      thing Story 2.5 deliberately did NOT do. The shipped code said it a third time at
+      `secret_scan.py:367`. ⛔ Recorded here, dated and append-only; **Story 2.5's record is NOT edited**.
+    - **WHAT CHANGED, AND WHAT DELIBERATELY DID NOT.** `argus/detectors/secret_scan.py` loses the
+      expression statement `self._evidence_for(match)`; the banner above it is REPLACED (not merely removed)
+      by the measured truth — redaction is the ABSENCE of a value field on `FindingDraft` / `Recording` /
+      `Locator` / `DetectorResult`, all `frozen=True, extra="forbid"`; and one further FALSE SENTENCE found
+      while measuring is corrected in the same module's docstring (`:26`–`:27` claimed *"the masked indicator
+      + the location are the ONLY things that survive into a finding"* — measured, only the LOCATION
+      survives; the mask has nowhere to go). ⛔ **The CARRIER is NOT deleted**: `SecretFindingEvidence`,
+      `SECRET_EVIDENCE_SCHEMA_VERSION`, `_evidence_for` and `scan_evidence()` all survive unchanged and
+      `__all__` is untouched. Verified by docstring-stripped AST comparison of the whole module before vs
+      after: **the ONLY semantic difference in the file is the removal of that one statement**.
+    - **THE MEASURED BEFORE/AFTER**, re-derived by execution at the story's own HEAD rather than cited from
+      this entry. By AST the module carried exactly ONE discarded-value `_evidence_for` expression statement,
+      at `:506`; the other call site (`:376`, inside `scan_evidence`) binds its return and is genuine. Driving
+      `SecretScanDetector().run()` over an IDENTICAL file list on both sides — **252** tracked `*.py`, the
+      population that INCLUDES the story's own new test module — comparing the FULL `DetectorResult`
+      (`entries` + `findings` + `degraded`, canonical JSON) per file, pre-change engine vs post-change engine:
+      **91 findings / 38 files with ≥1 on both sides, and 0 of 252 files differ**, while `_evidence_for`
+      invocations go **91 → 0**. Over the 251-file population that predates the new module the same sweep
+      re-derives this entry's own figure: **88 findings / 37 files / 0 differing**. ⚠️ Both sides were taken
+      over ONE list, engine-vs-engine, rather than HEAD-vs-worktree over two lists — the disclosure gap
+      Story 18.1's review raised.
+    - ⛔ **THE COST IS NOISE AND NO PERFORMANCE CLAIM RESTS ON THIS.** The sweep measured **1.462 s**
+      pre-change vs **1.455 s** post-change, and on a separate shipped-vs-nulled pair the NULLED side was the
+      *slower* of the two (1.467 s vs 1.477 s). That is how far inside the noise the difference sits.
+    - **`code_identity` IS NOT BUMPED** (story `DN-18-2-5`). `FROZEN_DETECTOR_SET`'s `secret_scan.v1`
+      (`argus/cache/key.py:187`) stands and `argus/cache/**` is untouched: the sweep proves no cached result
+      is stale, and bumping would invalidate every cached result for a provably output-neutral change.
+    - **THE CLOSING GUARDS:** `TC-ArgusAgent-SECRET-001-28`..`-30` in the new
+      `tests/test_secret_evidence_contract.py`, CONTINUING the SECRET index whose prior maximum was `-27`;
+      nothing is renumbered. `-28` the BEHAVIOURAL guard (with `_evidence_for` monkeypatched to raise,
+      `run()` still emits byte-identical findings); `-29` the NON-RECURRENCE AST guard (no `_evidence_for`
+      call site discards its return value, scoped to `_evidence_for` so `findings.append(...)` and
+      `seen.add(...)` do not trip it, and at least one call site must remain so the guard cannot pass by the
+      function having vanished); `-30` the FR28 STRUCTURAL guard (the whole `DetectorResult` carries neither
+      the secret nor any evidence field NAME, and neither `FindingDraft` nor `DetectorResult` has a field
+      matching the forbidden token set — extending `TC-ArgusAgent-EVIDENCE-001-04`'s discipline to the two
+      models it does not cover). ⚠️ The REDs were AUTHOR-DRIVEN, so per the guard-fire rule they are
+      **vacuity evidence** — proof the cases can fail — not *"these guards caught a defect"*. `-28` and `-29`
+      went RED against the shipped body (`-28` because `:506` sat OUTSIDE the `try/except` wrapping only
+      `self._scan(source)`, so a raise propagated out of `run()`); `-30` is GREEN before AND after **by
+      design** — it pins a guarantee that was already true, so that a future widening cannot land silently.
+      The RED was taken by loading a pre-change copy of the module from OUTSIDE the repository, so the shared
+      working tree was never stashed or reverted.
+    - **THE NEW TEST MODULE'S OWN FINDINGS ARE DISCLOSED, NOT REMOVED** (`DF-8-5-B`).
+      `tests/test_secret_evidence_contract.py` reports **3** `hardcoded_secret` findings against itself, all
+      at **line 111**, its `_SYNTHETIC_SECRET` constant — the published AWS documentation access-key example
+      the guards must build in-module to have a detectable subject at all. Three patterns hit that one span
+      and `run()` de-duplicates on `(start_line, end_line, pattern_id)`, which is why it is 3 and not 1. All
+      three are `advisory=True, depth_supported=None`, `is_verdict_blocking` **False**, and
+      `blocking_finding_count` over the whole result is **0** — proven by execution. They are present under
+      BOTH engine bodies and therefore cancel out of the pre/post delta. ⛔ The file was **not** suppressed,
+      whitelisted, annotated, relocated or edited to make them disappear.
+    - **RECORDED HERE, NOT FILED** (`AI-E9-8` — filing and scheduling are the Engineering Lead's). Two gaps
+      were measured while discharging this entry and are deliberately left un-filed and un-fixed. **(a)**
+      `argus/detectors/base.py:63`–`:72` says `FindingDraft` carries *"the supported coverage depth (the
+      verdict-fold input), and the evidence the finding carries WITH it"*; measured at the fix sha,
+      `FindingDraft`'s fields are exactly `advisory, ast_span, cartridge_id, coverage_envelope_slice,
+      end_line, file_path, rule_id, start_line` — **neither** a `depth_supported` nor any evidence field.
+      Same claim class as the banner this story repaired, but `base.py` is another story's module and was
+      left byte-unchanged. **(b)** The evidence-carrying gap is **repository-wide and older than this entry**:
+      `VacuousTestDetector().run()` over the `test_widget` fixture emits one finding whose full payload
+      carries `depth_supported`, `locators`, `rule_id` and no assertion-density, no mock-ratio and no count of
+      anything — structurally it cannot, since `Recording`'s ten fields include none that could hold a count.
+      That makes *"one detector widened in isolation"* the wrong shape of repair and is the strongest
+      available reason for the arm taken above.
+    - ⛔ **WHAT THIS DISPOSITION DOES NOT TOUCH.** `DF-AUD-DETECT-C` (detector cost) stays OPEN and the
+      timing figures above do NOT disposition it. `DF-10-4-B` is cited as prior art only. `DF-10-3-B`,
+      `DF-10-3-C`, `DF-AUD-DETECT-D`, `DF-AUD-DETECT-E` and `DF-AUD-DETECT-F` stay OPEN and untouched, and
+      `DF-13-5-A` stays OPEN and UNSPENT. No FR is amended, no `Recording` / `DetectorResult` /
+      `FindingDraft` / `Locator` field is added, no threshold moves, no finding becomes verdict-eligible, the
+      ≥80% precision keystone stays NOT CLEARED and the gate stays `BLOCKED`. `architecture.md`,
+      `E-PRD/prd.md`, `epics.md` and every `done` story's record are unedited.
+    - ⚠️ **LOCAL / Windows-only evidence** (`AI-E13-1`): suite **1,724** collected exit 0, the six
+      secret-domain modules **61 passed**, `mypy argus` clean over **95** source files, `bandit -r argus
+      --severity-level medium` clean, coverage **95.69%** against the 80% floor. The cross-platform claim
+      belongs to the CI ubuntu matrix and is NOT made here.
 
 - **`DF-AUD-DETECT-C` — the detector layer costs MORE than tree-sitter parsing, and its hot path is
   the statement counter re-scanning the same characters.**

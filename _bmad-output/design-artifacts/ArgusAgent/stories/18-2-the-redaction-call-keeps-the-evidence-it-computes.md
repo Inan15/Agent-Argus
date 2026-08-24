@@ -4,7 +4,7 @@ baseline_commit: c288d40
 
 # Story 18.2: The redaction call keeps the evidence it computes
 
-Status: in-progress
+Status: review
 
 <!-- Contexted 2026-08-24 at HEAD `c288d40` (branch `docs/merge-strategy-decision`) by the
      create-story workflow (Opus 5).
@@ -916,115 +916,115 @@ arc, preceded by four `docs(gov)` commits from the 2026-08-24 self-audit (`DF-IN
 
 ### ⛔ Task 0 — RE-MEASURE §0 BEFORE WRITING ANYTHING (AC2.1, AC2.2, AC6.1)
 
-- [ ] `git status --porcelain` — record it. ⚠️ **Expect it to be non-empty** (§0.0: three Story-18.1
+- [x] `git status --porcelain` — record it. ⚠️ **Expect it to be non-empty** (§0.0: three Story-18.1
       files). Record which files are not yours **before** you stage anything.
-- [ ] Clear `__pycache__`; export `PYTHONDONTWRITEBYTECODE=1`. **Story 16.5 lost a commit to a false
+- [x] Clear `__pycache__`; export `PYTHONDONTWRITEBYTECODE=1`. **Story 16.5 lost a commit to a false
       RED from stale bytecode.**
-- [ ] Re-run §0.1's AST proof. **Expect exactly one discarded-value `_evidence_for` statement, at
+- [x] Re-run §0.1's AST proof. **Expect exactly one discarded-value `_evidence_for` statement, at
       `:506`.** If it is gone or there are two, **STOP and report** — the premise is false.
-- [ ] Re-run §0.2's sweep. **Expect 251 files, 88 findings, 37 files with ≥1.** Record the pair; it is
+- [x] Re-run §0.2's sweep. **Expect 251 files, 88 findings, 37 files with ≥1.** Record the pair; it is
       the only baseline you will ever be able to take.
-- [ ] Re-run §0.3's single-file payload check. **Expect 3 findings and a payload with no mask, no
+- [x] Re-run §0.3's single-file payload check. **Expect 3 findings and a payload with no mask, no
       evidence field and no secret.**
-- [ ] Re-run the five secret-domain modules (**expect 58 passed**) and the full suite (**expect 1,721
+- [x] Re-run the five secret-domain modules (**expect 58 passed**) and the full suite (**expect 1,721
       collected, exit 0**). Record both.
-- [ ] Re-measure §0.7's ledger byte state and the max `TC-ArgusAgent-SECRET-001-NN` (**expect `-27`**).
-- [ ] `python -m pytest tests/test_governance_record_integrity.py -q` — **expect green** (this file
+- [x] Re-measure §0.7's ledger byte state and the max `TC-ArgusAgent-SECRET-001-NN` (**expect `-27`**).
+- [x] `python -m pytest tests/test_governance_record_integrity.py -q` — **expect green** (this file
       claims no closure yet).
-- [ ] Record every figure that came out different. **Expect at least one.**
+- [x] Record every figure that came out different. **Expect at least one.**
 
 ### Task 1 — THE EQUIVALENCE INSTRUMENT, BUILT BEFORE THE CHANGE (AC2.1)
 
-- [ ] Write the sweep as a throwaway script **outside the repository** (scratch dir) that drives
+- [x] Write the sweep as a throwaway script **outside the repository** (scratch dir) that drives
       `run()` over `git ls-files -- '*.py'` and emits a `{path: canonical DetectorResult}` map.
-- [ ] Capture the **pre-change** map to a scratch file. ⛔ Do not commit the instrument
+- [x] Capture the **pre-change** map to a scratch file. ⛔ Do not commit the instrument
       (`DN-18-2-6`).
 
 ### Task 2 — THE GUARD, WRITTEN AGAINST THE SHIPPED BODY (AC3)
 
-- [ ] Create `tests/test_secret_evidence_contract.py`, opening `TC-ArgusAgent-SECRET-001-28` and
+- [x] Create `tests/test_secret_evidence_contract.py`, opening `TC-ArgusAgent-SECRET-001-28` and
       continuing upward. Docstring in the `-15`..`-27` register: the defect, the measurement, the RED
       evidence, and *"key material is synthetic and built in the module"*.
-- [ ] `-28` — the **behavioural** guard: real-body population non-empty, then `_evidence_for`
+- [x] `-28` — the **behavioural** guard: real-body population non-empty, then `_evidence_for`
       monkeypatched to raise, then the two results compared (AC3.2).
-- [ ] `-29` — the **non-recurrence** AST guard over `secret_scan.py`, scoped to `_evidence_for`
+- [x] `-29` — the **non-recurrence** AST guard over `secret_scan.py`, scoped to `_evidence_for`
       (AC3.3). ⛔ Not a blanket "no bare call statements" rule.
-- [ ] `-30` — the **FR28 structural** guard over the emitted result and the two models
+- [x] `-30` — the **FR28 structural** guard over the emitted result and the two models
       `TC-ArgusAgent-EVIDENCE-001-04` does not cover (AC3.4).
-- [ ] Every case asserts its population non-empty first (`AI-E11-1`); no assertion on a secret value
+- [x] Every case asserts its population non-empty first (`AI-E11-1`); no assertion on a secret value
       (AC3.6).
-- [ ] Confirm the new module is ≤ **1,200** physical lines (AC5.2) — `len(text.splitlines())`, the
+- [x] Confirm the new module is ≤ **1,200** physical lines (AC5.2) — `len(text.splitlines())`, the
       same arithmetic `tests/test_module_size_ceiling.py:176`–`:183` uses.
 
 ### Task 3 — DRIVE IT RED, THEN MAKE THE CHANGE (AC3.5, AC1)
 
-- [ ] Run the new module **against the shipped `secret_scan.py`**. **Record the exact failure text of
+- [x] Run the new module **against the shipped `secret_scan.py`**. **Record the exact failure text of
       every case that goes RED, and which do not.** ⛔ A case that stays GREEN pre-change is not a
       guard — fix the case, not the assertion, and record that you found it.
-- [ ] ⛔ **Two safe mechanisms, one unsafe.** SAFE: (a) monkeypatch from a pre-change copy of the
+- [x] ⛔ **Two safe mechanisms, one unsafe.** SAFE: (a) monkeypatch from a pre-change copy of the
       module held outside the repository; (b) `git stash push -- argus/detectors/secret_scan.py` —
       **explicit pathspec**, and only after `git status --porcelain -- argus/detectors/secret_scan.py`
       confirms the only change there is yours. ⛔ UNSAFE: `git stash` with no pathspec — a peer
       session's three files are in this tree (§0.0).
-- [ ] Delete `:506` (AC1.1); replace the `:505` banner with the measured truth (AC1.2); correct the
+- [x] Delete `:506` (AC1.1); replace the `:505` banner with the measured truth (AC1.2); correct the
       docstring sentence at `:26`–`:27` (AC1.3). ⛔ Nothing else in the docstring is reflowed.
-- [ ] Confirm `SecretFindingEvidence` / `SECRET_EVIDENCE_SCHEMA_VERSION` / `scan_evidence` /
+- [x] Confirm `SecretFindingEvidence` / `SECRET_EVIDENCE_SCHEMA_VERSION` / `scan_evidence` /
       `_evidence_for` / `__all__` are untouched (AC1.4) and `:451`/`:502` are byte-unchanged (AC1.5).
-- [ ] Re-run the new module. **Record GREEN.**
+- [x] Re-run the new module. **Record GREEN.**
 
 ### Task 4 — PROVE THE CHANGE MOVES NOTHING (AC2)
 
-- [ ] Re-run Task 1's sweep post-change and diff the two maps. ⛔ **The differing set must be EMPTY**
+- [x] Re-run Task 1's sweep post-change and diff the two maps. ⛔ **The differing set must be EMPTY**
       and the totals must be unchanged (**88 / 37**). If one file differs, that is **AC7**.
-- [ ] ⛔ Take **both** sides over the SAME file list — **252** files once the new test module is
+- [x] ⛔ Take **both** sides over the SAME file list — **252** files once the new test module is
       tracked (AC2.1a). Record which population the pair was taken over, and disclose any
       `hardcoded_secret` finding the new module itself carries, with its non-blocking proof
       (AC2.1b). **This is the one finding 18.1's review raised; do not repeat it.**
-- [ ] Re-run the five secret-domain modules **with no edit to any assertion, docstring or fixture in
+- [x] Re-run the five secret-domain modules **with no edit to any assertion, docstring or fixture in
       them** (AC2.2).
-- [ ] Full suite, green, **no assertion loosened**. ⛔ `tests/test_secret_containment.py` must be run
+- [x] Full suite, green, **no assertion loosened**. ⛔ `tests/test_secret_containment.py` must be run
       as part of the whole-directory collection (§0.8/(b)).
-- [ ] Coverage with `--cov-fail-under=80`; record the percentage (AC2.4).
-- [ ] Confirm `argus/cache/key.py` is **unmodified** (AC2.3) — `git status --porcelain` must not list
+- [x] Coverage with `--cov-fail-under=80`; record the percentage (AC2.4).
+- [x] Confirm `argus/cache/key.py` is **unmodified** (AC2.3) — `git status --porcelain` must not list
       it.
 
 ### Task 5 — THE DISCLOSURES (AC4.4)
 
-- [ ] Re-derive §0.3/(c) (`base.py`'s `FindingDraft` docstring) and §0.5 (FR10's un-carried counts) at
+- [x] Re-derive §0.3/(c) (`base.py`'s `FindingDraft` docstring) and §0.5 (FR10's un-carried counts) at
       your own HEAD. **Record both measurements in the completion notes.**
-- [ ] ⛔ **Do not fix either. Do not file either.** Name `AI-E9-8` and the Engineering Lead as the
+- [x] ⛔ **Do not fix either. Do not file either.** Name `AI-E9-8` and the Engineering Lead as the
       owner of the filing decision.
 
 ### Task 6 — THE LEDGER (AC4.1–AC4.3)
 
-- [ ] ⛔ **Grep first** (`DF-INV-LEDGER-A`). Then append, **in binary mode**, `DF-AUD-DETECT-B`'s
+- [x] ⛔ **Grep first** (`DF-INV-LEDGER-A`). Then append, **in binary mode**, `DF-AUD-DETECT-B`'s
       dated closure note: the repair taken, the reason (§0.4, including the `:613` falsification of
       the entry's own sentence), the guard ids, the 251-file/0-differing measurement, and an explicit
       list of what this closure does **not** disposition.
-- [ ] Verify afterwards: **0** CRLF pairs, **exactly one** lone `\r`, and a `git diff` confined to the
+- [x] Verify afterwards: **0** CRLF pairs, **exactly one** lone `\r`, and a `git diff` confined to the
       appended lines.
-- [ ] ⛔ Confirm `architecture.md`, `E-PRD/prd.md`, `epics.md`, `2-5-…md` and `18-1-…md` are
+- [x] ⛔ Confirm `architecture.md`, `E-PRD/prd.md`, `epics.md`, `2-5-…md` and `18-1-…md` are
       **unmodified** (AC4.2, AC4.5) — `git status --porcelain` must not list any of them as *yours*.
 
 ### Task 7 — GATES, DOGFOOD REGENERATION AND THE COMMIT ARC (AC5.5, AC6.1, AC6.2)
 
-- [ ] Commit `argus/` + `tests/` **by explicit path**, with the trailer **`Evidence-partition: none`**
+- [x] Commit `argus/` + `tests/` **by explicit path**, with the trailer **`Evidence-partition: none`**
       as a whole line in the commit message (§0.6). ⛔ Never `git add -A`.
-- [ ] `python -m pytest tests/test_gate_seal.py -q` immediately after that commit — this is where
+- [x] `python -m pytest tests/test_gate_seal.py -q` immediately after that commit — this is where
       Story 18.1 lost a sha.
-- [ ] `python scripts/regenerate_dogfood_artifacts.py` on the now-clean `argus/` tree; commit the
+- [x] `python scripts/regenerate_dogfood_artifacts.py` on the now-clean `argus/` tree; commit the
       three artifacts separately. ⛔ Exit 2 means the tree is dirty — fix the tree, never pass
       `--allow-dirty-argus`.
-- [ ] Run the full AC6.1 gate list. **Record every exit code.** Mark the run **LOCAL / Windows-only**
+- [x] Run the full AC6.1 gate list. **Record every exit code.** Mark the run **LOCAL / Windows-only**
       (AC5.4).
 
 ### Task 8 — HAND-OFF (AC6.3, AC6.4)
 
-- [ ] `git status --porcelain` — the write set equals AC5.1 exactly, and no Story-18.1 file rode along.
-- [ ] Completion notes: every re-measured §0 figure, the observed REDs with their exact text, the
+- [x] `git status --porcelain` — the write set equals AC5.1 exactly, and no Story-18.1 file rode along.
+- [x] Completion notes: every re-measured §0 figure, the observed REDs with their exact text, the
       pre/post sweep pair, the two disclosures from Task 5, every exit code, and **any §0 premise
       found false**.
-- [ ] ⛔ If the PR lands squashed or rebased, re-run the regeneration on `master`
+- [x] ⛔ If the PR lands squashed or rebased, re-run the regeneration on `master`
       (`DF-INV-MERGE-A`, AC6.3).
 
 ---
@@ -1033,11 +1033,292 @@ arc, preceded by four `docs(gov)` commits from the 2026-08-24 self-audit (`DF-IN
 
 ### Agent Model Used
 
+Opus 5 (`claude-opus-5[1m]`), BMAD `bmad-dev-story` workflow, 2026-08-24. Single implementation
+round; no review iteration preceded it.
+
 ### Debug Log References
+
+- **Task 0 re-measurement** (before any line was written) - AST proof, 251-file sweep,
+  single-file payload, five secret modules, full suite, ledger byte state, DOCS-001-78 analyzer.
+- **RED run** of `tests/test_secret_evidence_contract.py` against the SHIPPED `secret_scan.py`.
+- **Engine-vs-engine sweep** over one identical 252-file list, pre-change body vs post-change body.
+- Instruments were throwaway scripts held OUTSIDE the repository (`DN-18-2-6`); none is committed.
+  The shared working tree was never stashed or reverted - the pre-change body was driven by loading
+  a copy of the module from the scratch directory via `importlib.util.spec_from_file_location`.
 
 ### Completion Notes List
 
+**1. Every Section 0 premise was re-measured by execution and every one reproduced.** One figure
+came out different and it is a counting-method artifact, not a moved fact - see note 9.
+
+| Section 0 row | expected | measured | verdict |
+|---|---|---|---|
+| discarded-value `_evidence_for` statements | exactly 1, at `:506` | `[(506, 'self._evidence_for(match)')]` | MATCH |
+| all `_evidence_for` call sites | `:376`, `:506` | `[(376, ...), (506, ...)]` | MATCH |
+| `_evidence_for` def | `:383`, `['staticmethod']`, returns `SecretFindingEvidence` | identical | MATCH |
+| tracked `*.py` | 251 | 251 | MATCH |
+| sweep, shipped body | 88 findings / 37 files / 88 invocations | 88 / 37 / 88 | MATCH |
+| sweep, `_evidence_for` nulled | 88 / 37, **0 differing** | 88 / 37, **0 differing** | MATCH |
+| `argus/prod/settings.py` payload | 3 findings, no mask, no evidence field, no secret | 3 findings; `****`, `masked`, `value_length`, `entropy_bits`, `kind`, `pattern_id` and the value ALL absent; `recording_id` `hardcoded_secret:b8162401...` | MATCH |
+| `secret_scan.py` | 575 lines | 575 | MATCH |
+| five secret-domain modules | 58 passed | 58 passed | MATCH |
+| full suite | 1,721 collected, exit 0 | 1,721 collected, exit 0 | MATCH |
+| `mypy argus` | clean, 95 source files | `Success: no issues found in 95 source files` | MATCH |
+| `deferred-work.md` | 546,616 bytes, 0 CRLF, exactly one lone `\r`, 7,040 LF | identical | MATCH |
+| max `TC-ArgusAgent-SECRET-001-NN` | `-27` | `-27` | MATCH |
+| DOCS-001-78 analyzer over this file | `()` | `()` | MATCH |
+| `git status --porcelain` | non-empty, three Story-18.1 files | the same three, plus this story file untracked | MATCH |
+
+**2. THE OBSERVED REDs, verbatim, driven against the SHIPPED module body** (`AI-E14-1`: these are
+AUTHOR-DRIVEN, therefore **vacuity evidence** - proof the cases can fail - **not** "these guards
+caught a defect"). The RED was taken with `secret_scan.py` still pristine on disk, before any edit:
+
+- `TC-ArgusAgent-SECRET-001-28` - **RED**:
+
+  ```
+  E       AssertionError: _evidence_for must not be on run()'s path (TC-ArgusAgent-SECRET-001-28)
+  tests\test_secret_evidence_contract.py:177: AssertionError
+  ```
+
+  The exception PROPAGATED OUT OF `run()` exactly as Section 2.2 predicted: `:506` sat outside the
+  `try/except` at `:424`-`:432`, which wraps only `self._scan(source)`.
+
+- `TC-ArgusAgent-SECRET-001-29` - **RED**:
+
+  ```
+  E       AssertionError: secret_scan.py calls _evidence_for and DISCARDS the return value at
+          line(s) [506]. That computes the masked indicator, the length, the kind, the pattern id
+          and an exact-Fraction entropy and throws all five away in the statement that computes
+          them, while reading as the load-bearing redaction step (DF-AUD-DETECT-B). ...
+  E       assert not [506]
+  tests\test_secret_evidence_contract.py:249: AssertionError
+  ```
+
+- `TC-ArgusAgent-SECRET-001-30` - **GREEN pre-change, BY DESIGN, and recorded as such.** It pins
+  FR28's structural guarantee, which was true before this story and stays true after it; it exists
+  so a future widening of `FindingDraft` / `DetectorResult` cannot land silently. Per Task 3 a case
+  that stays GREEN pre-change "is not a guard" - this one is deliberately a CONTRACT PIN rather than
+  a defect witness, which is why it is disclosed here rather than strengthened into a false RED.
+
+All three are **GREEN post-change** (exit 0).
+
+**3. THE PRE/POST SWEEP PAIR, taken engine-vs-engine over ONE identical population** (AC2.1a - the
+exact shape of Story 18.1's only review finding, deliberately not repeated). Both sides were driven
+over the SAME file list, which **includes** this story's own new test module, rather than
+HEAD-vs-worktree over two lists that differ by one file:
+
+| population **252** (identical list both sides) | `hardcoded_secret` findings | files with >=1 | `_evidence_for` invocations | `DetectorResult`s differing |
+|---|---:|---:|---:|---:|
+| pre-change engine (module copy from outside the repo) | 91 | 38 | 91 | - |
+| post-change engine (the tree) | 91 | 38 | **0** | **0 of 252** |
+
+Over the 251-file population that predates the new module, the same instrument re-derives Section
+0.2's own figures: **88 / 37 / 0 differing**. The `91 - 88 = 3` delta is entirely the new test
+module's own findings (note 4). The `91 -> 0` invocation count is the direct proof the call left
+`run()`'s path; the `0 differing` is the proof nothing observable moved.
+
+**Cost, recorded so nobody claims a performance win:** 1.462 s pre-change vs 1.455 s post-change;
+and on the separate shipped-vs-nulled pair the NULLED side was the *slower* of the two (1.467 s vs
+1.477 s). The difference is inside the noise. **`DF-AUD-DETECT-C` is NOT dispositioned by it.**
+
+**4. AC2.1b - THE NEW TEST MODULE'S OWN FINDINGS, DISCLOSED BY PATH, LINE AND CAUSE.**
+`tests/test_secret_evidence_contract.py` reports **3** `hardcoded_secret` findings against itself,
+all at **line 111**, its `_SYNTHETIC_SECRET` module constant - the published AWS documentation
+access-key example, which the guards must build in-module to have a detectable subject at all
+(AC3.6 forbids planting it in a committed fixture file). **Cause:** three scan patterns
+(`aws_access_key_id`, `generic_assigned_secret`, `high_entropy_string`) hit that one span, and
+`run()` de-duplicates on `(start_line, end_line, pattern_id)`, so one line legitimately yields
+three. **Proven non-blocking by execution:** each is `advisory=True`, `depth_supported=None`,
+`is_verdict_blocking` **False**, and `blocking_finding_count` over the whole result is **0**;
+`degraded` is `()`. They appear identically under BOTH engine bodies and so cancel out of the
+pre/post delta. They were **NOT** suppressed, whitelisted, annotated, relocated or edited away
+(`DF-8-5-B`).
+
+**5. AC1 verified MECHANICALLY, not by reading the diff.** A docstring-stripped AST comparison of
+the whole module before vs after reports **exactly one difference**:
+
+```
+AST-level (docstring-stripped) differences: 1
+   -            self._evidence_for(match)
+```
+
+So AC1.1 (the statement is DELETED, not commented out and not bound to a throwaway name), AC1.4
+(`SecretFindingEvidence`, `SECRET_EVIDENCE_SCHEMA_VERSION`, `_evidence_for`, `scan_evidence` and
+`__all__` all survive - re-confirmed by name, and `_evidence_for` is still a decorated
+`@staticmethod`) and AC1.5 (`run()`'s signature, purity and control flow otherwise unchanged;
+`:451` and `:502`, Story 18.1's territory, byte-unchanged) are all discharged by one measurement.
+AC1.2's banner replacement and AC1.3's docstring correction are the only other edits in the file
+and both are comment/docstring text. No import was added or removed (AC5.3).
+
+**6. TASK 5 DISCLOSURES - re-derived at this HEAD, and deliberately NOT fixed and NOT filed**
+(`AI-E9-8`: recording is this story's job, filing and scheduling are the Engineering Lead's).
+
+- **(a) `argus/detectors/base.py:63`-`:72`.** The `FindingDraft` docstring says it carries *"the
+  supported coverage depth (the verdict-fold input), and the evidence the finding carries WITH it
+  (FR10 'carrying their evidence counts' - a JSON-primitive dict of fixed-precision/int leaves)"*.
+  Measured at this HEAD, `FindingDraft.model_fields` is exactly `['advisory', 'ast_span',
+  'cartridge_id', 'coverage_envelope_slice', 'end_line', 'file_path', 'rule_id', 'start_line']` -
+  **neither** a `depth_supported` field **nor** any evidence field. Same claim class as the banner
+  this story repaired. `base.py` is Story 18.4's fence and was left **byte-unchanged**.
+- **(b) FR10's own detector does not carry its counts either.** `VacuousTestDetector().run()` over
+  the `test_widget` fixture of `tests/test_vacuous_detector.py:140` emits **1** finding whose FULL
+  payload is `{"advisory":true, ..., "depth_supported":"audited_shallow", "locators":[{"ast_span":
+  "function:test_widget@1-6", ...}], "rule_id":"vacuous_test_ast", ...}` - **no assertion-density,
+  no mock-ratio, no count of anything**; the tokens `assertion`, `density`, `mock`, `ratio` and
+  `count` are all absent from it. Structurally they must be: `Recording`'s ten fields
+  (`advisory, cartridge_id, claim_present, coverage_envelope_slice, depth_supported, locators,
+  partition_id, recording_id, rule_id, schema_version`) include none that could hold a count. So the
+  evidence-carrying gap is **repository-wide and older than `DF-AUD-DETECT-B`**, and it is the
+  strongest available reason NOT to widen one detector in isolation: the honest repair is one
+  cross-detector story, or none.
+
+Both are recorded in the ledger's closure note as well, under "RECORDED HERE, NOT FILED". **No new
+`DF-*` entry was filed** (AC4.4); the ledger was greped first (`DF-INV-LEDGER-A`) and already
+carries this defect, the unread-field class (`DF-10-4-B`), the detector cost (`DF-AUD-DETECT-C`) and
+the disclosure gap (`DF-10-3-B`).
+
+**7. EVERY EXIT CODE - LOCAL / Windows-only** (`AI-E13-1`; `PYTHONDONTWRITEBYTECODE=1` exported and
+`__pycache__` cleared before each full run, per AC6.1 and Story 16.5's lost commit).
+
+| gate | result | exit |
+|---|---|---|
+| `pytest tests/ -q` (baseline, pre-change) | 1,721 collected, all passed | **0** |
+| `pytest tests/ -q` (post-change, pre-regeneration) | 2 failed - the two PREDICTED dogfood derivation guards | 1 |
+| `pytest tests/ -q` (post-regeneration, final) | 1,724 collected, all passed | **0** |
+| `pytest tests/ --cov=argus --cov-fail-under=80` | `Required test coverage of 80% reached. Total coverage: 95.69%` (TOTAL 7315 stmts, 315 miss, 96%) | **0** |
+| the six secret-domain modules | 61 passed (58 baseline + the 3 new) | **0** |
+| `mypy argus` | `Success: no issues found in 95 source files` | **0** |
+| `bandit -r argus --severity-level medium` | 0 medium, 0 high at the medium threshold | **0** |
+| `pytest tests/test_gate_seal.py` (run immediately after the `feat` commit) | 9 passed | **0** |
+| `pytest tests/test_module_size_ceiling.py test_release_preflight.py test_governance_record_integrity.py test_v1_commitment_closure.py test_status_document_registry.py test_command_assets.py` | 59 passed | **0** |
+| `pytest tests/test_dogfood_plan.py test_dogfood_proof.py test_dogfood_artifact_currency.py` (post-regeneration) | 48 passed | **0** |
+| `python scripts/regenerate_dogfood_artifacts.py` | 3 artifacts rewritten, provenance sha `2cc5128`, 95 files, 33667 LOC | **0** |
+
+**Which guards actually fired, versus which Section 0.6 predicted.** Section 0.6 was RIGHT: the two
+that fired are `test_dogfood_plan.py::test_committed_partition_plan_artifact_exists_and_matches_live_derivation`
+and `test_dogfood_proof.py::test_committed_proof_artifact_exists_and_matches_live_run`, both on the
+live-LOC derivation (`33648 -> 33667`, exactly this module's `575 -> 594`). Both went green after
+regeneration, with **no assertion loosened** (`DF-8-5-B`). `TC-ArgusAgent-DOGFOOD-001-50` did **not**
+fire, as Section 0.6 warned. `TC-ArgusAgent-PRECISION-001-94` did **not** fire, because the
+`Evidence-partition: none` trailer was written on the `feat` commit **the first time** - Story
+18.1's lost sha was not repeated. `tests/test_v1_commitment_closure.py:510` stayed green because
+`class SecretFindingEvidence(` was not deleted.
+
+**8. AC5.2 - A DEVIATION FROM A PREDICTED FIGURE, DISCLOSED.** AC5.2 says `secret_scan.py` "is 575
+lines and **only shrinks**". It did **not** shrink: it is **594** lines, `+19`. The deletion removes
+2 lines, and AC1.2 requires the banner to be **REPLACED, not merely removed**, by text stating what
+is true and measurable - which is a substantive comment block, not a one-liner. The two
+requirements are in tension and AC1.2 is the binding one; the block follows this module's own
+established idiom (the Story 10.3 suppression-branch comment at `:451` is a comparable block in the
+same function). **The governing NFR is satisfied with wide headroom:** NFR-M1's ceiling is 1,200
+physical lines measured as `len(text.splitlines())`, and `secret_scan.py` is 594 while the new test
+module is **344**. `tests/test_module_size_ceiling.py` is green. Recorded rather than silently
+absorbed, because the `+19` is also the whole cause of the dogfood regeneration in note 7.
+
+**9. THE ONE SECTION 0 FIGURE THAT CAME OUT DIFFERENT, and why it is not a moved fact.** Section 0.7
+records **166** `- id: DF-` lines in the ledger; measured here, **169**. The ledger's byte state was
+simultaneously verified **byte-identical** to Section 0.7 (546,616 bytes, 0 CRLF, exactly one lone
+`\r`, 7,040 LF), so **the file did not move between contexting and this round** - the difference is
+in how the two counts were taken (line-anchored `^- id: DF-` returns 3; unanchored `- id: DF-`
+returns 169). Section 0.7 itself says the invariant, not the count, is the thing that must hold. No
+action taken.
+
+**10. TWO PRE-EXISTING OBSERVATIONS, recorded and NOT acted on.**
+
+- `tests/test_secret_containment.py` still cannot be collected on its own (`ModuleNotFoundError: No
+  module named '_cartridge'`) and was run only as part of whole-directory collection, exactly as
+  Section 0.8/(b) requires. Pre-existing; re-confirmed at this HEAD.
+- The DOCS-001-78 ledger extractor reports `DF-13-5-A` among its closed ids **at HEAD, before this
+  story's append** (36 closed ids at HEAD, of which `DF-13-5-A` is one), even though `DF-13-5-A` is
+  OPEN and UNSPENT. That is a pre-existing extractor imprecision, the guard is green at HEAD with
+  it, and it is **not this story's** to fix or file. Verified that this story's append adds
+  **exactly one** id to that set - `DF-AUD-DETECT-B` - and leaks no false closure onto
+  `DF-10-3-B`, `DF-10-4-B`, `DF-AUD-DETECT-C`, `-E` or `-F`.
+
+**11. AC5.1 / AC6.4 - THE WRITE SET, AND A FORCED DECISION ABOUT THE SHARED TREE (`DN-DEV-18-2-A`).**
+Section 0.0 warned the tree is shared and already dirty with three Story-18.1 files. Measured at
+Task 0, that was still true - and two of those three files are files **this story must also write**:
+
+- `deferred-work.md` - the peer's hunk is `@@ -6376,0 +6377,19 @@` and this story's is
+  `@@ -6426,0 +6446,98 @@`. **Two disjoint, pure-insertion hunks**, so they separate cleanly: the
+  blob committed here is HEAD's ledger plus **only** this story's 98 lines, verified to be a pure
+  insertion (every HEAD line surviving in order) with the byte invariants intact.
+- `sprint-status.yaml` - **does NOT separate.** At HEAD `18-2` is `backlog`; the SM's
+  `ready-for-dev` transition is itself part of the peer's uncommitted delta, and line **236**
+  (`last_updated`) is a **single physical line** carrying the peer's 18-1 REVIEW comment and this
+  story's comments together, while line 512 (18-1) is purely the peer's and sits adjacent to line
+  513 (18-2) in one hunk. There is no way to commit this story's transition without either
+  swallowing the peer's uncommitted 18-1 record (forbidden by Section 2.6 / AC5.5 / AC6.4) or
+  publishing a state inconsistent with it. **Decision: the file is WRITTEN on disk - `18-2` reads
+  `in-progress` then `review`, with dated status-line comments in the established style and all
+  comments and the STATUS DEFINITIONS block preserved - but is deliberately NOT staged in any of
+  this story's commits.** It therefore remains a working-tree modification for the peer session (or
+  the next orchestrator step) to commit along with its own 18-1 record. `epic-18` was left at
+  `in-progress` and no other entry was touched.
+
+**Committed write set, by explicit path, four commits, never `git add -A`:**
+
+| commit | paths |
+|---|---|
+| `57a278f` `chore` | this story file (new) |
+| `2cc5128` `feat` | `argus/detectors/secret_scan.py`, `tests/test_secret_evidence_contract.py` - carries `Evidence-partition: none` |
+| `25ff87f` `chore` | the three regenerated dogfood artifacts |
+| `docs` | `deferred-work.md` (ledger first in the diff), then this story file |
+
+Verified with `git status --porcelain` (not `git diff --name-only`, which is blind to the untracked
+test module): `argus/cache/key.py`, `argus/detectors/base.py`,
+`argus/detectors/secret_suppression.py`, `argus/pipeline.py`, `argus/pipeline_stages.py`,
+`argus/reports/generator.py`, `architecture.md`, `E-PRD/prd.md`, `epics.md`, the five shipped
+secret-domain test modules and every `done` story's record are **all unmodified**, and nothing under
+`minions_core/apaa/` was touched.
+
+**12. AC6.3 / `DF-INV-MERGE-A` - STANDING INSTRUCTION FOR WHOEVER LANDS THIS.** The three dogfood
+artifacts cite provenance sha `2cc5128`. **If this PR lands squashed or rebased, that sha is
+orphaned and `TC-ArgusAgent-DOGFOOD-001-49` reddens `master` after the merge, where no PR check can
+see it coming.** Re-run `python scripts/regenerate_dogfood_artifacts.py` on `master` and commit the
+result.
+
+**13. NOTHING ESCALATED (AC7).** No `DetectorResult` / `Recording` / `FindingDraft` / `Locator`
+field was added; no survivor was deleted or had its signature changed; `code_identity` was not
+bumped and `argus/cache/` was not touched; the differing set is empty and the finding total held;
+no fenced module was touched; no assertion in the five secret-domain modules was edited; no
+`architecture.md` / `prd.md` / `epics.md` / `done`-story record was edited; no new `DF-*` was filed;
+`DF-13-5-A` stays OPEN and UNSPENT; no finding became verdict-eligible and no threshold moved; no
+`DN-*` was reopened. The >=80% precision keystone stays **NOT CLEARED** and the gate stays
+**BLOCKED**. No new dependency and no new import.
+
+**14. WHAT THIS STORY DID NOT FIX, named so it is not mistaken for fixed.** No finding carries
+evidence afterwards, and that is the point. FR10's evidence-count gap survives (note 6b).
+`base.py`'s `FindingDraft` docstring still names two fields it lacks (note 6a). `DF-10-3-B`,
+`DF-10-3-C`, `DF-AUD-DETECT-C`, `-D`, `-E` and `-F` and `DF-10-4-B` all stay OPEN. The 0.4%-class
+cost figure dispositions nothing.
+
+**15. THE LEDGER DISPOSITION.** `DF-AUD-DETECT-B` is CLOSED by this story at fix sha `2cc5128`.
+The disposition lives in `deferred-work.md` as a dated, append-only note whose original entry is
+NOT rewritten (§3.4 evidence immutability), because a disposition recorded in prose and not in the
+ledger is not a disposition (`AI-E12-3` / `AI-E12-6`). That note and this record land in the SAME
+`docs` commit, ledger first in the diff, so `TC-ArgusAgent-DOCS-001-78` never observes a story
+claiming a closure the ledger does not yet carry. Verified with the guard's own analyzers: the
+ledger extractor gains **exactly one** id, and no false closure leaks onto any entry this story
+merely cites.
+
 ### File List
+
+| path | change |
+|---|---|
+| `argus/detectors/secret_scan.py` | UPDATE - deleted the discarded-value `self._evidence_for(match)` statement; replaced the `PRODUCER-SIDE REDACTION (the keystone)` banner with the measured truth; corrected the module docstring's false "masked indicator + the location are the ONLY things that survive" sentence |
+| `tests/test_secret_evidence_contract.py` | NEW - `TC-ArgusAgent-SECRET-001-28`..`-30` (344 lines) |
+| `_bmad-output/design-artifacts/ArgusAgent/deferred-work.md` | APPEND-ONLY - `DF-AUD-DETECT-B`'s dated closure note (+98 lines, pure insertion; 0 CRLF and exactly one lone `\r` re-verified) |
+| `_bmad-output/design-artifacts/ArgusAgent/minions-dogfood-partition-plan.md` | REGENERATED by `scripts/regenerate_dogfood_artifacts.py` |
+| `_bmad-output/design-artifacts/ArgusAgent/minions-dogfood-budget-plan.md` | REGENERATED by the same renderer |
+| `_bmad-output/design-artifacts/ArgusAgent/minions-dogfood-proof.md` | REGENERATED by the same renderer |
+| `_bmad-output/design-artifacts/ArgusAgent/stories/18-2-the-redaction-call-keeps-the-evidence-it-computes.md` | this record |
+| `_bmad-output/design-artifacts/ArgusAgent/sprint-status.yaml` | status transitions only - **written on disk, deliberately NOT staged** (`DN-DEV-18-2-A`, note 11) |
+
+⛔ Not touched: `argus/detectors/base.py`, `argus/detectors/secret_suppression.py`,
+`argus/cache/key.py`, `argus/pipeline.py`, `argus/pipeline_stages.py`, `argus/reports/generator.py`,
+`architecture.md`, `E-PRD/prd.md`, `epics.md`, any `done` story's record, and anything under
+`minions_core/apaa/`.
 
 ---
 
@@ -1045,4 +1326,5 @@ arc, preceded by four `docs(gov)` commits from the 2026-08-24 self-audit (`DF-IN
 
 | Date | Version | Description | Author |
 |---|---|---|---|
+| 2026-08-24 | 1.0 | Implemented. Section 0 re-measured by execution first and every premise reproduced (one figure differed by counting method only, ledger bytes identical - completion note 9). `self._evidence_for(match)` DELETED from `run()`; the `PRODUCER-SIDE REDACTION (the keystone)` banner REPLACED with the measured truth (redaction is the absence of a value field on four frozen `extra="forbid"` models); the module docstring's false *"masked indicator + the location are the ONLY things that survive"* sentence corrected. Carrier untouched - a docstring-stripped AST comparison of the whole module reports the removal of that ONE statement as the only semantic difference. Output-neutrality proven ENGINE-VS-ENGINE over one identical 252-file population (91 findings / 38 files both sides, **0 differing**, `_evidence_for` invocations 91 -> 0); the 251-file population re-derives Section 0.2's 88 / 37 / 0. Three guards added in `tests/test_secret_evidence_contract.py` continuing the SECRET index at `-28`..`-30`; `-28` and `-29` observed RED against the shipped body with their text recorded, `-30` GREEN before and after by design and disclosed as a contract pin. `DF-AUD-DETECT-B` given a dated append-only closure note recording the DELETE arm, the four grounds, and the falsification of the entry's own "matches what Story 2.5 says" sentence by `2-5-...md:613`. The new module's 3 self-findings and both Task 5 gaps disclosed, none fixed and none filed (`AI-E9-8`). Suite 1,724 exit 0, coverage 95.69%, mypy clean over 95 files, bandit clean, gate-seal green with `Evidence-partition: none` on the `feat` commit first time. `secret_scan.py` 575 -> 594 lines, a disclosed deviation from AC5.2's "only shrinks" forced by AC1.2 (note 8). `sprint-status.yaml` written but NOT staged - its delta is inseparable from a peer session's uncommitted 18-1 record (`DN-DEV-18-2-A`, note 11). Status `review`. | dev-story (Opus 5) |
 | 2026-08-24 | 0.1 | Story contexted at HEAD `c288d40`; §0 measured by execution (AST proof of the single discarded-value call at `:506`; 251-file sweep 88 findings / 37 files with `_evidence_for` nulled → **0 files differ**; cost 0.007 s = 0.4%; emitted-`Recording` payload shows no mask and no evidence field; the behavioural guard proven RED against the shipped body; suite 1,721 collected exit 0, five secret modules 58 passed, mypy clean over 95 files). Three premises found false while measuring: the module docstring's *"masked indicator + location survive"* sentence, `base.py`'s `FindingDraft` docstring naming two absent fields, and — the decisive one — `DF-AUD-DETECT-B`'s claim that widening `DetectorResult` *"matches what Story 2.5 says"*, which Story 2.5's own record forecloses at `:613`. `DN-18-2-1` therefore takes the delete-and-correct arm. Contexting-side guards verified green with this file on disk: `tests/test_governance_record_integrity.py`, `tests/test_status_document_registry.py` and `tests/test_command_assets.py` (18 passed), and the DOCS-001-78 analyzer returns `()` closure claims over this file - after a first draft that did claim one and was corrected. Status `ready-for-dev`. | create-story (Opus 5) |
