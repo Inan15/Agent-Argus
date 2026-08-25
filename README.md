@@ -189,8 +189,8 @@ graded, but has no definition for the depth gate to stand on. Pinned language-by
 
 ### What the distribution contains, and what needs the git repository
 
-MEASURED from the built wheel (`argus_agent-0.1.0-py3-none-any.whl`, 103 entries) and sdist
-(`argus_agent-0.1.0.tar.gz`, 102 files), not inferred: `[tool.flit.module] name = "argus"`
+MEASURED from the built wheel (`argus_agent-0.1.0-py3-none-any.whl`, 104 entries) and sdist
+(`argus_agent-0.1.0.tar.gz`, 103 files), not inferred: `[tool.flit.module] name = "argus"`
 packages **the `argus` Python package and nothing else** — which, since Story 12.7, includes
 the command assets under `argus/assets/commands/`: `flit_core` walks the whole `argus/`
 directory and ships every file in it, so a `.md` there reaches the wheel with **no**
@@ -218,7 +218,13 @@ to contradict each other (see the struck sentence under [Slash Commands](#-slash
 
 > **Measured limitation, stated rather than discovered later — and now measured away.** On a
 > freshly built wheel, with this repository removed from `sys.path` and one clean subprocess
-> per module, **95 of the 95 shipped modules import**. None fail. (95, not 94, since
+> per module, **96 of the 96 shipped modules import**. None fail. (96, not 95, since
+> 2026-08-25: Story 17.3 added `argus/detectors/assertion_strength.py`, which GRADES what
+> each assertion in a flagged test span constrains and lands the successor vacuity
+> predicate `S1` as code. It is ADVISORY and promotes nothing: no finding becomes
+> verdict-eligible, no threshold moves, and the externalization gate stays `BLOCKED`.
+> Like the two below it resolves NO repository path at module level, which is the
+> property that decides whether a wheel can import it. 95, not 94, since
 > 2026-08-23: Story 16.7 added `argus/precision/silent_class.py`, which DERIVES the class of
 > test spans that reach the system under test, discard the result and assert NOTHING AT ALL,
 > and publishes it as a QUESTION for a named human to judge. It promotes nothing: no finding

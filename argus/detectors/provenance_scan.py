@@ -109,6 +109,11 @@ __all__ = [
     "logical_statements",
     "opens_bare_assert",
     "provenance_evidence",
+    "result_observing_lines",
+    "SutCallSite",
+    "assertion_statement_lines",
+    "candidate_sut_edges",
+    "sut_call_classification",
 ]
 
 # Context managers whose BODY observes the SUT's behaviour, so a SUT call inside one
@@ -793,7 +798,7 @@ def _structural_colon(code: str) -> int:
     return -1
 
 
-def _result_observing_lines(source_lines: list[str], start: int, end: int) -> frozenset[int]:
+def result_observing_lines(source_lines: list[str], start: int, end: int) -> frozenset[int]:
     """1-based lines of the span that sit inside a result-observing context (DN-3).
 
     Indentation-scoped, because that is what a ``with`` block actually is. The inline
@@ -882,7 +887,7 @@ class ProvenanceEvidence(NamedTuple):
         return self.discarded_sut_calls >= 1 and self.consumed_sut_calls == 0
 
 
-def _assertion_statement_lines(
+def assertion_statement_lines(
     source_lines: list[str],
     span_edges: list[CodeEdge],
     start: int,
@@ -903,6 +908,116 @@ def _assertion_statement_lines(
             lines.add(line_no)
     lines.update(edge.line for edge in span_edges if edge.callee in assertion_callees)
     return tuple(sorted(lines))
+
+
+def candidate_sut_edges(
+    span_edges: list[CodeEdge],
+    *,
+    assertion_callees: frozenset[str],
+    mock_callees: frozenset[str],
+) -> list[CodeEdge]:
+    """The span's candidate SUT calls: non-assertion, non-mock callees on its edges.
+
+    ⛔ **THE derivation of "is this span edge a candidate SUT call", and there is exactly
+    ONE in ``argus/**``** (AR7/§3.3, ``-151``): fact (a), the classification below and
+    Story 17.3's grader all read it. Reads the vocabulary it is HANDED (DN-14-2-1) —
+    widening the FROZEN table can only SHRINK the candidate set, towards an accusation.
+    """
+    return [
+        edge
+        for edge in span_edges
+        if edge.callee not in assertion_callees and edge.callee not in mock_callees
+    ]
+
+
+class SutCallSite(NamedTuple):
+    """One candidate SUT call of a span, as fact (b)'s classification reads it.
+
+    ``discarded`` is *the simple statement IS this call and nothing else*; bound, nested,
+    asserted on, observed (DN-3) or unreadable are all CONSUMED. ``column`` is ``-1`` when
+    the call could not be located on its line — unresolvable is not evidence.
+    """
+
+    line: int
+    callee: str
+    column: int
+    discarded: bool
+
+
+def sut_call_classification(
+    source_lines: list[str],
+    span_edges: list[CodeEdge],
+    *,
+    assertion_callees: frozenset[str],
+    mock_callees: frozenset[str],
+    mock_names: frozenset[str],
+    observed_lines: frozenset[int],
+    statement_starts: dict[int, int],
+    statement_extents: dict[int, int],
+) -> tuple[SutCallSite, ...]:
+    """Classify every candidate SUT call of the span — THE derivation, read by BOTH consumers.
+
+    Fact (b) folds it into counts; Story 17.3's assertion grader reads which lines carry a
+    SUT call (AC4.6). The four scan projections are passed in because every caller already
+    holds them, so the hot path still scans the span exactly once.
+
+    Source-ordered ``(line, column, callee)`` (AR11); the counts do not depend on that order
+    — see :func:`provenance_evidence` for why occurrence DISTINCTNESS is all that is needed.
+    A mock-rooted call, and an assertion/mock/observing callee, are not SUT calls at all and
+    produce no site.
+    """
+    sites: list[SutCallSite] = []
+    next_occurrence: dict[tuple[int, str], int] = {}
+    for edge in candidate_sut_edges(
+        span_edges, assertion_callees=assertion_callees, mock_callees=mock_callees
+    ):
+        if edge.callee in RESULT_OBSERVING_CONTEXT_CALLEES:
+            continue  # the context manager itself is not the SUT (DN-3's own table)
+        index = edge.line - 1
+        unreadable = SutCallSite(edge.line, edge.callee, -1, False)
+        if index < 0 or index >= len(source_lines):
+            sites.append(unreadable)  # off-span edge: cannot be read, cannot corroborate
+            continue
+        occurrence_key = (edge.line, edge.callee)
+        located = _locate_call(
+            source_lines[index], edge.callee, next_occurrence.get(occurrence_key, 0)
+        )
+        if located is None:
+            sites.append(unreadable)  # unresolvable is not evidence (see _locate_call)
+            continue
+        receiver_root, chain_start, match_end = located
+        next_occurrence[occurrence_key] = match_end  # this edge has claimed this occurrence
+        if receiver_root is not None and receiver_root in mock_names:
+            continue  # a mock-derived call, not a SUT call
+        statement_start = statement_starts.get(edge.line)
+        if edge.line in observed_lines or statement_start is None:
+            # DN-3: raising IS the observation; or the line opens no readable statement
+            sites.append(SutCallSite(edge.line, edge.callee, chain_start, False))
+            continue
+        statement_end = statement_extents.get(statement_start, statement_start)
+        line_code = _code_prefix(source_lines[index])
+        # Everything of the LOGICAL statement that precedes the call, across however
+        # many physical lines it was wrapped over, trimmed to the SIMPLE statement the
+        # call is in — text before a depth-0 ``;`` belongs to an earlier statement and
+        # says nothing about where THIS call's result goes. Empty (or a bare ``await``)
+        # is what makes this an expression statement whose value nothing receives.
+        before = (
+            _statement_code(source_lines, statement_start, edge.line - 1)
+            + line_code[:chain_start]
+        )
+        breaks_before = _simple_statement_breaks(before)
+        preceding = (before[breaks_before[-1] + 1 :] if breaks_before else before).strip()
+        # …and the same statement, forwards: from the call to the next depth-0 ``;`` or
+        # the end of the logical statement. Ending in ``)`` is what says the statement
+        # IS the call rather than the call plus something that reads its value.
+        after = line_code[chain_start:] + " " + _statement_code(
+            source_lines, edge.line + 1, statement_end
+        )
+        breaks_after = _simple_statement_breaks(after)
+        statement = (after[: breaks_after[0]] if breaks_after else after).strip()
+        discarded = preceding in ("", "await") and statement.endswith(")")
+        sites.append(SutCallSite(edge.line, edge.callee, chain_start, discarded))
+    return tuple(sorted(sites, key=lambda site: (site.line, site.column, site.callee)))
 
 
 def provenance_evidence(
@@ -939,73 +1054,28 @@ def provenance_evidence(
     count CONSUMED — the failure direction is always away from an accusation.
     """
     mock_names = _mock_bound_names(source_lines, start, end, mock_callees)
-    observed_lines = _result_observing_lines(source_lines, start, end)
+    observed_lines = result_observing_lines(source_lines, start, end)
     statement_starts = logical_statement_starts(source_lines, start, end)
     # THE statement extent, projected from the SAME scan the starts come from
     # (DF-AUD-DETECT-D). A line absent from this map opens no readable statement and falls
     # back to itself: a SHORTER statement can only WITHHOLD corroboration, never make it.
     extents = {stmt.start_line: stmt.end_line for stmt in logical_statements(source_lines, start, end)}
 
-    discarded = 0
-    consumed = 0
-    next_occurrence: dict[tuple[int, str], int] = {}
-    for edge in span_edges:
-        if (
-            edge.callee in assertion_callees
-            or edge.callee in mock_callees
-            or edge.callee in RESULT_OBSERVING_CONTEXT_CALLEES
-        ):
-            continue
-        index = edge.line - 1
-        if index < 0 or index >= len(source_lines):
-            consumed += 1  # off-span edge: cannot be read, so it cannot corroborate
-            continue
-        occurrence_key = (edge.line, edge.callee)
-        located = _locate_call(
-            source_lines[index], edge.callee, next_occurrence.get(occurrence_key, 0)
-        )
-        if located is None:
-            consumed += 1  # unresolvable is not evidence (see _locate_call)
-            continue
-        receiver_root, chain_start, match_end = located
-        next_occurrence[occurrence_key] = match_end  # this edge has claimed this occurrence
-        if receiver_root is not None and receiver_root in mock_names:
-            continue  # a mock-derived call, not a SUT call
-        if edge.line in observed_lines:
-            consumed += 1  # DN-3: raising IS the observation
-            continue
-        statement_start = statement_starts.get(edge.line)
-        if statement_start is None:
-            consumed += 1  # the line opens no readable statement — not evidence
-            continue
-        statement_end = extents.get(statement_start, statement_start)
-        line_code = _code_prefix(source_lines[index])
-        # Everything of the LOGICAL statement that precedes the call, across however
-        # many physical lines it was wrapped over, trimmed to the SIMPLE statement the
-        # call is in — text before a depth-0 ``;`` belongs to an earlier statement and
-        # says nothing about where THIS call's result goes. Empty (or a bare ``await``)
-        # is what makes this an expression statement whose value nothing receives.
-        before = (
-            _statement_code(source_lines, statement_start, edge.line - 1)
-            + line_code[:chain_start]
-        )
-        breaks_before = _simple_statement_breaks(before)
-        preceding = (before[breaks_before[-1] + 1 :] if breaks_before else before).strip()
-        # …and the same statement, forwards: from the call to the next depth-0 ``;`` or
-        # the end of the logical statement. Ending in ``)`` is what says the statement
-        # IS the call rather than the call plus something that reads its value.
-        after = line_code[chain_start:] + " " + _statement_code(
-            source_lines, edge.line + 1, statement_end
-        )
-        breaks_after = _simple_statement_breaks(after)
-        statement = (after[: breaks_after[0]] if breaks_after else after).strip()
-        if preceding in ("", "await") and statement.endswith(")"):
-            discarded += 1
-        else:
-            consumed += 1
+    sites = sut_call_classification(
+        source_lines,
+        span_edges,
+        assertion_callees=assertion_callees,
+        mock_callees=mock_callees,
+        mock_names=mock_names,
+        observed_lines=observed_lines,
+        statement_starts=statement_starts,
+        statement_extents=extents,
+    )
+    discarded = sum(1 for site in sites if site.discarded)
+    consumed = len(sites) - discarded
 
     mock_referencing = 0
-    for line_no in _assertion_statement_lines(
+    for line_no in assertion_statement_lines(
         source_lines, span_edges, start, end, assertion_callees
     ):
         statement_end = extents.get(line_no, line_no)

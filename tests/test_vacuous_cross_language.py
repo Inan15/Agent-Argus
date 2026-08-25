@@ -724,8 +724,17 @@ def test_non_ascii_identifiers_are_matched_and_do_not_disturb_the_vocabulary(
 def test_provenance_scan_anchors_no_pattern_with_caret_or_dollar() -> None:
     """TC-ArgusAgent-DETECT-001-130 — AC7.1 / ``DF-14-2-B``: the docstring claim, made checkable.
 
-    **Observable:** ``argus/detectors/provenance_scan.py`` contains no ``^``- or
-    ``$``-anchored regular expression.
+    **Observable:** no module under ``argus/detectors/`` contains a ``^``- or ``$``-anchored
+    regular expression.
+
+    ⛔ **POPULATION WIDENED 2026-08-25 (Story 17.3 / AC9.11), and widened is all it is.** It
+    was scoped to ``provenance_scan.py`` alone, so a NEW module under ``argus/detectors/``
+    carrying regexes was UNSWEPT — and Story 17.3 adds exactly that
+    (``argus/detectors/assertion_strength.py``). Widening a population is the direction
+    ``test_module_size_ceiling._REMEDY`` demands (*"do NOT narrow this guard's population"*);
+    ⛔ no assertion below was removed, relaxed or narrowed, both positive controls still drive
+    the predicate to BOTH outcomes, and the predicate itself is untouched — forking a second
+    sweep would have been the ``AR7`` defect this file exists to close.
 
     That module's docstring has claimed *"no pattern below is anchored with ``$``"* since
     Story 14.1. **The claim was false when it was written**: ``_ASSIGNMENT_RE`` was
@@ -748,18 +757,42 @@ def test_provenance_scan_anchors_no_pattern_with_caret_or_dollar() -> None:
     ``re.MULTILINE`` is exactly ``\\A``), which is precisely why reading the ledger entry
     alone would have left it in place.
     """
-    source = Path(provenance_scan.__file__).read_text(encoding="utf-8")
-    # Only the pattern strings, so prose in a docstring naming the anchors does not trip it.
-    patterns = re.findall(r"re\.compile\(\s*((?:rf?\"[^\"]*\"\s*)+)", source)
-    assert len(patterns) >= 4, (
-        f"non-vacuity: only {len(patterns)} compiled pattern(s) were extracted from "
-        f"provenance_scan.py, so this sweep would pass without observing anything"
+    detector_root = Path(provenance_scan.__file__).resolve().parent
+    modules = sorted(
+        path for path in detector_root.glob("*.py") if "__pycache__" not in path.parts
     )
-    offenders = [p for p in patterns if _anchors_on_caret_or_dollar(p)]
+    assert len(modules) >= 6, (
+        f"non-vacuity: the widened sweep found only {len(modules)} module(s) under "
+        f"{detector_root.name}/, so it is not reading the package it claims to"
+    )
+    offenders: list[tuple[str, str]] = []
+    extracted = 0
+    scanned_provenance = False
+    for module in modules:
+        source = module.read_text(encoding="utf-8")
+        # Only the pattern strings, so prose in a docstring naming the anchors does not trip it.
+        patterns = re.findall(r"re\.compile\(\s*((?:rf?\"[^\"]*\"\s*)+)", source)
+        extracted += len(patterns)
+        if module.name == "provenance_scan.py":
+            scanned_provenance = True
+            assert len(patterns) >= 4, (
+                f"non-vacuity: only {len(patterns)} compiled pattern(s) were extracted from "
+                f"provenance_scan.py, so this sweep would pass without observing anything"
+            )
+        offenders.extend(
+            (module.name, pattern)
+            for pattern in patterns
+            if _anchors_on_caret_or_dollar(pattern)
+        )
+    assert scanned_provenance, "the widened population lost provenance_scan.py itself"
+    assert extracted >= 6, (
+        f"non-vacuity: only {extracted} compiled pattern(s) were extracted from the whole "
+        f"detector package, so this sweep would pass without observing anything"
+    )
     assert not offenders, (
-        "a `^`/`$`-anchored pattern is back in provenance_scan.py, contradicting that "
-        "module's platform-neutrality docstring. Use `\\A`/`\\Z`, which no line terminator "
-        f"can satisfy: {offenders!r}"
+        "a `^`/`$`-anchored pattern is back in argus/detectors/, contradicting "
+        "provenance_scan.py's platform-neutrality docstring. Use `\\A`/`\\Z`, which no line "
+        f"terminator can satisfy: {offenders!r}"
     )
     # POSITIVE CONTROLS — the sweep is watched FAILING, and watched not over-reaching. Both
     # matter: the version of this predicate written first reported `[^=]` as an anchor, which

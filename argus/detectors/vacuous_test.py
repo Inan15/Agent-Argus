@@ -174,8 +174,10 @@ from argus.detectors.base import (
     FindingDraft,
     build_recording,
 )
+from argus.detectors.assertion_strength import grade_span_assertions, s1_corroborated
 from argus.detectors.provenance_scan import (
     body_statement_count,
+    candidate_sut_edges,
     opens_bare_assert,
     provenance_evidence,
 )
@@ -238,6 +240,53 @@ class VacuousTestScore(BaseModel):
     )
     ast_corroborated: bool = Field(
         ..., description="True iff the Tier-A AST subset corroborated the vacuity (verdict-eligible)."
+    )
+
+
+# NOT added to ``__all__``: ``TC-ArgusAgent-DETECT-001-143`` pins that list at NINE entries
+# as the 2026-08-22 cohesion split's API promise, and a guard is never edited to accommodate
+# new code (DF-8-5-B). This class is imported by path, exactly as the new
+# ``argus/detectors/assertion_strength.py`` module is.
+class SuccessorVacuityEvidence(BaseModel):
+    """Story 17.3's SUCCESSOR-predicate evidence for one span — a SIBLING of
+    :class:`VacuousTestScore`, deliberately not a widening of it.
+
+    ⛔ **Why a sibling and not four more fields on the score** (§1.4.3 offers both; this is
+    the measured reason for the choice). ``TC-ArgusAgent-DETECT-001-119``
+    (``tests/test_vacuous_density.py``) pins ``set(VacuousTestScore.model_fields)`` EXACTLY,
+    so a field with a default does not save you — §1.4.6 measured only the four modules that
+    CONSTRUCT the score, not the guard that pins its shape. Widening the score would mean
+    editing a guard that is green, in a file outside this story's write set, to make it stay
+    green: precisely ``DF-8-5-B``. The evidence therefore lands beside the score.
+
+    Frozen, ``extra="forbid"``, COUNTS ONLY, no ``float`` (NFR-D2 / AR4). ⛔ Nothing here
+    reaches a ``.argus/``-bound output: ``FindingDraft``, ``DetectorResult`` and ``Recording``
+    are NOT widened, because ``DN-18-4-6`` measured that the FR10 evidence-plumbing gap is
+    repository-wide and widening one detector in isolation is the wrong shape of repair. That
+    gap stays OPEN and this story does not touch it.
+    """
+
+    model_config = ConfigDict(frozen=True, extra="forbid")
+
+    assertions_none: int = Field(
+        ..., ge=0, description="Assertions grading at the WEAKEST band (Story 17.3 scale)."
+    )
+    assertions_existence: int = Field(
+        ..., ge=0, description="Assertions constraining only existence/truthiness/type."
+    )
+    assertions_value: int = Field(
+        ..., ge=0, description="Assertions constraining WHAT an SUT-derived value is."
+    )
+    assertions_unestablished: int = Field(
+        ..., ge=0, description="Assertions the scale could not assign (NFR-R1; S1 refuses)."
+    )
+    s1_corroborated: bool = Field(
+        ...,
+        description=(
+            "True iff the SUCCESSOR predicate S1 corroborates this span. ⛔ ADVISORY: it "
+            "moves no verdict_eligible, no rule_id and no depth_supported in Epic 17 "
+            "(successor-vacuity-predicate-specification.md section 6.5)."
+        ),
     )
 
 
@@ -735,6 +784,43 @@ class VacuousTestDetector:
         )
 
     @staticmethod
+    def successor_evidence(
+        source_lines: list[str],
+        span_edges: list[CodeEdge],
+        start: int,
+        end: int,
+    ) -> SuccessorVacuityEvidence:
+        """Story 17.3's SUCCESSOR predicate and its grading, for one span (AC5, §1.4).
+
+        ⛔ **COMPOSITION ONLY.** Both halves are the PUBLIC shipped functions in
+        ``argus.detectors.assertion_strength``; nothing is re-derived here, so Story 17.4
+        measures the same predicate this detector would report (AC5.6). Reading this method
+        and reading ``s1_corroborated`` must never be able to give different answers.
+
+        ⛔ **IT DECIDES NOTHING, AND IT IS NOT ON ``run()``'s PATH.** ``run()``'s
+        ``rule_id``, ``depth_supported`` and ``advisory`` stay driven by
+        ``score.ast_corroborated`` alone and ``_ast_corroborated``'s return expression is
+        unchanged (specification §6.5; ``TC-ArgusAgent-PRECISION-001-146``).
+
+        ⛔ **§1.4.5's question, ANSWERED AND RECORDED rather than left to a short-circuit.**
+        It is computed for NEITHER *"every scored span"* NOR *"only the flagged ones"*: it is
+        computed **on demand**, off ``run()`` entirely. The reason is measured — the evidence
+        has nowhere to travel to (§1.4.4: ``Recording`` has no field that could hold it, and
+        ``DN-18-4-6`` refused widening one detector in isolation), so wiring it into ``_score``
+        would put a second full span scan on the flagged path to produce a value that is then
+        discarded. Story 17.4's measurement is unaffected either way: the 1,032 recorded corpus
+        findings are all heuristic findings, and this method scores any span it is given.
+        """
+        counts = grade_span_assertions(source_lines, span_edges, start, end)
+        return SuccessorVacuityEvidence(
+            assertions_none=counts.none,
+            assertions_existence=counts.existence,
+            assertions_value=counts.value,
+            assertions_unestablished=counts.unestablished,
+            s1_corroborated=s1_corroborated(source_lines, span_edges, start, end),
+        )
+
+    @staticmethod
     def _sut_call_sites(span_edges: list[CodeEdge]) -> list[CodeEdge]:
         """Candidate SUT calls: non-assertion, non-mock callees in the test span (fact a).
 
@@ -743,13 +829,17 @@ class VacuousTestDetector:
         the vocabulary here can only SHRINK the candidate SUT set, which is a direction that
         moves fact (a) and fact (b) towards an accusation; the frozen table is what stops
         Story 14.3's four-language widening from reaching the moat.
+
+        ⛔ The FILTER itself is ``provenance_scan.candidate_sut_edges`` — THE one
+        derivation of *"is this span edge a candidate SUT call"* in ``argus/**``, shared with
+        fact (b)'s classification and with Story 17.3's grader (AR7/§3.3, ``-151``). This
+        method is the corroboration path's binding of the vocabulary, not a second predicate.
         """
-        return [
-            e
-            for e in span_edges
-            if e.callee not in _CORROBORATION_ASSERTION_CALLEES
-            and e.callee not in _MOCK_CALLEES
-        ]
+        return candidate_sut_edges(
+            span_edges,
+            assertion_callees=_CORROBORATION_ASSERTION_CALLEES,
+            mock_callees=_MOCK_CALLEES,
+        )
 
     def _ast_corroborated(
         self,
