@@ -758,3 +758,280 @@ def test_TC_ArgusAgent_PRECISION_001_141_the_criterion_cannot_look_fetch_or_writ
         "the population and the successor-output path set must both be declared and non-empty; "
         "an empty one makes every absence asserted about them an absence over nothing."
     )
+
+
+# ═════════════════════════════════════════════════════════════════════════════════════════
+# AC4.3 — the ordering, proved from the object database rather than promised in prose
+# ═════════════════════════════════════════════════════════════════════════════════════════
+
+
+def test_TC_ArgusAgent_PRECISION_001_139_the_criterion_precedes_every_successor_output() -> None:
+    """TC-ArgusAgent-PRECISION-001-139 — AC4.2/AC4.3: the ordering claim, checked MECHANICALLY.
+
+    **Observable.** The commits reachable from ``PREREGISTRATION_COMMIT_SHA`` that touch any
+    declared ``SUCCESSOR_OUTPUT_PATHS`` entry. The claim is that there are **none**.
+
+    **Why it matters.** Story 17.1's entire value is the ORDER: the criterion was fixed while the
+    verdict-eligible population was still zero. An intention to decide-before-looking is not
+    evidence of having done so — git history is the evidence, and an asserted intention is not.
+
+    **Three non-vacuity preconditions, each asserted BEFORE the absence it protects** (``-75``'s
+    answer, reused verbatim rather than re-invented):
+
+    1. the declared successor-output path set is **non-empty** — an empty pathspec makes
+       ``git log`` report everything or nothing depending on invocation, and either way the
+       assertion below would be meaningless;
+    2. ``git log`` over a **control path known to carry commits** returns **non-empty** — this is
+       the one that matters, because a misspelled or moved pathspec returns empty and is
+       **indistinguishable from a clean ordering**;
+    3. the ancestry predicate is driven to **BOTH** outcomes — asserted ``True`` for
+       criterion-to-``HEAD`` and ``False`` for ``HEAD``-to-criterion — so it is watched
+       **failing**, not only passing. Both use real resolvable shas in this repository; neither
+       fabricates one.
+
+    ⛔ **The ancestry guard over commits LATER than the pre-registration is Story 17.4's, not this
+    story's.** 17.4 imports ``PREREGISTRATION_COMMIT_SHA`` and ``SUCCESSOR_OUTPUT_PATHS`` from the
+    criterion module and re-types neither (``DN-16-4-2`` / ``AI-E9-7``).
+    """
+    from precision_preregistration import PREREGISTRATION_COMMIT_SHA
+
+    # ── Precondition 0: the sha RESOLVES. Every assertion below is vacuous without it. ──
+    assert PREREGISTRATION_COMMIT_SHA is not None, (
+        "PREREGISTRATION_COMMIT_SHA is still None. A commit cannot contain its own sha, so it is "
+        "written by the commit AFTER the one that froze the criterion — but it must be written."
+    )
+    assert len(PREREGISTRATION_COMMIT_SHA) == 40 and PREREGISTRATION_COMMIT_SHA.islower(), (
+        "the pre-registration sha must be recorded as a full 40-character lowercase hex sha — a "
+        "short sha is ambiguous, and this is the story's central citation."
+    )
+    kind = _git("cat-file", "-t", PREREGISTRATION_COMMIT_SHA)
+    assert kind.returncode == 0 and kind.stdout.strip() == "commit", (
+        f"the recorded pre-registration sha {PREREGISTRATION_COMMIT_SHA} does not resolve to a "
+        f"commit in this repository (git said {kind.stdout.strip()!r} / "
+        f"{kind.stderr.strip()!r}). The ordering claim is a claim about git history and cannot "
+        "be established against a sha that is not in it."
+    )
+
+    # ── Precondition 1: the declared output-path set is non-empty. ──
+    assert SUCCESSOR_OUTPUT_PATHS, (
+        "SUCCESSOR_OUTPUT_PATHS is empty, so the absence asserted below is an absence over "
+        "nothing. Declare where a successor predicate's output would land, or this guard forbids "
+        "nothing."
+    )
+    assert all(
+        path and not path.startswith("/") and "\\" not in path
+        for path in SUCCESSOR_OUTPUT_PATHS
+    ), (
+        "every SUCCESSOR_OUTPUT_PATHS entry must be repository-relative and forward-slash so the "
+        "same string works as a git pathspec on both the Windows local gate and the ubuntu CI "
+        f"matrix; got {list(SUCCESSOR_OUTPUT_PATHS)}."
+    )
+
+    # ── Precondition 2: prove the invocation can FIND something. ──
+    control = _git(
+        "log", "--format=%H", PREREGISTRATION_COMMIT_SHA, "--", _CONTROL_PATH_WITH_COMMITS
+    )
+    assert control.returncode == 0, f"control `git log` failed: {control.stderr.strip()!r}"
+    control_commits = [line for line in control.stdout.splitlines() if line.strip()]
+    assert control_commits, (
+        f"`git log {PREREGISTRATION_COMMIT_SHA} -- {_CONTROL_PATH_WITH_COMMITS}` returned "
+        "NOTHING. That path is known to carry commits, so this invocation is not capable of "
+        "finding anything — and an invocation that finds nothing reports a clean ordering for a "
+        "dirty one. The guard below would be vacuous; fix the invocation, never the assertion."
+    )
+
+    # ── THE CLAIM: no commit reachable from the criterion touches successor output. ──
+    touching = _git(
+        "log", "--format=%H", PREREGISTRATION_COMMIT_SHA, "--", *SUCCESSOR_OUTPUT_PATHS
+    )
+    assert touching.returncode == 0, f"`git log` failed: {touching.stderr.strip()!r}"
+    offenders = [line for line in touching.stdout.splitlines() if line.strip()]
+    assert not offenders, (
+        f"{len(offenders)} commit(s) reachable from the pre-registration sha touch a declared "
+        f"successor-output path {list(SUCCESSOR_OUTPUT_PATHS)}: {offenders[:5]}. The criterion "
+        "would then have been fixed with a successor's output already in hand, which is exactly "
+        "the failure Story 17.1 exists to prevent — a standard chosen once the result is in view."
+    )
+
+    # ── Precondition 3: the ancestry predicate, driven to BOTH outcomes. ──
+    forward = _git("merge-base", "--is-ancestor", PREREGISTRATION_COMMIT_SHA, "HEAD")
+    assert forward.returncode == 0, (
+        f"the pre-registration commit {PREREGISTRATION_COMMIT_SHA} is NOT an ancestor of HEAD. It "
+        "is on a detached or abandoned line of history, so it does not establish that the "
+        "criterion preceded anything on the branch that shipped."
+    )
+    backward = _git("merge-base", "--is-ancestor", "HEAD", PREREGISTRATION_COMMIT_SHA)
+    assert backward.returncode != 0, (
+        "HEAD reports as an ancestor of the pre-registration commit, which cannot be true while "
+        "the pre-registration commit is also an ancestor of HEAD unless they are the same "
+        "commit. The ancestry predicate is therefore returning the same answer to both questions "
+        "and is not discriminating anything — the forward assertion above proves nothing."
+    )
+
+
+# ═════════════════════════════════════════════════════════════════════════════════════════
+# AC4.5 — the criterion is DIRECTIONALLY immutable: it may be strengthened, never loosened
+# ═════════════════════════════════════════════════════════════════════════════════════════
+
+
+def _module_level_literal(source: str, name: str) -> object:
+    """The value module-level *name* is assigned, read from *source*'s AST. PURE.
+
+    ``ast.literal_eval`` rather than ``exec``: the pinned blob is read to be COMPARED, and
+    executing a historical revision of a module to find out what it said is a different and much
+    larger act than parsing it.
+    """
+    for node in ast.walk(ast.parse(source)):
+        targets: list[ast.expr] = []
+        if isinstance(node, ast.Assign):
+            targets = list(node.targets)
+        elif isinstance(node, ast.AnnAssign):
+            targets = [node.target]
+        else:
+            continue
+        for target in targets:
+            if isinstance(target, ast.Name) and target.id == name and node.value is not None:
+                try:
+                    return ast.literal_eval(node.value)
+                except ValueError:
+                    return None
+    raise AssertionError(
+        f"no module-level assignment to {name!r} was found in the pinned source. The frozen "
+        "field set cannot be read, so the immutability check below would compare nothing."
+    )
+
+
+def _threshold_from(source: str) -> Fraction:
+    """``PRECISION_GATE_THRESHOLD`` as an exact Fraction, read out of *source*'s AST. PURE.
+
+    Read from the pinned ``replay_harness`` blob rather than assumed: the criterion RESOLVES its
+    ratio floor, so *the ratio at the pin* is whatever protocol section 5's threshold was at the
+    pin. A guard that compared today's value with today's value would be ``f(x) == f(x)``.
+    """
+    for node in ast.walk(ast.parse(source)):
+        if not isinstance(node, ast.Assign):
+            continue
+        for target in node.targets:
+            if isinstance(target, ast.Name) and target.id == _THRESHOLD_SYMBOL:
+                call = node.value
+                assert isinstance(call, ast.Call), (
+                    f"{_THRESHOLD_SYMBOL} is not built by a call in the pinned blob; the ratio "
+                    "floor at the pin cannot be read exactly and AR4 forbids approximating it."
+                )
+                args = [ast.literal_eval(arg) for arg in call.args]
+                return Fraction(*args)
+    raise AssertionError(
+        f"{_THRESHOLD_SYMBOL} was not found in the pinned {_THRESHOLD_REL_PATH}, so the ratio "
+        "floor at the pin cannot be established."
+    )
+
+
+def test_TC_ArgusAgent_PRECISION_001_140_the_criterion_may_only_be_strengthened() -> None:
+    """TC-ArgusAgent-PRECISION-001-140 — AC4.5: strengthening only, enforced DIRECTIONALLY.
+
+    **Observable.** The frozen field set read from the PINNED BLOB at
+    ``PREREGISTRATION_COMMIT_SHA`` — ``POPULATION_ID``, ``PROTOCOL_VERSION``, the ratio floor and
+    ``MAX_FALSE_ACCUSATION_EXPOSURE`` — compared against today's live values.
+
+    **The direction is the whole point** (``DN-17-1-6``). Equality alone would make the criterion
+    unamendable, and protocol section 5 is amended by dated addition precisely because an
+    amendment can only make clearing HARDER. So:
+
+    * ``ceiling <= ceiling_at_pin`` — the exposure cap may be **lowered**, never raised;
+    * ``ratio >= ratio_at_pin`` — the precision floor may be **raised**, never lowered;
+    * ``POPULATION_ID`` and ``PROTOCOL_VERSION`` **equal** — moving either is not a strengthening,
+      it is measuring something else and calling it the same criterion.
+
+    ⛔ ``PREREGISTRATION_COMMIT_SHA`` itself is **excluded** from the frozen field set: the commit
+    that records it legitimately writes it, and including it would make the guard red by
+    construction (section 2.2 of the story record).
+
+    **Non-vacuity, asserted BEFORE the comparison:** the sha resolves and is an ancestor of HEAD;
+    both pinned blobs are fetched and PARSE; each frozen field is actually FOUND in the pinned
+    source (a missing name raises rather than defaulting to today's value); and the ratio at the
+    pin is read from the pinned ``replay_harness`` blob rather than from the live import, so the
+    comparison is not ``f(x) == f(x)``.
+
+    **Adversarial, EXECUTED:** the directional predicate is driven to both outcomes on generated
+    values — a loosened ceiling and a lowered ratio must both be rejected, and a strengthened
+    ceiling and a raised ratio must both be accepted.
+    """
+    from precision_preregistration import PREREGISTRATION_COMMIT_SHA
+
+    assert PREREGISTRATION_COMMIT_SHA is not None
+    ancestry = _git("merge-base", "--is-ancestor", PREREGISTRATION_COMMIT_SHA, "HEAD")
+    assert ancestry.returncode == 0, (
+        f"{PREREGISTRATION_COMMIT_SHA} is not an ancestor of HEAD; the pin does not describe "
+        "this branch's history."
+    )
+
+    pinned = _pinned_blob(PREREGISTRATION_COMMIT_SHA, _CRITERION_REL_PATH)
+    assert pinned.returncode == 0, (
+        f"`git show {PREREGISTRATION_COMMIT_SHA}:{_CRITERION_REL_PATH}` failed: "
+        f"{pinned.stderr.strip()!r}. The frozen criterion is unreadable, so nothing below is a "
+        "comparison."
+    )
+    pinned_source = pinned.stdout
+    assert pinned_source.strip(), "the pinned criterion blob is empty"
+    ast.parse(pinned_source)  # a blob that does not parse makes every read below meaningless
+
+    pinned_threshold_blob = _pinned_blob(PREREGISTRATION_COMMIT_SHA, _THRESHOLD_REL_PATH)
+    assert pinned_threshold_blob.returncode == 0, (
+        f"`git show {PREREGISTRATION_COMMIT_SHA}:{_THRESHOLD_REL_PATH}` failed: "
+        f"{pinned_threshold_blob.stderr.strip()!r}."
+    )
+
+    population_at_pin = _module_level_literal(pinned_source, "POPULATION_ID")
+    protocol_at_pin = _module_level_literal(pinned_source, "PROTOCOL_VERSION")
+    ceiling_at_pin = _module_level_literal(pinned_source, "MAX_FALSE_ACCUSATION_EXPOSURE")
+    ratio_at_pin = _threshold_from(pinned_threshold_blob.stdout)
+
+    assert isinstance(population_at_pin, str) and population_at_pin, (
+        "POPULATION_ID at the pin is empty or not a string; the equality below would hold "
+        "trivially."
+    )
+    assert isinstance(ceiling_at_pin, int) and ceiling_at_pin > 0, (
+        f"the exposure ceiling at the pin read as {ceiling_at_pin!r}; a non-positive or "
+        "unreadable ceiling makes the directional comparison meaningless."
+    )
+    assert isinstance(ratio_at_pin, Fraction) and 0 < ratio_at_pin <= 1
+
+    # ── THE CLAIM: equal where it must be equal, directional where it may move. ──
+    assert POPULATION_ID == population_at_pin, (
+        "POPULATION_ID has MOVED since the criterion was frozen. Measuring a different "
+        "population is not a strengthening of the criterion — it is a different criterion "
+        "wearing the same name and the same date."
+    )
+    assert PROTOCOL_VERSION == protocol_at_pin, (
+        f"PROTOCOL_VERSION has moved from {protocol_at_pin!r} to {PROTOCOL_VERSION!r} since the "
+        "pin. A pre-registration folded across an amendment is a re-interpretation of judgements "
+        "nobody re-made."
+    )
+    assert MAX_FALSE_ACCUSATION_EXPOSURE <= ceiling_at_pin, (
+        f"the exposure ceiling has been RAISED from {ceiling_at_pin} to "
+        f"{MAX_FALSE_ACCUSATION_EXPOSURE}. STRENGTHENING ONLY: the ceiling may be lowered and "
+        "never raised once the criterion is pinned. Raising it after the fact permits more false "
+        "accusations than were pre-registered, which is the defect this story exists to prevent."
+    )
+    assert precision_floor() >= ratio_at_pin, (
+        f"the ratio floor has been LOWERED from {ratio_at_pin} to {precision_floor()}. "
+        "STRENGTHENING ONLY: it may be raised and never lowered."
+    )
+
+    # ── RED, EXECUTED: the direction predicate driven to BOTH outcomes on generated values. ──
+    def strengthening(ceiling: int, ratio: Fraction) -> bool:
+        return ceiling <= ceiling_at_pin and ratio >= ratio_at_pin
+
+    assert strengthening(ceiling_at_pin, ratio_at_pin), "an unchanged criterion must be accepted"
+    assert strengthening(ceiling_at_pin - 1, ratio_at_pin), "a LOWERED ceiling must be accepted"
+    assert strengthening(ceiling_at_pin, ratio_at_pin + Fraction(1, 100)), (
+        "a RAISED ratio floor must be accepted — protocol section 5's own amendments are "
+        "permitted precisely because they can only make clearing harder."
+    )
+    assert not strengthening(ceiling_at_pin + 1, ratio_at_pin), (
+        "a RAISED ceiling was accepted, so the directional predicate is not directional and the "
+        "assertions above are equality checks that happen to pass."
+    )
+    assert not strengthening(ceiling_at_pin, ratio_at_pin - Fraction(1, 100)), (
+        "a LOWERED ratio floor was accepted, so the ratio arm of the asymmetry is inert."
+    )

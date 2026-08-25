@@ -511,9 +511,9 @@ SUCCESSOR_OUTPUT_PATHS: tuple[str, ...] = (
 #: ⛔ Story 17.4 IMPORTS this constant and :data:`SUCCESSOR_OUTPUT_PATHS` from here and re-types
 #: neither (``DN-16-4-2`` / ``AI-E9-7``). The ancestry guard over LATER commits is 17.4's to
 #: write, not this story's.
-# Commit A lands this as ``None``; commit B fills it. See DN-17-1-7 and section 2.2 of the
-# story record for the three-commit arc that makes that ordering provable.
-PREREGISTRATION_COMMIT_SHA: str | None = None
+# Landed as ``None`` by the commit below and filled by the one after it (DN-17-1-7). See
+# section 2.2 of the story record for the three-commit arc that makes the ordering provable.
+PREREGISTRATION_COMMIT_SHA = "f906d04997b391bea4592aabc0343d1234b3b060"
 
 
 # ---------------------------------------------------------------------------------------------

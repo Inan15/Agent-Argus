@@ -4,7 +4,7 @@ baseline_commit: c2ce00f
 
 # Story 17.1: Write down what would count as precision, before the number exists
 
-Status: in-progress
+Status: review
 
 <!-- Contexted 2026-08-25 at HEAD `c2ce00f` (branch `docs/merge-strategy-decision`, working tree
      CLEAN) by the create-story workflow (Opus 5).
@@ -888,101 +888,101 @@ sha (`AI-E13-1`; epic-18 retro SD-4).
 
 ### ⛔ Task 0 — RE-MEASURE §0 BEFORE WRITING ANYTHING (AC1.7, AC3.2, AC7)
 
-- [ ] 0.1 Confirm `git status --porcelain` is **empty** (or that every dirty path belongs to the
+- [x] 0.1 Confirm `git status --porcelain` is **empty** (or that every dirty path belongs to the
       peer session and is none of AC6.1's). Record `git rev-parse HEAD`.
-- [ ] 0.2 Re-derive **§0.1**'s four floors and five vocabulary sizes by importing and calling.
-- [ ] 0.3 Re-derive **§0.2**'s per-member table from `adjudication-set-13-5.json`, and cross-check
+- [x] 0.2 Re-derive **§0.1**'s four floors and five vocabulary sizes by importing and calling.
+- [x] 0.3 Re-derive **§0.2**'s per-member table from `adjudication-set-13-5.json`, and cross-check
       `1032` against `silent-class-record.json`'s `population_walked`.
-- [ ] 0.4 Re-derive **§0.4**: `sealed ∩ eligible`. ⛔ **If it is non-empty, STOP** — a §6 R2
+- [x] 0.4 Re-derive **§0.4**: `sealed ∩ eligible`. ⛔ **If it is non-empty, STOP** — a §6 R2
       ratification happened and the whole criterion needs re-shaping (AC7).
-- [ ] 0.5 Re-derive **§0.5**: `class_by_corpus_member` from `silent-class-record.json`; confirm
+- [x] 0.5 Re-derive **§0.5**: `class_by_corpus_member` from `silent-class-record.json`; confirm
       **2** contributing members.
-- [ ] 0.6 Re-derive **§0.6** twice — from the working-tree file **and** from the pinned blob at
+- [x] 0.6 Re-derive **§0.6** twice — from the working-tree file **and** from the pinned blob at
       `6c59115` — and confirm **26 FP / 31 rows / 0 TP** both ways and that `6c59115` is an
       ancestor of `HEAD`. ⛔ **If 26 does not reproduce, STOP** (AC7).
-- [ ] 0.7 Re-read **§0.7** at HEAD: the four `if TYPE_CHECKING:` pins and `-145`/`-146`.
-- [ ] 0.8 Confirm `-135` is still the next free `PRECISION-001` id.
-- [ ] 0.9 Record every row that came out **different**, with the new value. ⛔ **Record it; do not
+- [x] 0.7 Re-read **§0.7** at HEAD: the four `if TYPE_CHECKING:` pins and `-145`/`-146`.
+- [x] 0.8 Confirm `-135` is still the next free `PRECISION-001` id.
+- [x] 0.9 Record every row that came out **different**, with the new value. ⛔ **Record it; do not
       smooth it.**
 
 ### Task 1 — THE CRITERION AS CODE (AC1.1–AC1.5, AC2.1–AC2.4, AC4.1)
 
-- [ ] 1.1 Create `scripts/precision_preregistration.py`. Module docstring states: what a
+- [x] 1.1 Create `scripts/precision_preregistration.py`. Module docstring states: what a
       pre-registration is, why it is dated, the 2026-08-17 precedent, and ⛔ that nothing here
       ratifies/fetches/spends.
-- [ ] 1.2 `precision_floor()` and `resolution_floors()` — **resolving** calls only. No literals.
-- [ ] 1.3 `POPULATION_ID` / `POPULATION_DERIVATION` / `POPULATION_SOURCE_ARTIFACTS` — the five
+- [x] 1.2 `precision_floor()` and `resolution_floors()` — **resolving** calls only. No literals.
+- [x] 1.3 `POPULATION_ID` / `POPULATION_DERIVATION` / `POPULATION_SOURCE_ARTIFACTS` — the five
       ratified members, their pinned shas, the rule class, the count 1,032, the two artifacts.
-- [ ] 1.4 `PROTOCOL_VERSION = "V1.3"` + the change-log-head check (AC1.2).
-- [ ] 1.5 `MAX_FALSE_ACCUSATION_EXPOSURE = 26`, `EXPOSURE_CEILING_DERIVATION`,
+- [x] 1.4 `PROTOCOL_VERSION = "V1.3"` + the change-log-head check (AC1.2).
+- [x] 1.5 `MAX_FALSE_ACCUSATION_EXPOSURE = 26`, `EXPOSURE_CEILING_DERIVATION`,
       `EXPOSURE_SOURCE_PATH`, `EXPOSURE_SOURCE_SHA` — with §1.3's four rejected alternatives named
       in the derivation string, and the *"never resolved live"* reason on the line (AC2.3).
-- [ ] 1.6 `CONSEQUENCE_BELOW` / `CONSEQUENCE_MET` — §1.4 verbatim, both ⛔ clauses included.
-- [ ] 1.7 `SUCCESSOR_OUTPUT_PATHS` — non-empty, successor-scoped, repository-relative,
+- [x] 1.6 `CONSEQUENCE_BELOW` / `CONSEQUENCE_MET` — §1.4 verbatim, both ⛔ clauses included.
+- [x] 1.7 `SUCCESSOR_OUTPUT_PATHS` — non-empty, successor-scoped, repository-relative,
       resolved **by the caller** (`DETECTOR_TUNING_PATHS`' treatment, `DF-9-2-A`).
-- [ ] 1.8 `CRITERION_OUTCOMES` (`MET` / `NOT_MET` / `UNEVALUABLE`) — refusing an unregistered
+- [x] 1.8 `CRITERION_OUTCOMES` (`MET` / `NOT_MET` / `UNEVALUABLE`) — refusing an unregistered
       member, `GATE_OUTCOMES`' shape. `UNEVALUABLE` reached from `CONDITION_VERDICTS`.
-- [ ] 1.9 `evaluate(...) -> CriterionAssessment` — a pure fold taking the eligible count, the
+- [x] 1.9 `evaluate(...) -> CriterionAssessment` — a pure fold taking the eligible count, the
       contributing-member count, the sealed-contributing count, and the TP/FP counts; returning the
       outcome **plus the counts that produced it**. ⛔ Resolution floors evaluated **before** the
       ratio, exactly as `fold_adjudicated_precision` evaluates reproducibility first.
-- [ ] 1.10 `PREREGISTRATION_COMMIT_SHA = None` for commit A.
+- [x] 1.10 `PREREGISTRATION_COMMIT_SHA = None` for commit A.
 
 ### Task 2 — THE DATED DOCUMENT (AC1.6, AC2.5, AC3.1)
 
-- [ ] 2.1 Write `successor-predicate-precision-preregistration.md`: date **2026-08-25**, author
+- [x] 2.1 Write `successor-predicate-precision-preregistration.md`: date **2026-08-25**, author
       role, epic/story, and every field — **citing the module's constants by name rather than
       restating their values where a value is pinned elsewhere** (`AI-E9-7`).
-- [ ] 2.2 State **§0.4** in terms: `sealed ∩ ratified` is empty, the seal condition reads FAILED,
+- [x] 2.2 State **§0.4** in terms: `sealed ∩ ratified` is empty, the seal condition reads FAILED,
       the criterion judges the **successor**, the gate stays `BLOCKED`.
-- [ ] 2.3 State **§0.5** in terms: both known candidates draw from 2 members and are
+- [x] 2.3 State **§0.5** in terms: both known candidates draw from 2 members and are
       `UNEVALUABLE` on breadth as they stand.
-- [ ] 2.4 State the four rejected ceilings and the strengthening-only asymmetry (AC2.5).
-- [ ] 2.5 State AC3's five clauses **in terms**, and `AI-E16-7` as a **17.4 precondition**.
-- [ ] 2.6 ⛔ Contains no undenied `_STATUS_CLAIMS` phrase; ⛔ contains no closure verb on a line
+- [x] 2.4 State the four rejected ceilings and the strengthening-only asymmetry (AC2.5).
+- [x] 2.5 State AC3's five clauses **in terms**, and `AI-E16-7` as a **17.4 precondition**.
+- [x] 2.6 ⛔ Contains no undenied `_STATUS_CLAIMS` phrase; ⛔ contains no closure verb on a line
       naming a `DF-*` id; ⛔ **not** added to `_STATUS_DOCUMENTS` (§2.4).
 
 ### Task 3 — THE GUARDS THAT DO NOT NEED A SHA (AC5, AC2.4, AC3.3)
 
-- [ ] 3.1 Create `tests/test_precision_preregistration.py`; module docstring in the
+- [x] 3.1 Create `tests/test_precision_preregistration.py`; module docstring in the
       `test_candidate_selection.py` form — area, why no new area is opened, and the vacuity it is
       built against.
-- [ ] 3.2 `-135`, `-136`, `-137`, `-138`, `-141`. Each: precondition asserted first, assertion,
+- [x] 3.2 `-135`, `-136`, `-137`, `-138`, `-141`. Each: precondition asserted first, assertion,
       then an **executed** adversarial mutation.
-- [ ] 3.3 Run each one RED at its **real seam** before it is green; record the id, the mutation and
+- [x] 3.3 Run each one RED at its **real seam** before it is green; record the id, the mutation and
       the observation. (`.argus/guard-fires.jsonl` records automatically — **do not hand-write it**.)
 
 ### Task 4 — PROVE NOTHING MOVED (AC3.2, AC3.4, AC6.3)
 
-- [ ] 4.1 Re-measure AC3.2's five constants; record **before → after**.
-- [ ] 4.2 `git status --porcelain` — confirm `argus/**`, `tests/corpus/**`, `validation-corpus/**`,
+- [x] 4.1 Re-measure AC3.2's five constants; record **before → after**.
+- [x] 4.2 `git status --porcelain` — confirm `argus/**`, `tests/corpus/**`, `validation-corpus/**`,
       `precision-validation-protocol.md`, `deferred-work.md`, `epics.md`, `architecture.md`,
       `E-PRD/prd.md` are **all absent** from the diff.
-- [ ] 4.3 Confirm no dogfood artifact changed and no `code_identity` moved.
+- [x] 4.3 Confirm no dogfood artifact changed and no `code_identity` moved.
 
 ### Task 5 — THE ARC, THE SHA, AND THE ORDERING GUARDS (AC4.2–AC4.5, AC6.2, AC6.4, AC6.7)
 
-- [ ] 5.0 Commit **O** (`chore`) — this story file + `sprint-status.yaml` `ready-for-dev` →
+- [x] 5.0 Commit **O** (`chore`) — this story file + `sprint-status.yaml` `ready-for-dev` →
       `in-progress`, and **nothing else** — before any of Tasks 1–4 is staged.
-- [ ] 5.1 Stage **by explicit path** and make **commit A** (`feat`). ⛔ Verify with
+- [x] 5.1 Stage **by explicit path** and make **commit A** (`feat`). ⛔ Verify with
       `git show --stat` that it touches **no** `SUCCESSOR_OUTPUT_PATHS` entry.
-- [ ] 5.2 Read commit A's **full 40-hex** sha; write it into `PREREGISTRATION_COMMIT_SHA`.
-- [ ] 5.3 Add `-139` and `-140`; run both RED first (a deliberately wrong sha for `-139`; a raised
+- [x] 5.2 Read commit A's **full 40-hex** sha; write it into `PREREGISTRATION_COMMIT_SHA`.
+- [x] 5.3 Add `-139` and `-140`; run both RED first (a deliberately wrong sha for `-139`; a raised
       ceiling for `-140`), then green.
-- [ ] 5.4 Run AC6.4's gate list; record every exit code as **LOCAL (Windows)**.
-- [ ] 5.5 Make **commit B** (`docs`) — module sha + the two guards + this story's record +
+- [x] 5.4 Run AC6.4's gate list; record every exit code as **LOCAL (Windows)**.
+- [x] 5.5 Make **commit B** (`docs`) — module sha + the two guards + this story's record +
       `sprint-status.yaml` transition.
 
 ### Task 6 — HAND-OFF (AC4.4, AC7)
 
-- [ ] 6.1 Record, in the Completion Notes, the two constants Story 17.4 must **import**
+- [x] 6.1 Record, in the Completion Notes, the two constants Story 17.4 must **import**
       (`PREREGISTRATION_COMMIT_SHA`, `SUCCESSOR_OUTPUT_PATHS`) and ⛔ that 17.4's ancestry guard
       over later commits is 17.4's to write.
-- [ ] 6.2 Record the **exposure-ceiling ratification** owed to XAgent007 (AC7) — value, derivation,
+- [x] 6.2 Record the **exposure-ceiling ratification** owed to XAgent007 (AC7) — value, derivation,
       rejected alternatives, and the fact that it may only be **lowered**.
-- [ ] 6.3 Record anything **observed but not filed** (`AI-E9-8`) — recording is this story's job,
+- [x] 6.3 Record anything **observed but not filed** (`AI-E9-8`) — recording is this story's job,
       filing is the operator's.
-- [ ] 6.4 ⛔ Confirm `DF-13-5-A` is untouched and `deferred-work.md` is absent from the diff.
+- [x] 6.4 ⛔ Confirm `DF-13-5-A` is untouched and `deferred-work.md` is absent from the diff.
 
 ---
 
@@ -990,14 +990,255 @@ sha (`AI-E13-1`; epic-18 retro SD-4).
 
 ### Agent Model Used
 
+Opus 5 (`claude-opus-5[1m]`), `bmad-dev-story` workflow, iteration 1. Local gate run is
+**Windows-only** and is recorded as **LOCAL** throughout (`AI-E13-1`; epic-18 retro SD-4). The
+branch is ahead of `origin/master` and `audit-ci.yml` triggers on `master`/`main` only, so **no CI
+evidence exists for this work at its own sha.**
+
 ### Debug Log References
+
+#### Task 0 — §0 RE-MEASURED BY EXECUTION at `c2ce00f`. ⛔ EVERY ROW REPRODUCED.
+
+Nothing was smoothed and nothing came out different. No detector was run, no corpus member staged,
+nothing fetched. Every figure below is a read of a committed artifact, the manifest, or the git
+object database.
+
+| §0 row | expected | measured | verdict |
+|---|---|---|---|
+| HEAD / branch | `c2ce00f…`, `docs/merge-strategy-decision` | identical | ✅ |
+| `git status --porcelain` | clean | carried **only** the create-story output (this story file untracked; `sprint-status.yaml` modified with `epic-17 backlog→in-progress`, `17-1 backlog→ready-for-dev`) — both AC6.1 members, landed by commit **O** | ✅ |
+| §0.1 `PRECISION_GATE_THRESHOLD` | `Fraction(4, 5)` | `Fraction(4, 5)` | ✅ |
+| §0.1 `verdict_eligible_population_floor` | 5 | 5 | ✅ |
+| §0.1 `contributing_member_floor` / `sealed_member_floor` | 3 / 3 | 3 / 3 | ✅ |
+| §0.1 `validation_floor_n` / `eligible_member_count` / `len(MANIFEST_FIELDS)` | 5 / 5 / 9 | 5 / 5 / 9 | ✅ |
+| §0.1 `GATE_OUTCOMES` / `CONDITION_VERDICTS` | 3 / 4 | 3 / 4 | ✅ |
+| §0.2 per-member `vacuous_test_heuristic` | 648 / 295 / 72 / 17 / 0 = **1,032** of 4,284 | identical | ✅ |
+| §0.2 rule classes | `orphan_code` 1,675 · `hardcoded_secret` 1,330 · `vacuous_test_heuristic` 1,032 · `cross_partition` 231 · `traceability_not_establishable` 16 | identical | ✅ |
+| §0.2 `silent-class-record.json` | `population_walked` 1,032, `population_skipped` 0, `V1.3` | identical | ✅ |
+| §0.3 protocol change-log head | **V1.3**, 2026-08-16 | identical — parsed from the table, not read off prose | ✅ |
+| §0.4 `sealed ∩ eligible` | **∅** | **∅** — `pre-seal` 5 (all eligible), `sealed` 6 / `open` 10 (all `eligible_for_n=False`) | ✅ ⛔ |
+| §0.5 `class_by_corpus_member` | `{agent-smith: 22, minions: 14}`, `class_size` 36 | identical; `counts {UNADJUDICATED: 36, TP/FP/BORDERLINE: 0}`, `gates_anything False`, `promotes_nothing True` | ✅ ⛔ |
+| §0.6 worktree record | 31 rows, 26 FP, 5 BORDERLINE, **0 TP** | identical | ✅ |
+| §0.6 **pinned blob** `6c59115:…` | 31 rows, 26 FP, **0 TP**, `V1.3`, unit `finding`, `vacuous_test_ast` 31/31, by member `{minions 24, agent-smith 7}` | identical, and `6c59115` **is an ancestor of HEAD** | ✅ ⛔ |
+| §0.7 detector pins | four `if TYPE_CHECKING:` pins at `orphan_code:310`, `secret_scan:633`, `tool_runner:459`, `vacuous_test:799`; `@runtime_checkable` absent; `-145`/`-146` present | identical | ✅ |
+| §0.8 next free id | `-135` | highest **actually used** `PRECISION-001` id is `-134`; `-135` appears only in this story file | ✅ |
+
+⛔ **AC7 was not triggered.** Every escalation condition was checked and none fired: `sealed ∩
+ratified` is still empty, the two candidate distributions are still 2 members, and **26 still
+reproduces from the pinned blob**. The exposure ceiling therefore did **not** have to differ from
+26 (see Completion Note 6.2 for the ratification that is owed anyway).
+
+#### Task 3.3 / 5.3 — EVERY GUARD DRIVEN RED AT ITS REAL SEAM, BY AN EXECUTED MUTATION
+
+The mutation was applied to the **real module**, the guard run against it, and the module restored
+byte-for-byte (verified by comparing bytes, not by re-writing from memory). `.argus/guard-fires.jsonl`
+records RED observations automatically; **no fires ledger was hand-written**.
+
+| guard | mutation applied to the real source | observed |
+|---|---|---|
+| `-135` | `contributing_members=contributing_member_floor(floor_n)` → `contributing_members=3` | **RED**, exit 1 — *"re-types a resolved floor"* |
+| `-135` | `return PRECISION_GATE_THRESHOLD` → `return Fraction(4, 5)` | **RED**, exit 1 |
+| `-135` | change-log head mutated to `V99.9` in the generated protocol text | `refuse_protocol_drift` **raised**, and raised again on a table with no rows |
+| `-136` | `MAX_FALSE_ACCUSATION_EXPOSURE` 26 → 27 | **RED**, exit 1 |
+| `-136` | pin re-pointed to `c2ce00f` | ⚠️ **stayed GREEN** — *and that is a true measurement, not a hole:* the record is byte-stable between `6c59115` and HEAD, so the count is 26 at both. Recorded rather than smoothed. Replaced with a genuinely discriminating pin below. |
+| `-136` | pin re-pointed to **`e991a00b`** — the pre-adjudication blob (31 rows, all `UNADJUDICATED`, **0 FP**) | **RED**, exit 1. This is the mutation that proves `EXPOSURE_SOURCE_SHA` is load-bearing. |
+| `-136` | in-guard: every `FP` row relabelled | count moved 26 → 0, as required |
+| `-137` | `exposure_holds = false_accusation_count <= MAX_…` → `exposure_holds = True` | **RED**, exit 1 — the ceiling proved non-redundant |
+| `-138` | resolution-floor loop emptied (i.e. ratio evaluated before the floors) | **RED**, exit 1 |
+| `-141` | `import subprocess` injected | **RED**, exit 1 |
+| `-141` | `from argus.detectors.vacuous_test import _ast_corroborated` injected | RED at **collection** (exit 4) — weaker evidence, so re-run with `import argus.detectors` |
+| `-141` | `import argus.detectors` injected | **RED**, exit 1 — the guard's own assertion fired: *"imports ['argus.detectors']"* |
+| `-141` | `Path("x").write_text(...)` injected into a real function body | **RED**, exit 1 |
+| `-139` | at commit **A** (`HEAD == the pin`) | **RED** on precondition 3 by design — the ordering claim requires a **strict** ancestor. GREEN from commit **B** onward. |
+| `-139` | sha replaced with a well-formed but **unresolvable** 40-hex | **RED** — *"does not resolve to a commit in this repository"* |
+| `-139` | sha replaced with the **short** form `f906d04` | **RED** — *"must be recorded as a full 40-character lowercase hex sha"* |
+| `-139` | sha set back to `None` at a `HEAD` past it | **RED** — *"PREREGISTRATION_COMMIT_SHA is still None"* |
+| `-139` | `SUCCESSOR_OUTPUT_PATHS` emptied | **RED** on precondition 1 — *"an absence over nothing"* |
+| `-139` | `SUCCESSOR_OUTPUT_PATHS` widened to `tests/corpus/_manifest.py`, a path that **does** carry commits | **RED** on the CLAIM itself — *"6 commit(s) reachable from the pre-registration sha touch a declared successor-output path"*. ⛔ This is the strongest non-vacuity evidence in the module: the assertion is watched **firing**, not only passing. |
+| `-140` | `MAX_FALSE_ACCUSATION_EXPOSURE` 26 → 27 (a **raised** ceiling) | **RED** — *"STRENGTHENING ONLY: the ceiling may be lowered and never raised"* |
+| `-140` | `POPULATION_ID` moved after the pin | **RED** — *"measuring a different population is not a strengthening"* |
+| `-140` | `PROTOCOL_VERSION` moved `V1.3` → `V1.4` after the pin | **RED** — *"a pre-registration folded across an amendment is a re-interpretation of judgements nobody re-made"* |
+| `-140` | in-guard: raised ceiling and lowered ratio driven through the direction predicate | both **rejected**; unchanged / lowered-ceiling / raised-ratio all **accepted** |
+
+#### Task 4 — PROVE NOTHING MOVED
+
+`git status --porcelain` after Tasks 1–3 listed **exactly** three untracked paths — the two new
+modules and the new document — and nothing else. ⛔ **Absent from the diff, verified:** everything
+under `argus/**`, `tests/corpus/**` and `validation-corpus/**`; `precision-validation-protocol.md`;
+`deferred-work.md`; `epics.md`; `architecture.md`; `E-PRD/prd.md`. No dogfood artifact changed and
+**no `code_identity` moved** — `argus/**` is byte-unchanged, so `tests/test_dogfood_artifact_currency.py`
+is green without a regeneration commit and AC6.3 holds by construction.
+
+**AC3.2, measured before and after by import:**
+
+| constant | before | after |
+|---|---|---|
+| `eligible_member_count()` | 5 | **5** |
+| `len(MANIFEST_FIELDS)` | 9 | **9** |
+| `len(GATE_OUTCOMES)` | 3 | **3** |
+| `len(CONDITION_VERDICTS)` | 4 | **4** |
+| `validation_floor_n()` | 5 | **5** |
+
+`-141` re-asserts all five on every run, so this is a guarded property rather than a recorded
+observation.
+
+#### Task 5.4 — AC6.4 GATES, EVERY EXIT CODE. ⛔ LOCAL (WINDOWS) — CI OWNS THE CROSS-PLATFORM CLAIM
+
+Run with `PYTHONDONTWRITEBYTECODE=1` and every `__pycache__` cleared first.
+
+| gate | result | exit |
+|---|---|---|
+| `python -m pytest` (post-commit-B, **nothing deselected**) | **1,738 passed** (268.84s) | **0** |
+| `python -m pytest -q` (pre-commit-B, `-139` deselected — see below) | 1,737 passed, 1 deselected (259.72s) | **0** |
+| `python -m pytest -q` with `ARGUS_REQUIRE_LANGUAGE_GRAMMARS=1` | all passed | **0** |
+| `pytest --cov=argus --cov-report=term-missing --cov-fail-under=80` | **95.69%** (7,316 statements, 315 missed) | **0** |
+| `mypy argus` | *Success: no issues found in 95 source files* | **0** |
+| `bandit -r argus -f txt --severity-level medium` | no medium-or-above issue | **0** |
+| the thirteen modules named by AC6.4, run by name | all passed | **0** |
+| `tests/test_precision_preregistration.py` | **7 passed** (post-commit-B, `-139` included) | **0** |
+
+⛔ The deselection above is `-139` only, and only for the runs taken **while `HEAD` was commit A
+itself** — the guard requires the pre-registration to be a **strict** ancestor of `HEAD`, which it
+is not at the moment it is created. It was run and is **green from commit B onward**; the
+post-commit re-run is the row that carries the claim.
+
+**NFR-M1 (AC6.5):** `scripts/precision_preregistration.py` **772** lines,
+`tests/test_precision_preregistration.py` **1,037** lines — both under the 1,200 ceiling, with
+headroom. Nothing was shaved and no `_EXEMPT_BY_DESIGN` entry was added.
 
 ### Completion Notes List
 
+**What landed.** Four artifacts and nothing else: the criterion as pure code, the dated document,
+seven guards, and this record with the two `sprint-status.yaml` transitions.
+
+**Design decisions taken inside the story's authority, each with its rejected alternative:**
+
+- **`DN-17-1-10` — `resolution_floors()` reaches `N` through `replay_harness.corpus_manifest_module()`,
+  the ONE declared lazy edge.** *Rejected:* reading `registry_module().VALIDATION_SET_FLOOR_N`
+  directly, which is a **second** path to a number `_manifest.validation_floor_n()` already
+  answers — `AR7` permits one derivation per question, and `DN-3` is the same rule for the floor
+  itself. *Also rejected:* resolving `N` at module scope, which would make the file unimportable
+  in an environment without `tests/` (`DF-9-2-A`). The resolution happens inside the function.
+- **`DN-17-1-11` — AC1.2's change-log-head check is split: a PURE parser in the module, the file
+  read in the guard.** *Rejected:* opening `precision-validation-protocol.md` from the module.
+  AC1.1 requires the module to be pure and AC1.2 permits *"the module **or its guard**"* to do the
+  resolving; splitting it keeps both. `protocol_change_log_head()` / `refuse_protocol_drift()` take
+  text and raise `ProtocolVersionDrift` — `gate_decision.py:336`'s shape — and `-135` performs the
+  read. An unparseable table **refuses** rather than returning `PROTOCOL_VERSION`, which would have
+  made the check `f(x) == f(x)`.
+- **`DN-17-1-12` — `-140` reads the ratio floor AT THE PIN from the pinned `replay_harness` blob,
+  not from the live import.** *Rejected:* comparing `precision_floor()` against `precision_floor()`,
+  which is the `f(x) == f(x)` shape Epic 14 shipped four times. Because the criterion **resolves**
+  its ratio floor, *"the ratio at the pin"* is whatever protocol §5's threshold was at that commit,
+  and that is only knowable from the object database.
+- **`DN-17-1-13` — the pinned blob is PARSED (`ast.literal_eval`), never executed.** *Rejected:*
+  `exec`-ing a historical revision of the module to read its constants. Reading a blob to compare
+  it is a much smaller act than running it.
+- **`DN-17-1-14` — `NOT_MET` is this criterion's own name for its own negative.** `MET` and
+  `UNEVALUABLE` are **resolved** from `CONDITION_VERDICTS` through a lookup that raises, so the
+  module stops importing if §5's vocabulary changes underneath it. ⛔ No §5 terminal state was
+  invented, added or renamed: `CONDITION_VERDICTS` is still 4 and `GATE_OUTCOMES` still 3, and
+  `NOT_MET` is never written into a §5 condition or a gate record.
+- **`SUCCESSOR_OUTPUT_PATHS` is successor-scoped**, exactly as `-75`'s reasoning demands:
+  `…/validation-corpus/successor` and `_bmad-output/audit-reports/successor`. Both were verified to
+  carry **zero** commits across all refs, so the guard's absence is real and was not widened to
+  *"anything under `validation-corpus/`"* — which would have been false against artifacts that
+  predate this story by weeks.
+- **`evaluate()` refuses malformed input at construction** (negative counts; an adjudicated
+  population larger than the verdict-eligible one; sealed contributors exceeding contributors).
+  NFR-R1's stated exception: refusing a malformed pin is correct, and folding an impossible
+  population would return a registered outcome for something that cannot exist.
+
+**6.1 — HAND-OFF TO STORY 17.4 (AC4.4).** 17.4 **imports** two constants from
+`scripts/precision_preregistration.py` and re-types neither (`DN-16-4-2` / `AI-E9-7`):
+
+- `PREREGISTRATION_COMMIT_SHA` = `f906d04997b391bea4592aabc0343d1234b3b060` (full 40-hex, resolves,
+  ancestor of `HEAD`, and touches **no** `SUCCESSOR_OUTPUT_PATHS` entry — proved by `-139`);
+- `SUCCESSOR_OUTPUT_PATHS`.
+
+⛔ **The ancestry guard over commits LATER than the pre-registration is Story 17.4's to write, not
+this story's.** `-139` proves only the claim this story can prove.
+⚠️ 17.4 also inherits a **stated precondition**: protocol §4's External adjudicator (`AI-E16-7`) is
+**UNFILLED**. 17.1 adjudicates nothing and does not need it; 17.4 does. It is written into
+`CONSEQUENCE_MET` and into §3.5 of the document rather than left to be discovered.
+
+**6.2 — ⛔ RATIFICATION OWED TO THE ENGINEERING LEAD (XAgent007), AC7.** The exposure ceiling is a
+**new absolute quantity** and setting one is an operator act of the same class as the 2026-08-17
+rule. Per AC7 it was **landed with its derivation** rather than substituted by a preference, and it
+is raised here for ratification:
+
+- **value:** `MAX_FALSE_ACCUSATION_EXPOSURE` = **26**;
+- **derivation:** the `FP` disposition count of the 31-row adjudication record at
+  `6c59115b2aad1e6ab9c7dd3ebba011f7d37376dd` — the instrument's entire recorded false-accusation
+  history, judged by a named human under V1.3, with **zero** TP ever recorded. Re-derived on every
+  run by `-136`, and driven RED against a pin where the count differs;
+- **rejected alternatives:** 1 (`floor(yield_floor × (1 − p))`) and 5 (`yield_floor`) — both
+  shutdowns; **48** (`DF-16-7-B`) — cannot bite at any reachable population; a percentage — the
+  ratio wearing a different hat; live resolution — the record grows and 17.4 appends to it;
+- **⛔ it may only be LOWERED.** `-140` enforces `ceiling ≤ ceiling_at_pin` and
+  `ratio ≥ ratio_at_pin` against the pinned blob, so a loosening is a red test.
+
+**6.3 — OBSERVED BUT NOT FILED (`AI-E9-8`: recording is this story's job, filing is the operator's).**
+The ledger was read before writing any of this and each observation below already has prior art in
+it; **none is filed here and `deferred-work.md` is absent from this story's diff.**
+
+1. **A pin whose blob has not changed cannot falsify a pin-provenance guard.** Re-pointing `-136`'s
+   sha at `c2ce00f` left it green, because `adjudication-record.json` is byte-stable between
+   `6c59115` and HEAD. The guard is sound — a discriminating pin (`e991a00b`) reddens it — but the
+   general shape is *"a mutation that does not move the observable proves nothing"*, which is the
+   `DF-8-5-B` / GUARD-ADEQUACY family. **Recorded, not filed.**
+2. **`-139` is red at the exact commit it describes**, because the ordering claim needs a strict
+   ancestor. That is correct behaviour and it is `-75`'s behaviour too, but it means the
+   sha-dependent guards genuinely cannot live in the commit they name — the three-commit arc is a
+   structural requirement, not a convention. Worth a line in an epic retrospective; **not a ledger
+   entry.**
+3. **`argus/precision/gate_seal.py` exports `SEALED_MEMBER_FLOOR_DERIVATION`**, not
+   `SEAL_MEMBER_FLOOR_DERIVATION` as §2.7's shorthand suggested. A naming observation only; nothing
+   was renamed and no `argus/**` byte moved.
+
+**6.4 — ⛔ `DF-13-5-A` IS UNTOUCHED, and stays OPEN and UNSPENT.** Its branch (a) was not executed,
+its branch (b) was not declared, no round was spent, no member was ratified and no third-party
+source was fetched. Its 2026-08-24 trigger was **not evaluated** — that is Story 17.4's, by name.
+`deferred-work.md` is **absent from this story's diff** (verified with `git status --porcelain`),
+which is the cleanest possible answer to its byte invariants. ⛔ This story therefore claims **no
+`DF-*` disposition change** of any kind, and every other open entry named in the story context —
+`DF-INV-VACUOUS-A`/`-B`, `DF-16-7-A`/`-B`, `DF-14-1-A`, `DF-12-2-D`, `DF-12-3-A`,
+`DF-AUD-DETECT-C`/`-D` — stays exactly as it was. Their re-homing notes remain Story 17.5's.
+
+**What this story did NOT do, restated so it is not mistaken for done:** no successor predicate
+exists; no protocol row was added and `precision-validation-protocol.md` is byte-unchanged; no §5
+condition was created; the gate stays `BLOCKED` and `protocol_cleared` stays `False`; `consumed == 0`
+was not reached; the document was **not** registered in `_STATUS_DOCUMENTS` (`DN-17-1-8` — `-22`
+closes in both directions and registering it would turn that guard red); no `Evidence-partition:`
+trailer was required or added, because the write set touches neither `DETECTOR_TUNING_PATHS` entry.
+
 ### File List
+
+**New**
+
+- `scripts/precision_preregistration.py`
+- `_bmad-output/design-artifacts/ArgusAgent/successor-predicate-precision-preregistration.md`
+- `tests/test_precision_preregistration.py`
+
+**Modified**
+
+- `_bmad-output/design-artifacts/ArgusAgent/stories/17-1-write-down-what-would-count-as-precision-before-the-number-exists.md` (this file)
+- `_bmad-output/design-artifacts/ArgusAgent/sprint-status.yaml` (status transitions and `last_updated` only)
+
+**Commit arc (AC6.2 — three commits, pure-ASCII messages)**
+
+| commit | message | contents |
+|---|---|---|
+| **O** `72e630d` | `chore(17-1): open the pre-registration story` | this story file + `sprint-status.yaml` (`epic-17 → in-progress`, `17-1 ready-for-dev → in-progress`) |
+| **A** `f906d04` | `feat(17-1): pre-register the successor-predicate precision criterion` | the criterion (with `PREREGISTRATION_COMMIT_SHA = None`), the document, and `-135`/`-136`/`-137`/`-138`/`-141` |
+| **B** | `docs(17-1): record the pre-registration commit and the dev round` | the sha, `-139`/`-140`, this record, and `17-1 → review` |
+
+⛔ Staged **by explicit path** on every commit; `git add -A` was never used — a peer session shares
+this branch (§2.6).
 
 ## Change Log
 
 | Date | Change | By |
 |---|---|---|
 | 2026-08-25 | Story contexted at HEAD `c2ce00f`; `backlog` → `ready-for-dev`. §0 measured by execution; three premises recorded that the epic's plan did not carry — empty `sealed ∩ ratified`, both candidate successors at 2 contributing members, and 26 FP / 0 TP across the instrument's whole adjudicated history. | Scrum Master (create-story, Opus 5) |
+| 2026-08-25 | **DEV round 1.** §0 re-measured by execution before a line was written — **every row reproduced**, AC7 not triggered. Landed `scripts/precision_preregistration.py` (the criterion as pure code: population, protocol version checked against the change-log head, ratio floor and three resolution floors RESOLVED, `MAX_FALSE_ACCUSATION_EXPOSURE = 26` derived from a pinned blob, both consequence clauses, and a pure fold evaluating the floors before the ratio), the dated pre-registration document, and seven guards `TC-ArgusAgent-PRECISION-001-135`..`-141` — each driven RED at its real seam by an executed mutation. Three commits, pure-ASCII messages. Local (Windows) gates all exit 0: 1,737 passed, coverage 95.69%, `mypy` clean, `bandit` clean. Nothing ratified, fetched or spent; `argus/**` byte-unchanged; `deferred-work.md` untouched. `ready-for-dev` → `in-progress` → `review`. | Developer (dev-story, Opus 5) |
