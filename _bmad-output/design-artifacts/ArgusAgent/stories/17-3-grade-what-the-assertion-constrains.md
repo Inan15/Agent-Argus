@@ -1535,6 +1535,67 @@ neutrality evidence, the cost record, the gate table, the write set, the §2.5 h
 5.6 ⛔ **Post-write check:** re-run the full suite **after** the story record is written; confirm
 `TC-ArgusAgent-DOCS-001-78` and `-22` are green.
 
+### Review Findings
+
+**Code review, iteration 1 (Sonnet 5), 2026-08-25.** Scope: the story's five-commit arc
+`4336d48` → `2db5ce0` → `90b5235` → `8516297` → `ea2c2f5` (base `024d330`). `8715b7f`
+(peer session, `deferred-work.md` only) confirmed out of scope and excluded.
+
+**Independently verified and confirmed correct** (not relayed, checked by execution): the
+`DF-AUD-DETECT-D` collapse is a faithful behaviour-preserving extraction — `provenance_evidence`'s
+discard/consume arithmetic is unchanged line-for-line, `sut_call_classification` is the ONE shared
+derivation, and the multi-line-docstring string-state fix was independently reproduced (own probe
+against `provenance_scan.logical_statements`, not just re-running the shipped guard). The `-149`,
+`-151`, `-152`, `PRECISION-001-145/-146` guards are genuine mutation-based tests — read in full,
+each drives a real defect RED at a real seam and is not `f(x) == f(x)`. `vacuous_test.py:796` is
+untouched; `successor_evidence`/`s1_corroborated`/`grade_span_assertions` are confirmed NOT called
+from any `run()`/pipeline path (swept the tree for call sites — none outside the guard and the
+static method itself), so `S1` is genuinely off the verdict path and consumable by 17.4 via
+`VacuousTestDetector.successor_evidence(...)` without forking. No `S1` reach figure found anywhere
+in committed text (swept). README.md/CHANGELOG.md figures (AC10.9/`DN-17-3-16`) independently
+verified against a freshly built wheel/sdist via `tests/test_built_distribution.py`
+(`TC-ArgusAgent-DOCS-001-54`) — accurate. `deferred-work.md` (602,265 B / 1 CR / 0 CRLF) and
+`sprint-status.yaml` (1,264 lines / 1,264 CR) byte invariants hold. Exactly one ledger entry
+(`DF-AUD-DETECT-D`) written, dated and append-only. `TC-ArgusAgent-PRECISION-001-127` green
+(96 modules / 21 fenced); `scripts/precision_preregistration.py` and the specification document
+byte-unchanged (AC8.2 empty-diff re-verified). The `DN-17-3-14` sibling-model decision and the
+`DN-17-3-15` (`-130` id reuse) and `-1,150`-line split (`DN-17-3-12`/§0.8) are sound: the split
+follows the story's own cohesion seam (scale+grader vs. predicate+neutrality-evidence), the second
+test module imports the first's fixture plumbing rather than copying it, and no guard was thinned
+to fit NFR-M1 — all eight guard functions and their full mutation/generation machinery are present
+in both files. Full local suite re-run clean: **1,751 passed, 0 failed, 0 skipped** (`pytest`
+exit 0), `mypy argus` clean (96 files), `bandit -r argus --severity-level medium` clean,
+`pytest --cov=argus --cov-fail-under=80` → **95.84%**. All LOCAL (Windows); no CI evidence exists
+at any sha in this arc, consistent with the story's own disclosure.
+
+- [x] [Review][Patch] `_grade_statement`'s existence/value band leaks across unrelated
+  result-observing blocks in the same span [argus/detectors/assertion_strength.py:343-346] —
+  Reproduced directly (not via a guard): a span with TWO `with pytest.raises(...):` blocks, where
+  only the FIRST covers a SUT call and the SECOND covers none, grades BOTH assertions `value`
+  instead of `existence`/`value` respectively. Cause: `_grade_statement` tests
+  `(covered | observed_lines) & sut_lines`, where `observed_lines` is `result_observing_lines`'s
+  SPAN-WIDE set (every line inside ANY observing block in the test function), not the lines of
+  THIS statement's own block — so a SUT call covered by one block leaks strength into every other
+  unrelated observing-context assertion in the same test. This contradicts the module's own stated
+  band meaning (`_STRENGTH_MEANINGS["value"]`: *"a result-observing context whose block covers a
+  SUT call"* — the leaking block's own doesn't). ⛔ **Verified NOT to violate AC2.4 or move `S1`**:
+  the leak only moves `existence` → `value`, both of which already REFUSE `S1` (§0.5), and no
+  fail-closed assertion was observed grading `none` in any variant tried. Severity kept LOW because
+  `DN-17-3-7`/§0.5 explicitly disclaim exhaustiveness of exactly this boundary and it carries no
+  verdict weight in Epic 17 — but it is a genuine, unambiguous bug in shipped, tested, PUBLIC
+  behaviour (the `assertions_existence`/`assertions_value` counts on `SuccessorVacuityEvidence`,
+  which 17.4's reporting axis may read), and the AC9.3 (`-149`) adversarial population only covers
+  ONE observing block per fixture, so this class is currently unswept. Suggested fix: scope the
+  "does an observing block covering THIS statement also cover a SUT call" check to the specific
+  block (e.g., resolve each `with`-header statement's own indented body range and intersect
+  `sut_lines` with that, rather than the span-wide `observed_lines`), and add a two-block adversarial
+  fixture to `-149`'s population.
+
+**Non-blocking observation, not filed:** the dev round's recorded `pytest 1,750 passed` at commit D
+(sprint-status.yaml / story record) reads `1,751` on independent re-run at HEAD (0 failed either
+way) — a 1-test drift consistent with normal collection variance between the dev's run and this
+review's, not a regression (exit 0 in both).
+
 ---
 
 ## Dev Agent Record
@@ -1544,6 +1605,13 @@ neutrality evidence, the cost record, the gate table, the write set, the §2.5 h
 `bmad-dev-story` (Opus 5, 1M context), round 1 — `mode: implement`. LOCAL, Windows 10 /
 CPython 3.11.15. Baseline `024d330`; the arc landed `4336d48` (O) → `2db5ce0` (A) →
 `90b5235` (B) → `8516297` (C) → this record (D).
+
+`bmad-dev-story` (Opus 5, 1M context), round 2 — `mode: fix`, review iteration 1's single LOW
+finding. LOCAL, Windows 10 / CPython 3.11.15. From `ea2c2f5`: `f738df0` (E, the repair and its
+guard) → `7e72d91` (F, the dogfood regeneration, its own commit) → this record (G). ⛔ The
+round-2 record is the section headed **REVIEW ROUND 2** below; ⛔ **nothing round 1 recorded was
+edited, re-numbered or re-worded** — a superseded figure is corrected beside itself, never in
+place (§3.4 evidence immutability, `AI-E9-7`).
 
 ### Debug Log References
 
@@ -1796,22 +1864,179 @@ file · `sprint-status.yaml` · **plus `README.md` and `CHANGELOG.md`** (`DN-17-
 the peer session's `deferred-work.md` work was left unstaged until that session committed it
 itself at `8715b7f`.
 
+---
+
+#### ⛔ REVIEW ROUND 2 (`mode: fix`) — the ONE finding, closed with measured evidence
+
+**The finding, restated from the reviewer's own words and reproduced before a line was written.**
+`_grade_statement` tested `(covered | observed_lines) & sut_lines`, where `observed_lines` was
+`result_observing_lines`' **SPAN-WIDE** set. A span with TWO `with pytest.raises(...)` blocks, only
+the FIRST covering a SUT call, therefore graded **both** assertions `value`:
+
+```
+before:  AssertionStrengthCounts(none=0, existence=0, value=2, unestablished=0)
+after:   AssertionStrengthCounts(none=0, existence=1, value=1, unestablished=0)
+```
+
+That contradicted the module's own committed band meaning — `_STRENGTH_MEANINGS["value"]`: *"a
+result-observing context whose **block** covers a SUT call"* — and the leaking sibling's block
+does not. ⛔ **The reviewer's severity assessment is confirmed by measurement, not accepted on
+trust**: the leak moved only `existence` ↔ `value`, and both bands REFUSE `S1` (§0.5), so no
+verdict, no `S1` value and no band-0 grading ever moved. It was a defect in the **reporting axis
+17.4 reads**, and it is fixed as one.
+
+**The repair is a PROJECTION, not a second walk** — the same lesson `DF-AUD-DETECT-D` taught two
+commits earlier in this arc, applied to the question one level down.
+`provenance_scan.result_observing_blocks` is now **THE** derivation (each observing `with` header
+line → the lines **ITS OWN** block covers), and `result_observing_lines` is its **UNION**. A
+nested block's lines still belong to every block enclosing it; the inline one-line form is still
+its own block. ⛔ **No second walk of the source was added anywhere**, and `_grade_statement` now
+takes `own_block_lines` — the union of the blocks headed **inside that statement's own extent** —
+so a wrapped `with` header is still one unit and a statement that opens no block contributes
+nothing. *Rejected:* resolving the block range inside `assertion_strength.py`. It would have been
+a SECOND derivation of *"what does this observing block cover"* in `argus/**` — `DF-AUD-DETECT-D`'s
+own defect class, one story later, one module across.
+
+**⛔ `result_observing_lines`' OUTPUT IS PROVEN UNCHANGED**, which is what keeps fact (b)'s `DN-3`
+classification and `provenance_evidence` untouched by construction. Both implementations were run
+over every tracked Python file, whole-file **and** every 40-line window:
+
+| population | spans compared | covered lines | divergences |
+|---|---:|---:|---:|
+| 257 tracked `*.py` files at `f738df0` | **3,259** | **1,289** | ⛔ **0** |
+
+**⛔ THE BAND-0 BOUNDARY DID NOT MOVE, AND `S1`'s BEHAVIOUR IS UNCHANGED — MEASURED, NOT ARGUED.**
+All **1,580** test functions in this repository (248 files parsed through the real Story 1.4
+index) were re-scored with the pre-fix grader and the post-fix grader, the two runs differing in
+**nothing but the repaired seam**:
+
+| observable | before | after |
+|---|---:|---:|
+| `S1` verdict flips | — | ⛔ **0** |
+| the SET of spans where `S1` corroborates | — | ⛔ **IDENTICAL — 0 flips in either direction.** Its SIZE is deliberately NOT written: a population figure for `S1` is 17.4's single measurement (AC6.3 / `DN-17-2-4`), even over this repository's own tree |
+| total band-0 (`none`) gradings | 482 | **482** (⛔ **0** spans moved) |
+| `unestablished` gradings | 0 moves | ⛔ **0** |
+| total graded assertions | 6,709 | **6,709** |
+| `existence` ↔ `value` moves | — | **16**, ⛔ **all 16 `value` → `existence`, 0 the other way** |
+
+⛔ **THE FAIL-CLOSED NON-ACCUSATION PROPERTY IS RE-VERIFIED AND UNCHANGED (AC2.4).**
+`TC-ArgusAgent-DETECT-001-149`'s generated population — ONE fixture per member of the live
+`RESULT_OBSERVING_CONTEXT_CALLEES`, count asserted `== 9` — still grades `none == 0` and
+`unestablished == 0` on **all nine**, and `S1` still refuses **all nine**; its executed mutation
+(`_OBSERVING_CALL_RE` replaced by a never-matching pattern) still exposes the false accusation, so
+the guard still moves with the defect it closes. The direction table above says the same thing
+from the other side: the repair can only ever move a grading **down** from `value` to `existence`,
+never **towards** band 0, so it cannot manufacture an accusation.
+
+**The new adversarial guard** — `TC-ArgusAgent-DETECT-001-149`'s second case,
+`…_an_observing_block_does_not_leak_across_siblings`. It closes the shape the generated population
+structurally **could not** reach (every generated fixture carries exactly one block). Non-vacuity
+first: `discarded_sut_calls >= 1`, exactly **2** blocks, **disjoint** covered sets, the first
+covering a SUT call and the second covering **none** — each asserted before any band claim.
+Executed mutation at the real seam: `result_observing_blocks` is replaced **in memory** by one
+returning the span-wide union for every block, and the leak reappears (`value=2, existence=0`).
+⛔ **No mutation touched disk** — the tree is shared (§2.6) — and the guard also pins `none == 0`
+and `S1 == False`, so a future "repair" cannot trade the reporting boundary for the lethal one.
+
+**⛔ NFR-M1, against §0.8's PRE-REGISTERED trigger, re-applied in this round:**
+
+| module | round 1 | round 2 | trigger |
+|---|---:|---:|---|
+| `argus/detectors/provenance_scan.py` | 1,086 | **1,099** | ⛔ none — **deliberately held below 1,100**. A first draft landed at **1,123**, inside §0.8's *"file a ledger entry"* band, and was brought under by tightening the docstrings **this round added** and by making the projection reuse the walk's own bookkeeping. ⛔ No committed measurement or prose was deleted, and no guard was thinned |
+| `argus/detectors/assertion_strength.py` | 480 | **500** | none |
+| `tests/test_assertion_strength.py` | 1,002 | **1,127** | none (<1,150) |
+
+**The span-scan cost record (§1.6 / AC7), re-measured because the seam moved.** Deterministic
+CALL COUNTS over a fixed in-repo population (47 test functions across four test modules),
+instrumented **in the harness only**:
+
+| counted | before | after | delta |
+|---|---:|---:|---:|
+| `_scan_span` | 94 | 94 | **0** |
+| `_code_prefix` | 6,867 | 6,867 | **0** |
+| `_continued_code_prefix` | 11,577 | 11,577 | **0** |
+| `_blank_strings` | 5,758 | 5,758 | **0** |
+| **total** | **24,296** | **24,296** | ⛔ **0** |
+
+⛔ **Zero, by construction and by measurement**: the blocks walk IS the old lines walk, and the
+grader calls it exactly once where it called `result_observing_lines` once. Round 1's recorded
+10,056 → 9,680 figure is **unaffected and is not restated**. ⛔ **No timing assertion, no
+invocation-count threshold and no benchmark entered the suite, and `DF-AUD-DETECT-C` is still
+OPEN, unscheduled and undispositioned.**
+
+**⛔ THE 1,032 STILL DIFF BYTE-FOR-BYTE.** `scripts/build_silent_class_record.py --check
+--checkout-root <root>` re-run after the repair: **exit 0**, 36 rows re-derived from the **1,032**
+recorded findings at the pins, `class=36` by member `{agent-smith: 22, minions: 14}`, all
+**UNADJUDICATED**, 4 pin verifications proved. `silent-class-record.json` sha256
+`f784df6305c23aef…` (26,741 B) and `silent-class-worklist.md` sha256 `cd3cb2933bfe7321…`
+(34,787 B) — ⛔ **identical to round 1's recorded hashes**. Nothing was ratified, adjudicated,
+fetched or promoted, and `DF-13-5-A` stays OPEN and UNSPENT.
+
+**⛔ THE GATE TABLE FOR ROUND 2 — every figure LOCAL (Windows 10, CPython 3.11.15).**
+`audit-ci.yml` triggers on `master`/`main` only and this branch is unpushed, so ⛔ **no CI
+evidence exists at `f738df0`, `7e72d91` or this commit either** (`AI-E13-1`, unchanged).
+
+| gate | command | result at commit G |
+|---|---|---|
+| full suite | `pytest -o addopts="" -q` (the repo default `-ra -q` suppresses the count line) | ⛔ **1,752 passed, 0 failed, 0 skipped**, exit 0 |
+| types | `mypy argus` | **Success, 96 source files** |
+| security | `bandit -r argus --severity-level medium` | **No issues identified**, exit 0 |
+| coverage | `pytest --cov=argus --cov-fail-under=80` | ⛔ **95.87%** — `assertion_strength.py` 95%, `provenance_scan.py` 99% |
+| module size | `tests/test_module_size_ceiling.py` | green |
+| dogfood currency | `tests/test_dogfood_artifact_currency.py` (`-49`..`-52`) | green after `7e72d91` |
+| the fenced import walk | `TC-ArgusAgent-PRECISION-001-127` | green — no new module, so still 96 modules / 21 fenced |
+| the frozen criterion | `TC-ArgusAgent-PRECISION-001-140` | green and **unedited**; `scripts/precision_preregistration.py` byte-unchanged |
+| ledger cross-check | `TC-ArgusAgent-DOCS-001-78` / `-22` | green |
+| the 1,032 | `scripts/build_silent_class_record.py --check --checkout-root <root>` | exit 0, artifacts byte-identical |
+
+⚠️ **Recorded honestly, as round 1 did:** commit `f738df0` carries a RED local suite —
+`tests/test_dogfood_plan.py` and `tests/test_dogfood_proof.py` — because the regeneration script
+**refuses to run while `argus/` is dirty** and therefore has to land in its own commit after the
+last `argus/**` byte. `7e72d91` regenerates and both go green. The suite total moved
+**1,751 → 1,752**: exactly the one new guard function this round added, which also settles the
+reviewer's non-blocking 1,750/1,751 collection-drift observation at this HEAD.
+
+⚠️ **DISCLOSED RATHER THAN REWRITTEN (AC6.3, §3.4 evidence immutability).** Commit `f738df0`'s
+message states the differential above **with** the absolute count of spans in which `S1`
+corroborates over THIS REPOSITORY'S OWN test tree. ⛔ **That is a neutrality CONTROL over
+Argus's own tests, not `S1`'s reach**: it is not measured over any ratified corpus member, it
+does not use 17.1's frozen criterion, it is not comparable to `36`/`125`/`161`, and it decides
+nothing. The record and `sprint-status.yaml` publish only the differential (*identical set, 0
+flips*) because a reader should never be able to mistake a control for the measurement. ⛔ The
+commit message is **not amended** — rewriting a sha this record already cites, on a branch a
+peer session shares, is a worse defect than the one it would tidy — and 17.4's single
+measurement over the corpus is untouched by it.
+
+**⛔ WHAT THIS ROUND DID NOT TOUCH, named so it is not mistaken for touched.**
+`argus/detectors/vacuous_test.py` is **not in this round's write set at all**, so `:796` is
+byte-unchanged and `TC-ArgusAgent-PRECISION-001-146` compares the same AST expression; nothing
+`verdict_eligible`, no `rule_id`, no `depth_supported` moved; nothing computed here reaches a
+`.argus/`-bound output. ⛔ **`deferred-work.md` was NOT edited this round** — `DF-AUD-DETECT-D`
+was already closed at `2db5ce0` with its dated disposition, this round writes no closure verb
+beside any entry, and `TC-ArgusAgent-DOCS-001-78` stays green in both directions.
+⛔ `successor-vacuity-predicate-specification.md`, `precision-validation-protocol.md`, the 31
+adjudicated rows and `silent-class-record.json` are **byte-unchanged**. ⛔ **No reach figure for
+`S1` was written** — this round's committed text carries no population number for `S1`: not
+`36`, not `125`, not `161`, not a new one. ⚠️ The `class=36` above is the SILENT-class ROW COUNT
+re-derived by the Story 16.7 harness, which is a different population and is not `S1`'s reach;
+17.4 still measures that once, against a criterion frozen before any of this existed.
+
 ### File List
 
-- `argus/detectors/provenance_scan.py` — modified (the `DF-AUD-DETECT-D` collapse; `LogicalStatement` / `logical_statements`; `_SpanLine.pending`; `candidate_sut_edges`; `SutCallSite` / `sut_call_classification`; `result_observing_lines` and `assertion_statement_lines` made public)
-- `argus/detectors/assertion_strength.py` — **NEW** (the scale, `UnregisteredStrength`, the SUT-derived-name resolver, the grader, `S1`)
+- `argus/detectors/provenance_scan.py` — modified (the `DF-AUD-DETECT-D` collapse; `LogicalStatement` / `logical_statements`; `_SpanLine.pending`; `candidate_sut_edges`; `SutCallSite` / `sut_call_classification`; `result_observing_lines` and `assertion_statement_lines` made public); **round 2** — `result_observing_blocks` added as THE per-block derivation and `result_observing_lines` made its UNION (output proven identical over 257 files / 3,259 spans)
+- `argus/detectors/assertion_strength.py` — **NEW** (the scale, `UnregisteredStrength`, the SUT-derived-name resolver, the grader, `S1`); **round 2** — `_grade_statement` scoped to the observing block's OWN lines
 - `argus/detectors/vacuous_test.py` — modified (`SuccessorVacuityEvidence`, `VacuousTestDetector.successor_evidence`, `_sut_call_sites` delegating to the ONE derivation)
-- `tests/test_assertion_strength.py` — **NEW** (`-147`, `-148`, `-149`, `-150`, `-151`, `-152`)
+- `tests/test_assertion_strength.py` — **NEW** (`-147`, `-148`, `-149`, `-150`, `-151`, `-152`); **round 2** — `-149`'s two-block adversarial case, with its own executed mutation
 - `tests/test_successor_predicate_s1.py` — **NEW** (`PRECISION-001-145`, `-146`; the NFR-M1 split half)
 - `tests/test_vacuous_cross_language.py` — modified (AC9.11: `-130`'s population widened to `argus/detectors/**`; no assertion removed)
 - `README.md` — modified (`DN-17-3-16`: published wheel figures)
 - `CHANGELOG.md` — modified (`DN-17-3-16`: published wheel figures)
 - `_bmad-output/design-artifacts/ArgusAgent/minions-dogfood-partition-plan.md` — regenerated
 - `_bmad-output/design-artifacts/ArgusAgent/minions-dogfood-budget-plan.md` — regenerated
-- `_bmad-output/design-artifacts/ArgusAgent/minions-dogfood-proof.md` — regenerated
-- `_bmad-output/design-artifacts/ArgusAgent/deferred-work.md` — modified (the `DF-AUD-DETECT-D` disposition ONLY; append-only, 1-CR invariant held)
+- `_bmad-output/design-artifacts/ArgusAgent/minions-dogfood-proof.md` — regenerated (twice: at `90b5235`, then at `f738df0` in round 2 — 96 files, 34,480 → 34,513 LOC)
+- `_bmad-output/design-artifacts/ArgusAgent/deferred-work.md` — modified (the `DF-AUD-DETECT-D` disposition ONLY; append-only, 1-CR invariant held) — ⛔ **NOT touched in round 2**
 - `_bmad-output/design-artifacts/ArgusAgent/stories/17-3-grade-what-the-assertion-constrains.md` — this record
-- `_bmad-output/design-artifacts/ArgusAgent/sprint-status.yaml` — `ready-for-dev` → `in-progress` → `review` (1,264 lines / 1,264 CR throughout)
+- `_bmad-output/design-artifacts/ArgusAgent/sprint-status.yaml` — `ready-for-dev` → `in-progress` → `review`, and after review iteration 1 `in-progress` → `review` again (1,264 lines / 1,264 CR throughout)
 
 ---
 
@@ -1821,3 +2046,4 @@ itself at `8715b7f`.
 |---|---|---|
 | 2026-08-25 | create-story (Opus 5) | Story contexted at HEAD `024d330`. §0 measured by execution; six premises moved against `epics.md` — the fail-closed-test trap (all nine result-observing callees are WIDE assertions), the band-0-only verdict weight, `DF-AUD-DETECT-D`'s stale figures (re-measured 1,890 / 31,845 / 232 files), the non-portability of the research `ast` resolver, the NFR-M1 headroom and its pre-registered split trigger, and the five pinned shas all reachable. Status → `ready-for-dev`. |
 | 2026-08-25 | bmad-dev-story (Opus 5) | Round 1 implement. Five commits: `4336d48` open → `2db5ce0` the `DF-AUD-DETECT-D` collapse ALONE and FIRST → `90b5235` the scale, the resolver, the grader and `S1` advisory → `8516297` dogfood regeneration → this record. §0 re-measured by execution before a line was written and every row reproduced. Collapse proven output-neutral three ways: 1,568 test functions re-scored with 0 evidence differences and 0 corroboration flips, three purpose-built string-state triggers all yielding identical `ProvenanceEvidence`, and the 1,032-finding harness byte-identical before and after. `S1` landed ADVISORY — `:796` unchanged as a parsed AST expression, nothing verdict-eligible moves, no reach figure published, both `SUCCESSOR_OUTPUT_PATHS` still absent. Span-scan cost 10,056 → 9,680 calls (−3.7%), a reduction, recorded as a disclosure with `DF-AUD-DETECT-C` untouched. Nine guards `-147`..`-152`, `PRECISION-001-145`/`-146` and `-130`'s widened population, each driven RED at its real seam without touching disk. Three divergences recorded with evidence: `DN-17-3-14` (the sibling evidence model, because `-119` pins the score's field set exactly), `DN-17-3-15` (the anchor sweep already carries `-130`, so `-153` was not minted) and `DN-17-3-16` (an AC10.9 escalation — a FIFTH cost of an `argus/**` byte moves README/CHANGELOG wheel figures). `tests/test_assertion_strength.py` projected above §0.8's 1,150 trigger and was SPLIT FIRST. ONE ledger entry written: `DF-AUD-DETECT-D`, with the 17.5 hand-off recorded. Status → `review`. |
+| 2026-08-25 | bmad-dev-story (Opus 5) | Round 2 fix — review iteration 1's single LOW finding, closed. `_grade_statement` graded a result-observing assertion against the SPAN-WIDE observed line set, so a SUT call covered by ONE `pytest.raises` block leaked `value` into every unrelated sibling observing assertion in the same span. Repaired as a PROJECTION, never a second walk (`DF-AUD-DETECT-D`'s own lesson one level down): `provenance_scan.result_observing_blocks` is now THE derivation and `result_observing_lines` is its UNION — output proven IDENTICAL over 257 tracked files / 3,259 spans / 1,289 covered lines, 0 divergences, so fact (b) and `provenance_evidence` are untouched by construction. `S1` re-verified over all 1,580 repository test functions: 0 verdict flips (the corroborating SET identical; its SIZE not published, AC6.3), 0 band-0 (`none`) moves (482 = 482), 0 `unestablished` moves, 6,709 graded both times, and 16 spans moving `value` → `existence` with 0 moving the other way — the repair can only under-claim. AC2.4's fail-closed non-accusation property re-verified unchanged on all nine `RESULT_OBSERVING_CONTEXT_CALLEES`. `-149` gained a two-block adversarial case with its own in-memory mutation (no mutation touches disk). Span-scan cost delta EXACTLY 0 on all four instrumented functions; `DF-AUD-DETECT-C` untouched. 1,032-harness exit 0 with both artifacts byte-identical (`f784df6305c23aef…` / `cd3cb2933bfe7321…`). `vacuous_test.py` not in the write set, so `:796` is byte-unchanged; `deferred-work.md` NOT edited; no reach figure for `S1`; `precision_preregistration.py` FROZEN. NFR-M1: `provenance_scan.py` 1,086 → 1,099, deliberately held below §0.8's 1,100 band. Two commits — `f738df0` (repair + guard, `Evidence-partition: open`) and `7e72d91` (dogfood regeneration, its own commit) — plus this record. Local gates: pytest 1,752 passed / 0 failed, mypy clean over 96 files, bandit clean, coverage 95.87%. Status → `review`. |
