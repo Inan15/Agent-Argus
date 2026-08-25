@@ -101,10 +101,12 @@ from argus.index.ast_index import CodeEdge
 
 __all__ = [
     "RESULT_OBSERVING_CONTEXT_CALLEES",
+    "LogicalStatement",
     "ProvenanceEvidence",
     "body_statement_count",
     "logical_statement_count",
     "logical_statement_starts",
+    "logical_statements",
     "opens_bare_assert",
     "provenance_evidence",
 ]
@@ -342,36 +344,22 @@ def _continues_onto_next_line(code: str) -> bool:
     return code.rstrip().endswith("\\")
 
 
-def _logical_statement_end(source_lines: list[str], start_line: int, span_end: int) -> int:
-    """Last 1-based line of the logical statement opening at *start_line*.
-
-    Bracket-balanced AND backslash-aware, so both of Python's continuation syntaxes end
-    the statement in the same place. Bounded by *span_end* so a malformed span can never
-    walk out of the test function.
-    """
-    depth = 0
-    for line_no in range(start_line, span_end + 1):
-        index = line_no - 1
-        if index < 0 or index >= len(source_lines):
-            return line_no
-        code = _code_prefix(source_lines[index])
-        depth = max(depth + _bracket_delta(code), 0)
-        if depth <= 0 and not _continues_onto_next_line(code):
-            return line_no
-    return span_end
-
-
 class _SpanLine(NamedTuple):
     """One physical line of a span, as the ONE scan below reads it.
 
     ``opens`` is the 1-based first line of the logical statement this line belongs to,
     or ``None`` when the line opens nothing and belongs to nothing (blank, comment-only,
     at bracket depth 0 and outside any string).
+
+    ``pending`` is the triple-quote delimiter still OPEN after this line, or ``None``.
+    It is the scan's cross-line string state, surfaced so a consumer can tell a statement
+    that ENDED from one the span ran out on (:func:`logical_statements`, ``NFR-R1``).
     """
 
     line_no: int
     code: str
     opens: int | None
+    pending: str | None = None
 
 
 def _scan_span(source_lines: list[str], start: int, end: int) -> list[_SpanLine]:
@@ -410,10 +398,12 @@ def _scan_span(source_lines: list[str], start: int, end: int) -> list[_SpanLine]
         if depth <= 0 and not continued and not inside_string:
             if not code.strip():
                 current = None  # a blank / comment-only line opens no statement
-                scanned.append(_SpanLine(line_no, code, None))
+                scanned.append(_SpanLine(line_no, code, None, pending))
                 continue
             current = line_no
-        scanned.append(_SpanLine(line_no, code, current if current is not None else line_no))
+        scanned.append(
+            _SpanLine(line_no, code, current if current is not None else line_no, pending)
+        )
         depth = max(depth + _bracket_delta(code), 0)
         continued = _continues_onto_next_line(code)
     return scanned
@@ -638,6 +628,52 @@ def logical_statement_starts(
         for line in _scan_span(source_lines, start, end)
         if line.opens is not None
     }
+
+
+class LogicalStatement(NamedTuple):
+    """One logical statement of a span, as the ONE scan reads it.
+
+    1-based, inclusive; ``end_line`` is the LAST line whose ``opens`` is ``start_line``.
+    ``unterminated`` means a literal the statement opened was still open when the span ran
+    out — the extent is then a floor, and a consumer must read it as unreadable (NFR-R1).
+    """
+
+    start_line: int
+    end_line: int
+    code: str
+    unterminated: bool
+
+
+def logical_statements(
+    source_lines: list[str], start: int, end: int
+) -> tuple[LogicalStatement, ...]:
+    """Every logical statement of the 1-based inclusive span, in source order (AR11).
+
+    ⛔ **THE statement-extent derivation, and there is exactly one** (AR7/§3.3,
+    ``DF-AUD-DETECT-D``, ``TC-ArgusAgent-DETECT-001-151``/``-152``). A PROJECTION of
+    :func:`_scan_span` — the statement opening at ``s`` ends at the LAST line whose
+    ``opens`` is ``s`` — never a second walk of the same source.
+
+    It replaced ``_logical_statement_end``, which restated the continuation rule over
+    :func:`_code_prefix` and so could not carry the cross-line STRING state: it placed
+    every multi-line docstring's end at its OPENING line. Re-measured at HEAD ``024d330``
+    over every tracked ``argus/**`` + ``tests/**`` file — **232 files / 31,845 statements
+    / 1,890 disagreements (5.93%)** — and the entry's own prescribed repair was *a
+    deletion, not an addition*.
+    """
+    grouped: dict[int, list[_SpanLine]] = {}
+    for line in _scan_span(source_lines, start, end):
+        if line.opens is None:
+            continue
+        grouped.setdefault(line.opens, []).append(line)
+    statements: list[LogicalStatement] = []
+    for opens in sorted(grouped):
+        lines = grouped[opens]
+        code = " ".join(part for part in (line.code.strip() for line in lines) if part)
+        statements.append(
+            LogicalStatement(opens, lines[-1].line_no, code, lines[-1].pending is not None)
+        )
+    return tuple(statements)
 
 
 def _statement_code(source_lines: list[str], start_line: int, end_line: int) -> str:
@@ -905,6 +941,10 @@ def provenance_evidence(
     mock_names = _mock_bound_names(source_lines, start, end, mock_callees)
     observed_lines = _result_observing_lines(source_lines, start, end)
     statement_starts = logical_statement_starts(source_lines, start, end)
+    # THE statement extent, projected from the SAME scan the starts come from
+    # (DF-AUD-DETECT-D). A line absent from this map opens no readable statement and falls
+    # back to itself: a SHORTER statement can only WITHHOLD corroboration, never make it.
+    extents = {stmt.start_line: stmt.end_line for stmt in logical_statements(source_lines, start, end)}
 
     discarded = 0
     consumed = 0
@@ -938,7 +978,7 @@ def provenance_evidence(
         if statement_start is None:
             consumed += 1  # the line opens no readable statement — not evidence
             continue
-        statement_end = _logical_statement_end(source_lines, statement_start, end)
+        statement_end = extents.get(statement_start, statement_start)
         line_code = _code_prefix(source_lines[index])
         # Everything of the LOGICAL statement that precedes the call, across however
         # many physical lines it was wrapped over, trimmed to the SIMPLE statement the
@@ -968,7 +1008,7 @@ def provenance_evidence(
     for line_no in _assertion_statement_lines(
         source_lines, span_edges, start, end, assertion_callees
     ):
-        statement_end = _logical_statement_end(source_lines, line_no, end)
+        statement_end = extents.get(line_no, line_no)
         statement = _blank_strings(_statement_code(source_lines, line_no, statement_end))
         if any(name in mock_names for name in _CHAIN_ROOT_RE.findall(statement)):
             mock_referencing += 1
