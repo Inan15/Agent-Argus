@@ -4,7 +4,7 @@ baseline_commit: bd110c6
 
 # Story 18.4: The `Detector` Protocol is load-bearing or it is deleted
 
-Status: in-progress
+Status: review
 
 <!-- Contexted 2026-08-25 at HEAD `bd110c6` (branch `docs/merge-strategy-decision`) by the
      create-story workflow (Opus 5).
@@ -1119,77 +1119,77 @@ in that shape and the last of the epic.**
 
 ### Task 2 — THE PROTOCOL, THE PINS AND THEIR GUARDS (AC1, AC2, AC5.1, AC5.2)
 
-- [ ] Write `-146` (the shape fence) and `-145` (the structural pin guard) **against the SHIPPED
+- [x] Write `-146` (the shape fence) and `-145` (the structural pin guard) **against the SHIPPED
       body first**. Observe **both RED**; record the exact failure text (AC5.6).
-- [ ] ⛔ Confirm `-145`'s non-vacuity: it must report **4 classes found / 0 pinned** against the
+- [x] ⛔ Confirm `-145`'s non-vacuity: it must report **4 classes found / 0 pinned** against the
       shipped tree, not pass over an empty population (`AI-E11-1`).
-- [ ] Narrow `Detector` (AC1.1–AC1.6): read-only `rule_id` and `run`, `@runtime_checkable` removed,
+- [x] Narrow `Detector` (AC1.1–AC1.6): read-only `rule_id` and `run`, `@runtime_checkable` removed,
       purity paragraph kept, locked-decisions bullet corrected, `__all__` unchanged.
-- [ ] Add the four `if TYPE_CHECKING:` pins (AC2.1, AC2.2). ⛔ **No module-level instance is
+- [x] Add the four `if TYPE_CHECKING:` pins (AC2.1, AC2.2). ⛔ **No module-level instance is
       constructed at import time**; assert `TYPE_CHECKING is False` at runtime somewhere in `-145`
       or `-146`.
-- [ ] `python -m mypy argus` — **expect `Success … 95 source files`**.
-- [ ] AC2.3: mutate at least three pinned detectors (drop `rule_id`; retype `rule_id`; regress
+- [x] `python -m mypy argus` — **expect `Success … 95 source files`**.
+- [x] AC2.3: mutate at least three pinned detectors (drop `rule_id`; retype `rule_id`; regress
       `run`'s return type) **in a scratch copy** and record each `mypy` failure.
 
 ### Task 3 — ITEM B AND ITEM C (AC3, AC4)
 
-- [ ] Extend `base.py`'s existing `argus.ledger.coverage_ledger` import with `CoverageDepth`; retype
+- [x] Extend `base.py`'s existing `argus.ledger.coverage_ledger` import with `CoverageDepth`; retype
       `depth_supported`; **delete the `# type: ignore[arg-type]`**.
-- [ ] Re-run §0.5's probe: **expect it to become an error**, and the runtime `ValidationError` to be
+- [x] Re-run §0.5's probe: **expect it to become an error**, and the runtime `ValidationError` to be
       unchanged (AC3.3).
-- [ ] `grep -c "type: ignore" argus/detectors/base.py` — **expect 0** (AC3.2). ⛔ Do not touch the
+- [x] `grep -c "type: ignore" argus/detectors/base.py` — **expect 0** (AC3.2). ⛔ Do not touch the
       other 30 in `argus/`.
-- [ ] Correct `FindingDraft`'s docstring and any module-docstring sentence that repeats the claim,
+- [x] Correct `FindingDraft`'s docstring and any module-docstring sentence that repeats the claim,
       **from the measured `model_fields`** (AC4). ⛔ **State the two absences; add no field.**
 
 ### Task 4 — REWRITE `-84` (AC5.3, AC5.4, AC5.5)
 
-- [ ] Replace the `isinstance` assertion with a **structural** one covering **all four** detector
+- [x] Replace the `isinstance` assertion with a **structural** one covering **all four** detector
       classes. ⛔ **No `isinstance`, no `issubclass`** (§2.3).
-- [ ] Keep the id `-84` and keep `-80`..`-83` byte-unchanged.
-- [ ] Run the three guards; **expect all GREEN**. Re-run `-145`/`-146` against the shipped body one
+- [x] Keep the id `-84` and keep `-80`..`-83` byte-unchanged.
+- [x] Run the three guards; **expect all GREEN**. Re-run `-145`/`-146` against the shipped body one
       last time to confirm the recorded REDs are reproducible.
 
 ### Task 5 — PROVE NOTHING MOVED (AC6)
 
-- [ ] Run the engine-vs-engine sweep **after**. ⛔ **The differing set must be EMPTY.** Record both
+- [x] Run the engine-vs-engine sweep **after**. ⛔ **The differing set must be EMPTY.** Record both
       totals, the population size, and that the population included this story's own edits.
-- [ ] Run the AST comparator (AC6.1) and record the exact list of executable differences.
-- [ ] Full suite; `tests/test_silent_class.py` explicitly (the 1,032-finding harness, AC6.3);
+- [x] Run the AST comparator (AC6.1) and record the exact list of executable differences.
+- [x] Full suite; `tests/test_silent_class.py` explicitly (the 1,032-finding harness, AC6.3);
       `build_silent_class_record.py --check`.
-- [ ] AC6.4: attempt the full re-derivation with `--checkout-root` and a **short**
+- [x] AC6.4: attempt the full re-derivation with `--checkout-root` and a **short**
       `--snapshot-root`. ⛔ Record the outcome either way, **by name** if a member refuses.
-- [ ] Regenerate the three dogfood artifacts on a **clean** `argus/` tree (AC6.5). Compare
+- [x] Regenerate the three dogfood artifacts on a **clean** `argus/` tree (AC6.5). Compare
       `hardcoded_secret` (**expect 39**) and total LOC (**expect ~33,726**). ⛔ **Disclose any count
       that moves with its measured cause; loosen nothing.**
 
 ### Task 6 — THE LEDGER (AC7)
 
-- [ ] ⛔ `grep` `deferred-work.md` by id first (`DF-INV-LEDGER-A`).
-- [ ] Append the dated `DF-AUD-DETECT-F` closure note (AC7.1–AC7.3): the arm, the reason, the four
+- [x] ⛔ `grep` `deferred-work.md` by id first (`DF-INV-LEDGER-A`).
+- [x] Append the dated `DF-AUD-DETECT-F` closure note (AC7.1–AC7.3): the arm, the reason, the four
       falsified premises with their measurements, item B's before/after, item C.
-- [ ] Answer the entry's own counter-argument in terms (AC7.2).
-- [ ] List what is **not** dispositioned (AC7.4) and record the three un-filed observations (AC7.5).
-- [ ] Re-verify the byte invariants: bytes, `CRLF == 0`, lone `CR == 1`, and that the edit is a pure
+- [x] Answer the entry's own counter-argument in terms (AC7.2).
+- [x] List what is **not** dispositioned (AC7.4) and record the three un-filed observations (AC7.5).
+- [x] Re-verify the byte invariants: bytes, `CRLF == 0`, lone `CR == 1`, and that the edit is a pure
       insertion. ⛔ **Binary-mode edit; hunk-selective staging** (§2.6).
 
 ### Task 7 — GATES, DOGFOOD AND THE COMMIT ARC (AC8)
 
-- [ ] Run every gate in AC8.4 and record every exit code. ⛔ `PYTHONDONTWRITEBYTECODE=1`,
+- [x] Run every gate in AC8.4 and record every exit code. ⛔ `PYTHONDONTWRITEBYTECODE=1`,
       `__pycache__` cleared.
-- [ ] Four commits in AC8.2's order; **`Evidence-partition: none`** on the `feat`, **written the
+- [x] Four commits in AC8.2's order; **`Evidence-partition: none`** on the `feat`, **written the
       first time**; pure-ASCII messages.
-- [ ] ⛔ Verify the final write set equals AC8.1 **exactly** with `git status --porcelain`, and that
+- [x] ⛔ Verify the final write set equals AC8.1 **exactly** with `git status --porcelain`, and that
       none of the five §0.0 peer files rode along.
 
 ### Task 8 — HAND-OFF (AC7, AC8.6)
 
-- [ ] Completion notes: every §0 row that moved, every RED's exact text, which guards are witnesses
+- [x] Completion notes: every §0 row that moved, every RED's exact text, which guards are witnesses
       and which are fences, the AC6.4 outcome, and every deviation disclosed rather than smoothed.
-- [ ] Mark the local evidence **LOCAL / Windows-only** (`AI-E13-1`) and say plainly that the
+- [x] Mark the local evidence **LOCAL / Windows-only** (`AI-E13-1`) and say plainly that the
       3.10/3.11/3.12 claim belongs to CI at the pushed sha (AC8.6).
-- [ ] ⛔ **This is the last story of Epic 18.** State whether `epic-18` is ready for its
+- [x] ⛔ **This is the last story of Epic 18.** State whether `epic-18` is ready for its
       retrospective, and leave `epic-18-retrospective` at `backlog` — ⛔ **do not transition it.**
 
 ---
@@ -1198,11 +1198,286 @@ in that shape and the last of the epic.**
 
 ### Agent Model Used
 
+`bmad-dev-story` (Claude Opus 5, 1M context) — 2026-08-25, one pass, mode `implement`.
+
 ### Debug Log References
+
+Every command below was RUN, not cited. All probes ran in a scratch directory OUTSIDE the
+repository (`…/scratchpad/{probes,shapes,sweep,engine_before,engine_after,mutrun}`); no probe file was
+written under `argus/`, `tests/` or `scripts/`. `PYTHONDONTWRITEBYTECODE=1` was exported and all 95
+`__pycache__` directories were cleared before the baseline and again before the final gates
+(Story 16.5's lost commit).
+
+| # | what was measured | how |
+|---|---|---|
+| 1 | §0.1 census | `git grep -w Detector -- '*.py'` + an `ast` walk of `argus/**` for classes defining `run` |
+| 2 | §0.2 — the arm's premise | four `Detector`-typed assignments through `python -m mypy` |
+| 3 | §0.3 — decoy matrix | six decoys × `isinstance`, on `python`, `py -3.12`, `py -V:Astral/CPython3.13.14` |
+| 4 | §0.4 — five candidate shapes | five probe modules, each assigning all four detectors, through `mypy` |
+| 5 | §0.4 — five decoys vs the accepted shape | pins written inside `if TYPE_CHECKING:`, through `mypy` |
+| 6 | §0.5 — item B | `build_recording(d, depth_supported="not-a-depth")` under `mypy` and at runtime |
+| 7 | §0.6 — the models | `FindingDraft.model_fields` / `Recording.model_fields` / `DetectorResult.model_fields` |
+| 8 | AC2.3 — pin non-vacuity | five mutations on a scratch copy of `argus/`, each through `mypy argus` |
+| 9 | AC6.1 — inertness | docstring-stripped `ast.unparse` diff of the five changed modules |
+| 10 | AC6.2 — neutrality | both engines over one identical population of the 253 tracked `*.py` files |
+| 11 | AC6.4 | `build_silent_class_record.py --check --checkout-root D:/ProjectX/XAgents/XAgents --snapshot-root D:/s184` |
 
 ### Completion Notes List
 
+#### 1. §0 RE-MEASURED BEFORE A LINE WAS WRITTEN — and every load-bearing row REPRODUCED
+
+⛔ **§0.2 reproduces exactly, and the whole arm rests on it.** `mypy 2.3.0` rejects **4 of 4**
+shipped detectors against the shipped Protocol, with the `Expected: def run(self, *args: object,
+**kwargs: object) -> DetectorResult` / `Got: def run(self, *, file_path: str, …)` notes verbatim, and
+`Found 4 errors in 1 file`. `issubclass(VacuousTestDetector, Detector)` raised
+`TypeError: Protocols with non-method members don't support issubclass()`.
+
+⛔ **§0.3 reproduces on all three interpreters.** `run = 42` → `True` on 3.11.15, 3.12.10 **and**
+3.13.14; `run` returning `str` → `True` on all three; incompatible signature → `True` on all three;
+and ⚠️ **the `__getattr__`-provided `rule_id` row DIFFERS** — `True` on 3.11, `False` on 3.12 and
+3.13. CI runs 3.10/3.11/3.12, so this is a live matrix difference, not trivia.
+
+⛔ **§0.4 reproduces exactly.** Of the five candidate shapes, `*args/**kwargs` → 4 errors,
+`run: Callable[...]` as a settable attribute → 4 errors (*"Protocol member … expected settable
+variable, got read-only attribute"*), `**kwargs: Any` → 4 errors, `rule_id: str` alone → accepted but
+content-free, and **both members as read-only properties → `Success: no issues found`**. Against the
+five decoys that shape gives **`Found 5 errors in 1 file`, 5 of 5 rejected**, including
+`run: expected "Callable[..., DetectorResult]", got "int"`.
+
+§0.1 (one importer, one use, no production import, **four** detector classes not five, six classes
+defining `run`), §0.5 (silent `mypy`, runtime `ValidationError`), §0.6 (8/10/3 fields, neither
+`depth_supported` nor any evidence field on the draft), §0.0 (573,091 bytes / 0 CRLF / one lone CR at
+offset 410,341 in `deferred-work.md`; 253 tracked `*.py`, 95 under `argus/`; 31 `# type: ignore` in
+`argus/` and exactly 1 in `base.py`; 204/796/630/455/306/89 line counts; next free id **-145**;
+LOC 33,703 and `hardcoded_secret` 39) all reproduce.
+
+#### 2. ⚠️ THREE §0 ROWS CAME OUT DIFFERENT — recorded, not smoothed
+
+1. ⛔ **The full suite is NOT exit 0 at HEAD `bd110c6` in this worktree.**
+   `TC-ArgusAgent-DOCS-001-78` (`tests/test_governance_record_integrity.py`) is **RED** with
+   *"18-4-…md claims DF-AUD-DETECT-F CLOSED"* — because this story file, written by the contexting
+   pass, states the closure while `deferred-work.md` has not received the note. §0.0's *"full suite
+   exit 0"* was true of the tree **before the story file existed**. It goes green at Task 6, and did.
+   1,729 collected reproduces exactly.
+2. **`sprint-status.yaml` is 1,022,333 bytes, not 1,017,662** — the contexting pass's own 18-4 row.
+   CRLF **1,187** and lone CR **0** are unchanged, which are the invariants that matter.
+3. **`git status --porcelain` has a sixth entry**, `?? …/stories/18-4-….md` — the untracked story
+   file itself. §0.0's five ` M` peer files are otherwise exactly as listed.
+
+#### 3. THE ARM, AND WHY DELETION WAS NOT TAKEN (`DN-18-4-1`)
+
+`DN-18-4-1` is honoured as written: the Protocol is **narrowed and made load-bearing, not deleted**.
+The entry's counter-argument assumes the only way to make it constrain something is to force a common
+`run` signature; measured, there is a shape that constrains `rule_id`'s type and `run`'s callability
+and return type, that all four detectors satisfy **unedited**, and that rejects five decoys the
+shipped one accepts. ⛔ **Not one detector's `run` signature, body, decorator or call site moved**, and
+`argus/pipeline_stages.py` is **byte-unchanged** (§2.2 — no registry, no `Sequence[Detector]`, no
+dispatch loop; annotating those locals would have made the call sites *less* checked).
+
+#### 4. WHAT LANDED
+
+- **AC1** — `Detector` keeps its name and its `__all__` entry, drops `@runtime_checkable`, and
+  declares exactly two read-only properties: `rule_id -> str` and
+  `run -> Callable[..., DetectorResult]`. The AR8 purity sentence **survives** (`tool_runner.py:27`
+  cites it — `DF-INV-REFS-A`), the docstring records why the decorator is deliberately absent and that
+  restoring it is a decision, and the module's *"Contract decisions locked here"* bullet is corrected
+  rather than deleted.
+- **AC2** — four `if TYPE_CHECKING:` pins, one per detector module, inside `argus/`. `mypy argus`
+  returns **`Success: no issues found in 95 source files` WITH the pins present** — the pins **are**
+  AC1.2's proof. `argus/detectors/__init__.py` is untouched.
+- **AC3** — `depth_supported` retyped to `CoverageDepth | None`; the `# type: ignore[arg-type]`
+  **deleted**; `base.py` now carries **zero** `# type: ignore` and the other **30** in `argus/` are
+  untouched; all **seven** `depth_supported=` call sites type-check **unedited**;
+  `argus/ledger/recording.py` byte-unchanged.
+- **AC4** — `FindingDraft`'s docstring rewritten from the measured `model_fields`, **stating both
+  absences** (a `build_recording` parameter, and a repository-wide FR10 gap) rather than deleting the
+  sentence. No field added, no FR amended.
+
+#### 5. THE GUARDS — which is a witness and which is a fence (`AI-E14-1`)
+
+⛔ **Both REDs were observed against the SHIPPED body before the change was made, and both were
+re-driven against a pristine snapshot afterwards to prove they reproduce.**
+
+- **`-145` — WITNESS.** RED text, verbatim: *"4 detector class(es) define `run() -> DetectorResult`
+  but 4 carry NO static conformance pin against `Detector` in their own module:
+  [('orphan_code.py', 'OrphanCodeDetector'), ('secret_scan.py', 'SecretScanDetector'),
+  ('tool_runner.py', 'ToolRunnerDetector'), ('vacuous_test.py', 'VacuousTestDetector')]"*.
+  ⛔ **`AI-E11-1` non-vacuity is structural, not incidental**: the guard asserts it found ≥ 4 classes
+  **before** asserting anything about pins, so it cannot pass over an empty population — and the RED
+  message itself proves the population was 4, not 0. This is the guard that makes a fifth, unpinned
+  detector impossible.
+- **`-146` — FENCE, NOT A CAUGHT DEFECT** (`DN-18-4-5`; the `-30`/`-09` precedent). RED text,
+  verbatim: *"`Detector` is decorated @runtime_checkable … Decorators found: ['runtime_checkable']"*.
+  It is RED against the shipped Protocol **text** and green before and after the **behaviour** it
+  protects. ⚠️ **Both REDs are author-driven and are therefore vacuity evidence, not "this guard
+  caught a defect."**
+- **`-84` — REWRITTEN, ID KEPT** so Story 1.5's *"Detector satisfies the `Detector` Protocol
+  (TC-84)"* stays true, and **strengthened from one detector to four**. `-80`..`-83` are
+  **byte-unchanged** (the diff has exactly four hunks: three import hunks and `-84`'s body).
+- ⛔ **AC5.4 is honoured to the LETTER.** No guard decides anything by `isinstance`/`issubclass`
+  against a Protocol — **not even inside `pytest.raises(TypeError)`**. That assertion was written,
+  then removed: it is literally *"a guard using `isinstance` against a Protocol"*, and the AC is
+  unqualified. `-146` owns that claim structurally instead, which is also the version-stable
+  spelling. **Tradeoff recorded:** a `pytest.raises` pin would have been version-stable *in this
+  instance*, but the project standard is explicit and the project standard wins.
+- `tests/test_detector_base.py` is **326** lines (NFR-M1 ceiling 1,200).
+
+#### 6. AC2.3 — FIVE OF FIVE MUTATIONS FAIL `mypy argus`, AT THE PIN LINE
+
+Each applied to a scratch copy of `argus/` outside the repository:
+
+| mutation | `mypy argus` |
+|---|---|
+| drop `rule_id` from `VacuousTestDetector` | `vacuous_test.py:807: error: Incompatible types in assignment (expression has type "VacuousTestDetector", variable has type "Detector")` — `Found 1 error` |
+| retype `SecretScanDetector.rule_id` to `int` | `secret_scan.py:641: error: Incompatible types in assignment …` — `Found 1 error` |
+| regress `OrphanCodeDetector.run` to `-> str` | `orphan_code.py:318: error: Incompatible types in assignment …` — `Found 3 errors in 2 files` |
+| make `ToolRunnerDetector.run` the integer 42 | `tool_runner.py:469: error: Incompatible types in assignment …` — `Found 2 errors in 2 files` |
+| remove `OrphanCodeDetector.run` entirely | `orphan_code.py:318: error: Incompatible types in assignment …` — `Found 2 errors in 2 files` |
+
+In every case the reported line **is the pin**. The story asked for at least three; five were run.
+
+#### 7. AC6 — OUTPUT NEUTRALITY, PROVEN THREE WAYS, AND ONE DISCLOSURE
+
+**AC6.1 — by construction.** The docstring-stripped AST comparison over the five changed modules
+returns exactly and only: the two import edits and the `CoverageDepth` addition; the removed
+`@runtime_checkable`; `rule_id: str` and the `*args/**kwargs` `run` replaced by the two properties;
+the `depth_supported` annotation; and four identical `if TYPE_CHECKING:` blocks. **Nothing else.**
+⛔ Asserted rather than assumed: `typing.TYPE_CHECKING is False` at runtime, no module exposes
+`_DETECTOR_CONFORMANCE_PIN` after import (so no detector is constructed at import time), and
+`inspect.signature(build_recording).parameters['depth_supported'].annotation` is the **string**
+`'CoverageDepth | None'` because `from __future__ import annotations` is in force — the retype is
+provably inert.
+
+**AC6.2 — engine vs engine, over ONE identical population.** ⛔ **THE DIFFERING SET IS EMPTY.**
+Population **253** tracked `*.py` files **including this story's own edits** (18.1's disclosure gap);
+shipped engine **459** findings, changed engine **459**; per-file `DetectorResult`s identical for all
+253; whole-index `orphan_code` and `tool_runner` identical.
+
+⚠️ **A trap worth recording for the reviewer.** The first `before` baseline was taken over the
+**pre-edit** sources and gave **458**, which would have read as a +1 engine effect. It is not: it
+changed **both** the engine and the population content. Re-running the **shipped** engine over the
+**post-edit** sources gives **459** too, which isolates the variable and is what 18.2's *"ONE
+identical population"* actually requires.
+
+⚠️ **DISCLOSED — one dogfood count really did move, and here is its measured cause.**
+`orphan_code` over `argus/**` goes **127 → 128**. The new row is `function:rule_id@187` in
+`argus/detectors/base.py`: the narrowed Protocol declares `rule_id` as a `@property` **function**
+rather than a data member, and `orphan_code` conservatively accuses a lone uncalled definition.
+`run` is **not** accused because six classes in `argus/` define it and `orphan_code` refuses to accuse
+a twinned name. The finding is `advisory=True`, `depth_supported=None` — **verdict-ineligible by
+construction**. ⛔ Nothing was suppressed, re-spelled or loosened to hide it (`DF-8-5-B`).
+
+⚠️ **Total physical LOC 33,703 → 33,800 (+97), not the predicted ~33,726 (+23).** §0.7 says in terms
+that the line arithmetic is a sanity check and not a requirement; AC1–AC4 bind. The extra ~74 lines
+are the `Detector` docstring, which now records **why** the Protocol does not describe `run`'s
+parameters, **why** both members are read-only properties and **why** `@runtime_checkable` is
+deliberately absent — each with its measurement — so the next reader does not re-derive them.
+`hardcoded_secret` is **unchanged at 39**, as predicted. The three artifacts were regenerated by their
+own renderer on a clean `argus/` (`scripts/regenerate_dogfood_artifacts.py`, exit 0, provenance sha
+`0ba6a98`).
+
+**AC6.3** — full suite green, **1,731** collected (1,729 + this story's two new cases).
+`tests/test_silent_class.py` green. `build_silent_class_record.py --check` OK, 36 rows, round-trip
+clean, and it says in terms that it did not re-derive.
+
+**AC6.4 — THE FULL RE-DERIVATION WAS RUN AND IT PASSED.**
+`build_silent_class_record.py --check --checkout-root D:/ProjectX/XAgents/XAgents --snapshot-root
+D:/s184` (short root for Windows `MAX_PATH`) → *"OK — the silent-class artifacts are current (36
+row(s), **re-derived from 1032 recorded finding(s) at the pins**)"*, `pin verifications: 4 member(s),
+all proved`, exit **0**, and **no artifact byte changed**. ⛔ **No `PinUnreachable` and no
+`PinnedBytesRefusal` was raised.** ⚠️ **Recorded by name: four members were walked, not five.**
+`ai-body-runtime` is absent from the population **by measurement, not by refusal** — its 13 recorded
+findings are 4 `hardcoded_secret`, 8 `orphan_code` and 1 `traceability_not_establishable`, and
+**zero** `vacuous_test_heuristic`, which is the rule the silent class is derived over. The four
+walked members contribute 72 + 648 + 17 + 295 = **1,032**, the harness figure exactly. ⚠️ Three
+checkout `HEAD`s have moved since contexting (`agent-markovich` `41d372c7`, `agent-smith` `040c5b5d`,
+`minions` `29081ac9`); Story 13.5's reader takes bytes from the **object database at the pinned sha**,
+so this is not a blocker and all four pins proved.
+
+#### 8. RECORDED, NOT FILED (`AI-E9-8`)
+
+Filing and scheduling are the Engineering Lead's. Written into the ledger note and repeated here:
+**(a)** `OrphanCodeDetector.rule_id == "orphan_code"` is absent from `FROZEN_DETECTOR_SET` (a
+cache-key question, and `argus/cache/` is fenced); **(b)** that set's *"mirror the live detector
+constants"* comment is unenforced, and binding it would drag the AST/tree-sitter import surface into
+the determinism module — a design decision with a real cost; **(c)** the FR10 evidence-carrying gap
+is repository-wide and older than `DF-AUD-DETECT-F`. ⛔ **No new `DF-*` entry was filed.**
+
+#### 9. SCOPE, GATES AND STAGING
+
+⛔ **The write set equals AC8.1 exactly.** `argus/pipeline.py`, `argus/pipeline_stages.py`,
+`argus/cache/**`, `argus/ledger/**`, `argus/audit/**`, `argus/precision/**`, `argus/reports/**`,
+`argus/detectors/__init__.py`, `provenance_scan.py`, `secret_suppression.py`, `scripts/**`, every
+other test module, `architecture.md` (`:1174` **stays true**), `E-PRD/prd.md`, `epics.md`, every
+`done` story's record and everything under `minions_core/apaa/` are **untouched**. **No
+`code_identity` bump** (`DN-18-4-8`). **No verdict move**: the ≥80% keystone stays **NOT CLEARED**,
+the gate stays `BLOCKED`, `DF-13-5-A` stays **OPEN and UNSPENT**.
+
+**Every AC8.4 exit code, all `0`:** `pytest -q` (1,731 collected); `pytest -q` with
+`ARGUS_REQUIRE_LANGUAGE_GRAMMARS=1`; `pytest --cov=argus --cov-fail-under=80` (**95.69%**);
+`mypy argus` (95 files); `bandit -r argus --severity-level medium`; and individually
+`test_module_size_ceiling`, `test_no_web_imports`, `test_v1_commitment_closure`,
+`test_governance_record_integrity`, `test_dogfood_plan`, `test_dogfood_proof`,
+`test_dogfood_artifact_currency`, `test_silent_class`, `test_cache_key`, `test_cache_invalidation`,
+`test_release_preflight`, `test_gate_*.py`, `test_detector_base`. `__pycache__` cleared,
+`PYTHONDONTWRITEBYTECODE=1`.
+
+**Ledger byte invariants, re-verified after the write:** 573,091 → 589,632 bytes, **CRLF 0**, **lone
+CR 1 at offset 410,341 (unchanged)**, and the edit proven a **pure insertion** by reconstructing the
+original bytes from the new ones. `sprint-status.yaml`: CRLF **1,187** and lone CR **0** preserved
+across both transitions; per `DN-DEV-18-2-A` it is **written but NOT staged**.
+
+⛔ **`deferred-work.md` was staged HUNK-SELECTIVELY** (`git apply --cached --recount` with a
+patch carrying only my hunk), copying 18.3. Verified afterwards with `git status --porcelain`:
+`MM deferred-work.md` — **184 lines staged (mine), the peer's 19 still uncaptured in the worktree**.
+The five peer-owned Story-18.1/18.2/18.3 record files were never staged. **No `git add -A`, ever.**
+
+**Commit arc (AC8.2), four commits in order:** `a862d8a` chore (story + `in-progress`) → `0ba6a98`
+feat (`argus/` + `tests/`, carrying **`Evidence-partition: none`** — ⛔ **written the first time**,
+18.1's lost sha not repeated) → `0729325` chore (dogfood regeneration on a clean `argus/`) → this
+`docs` commit, **ledger first in the diff**. All messages verified **pure ASCII** (`DF-16-6-F`).
+
+#### 10. HAND-OFF (AC8.6, Task 8)
+
+⚠️ **ALL LOCAL EVIDENCE IS WINDOWS-ONLY** (`AI-E13-1`), on CPython **3.11.15**, with the two
+cross-version rows additionally executed on **3.12.10** and **3.13.14**. ⛔ **The 3.10/3.11/3.12 claim
+belongs to the CI ubuntu matrix at the pushed sha and is NOT claimed here.** This story is the one
+place in the epic where that matters most, and it was addressed rather than inherited: **every guard
+it lands is decided by `ast` or by static typing**, both version-stable, and **none decides anything
+by `isinstance`/`issubclass` against a Protocol** — which is exactly the construct measured to differ
+across the matrix.
+
+⛔ **This is the LAST story of Epic 18.** With 18.1, 18.2 and 18.3 `done` and 18.4 at `review`,
+**`epic-18` is ready for its retrospective once this story is accepted.**
+⛔ **`epic-18-retrospective` is left at `backlog` and was NOT transitioned**, and `epic-17` and its
+five stories are untouched.
+
+⛔ **`DF-INV-MERGE-A` (AC8.3):** if this PR lands squashed or rebased, `python
+scripts/regenerate_dogfood_artifacts.py` must be re-run on `master` and committed, or
+`TC-ArgusAgent-DOGFOOD-001-49` reddens `master` after the fact.
+
+**No HALT condition was reached.** §0.4 reproduced, so AC9's first trigger did not fire; no detector
+signature moved; no fenced file was edited; no dispatch site was invented; no model field moved; no
+`code_identity` moved; no guard was loosened; no new `DF-*` was filed; no `DN-*` was reopened; and no
+new dependency was added (`collections.abc.Callable` and `typing.TYPE_CHECKING` are stdlib, and
+`CoverageDepth` comes from a module `base.py` already imported from).
+
 ### File List
+
+| path | change |
+|---|---|
+| `argus/detectors/base.py` | UPDATE — Protocol narrowed (AC1), `depth_supported` retyped + `# type: ignore` deleted (AC3), `FindingDraft` and module docstrings corrected (AC4). 204 → 255 lines |
+| `argus/detectors/vacuous_test.py` | UPDATE — `TYPE_CHECKING` import + conformance pin ONLY. 796 → 807 |
+| `argus/detectors/secret_scan.py` | UPDATE — `TYPE_CHECKING` import + conformance pin ONLY (18.3's regexes NOT reopened). 630 → 641 |
+| `argus/detectors/tool_runner.py` | UPDATE — `TYPE_CHECKING` import + conformance pin ONLY. 455 → 467 |
+| `argus/detectors/orphan_code.py` | UPDATE — `TYPE_CHECKING` import + conformance pin ONLY. 306 → 318 |
+| `tests/test_detector_base.py` | UPDATE — `-145`, `-146` added; `-84` rewritten (id kept); `-80`..`-83` byte-unchanged. 89 → 326 |
+| `_bmad-output/design-artifacts/ArgusAgent/deferred-work.md` | APPEND-ONLY — `DF-AUD-DETECT-F` closure note, +184 lines, pure insertion, staged hunk-selectively |
+| `_bmad-output/design-artifacts/ArgusAgent/minions-dogfood-partition-plan.md` | REGENERATED by its own renderer |
+| `_bmad-output/design-artifacts/ArgusAgent/minions-dogfood-budget-plan.md` | REGENERATED by its own renderer |
+| `_bmad-output/design-artifacts/ArgusAgent/minions-dogfood-proof.md` | REGENERATED by its own renderer |
+| `_bmad-output/design-artifacts/ArgusAgent/stories/18-4-…-deleted.md` | this file — status, tasks, record |
+| `_bmad-output/design-artifacts/ArgusAgent/sprint-status.yaml` | status transitions only; **written, NOT staged** (`DN-DEV-18-2-A`) |
 
 ---
 
@@ -1211,3 +1486,4 @@ in that shape and the last of the epic.**
 | Date | Version | Description | Author |
 |---|---|---|---|
 | 2026-08-25 | 0.1.0 | Story contexted at HEAD `bd110c6`. Every §0 figure measured by execution: the `Detector` Protocol type-checked against all four shipped detectors (4 of 4 REJECTED by `mypy`, falsifying the entry's central mechanism), the lone `isinstance` assertion driven against five decoys on CPython 3.11/3.12/3.13 (`run = 42` passes on all three), five candidate Protocol shapes probed (exactly one accepted by all four detectors, rejecting five of five decoys), item B's silent `mypy` hole reproduced, and the whole candidate change applied to a throwaway copy of `argus/` with `mypy argus` clean over 95 files. Arm taken: **load-bearing, not deleted** (`DN-18-4-1`). Status → ready-for-dev. | bmad-create-story (Opus 5) |
+| 2026-08-25 | 1.0.0 | DF-AUD-DETECT-F CLOSED; DN-18-4-1's LOAD-BEARING arm taken and the Protocol NOT deleted. Task 0 re-measured every SECTION 0 row by execution and the three load-bearing ones reproduced exactly (mypy rejects 4 of 4 shipped detectors; `run = 42` passes the lone isinstance on 3.11/3.12/3.13 and the `__getattr__` row differs at 3.12; exactly one shape - both members read-only properties - is accepted by all four and rejects 5 of 5 decoys). THREE SECTION 0 ROWS MOVED and are disclosed: the suite was NOT exit 0 at HEAD (TC-ArgusAgent-DOCS-001-78 RED on this story file's own closure claim, green after Task 6), sprint-status.yaml is 1,022,333 bytes, and git status had a sixth entry. LANDED: the narrowed Protocol (`rule_id` + `run: Callable[..., DetectorResult]`, `@runtime_checkable` dropped, AR8 purity paragraph kept); four `if TYPE_CHECKING:` conformance pins INSIDE argus/ where the blocking `mypy argus` gate sees them; `depth_supported` retyped to `CoverageDepth | None` with the `# type: ignore[arg-type]` DELETED (base.py now carries zero); FindingDraft's docstring corrected from the measured model_fields, stating both absences and adding no field. GUARDS: -145 WITNESS (RED at 4 classes / 0 pins, non-empty population asserted first), -146 FENCE not a caught defect, -84 kept by id and strengthened one detector -> four; no guard uses isinstance/issubclass against a Protocol. AC2.3: 5 of 5 mutations fail `mypy argus` at the pin line. NEUTRALITY: AST-inert by construction; engine-vs-engine over ONE identical 253-file population - 459 vs 459, DIFFERING SET EMPTY. DISCLOSED: orphan_code 127 -> 128 (one advisory row, `function:rule_id@187`, a population-content effect the shipped engine reproduces) and LOC 33,703 -> 33,800; hardcoded_secret unchanged at 39. AC6.4 full re-derivation RUN and PASSED (1,032 findings at the pins, 4 members proved, no refusal). All AC8.4 gates exit 0, coverage 95.69%. LOCAL / Windows-only. Status -> review. | bmad-dev-story (Opus 5) |

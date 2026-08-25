@@ -6816,6 +6816,190 @@ than filed as its own entry.
     `depth_supported: object | None` (`base.py:166`) is passed to `Recording` under a
     `# type: ignore[arg-type]` (`:200`), erasing the type at the single construction point every
     finding in the system passes through. `mypy` is clean because the ignore silences it.
+  - ⛔ **`DF-AUD-DETECT-F` — CLOSED 2026-08-25 by story `18-4-the-detector-protocol-is-load-bearing-or-it-is-deleted` at fix sha `0ba6a98`.**
+    Append-only note; the original entry above it is NOT rewritten (§3.4 evidence immutability — the
+    `DF-AUD-DETECT-A` / `DF-AUD-DETECT-B` / `DF-AUD-DETECT-E` notes are the form). The entry's `id`,
+    `owner`, `category` and `severity` fields are left unedited. Status transition: **OPEN → CLOSED.**
+    - ⛔ **THE ARM TAKEN: LOAD-BEARING, NOT DELETED** (`DN-18-4-1`). The `Detector` Protocol survives,
+      narrowed to the two members all four shipped detectors actually have, and each detector module
+      carries a static conformance pin against it INSIDE `argus/` where the blocking `mypy argus` CI
+      gate checks it. The either/or in the epic's AC is decided by measurement, and the measurement
+      decided against deletion.
+    - ⛔ **FALSIFICATION (i) — THIS ENTRY'S CENTRAL MECHANISM IS FALSE. THE PROTOCOL WAS NOT UNUSED,
+      IT WAS UNUSABLE.** The entry says *"the widened signature is what makes them all 'satisfy' it"*.
+      **Measured, `mypy` 2.3.0, 4 of 4 REJECTED:** assigning each shipped detector to a
+      `Detector`-typed variable yields `Incompatible types in assignment` for `VacuousTestDetector`,
+      `SecretScanDetector`, `ToolRunnerDetector` and `OrphanCodeDetector` alike —
+      `Expected: def run(self, *args: object, **kwargs: object) -> DetectorResult` against each
+      detector's keyword-only `Got:`. `Found 4 errors in 1 file`. `*args: object, **kwargs: object`
+      does not *widen* a protocol member; it **narrows what can implement it**, because an
+      implementation must accept everything the protocol permits and a keyword-only signature accepts
+      no positional argument. The Protocol therefore lacked a consumer **because it could not have
+      one** — it would have failed the moment anyone used it — and the middle position the entry
+      describes is not *"`run` is decoration"* but *"`run` is an active falsehood"*. Its four
+      downstream repetitions are the shipped docstrings at `orphan_code.py:174`, `secret_scan.py:389`,
+      `tool_runner.py:291` and `vacuous_test.py:602`, each claiming its class *"satisfies the
+      `detectors.base.Detector` protocol structurally"*. ⛔ **Those four claims were FALSE as written
+      and are TRUE as of this fix; they were not rewritten, they were made true.** Also measured:
+      `issubclass(VacuousTestDetector, Detector)` raised
+      `TypeError: Protocols with non-method members don't support issubclass()`, because `rule_id: str`
+      was a data member.
+    - ⛔ **FALSIFICATION (ii) — THE LONE ASSERTION IS VACUOUS ON EVERY INTERPRETER CI RUNS, AND ITS
+      VERDICT IS NOT EVEN STABLE ACROSS THEM.** `tests/test_detector_base.py:89` was
+      `assert isinstance(VacuousTestDetector(), Detector)`. A `runtime_checkable` protocol's
+      `isinstance` checks member PRESENCE only — never callability, never signature, never return
+      type. Driven against five decoys on CPython **3.11.15, 3.12.10 and 3.13.14**: a class whose
+      `run` returns `str` → **True**; a class with an incompatible `run(self, banana: int)` → **True**;
+      ⛔ **a class whose `run` is the integer `42` → True on all three.** Only *no `rule_id`* and
+      *empty class* were rejected. ⚠️ **And one row DIFFERS across the CI matrix:** a `rule_id`
+      supplied by `__getattr__` satisfies on **3.11** and does **not** on **3.12/3.13**, because 3.12
+      switched `runtime_checkable` from `hasattr` to `inspect.getattr_static`. **CI runs 3.10, 3.11
+      and 3.12** (`.github/workflows/audit-ci.yml:15`), so this is a live matrix difference. The
+      assertion detected exactly two things: *has an attribute named `run`* and *has an attribute
+      named `rule_id`*.
+    - ⛔ **FALSIFICATION (iii) — "THE FIVE CONCRETE DETECTORS" IS FOUR.** An AST walk of `argus/**`
+      finds exactly **six** classes defining `run`: the four detectors (all `-> DetectorResult`), the
+      Protocol itself, and `DeepAuditSeam.run -> LLMRecording` (`argus/audit/deep_audit.py:110`, not a
+      detector). `argus/detectors/provenance_scan.py` defines no detector class. **Five is the number
+      of `rule_id`s in `FROZEN_DETECTOR_SET`** (`vacuous_test` contributes two), not the number of
+      classes.
+    - ⛔ **THE ANSWER TO THIS ENTRY'S OWN HONEST COUNTER-ARGUMENT, in its own terms.** The
+      counter-argument says the detectors are genuinely heterogeneous, that forcing a common `run`
+      signature would be a worse design, and that in that case the repair is to delete the Protocol
+      and its test. ⛔ **Its premise is accepted in full and NO SIGNATURE IS FORCED.** Not one
+      detector's `run` signature, body, decorator or call site was touched, and
+      `argus/pipeline_stages.py` — where all four are constructed and called concretely — is
+      **byte-unchanged**. The counter-argument's own closing sentence names the repair that was
+      taken: *"`rule_id` + `DetectorResult` is the real shared contract and `run` is decoration"*.
+      **That is exactly what the new Protocol encodes**, and the reason the middle position did not
+      persist is that the contract stopped describing `run`'s parameters at all and started
+      constraining `run`'s existence, callability and return type — the part that is genuinely shared.
+      ⚠️ **What deletion would have cost, weighed and rejected:** it removes a public `__all__` symbol
+      from a shipped distribution, a `done` story's contract and the test id `TC-ArgusAgent-DETECT-001-84`
+      that Story 1.5's record names; it makes `architecture.md:1174` (*"base.py # detector Protocol +
+      Finding builder"*) stale, which would have forced this epic's first architecture edit for a
+      cosmetic reason; and it leaves four shipped docstrings asserting a conformance with nothing left
+      to check them against. ⛔ **It is also the IRREVERSIBLE arm of the two** — a narrowed Protocol
+      can be deleted later by anyone; a deleted one has to be re-litigated.
+    - ⛔ **THE SHAPE, MEASURED AGAINST ALL FOUR DETECTORS, AND THE FIVE DECOYS IT REJECTS.** Five
+      candidate shapes were type-checked against the four shipped detectors, unedited. `rule_id: str`
+      + `run(self, *args: object, **kwargs: object)` → **4 errors**; `rule_id: str` +
+      `run: Callable[..., DetectorResult]` as a settable attribute → **4 errors**, *"Protocol member
+      Detector.run expected settable variable, got read-only attribute"*; `rule_id: str` +
+      `run(self, **kwargs: Any)` → **4 errors**; `rule_id: str` alone → accepted, but constrains
+      nothing about the result (the deletion arm with extra steps). ⛔ **Exactly one shape is accepted
+      by all four — both members as READ-ONLY PROPERTIES:**
+
+      ```python
+      class Detector(Protocol):
+          @property
+          def rule_id(self) -> str: ...
+
+          @property
+          def run(self) -> Callable[..., DetectorResult]: ...
+      ```
+
+      ⛔ **And it is not permissive.** With the pins written inside `if TYPE_CHECKING:`, five decoys
+      the shipped Protocol accepted or was silent about are each an error: no `rule_id`; `rule_id = 7`;
+      `run` returning `str`; no `run`; and `run = 42` — the last reported as
+      *`run: expected "Callable[..., DetectorResult]", got "int"`*. **`Found 5 errors in 1 file`, 5 of
+      5 rejected**, against a shipped `isinstance` that accepted three of them on every interpreter CI
+      runs. ⛔ The property spelling is **already this repository's idiom**:
+      `argus/detectors/vacuous_test.py:404`'s `_HasFilePath` uses it verbatim and is load-bearing.
+    - ⛔ **THE PINS ARE INSIDE `argus/`, AND THAT IS THE WHOLE POINT.** There is **no `[tool.mypy]`
+      section, no `mypy.ini`, no `setup.cfg`** in this repository, and CI runs **`mypy argus`** only
+      (`audit-ci.yml:70`) — `tests/` is type-checked by **no gate**. ⛔ **A `Detector`-typed assertion
+      written under `tests/` would be enforced by NOTHING**: it would look like a guard, pass forever,
+      and be precisely the vacuity Epic 18 exists to remove. Each of the four detector modules
+      therefore ends with an `if TYPE_CHECKING:` block binding its class to `Detector`. `TYPE_CHECKING`
+      is `False` at runtime (asserted, not assumed), so no pin exists at import time, no detector is
+      constructed at import time, and `argus/detectors/__init__.py` is untouched (Story 1.5's
+      *"do NOT add them here"* note is a locked decision). **Non-vacuity of the pins, executed:** five
+      mutations on a scratch copy — drop `rule_id`, retype `rule_id` to `int`, regress `run`'s return
+      type to `str`, make `run` the integer `42`, remove `run` entirely — each makes **`mypy argus`
+      FAIL at the pin line**. 5 of 5.
+    - ⛔ **THE ENTRY'S SECOND, NARROWER ITEM IS TRUE AND WORSE THAN IT STATES — DISCHARGED.**
+      `build_recording`'s `depth_supported: object | None` was passed to `Recording` under
+      `# type: ignore[arg-type]` at the single construction point every finding in the system passes
+      through. **Before:** `build_recording(d, depth_supported="not-a-depth")` and
+      `build_recording(d, depth_supported=object())` were both **`mypy: Success: no issues found`**,
+      while at runtime `pydantic` raised
+      `ValidationError: Input should be 'audited_deep', 'audited_shallow', ...`. ⛔ **The ignore
+      converted a compile-time error into an audit-time crash.** **After:** the parameter is
+      `CoverageDepth | None`, the ignore is DELETED, and the same probe is
+      **`error: Argument "depth_supported" to "build_recording" has incompatible type "str"; expected
+      "CoverageDepth | None" [arg-type]`** — `Found 2 errors in 1 file`. The runtime behaviour is
+      unchanged (`pydantic` still raises), asserted rather than assumed. `mypy argus` stays
+      **`Success: no issues found in 95 source files`** with all **seven** existing `depth_supported=`
+      call sites UNEDITED, and **no new import edge** is created — `CoverageDepth` comes from
+      `argus.ledger.coverage_ledger`, which `base.py` already imported for `CoverageLedgerEntry`.
+      `argus/detectors/base.py` now carries **zero** `# type: ignore`; the other **30** in `argus/`
+      are untouched.
+    - ⛔ **AND A THIRD ITEM IN THE SAME MODULE, HANDED OVER BY NAME BY STORY 18.2 — DISCHARGED AS
+      PROSE ONLY.** `FindingDraft`'s docstring claimed the draft carries *"the supported coverage depth
+      (the verdict-fold input), and the evidence the finding carries WITH it (FR10 …)"*. Measured from
+      the live models: `FindingDraft` has **eight** fields (`advisory`, `ast_span`, `cartridge_id`,
+      `coverage_envelope_slice`, `end_line`, `file_path`, `rule_id`, `start_line`) and **neither
+      exists**. `depth_supported` is a **parameter of `build_recording`**, not a draft field; and no
+      evidence field exists on `FindingDraft`, on `DetectorResult`, or on the ten-field `Recording`.
+      ⛔ **The docstring now STATES both absences; no field was added and no FR was amended**
+      (`DN-18-4-6`). Story 18.2 measured the evidence half as repository-wide and older than this
+      entry — `Recording` has no field that could hold a count — so *"one detector widened in
+      isolation"* is the wrong shape of repair and **the FR10 evidence-carrying gap stays OPEN**.
+    - ⛔ **OUTPUT NEUTRALITY, PROVEN THREE WAYS** (`DN-18-4-7`). **By construction:** a
+      docstring-stripped AST comparison of the five changed modules shows the only executable
+      differences are the Protocol's member declarations, the removed decorator, the four
+      `if TYPE_CHECKING:` blocks, the added imports and the parameter annotation —
+      `from __future__ import annotations` is in force, so the `depth_supported` annotation is the
+      **string** `'CoverageDepth | None'` at runtime and the retype is provably inert.
+      **Engine-vs-engine:** the shipped engine and the changed engine were run over **ONE identical
+      population of all 253 tracked `*.py` files, including this story's own edits** — **459 findings
+      each, per-file `DetectorResult`s identical, whole-index `orphan_code` and `tool_runner`
+      identical. THE DIFFERING SET IS EMPTY.** **Suite:** `mypy argus` `Success … 95 source files`
+      **with the pins present** (which is what proves the four detectors conform), `bandit` clean, and
+      `build_silent_class_record.py --check` OK over 36 rows.
+    - ⚠️ **DISCLOSED, NOT SMOOTHED — two dogfood counts moved.** Total physical LOC **33,703 → 33,800**
+      (the story predicted ~33,726 from one candidate spelling; the extra lines are the `Detector`
+      docstring, which now records why the Protocol does not describe `run`'s parameters, why both
+      members are read-only properties and why `@runtime_checkable` is deliberately absent, each with
+      its measurement). `orphan_code` **127 → 128**: one new advisory row, `function:rule_id@187` in
+      `argus/detectors/base.py`, because the narrowed Protocol declares `rule_id` as a `@property`
+      FUNCTION rather than a data member and `orphan_code` conservatively accuses a lone uncalled
+      definition — `run` is not accused because six classes define it and `orphan_code` refuses to
+      accuse a twinned name. ⛔ **This is a POPULATION-CONTENT effect, not an engine effect**: the
+      SHIPPED engine over the POST-edit sources produces the same 128, which is why the
+      engine-vs-engine differing set above is empty. The finding is `advisory=True` with
+      `depth_supported=None` and is therefore **verdict-INELIGIBLE by construction**.
+      `hardcoded_secret` is **UNCHANGED at 39**, as predicted. The three artifacts were regenerated by
+      their OWN renderer on a clean `argus/`; **no assertion was loosened** (`DF-8-5-B`).
+    - ⛔ **NO `code_identity` BUMP** (`DN-18-4-8`, `DN-18-2-5`'s arm and the deliberate inverse of
+      `DN-18-3-6`). `FROZEN_DETECTOR_SET` (`argus/cache/key.py:186`) is five hand-declared descriptors
+      and **none of them is `base.py`**; no detector's logic changed and the output is proven
+      identical. **Nothing under `argus/cache/` is touched.**
+    - ⛔ **WHAT THIS NOTE DOES NOT DISPOSITION.** `DF-10-4-B`, `DF-10-3-B`, `DF-10-3-C`,
+      `DF-AUD-DETECT-C`, `DF-AUD-DETECT-D`, `DF-INV-MERGE-A`, `DF-INV-WHEEL-A` and `DF-INV-REFS-A` all
+      stay **OPEN and untouched**, and ⛔ **`DF-13-5-A` stays OPEN and UNSPENT** — no member was
+      ratified, no protocol row added, no third-party source fetched. No FR is amended, no model field
+      is added, no threshold moves, **no finding becomes verdict-eligible**, the ≥80%-precision
+      keystone stays **NOT CLEARED** and the gate stays `BLOCKED`. `architecture.md` (`:1174` **stays
+      true** under the arm taken), `E-PRD/prd.md`, `epics.md` and every `done` story's record are
+      **unedited**. Nothing under `minions_core/apaa/` was touched.
+    - ⛔ **RECORDED, NOT FILED** (`AI-E9-8` — filing and scheduling are the Engineering Lead's).
+      **(a)** `OrphanCodeDetector.rule_id == "orphan_code"` is **absent from `FROZEN_DETECTOR_SET`**,
+      which carries five `rule_id`s and not this one. It is a cache-key question, not a typing one.
+      **(b)** `FROZEN_DETECTOR_SET`'s comment claims its `rule_id`s *"mirror the live detector
+      constants"* and **nothing enforces it**; binding it would require `argus/cache/key.py` to import
+      `argus.detectors.*`, dragging the AST/tree-sitter import surface into the determinism module —
+      a design decision with a real cost. **(c)** the **FR10 evidence-carrying gap** is
+      repository-wide and older than this entry (above, and Story 18.2's record).
+    - ⚠️ **LOCAL / Windows-only evidence** (`AI-E13-1`). Every figure here was measured on a Windows
+      host on CPython 3.11.15, with the two cross-version rows additionally executed on 3.12.10 and
+      3.13.14. ⛔ **The 3.10/3.11/3.12 claim belongs to the CI ubuntu matrix at the pushed sha and is
+      not claimed here.** It is claimed deliberately rather than inherited: every guard this story
+      lands is decided by `ast` or by static typing, both version-stable, and **no guard in it decides
+      anything by `isinstance`/`issubclass` against a Protocol** — not even to assert the `TypeError`,
+      because that is the exact spelling measured vacuous above.
+
 
 ## Epic 17 / Epic 18 re-homing and scheduling — 2026-08-24
 
