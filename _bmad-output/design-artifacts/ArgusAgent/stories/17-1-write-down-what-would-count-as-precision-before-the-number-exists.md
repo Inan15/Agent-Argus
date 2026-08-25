@@ -4,7 +4,7 @@ baseline_commit: c2ce00f
 
 # Story 17.1: Write down what would count as precision, before the number exists
 
-Status: review
+Status: done
 
 <!-- Contexted 2026-08-25 at HEAD `c2ce00f` (branch `docs/merge-strategy-decision`, working tree
      CLEAN) by the create-story workflow (Opus 5).
@@ -1074,6 +1074,71 @@ back: full suite re-run from a clean tree (`PYTHONDONTWRITEBYTECODE=1 python -m 
   ⛔ `deferred-work.md` is **untouched** — correct per the reviewer's own triage (the code is new
   in this diff, so it is a `patch`, not a ledger entry) and per this story's write-set boundary.
 
+**Code review — iteration 2 (Sonnet 5), 2026-08-25. VERDICT: PASS.** Focused re-review of fix
+commit `52ae0e5` against iteration 1's one Medium finding. Independently re-executed rather than
+read back: full suite re-run from a clean tree (`PYTHONDONTWRITEBYTECODE=1 python -m pytest -q`),
+exit 0, all green, no `F`/`E` markers anywhere in the output (matches the claimed 1,738);
+`tests/test_precision_preregistration.py` alone 7/7; `mypy argus` clean over 95 files;
+`bandit -r argus --severity-level medium` clean; `git status --porcelain` clean before and after
+every probe.
+
+1. **Is the iteration-1 finding actually resolved? YES.** Confirmed `_CHANGE_LOG_ROW`,
+   `protocol_change_log_head` and `import re` are gone from
+   `scripts/precision_preregistration.py`; `refuse_protocol_drift` now calls
+   `argus.precision.adjudication.change_log_head_version` (read at `adjudication.py:721` —
+   anchored to the `## Change log` heading, stops at the next `## ` heading, PURE). The
+   `try/except ValueError` wraps **only** that one call, so a genuinely different failure inside
+   `refuse_protocol_drift` (e.g. a non-string `markdown` raising `TypeError`) propagates
+   unswallowed rather than being mistranslated into `ProtocolVersionDrift` — verified by reading
+   the exact span of the `try:` block, not assumed.
+2. **Are the two new guard halves in `-135` real? YES, confirmed by executed mutation, not by
+   reading the assertions.** Mutation A (structural): deleted the
+   `from argus.precision.adjudication import change_log_head_version` import line from the live
+   module — `-135` went RED with `AssertionError: the criterion does not import
+   'argus.precision.adjudication'`. Mutation B (behavioural): reintroduced iteration-1's exact
+   defect at the real seam — `refuse_protocol_drift` rebuilt to resolve the head via an unanchored
+   `re.search` over the whole document instead of `change_log_head_version` — `-135` went RED with
+   `Failed: DID NOT RAISE Exception` at the planted-decoy assertion, i.e. the guard reproduced the
+   silent-pass live. Module restored via `git checkout --` both times; `sha256sum` confirmed
+   byte-identical to the pre-mutation baseline
+   (`f31ae29cf241bc4343059bfce270e81498923847531d577e551109e40f7cd739`) after each restore. Neither
+   half is `f(x) == f(x)` or trivially satisfiable.
+3. **Did the fix regress anything the first round cleared? NO.** `git diff f906d04 HEAD --
+   scripts/precision_preregistration.py` shows exactly the change-log-head fix plus the
+   already-expected `PREREGISTRATION_COMMIT_SHA` fill from commit B (`4c3a517`, which predates this
+   fix) — nothing else moved. `POPULATION_ID`, `PROTOCOL_VERSION` (`"V1.3"`), the resolved ratio
+   floor and `MAX_FALSE_ACCUSATION_EXPOSURE` (`26`) are byte-identical between the `f906d04` pin
+   and `HEAD`. `-139` and `-140` re-run directly, both green. **On leaving
+   `PREREGISTRATION_COMMIT_SHA` pinned at `f906d04` rather than re-pinning to `52ae0e5`:** judged
+   **correct**, not a defect. AC4.5 defines the frozen field set as exactly
+   `POPULATION_ID` / `PROTOCOL_VERSION` / the ratio floor / `MAX_FALSE_ACCUSATION_EXPOSURE`, all
+   four of which are unchanged — the pin's job (per `-140`) is to prove those four values did not
+   move, not to track the module's byte-for-byte implementation. `DN-17-1-15`'s own reasoning
+   (re-pinning would restart the ordering claim `-139`/`-140` exist to prove) is sound: this fix
+   changed *how an external fact is read*, not *what was pre-registered*.
+4. **New-in-this-round defects: NONE found.** Coupling check on the new
+   `argus.precision.adjudication` import: does not drag any `DN-17-1-1` obligation. The module
+   already imported `argus.precision.gate_breadth` / `gate_conditions` / `gate_seal` / `gate_yield`
+   / `replay_harness` before this fix (per AC1.3's resolution requirement), so this is the same
+   established coupling direction (`scripts/` importing FROM `argus.precision`, never the reverse),
+   not a new one. None of `DN-17-1-1`'s four rejected costs (§2.1 — dogfood-artifact currency, the
+   `Evidence-partition:` trailer, `--cov=argus --cov-fail-under=80`, `mypy`/`bandit -r argus`) are
+   triggered: `argus.precision.adjudication.py` is not in `DETECTOR_TUNING_PATHS`, no `argus/**`
+   byte changed, and `scripts/**` stays out of all three CI gates' scope per §0.0's own table.
+   `AC3.3`'s forbidden-import list (`argus.detectors.*`, `urllib`, `requests`, `http.client`,
+   `socket`, `ftplib`, `subprocess`) does not include `argus.precision.adjudication`, so `-141`
+   correctly stays green (confirmed by direct run). No POSIX-portability hazard introduced — the
+   diff adds no new `subprocess`/path-separator/shell logic. `deferred-work.md` grepped first for
+   `DN-17-1-15` / `change_log_head` / `17-1`: no prior art, confirming this was correctly filed as
+   an in-diff `patch` in iteration 1 rather than a ledger entry, and correctly left untouched here.
+   NFR-M1 independently re-measured: `scripts/precision_preregistration.py` **774** lines,
+   `tests/test_precision_preregistration.py` **1,121** lines, both well under the 1,200 ceiling.
+
+**Write-set re-verified:** `git status --porcelain` at review start showed nothing outstanding
+beyond this story's own commits; the only files this review round wrote are this story file and
+`sprint-status.yaml` (surgical, `last_updated` + the one status value). No code was patched by
+this review.
+
 ---
 
 ## Dev Agent Record
@@ -1417,3 +1482,4 @@ this branch (§2.6).
 | 2026-08-25 | **DEV round 1.** §0 re-measured by execution before a line was written — **every row reproduced**, AC7 not triggered. Landed `scripts/precision_preregistration.py` (the criterion as pure code: population, protocol version checked against the change-log head, ratio floor and three resolution floors RESOLVED, `MAX_FALSE_ACCUSATION_EXPOSURE = 26` derived from a pinned blob, both consequence clauses, and a pure fold evaluating the floors before the ratio), the dated pre-registration document, and seven guards `TC-ArgusAgent-PRECISION-001-135`..`-141` — each driven RED at its real seam by an executed mutation. Three commits, pure-ASCII messages. Local (Windows) gates all exit 0: 1,737 passed, coverage 95.69%, `mypy` clean, `bandit` clean. Nothing ratified, fetched or spent; `argus/**` byte-unchanged; `deferred-work.md` untouched. `ready-for-dev` → `in-progress` → `review`. | Developer (dev-story, Opus 5) |
 | 2026-08-25 | **CODE REVIEW, iteration 1 (Sonnet 5).** VERDICT **fail** (one Medium `patch` finding). Independently re-executed rather than read back: full suite re-run clean, exit 0, all green (matches claimed 1,738); `mypy`/`bandit` clean; `git status --porcelain` clean throughout. Both dev-flagged items judged sound by independent re-derivation and adversarial mutation: `MAX_FALSE_ACCUSATION_EXPOSURE = 26` reproduces byte-exact from the pinned blob and its strengthening-only asymmetry is enforced mechanically by `-140` (mutated 26→27 in the real module, watched `-136`/`-140` go RED, restored byte-exact); `-139` does not exist before commit B, is exercised and green at final `HEAD`, and correctly reddens on an injected non-vacuous defect (widened `SUCCESSOR_OUTPUT_PATHS`) — a legitimate seam, not a gamed guard. ONE Medium finding: `protocol_change_log_head`/`refuse_protocol_drift` re-implement, with a weaker unanchored regex, a fact `argus.precision.adjudication.change_log_head_version` already derives correctly and structurally — demonstrated by a constructed adversarial document where the new code silently passes on real protocol drift while the existing canonical parser would not. New code introduced by this diff, so filed `patch` (not `defer`) and left as an action item; `deferred-work.md` untouched, per this story's own write-set boundary. `review` → `in-progress`. | Reviewer (code-review, Sonnet 5, iteration 1) |
 | 2026-08-25 | **DEV FIX ROUND 1.** Addressed code review findings — **1 of 1 items resolved**. The Medium `[Review][Patch]` finding stands in full and was **reproduced before it was fixed**: an earlier same-shaped change-log row planted above the `## Change log` heading made `protocol_change_log_head`'s unanchored whole-document scan resolve the wrong row, and `refuse_protocol_drift` returned **silently** on a document whose real head had moved past `V1.3`. Fixed **by deletion**, not by patching the pattern: `_CHANGE_LOG_ROW`, `protocol_change_log_head` and `import re` removed; `refuse_protocol_drift` now calls `argus.precision.adjudication.change_log_head_version` — the one anchored derivation — and translates its unreadable-table `ValueError` into `ProtocolVersionDrift` (`DN-17-1-15`; `AR7`/`DN-3`/`DF-8-5-C`). The defect is pinned so it cannot return: `-135` now requires `argus.precision.adjudication` among the criterion's visible imports (**structural**) and drives the reviewer's exact adversarial document, **generated from the real protocol**, through the refusal on every run, having first proved that an unanchored reading of it resolves the decoy (**behavioural**) — plus the converse direction. Both halves driven RED at the real seam by executed mutations of the real module; module restored byte-exact by sha256. ⛔ No pre-registered value moved — `POPULATION_ID`, `PROTOCOL_VERSION`, the resolved ratio floor and `MAX_FALSE_ACCUSATION_EXPOSURE` are identical at the pin, so `-140` stays green and `PREREGISTRATION_COMMIT_SHA` is not re-pinned. LOCAL (Windows) gates all exit 0: **1,738 passed**, grammars-required green, coverage **95.69%**, `mypy` clean, `bandit` clean, NFR-M1 774/1,121. Nothing ratified, fetched or spent; `argus/**` byte-unchanged; `deferred-work.md` untouched and `DF-13-5-A` stays OPEN and UNSPENT. `in-progress` → `review`. | Developer (dev-story, Opus 5, fix iteration 1) |
+| 2026-08-25 | **CODE REVIEW, iteration 2 (Sonnet 5).** VERDICT **pass**. Focused re-review of fix commit `52ae0e5`. Independently re-executed: full suite re-run clean, exit 0, all green, no `F`/`E` markers (matches claimed 1,738); `tests/test_precision_preregistration.py` 7/7; `mypy`/`bandit` clean; `git status --porcelain` clean throughout. Confirmed by executed mutation, not by reading: deleting the `argus.precision.adjudication` import reddens `-135`'s structural assertion; reintroducing an unanchored `re.search` at the `refuse_protocol_drift` seam reproduces the iteration-1 silent-pass live and reddens `-135`'s behavioural assertion (`DID NOT RAISE`) — module restored and sha256-verified byte-identical both times. Confirmed the `ValueError`→`ProtocolVersionDrift` translation is narrowly scoped to the one call, so an unrelated failure is not swallowed. Confirmed nothing else moved between the `f906d04` pin and `HEAD` — `POPULATION_ID`, `PROTOCOL_VERSION`, the resolved ratio floor and `MAX_FALSE_ACCUSATION_EXPOSURE` byte-identical; `-139`/`-140` re-run green. Leaving `PREREGISTRATION_COMMIT_SHA` at `f906d04` (not re-pinned) judged **correct**: AC4.5's frozen field set is the four values, all unchanged. Coupling check: the new `argus.precision.adjudication` import does not drag any `DN-17-1-1` obligation — same established `scripts/` → `argus.precision` direction the module already used before this fix; none of `DN-17-1-1`'s four rejected costs are triggered. No new defect found; `deferred-work.md` grepped first, no prior art, correctly left untouched. NFR-M1 re-measured: 774/1,121, both well under 1,200. `review` → `done`. | Reviewer (code-review, Sonnet 5, iteration 2) |
