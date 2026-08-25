@@ -4,7 +4,7 @@ baseline_commit: 682b074
 
 # Story 17.4: Run it once, and let the pre-registered criterion decide
 
-Status: review
+Status: done
 
 <!-- Contexted 2026-08-25 at HEAD `682b074` (branch `docs/merge-strategy-decision`, 17 ahead of
      `origin/master`) by the create-story workflow (Opus 5).
@@ -1200,6 +1200,76 @@ and no environment read on any derivation path.**
 - [x] Update `sprint-status.yaml` **surgically** (1,264 lines / 1,264 CR bytes preserved); stage by
       **explicit path**; commit per the §2.3 arc.
 - [x] ⛔ If any AC10 condition fired, **STOP and escalate** rather than proceeding.
+
+### Review Findings
+
+**Code review (Sonnet 5), iteration 1, 2026-08-26.** Adversarial review (Blind Hunter, Edge Case
+Hunter, Acceptance Auditor) of the finished three-commit arc `0b4bfd8` → `5bf27ca` → `f3f2bbd`
+(base `682b074`), against the story's own ACs, `epics.md`'s Story 17.4 acceptance criteria and
+project standards. ✅ **Clean review — all layers passed.**
+
+**Independently verified by execution (re-derived, not relayed):**
+
+- `scripts/precision_preregistration.py` byte-frozen: sha256 `f31ae29c…` matches the story's
+  claim; `git diff`/`git log` `682b074..HEAD` for the file and for `tests/test_precision_preregistration.py`
+  (`-135`..`-141`, incl. `-140`) are both **empty**.
+- `python scripts/build_successor_reach_record.py --check` → exit 0: the committed record
+  round-trips through `argus.store.canonical` unchanged and its recorded outcome `UNEVALUABLE`
+  **re-derives from the recorded counts through the frozen fold** — reproduced independently of
+  the story's own transcript.
+- The JSON record read directly: `population_walked=1032`, `population_skipped=0`,
+  `eligible_population_count=85` (`minions` 54 / `agent-smith` 28 / `agent-markovich` 3),
+  `contributing_member_count=3`, `sealed_contributing_member_count=0`, `measured_precision=null`,
+  shipped-predicate promotions `0` — all match the story's transcript exactly.
+- `evaluate()`'s own check order (verdict-eligible → contributing → sealed, before the ratio)
+  independently read from `scripts/precision_preregistration.py:712-750`: confirms the recorded
+  reason (`"sealed contributing members: 0, below the resolved floor of 3"`) is the one and only
+  reason these counts can produce, ruling out an argued-down floor or a check-order artifact.
+- `-147`'s non-vacuity independently reproduced outside the test: `git log … -- <both
+  SUCCESSOR_OUTPUT_PATHS prefixes>` returns exactly one commit (`5bf27ca`), and
+  `git merge-base --is-ancestor f906d04… 5bf27ca` exits 0 — offender-candidate population is
+  genuinely 1, genuinely non-vacuous, and genuinely resolves to zero offenders by a live git query,
+  not a stub. `-147` and the re-scoped `-146` part (2) share one pure, exported query pair
+  (`commits_touching_prefixes` / `ancestry_offenders`), confirmed by import in
+  `tests/test_successor_predicate_s1.py`; no forked derivation.
+- The re-scoped `-146` part (2): diffed against base — parts (1) and (3) are byte-identical
+  (no hunk touches that code); only part (2)'s assertion and docstring changed. Its RED
+  demonstration (`build_violating_history`, throwaway repo under `tmp_path`) is exercised inside
+  the passing test itself, so the guard's ability to catch a real offender is proven by the run,
+  not merely asserted in prose. `DN-17-2-12` precedent verified genuine and previously
+  reviewed-and-passed at `024d330` (17.2 code review iteration 1, Sonnet 5).
+- The "shipped verdict-eligible" reconstruction in `build_successor_reach_record.py`
+  (`ProvenanceEvidence(discarded_sut_calls=score.discarded_sut_calls, …)`) traced to confirm it is
+  **not** a second derivation: `score_span` → `span_provenance` → `provenance_evidence(...)` is the
+  exact same shipped call `_ast_corroborated` makes (`vacuous_test.py:886` vs.
+  `silent_class.py:299`), with the same frozen `_CORROBORATION_ASSERTION_CALLEES` /
+  `_MOCK_CALLEES` tables — one derivation, read twice through two thin wrappers.
+- `deferred-work.md`: diffed against base — exactly one append-only block added beneath
+  `DF-13-5-A`'s prior notes, no closure verb, entry stays `OPEN`; byte invariants confirmed on
+  disk (607,244 bytes, 1 CR / 0 CRLF / 7,686 LF).
+- `sprint-status.yaml`: diffed against base — exactly three content lines changed
+  (`last_updated`, the `17-3` entry, the `17-4` entry); working-tree byte invariants confirmed
+  (1,264 lines / 1,264 CR / 1,264 CRLF).
+- `DN-17-4-19` disclosure: `git show --stat` on all three commits lists exactly the files in the
+  story's own File List — no unrelated peer path rode along. The 17-3 story file's
+  `Status: review → done` and its "Code review, iteration 2 (Sonnet 5)" block are dated
+  2026-08-25 (a day before 17.4's round 2), are entirely self-contained about 17.3's own fix arc
+  (`f738df0`/`7e72d91`/`682b074`), and follow the exact iteration-review pattern already used and
+  reviewed at `024d330`; 17.4's own contribution is confined to the append-only note at the very
+  end of the file, after the peer's content. Consistent with "verbatim content, only attribution
+  moved."
+- `git diff --stat 682b074 HEAD -- argus/` empty; `mypy argus` clean (96 files); `bandit -r argus
+  --severity-level medium` exit 0 (no medium/high); full `pytest` run exit 0 (all modules of
+  interest — `test_precision_preregistration.py`, `test_successor_reach_producer.py`,
+  `test_successor_reach_record.py`, `test_successor_output_ordering.py`,
+  `test_successor_predicate_s1.py`, `test_silent_class.py` — individually re-run green, 23/23).
+  Module line counts (789/523/474/404/360/355) confirmed exactly as claimed, all within NFR-M1.
+- No POSIX-portability hazard found: every `.splitlines()` call in the new modules is on git
+  command stdout or a docstring, never on span source text (which correctly uses
+  `index_aligned_lines`); every read/write names `encoding="utf-8"`; no `os.sep` / backslash
+  literal on a locator path; no `^`/`$` regex anchor.
+
+**No decision-needed, patch, or defer findings.** 0 dismissed.
 
 ---
 
