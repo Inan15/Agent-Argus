@@ -6660,6 +6660,60 @@ than filed as its own entry.
     a correctness defect and must not be quoted as one.** Suggested repair is a deletion, not an
     addition: the end of the statement opening at `s` is the last line whose `opens == s` in the
     `_scan_span` result, which inherits the string state instead of restating the rule.
+  - ⛔ **`DF-AUD-DETECT-D` — CLOSED 2026-08-25 by story `17-3-grade-what-the-assertion-constrains` at fix sha `2db5ce0`.**
+    Append-only note; the original entry above it is NOT rewritten (§3.4 evidence immutability — the
+    `DF-AUD-DETECT-E` / `DF-AUD-DETECT-F` notes are the form). The entry's `id`, `owner`, `category`,
+    `severity` and `target_story` fields are left unedited. Status transition: **OPEN → CLOSED**,
+    discharging the condition the entry set for itself — *“it rides with whatever story next reworks
+    `provenance_scan`”*. Story 17.3 is that story.
+    - ⛔ **THE ENTRY IS TRUE AND ITS FIGURES WERE STALE. RE-MEASURED, NOT QUOTED** (`AI-E9-7`).
+      Both implementations run over every logical statement of every tracked `argus/**` + `tests/**`
+      Python file at HEAD `024d330`: **232 files, 31,845 statements, 1,890 divergences (5.93%)**,
+      against this entry's recorded 228 / 30,941 / 1,844 (5.96%). Every sampled divergence is a
+      multi-line docstring whose end `_logical_statement_end` placed at its OPENING line, exactly as
+      the entry describes. The mechanism is confirmed by reading both functions: `_code_prefix`
+      hard-codes `pending=None` and therefore cannot carry the cross-line string state.
+    - ⛔ **THE REPAIR IS THE ENTRY'S OWN, AND IT IS A DELETION.** `_logical_statement_end` is REMOVED
+      and the question is answered by `logical_statements` — a PROJECTION of `_scan_span`, the last
+      line whose `opens == s` — which inherits the string state instead of restating the rule. No
+      third function was invented. `_SpanLine` gained the scan's `pending` state so a consumer can
+      tell a statement that ENDED from one the span ran out on (`NFR-R1`).
+    - ⛔ **STAGES (ii) AND (iii) RE-DERIVED, NOT CITED.** (ii) Fact (b) re-scored over the
+      repository's own test functions with both extents through the real Story 1.4 index:
+      **1,568 test functions, 0 evidence differences, 0 corroboration flips** (the entry recorded
+      1,543 functions at its own HEAD). (iii) THREE purpose-built triggers for the string-state gap
+      — a SUT call opening a multi-line literal, an assertion statement opening one, and docstring
+      prose carrying an unbalanced bracket — produce **identical `ProvenanceEvidence` from both
+      implementations** in all three. ⚠️ A fourth trigger, an unterminated literal at span end, is
+      refused by the 1.4 index itself (`parse_failed`) and so can never reach a detector at all;
+      that is recorded because it BOUNDS how far the exploit attempt could be pushed.
+    - ⛔ **OUTPUT-NEUTRAL OVER THE 1,032.** `scripts/build_silent_class_record.py --check
+      --checkout-root <root>` run before and after the collapse, exit **0** both times, all five
+      pinned corpus shas reachable, and both committed artifacts **BYTE-IDENTICAL**
+      (`silent-class-record.json` sha256 `f784df6305c23aef…`, `silent-class-worklist.md` sha256
+      `cd3cb2933bfe7321…`). ⚠️ **A LOCAL measurement (Windows)** — a clean CI machine has no
+      third-party checkouts, so no committed test requires them (`DF-16-6-F` / `AI-E13-1`). It
+      ratifies nothing, adjudicates nothing and writes nothing to any corpus member.
+    - ⛔ **THE IN-REPO HALF IS A COMMITTED GUARD.** `TC-ArgusAgent-DETECT-001-152` pins the extent
+      property over a generated population of the repository's own tracked `argus/**` modules with
+      its floors asserted FIRST, including the multi-line-docstring case, and is driven RED at the
+      real seam by replacing `_continued_code_prefix` with a string-state-blind version.
+      `TC-ArgusAgent-DETECT-001-151` sweeps `argus/**` for a second statement-extent walk and a
+      second `is_sut`-shaped predicate. So the state cannot be lost again silently.
+    - ⚠️ **WHAT THIS CLOSURE DOES NOT DO, AND THE HAND-OFF TO STORY 17.5.** It disposes of
+      **`DF-AUD-DETECT-D` ONLY**. `DF-AUD-DETECT-C` stays **OPEN, unscheduled and
+      undispositioned** — Story 17.3 recorded a span-scan cost figure beside this work and that is a
+      DISCLOSURE, not a disposition; `DF-INV-VACUOUS-A`, `DF-16-7-A`, `DF-16-7-B`, `DF-14-1-A`,
+      `DF-12-2-D`, `DF-12-3-A` and `DF-13-5-A` all keep the status they had. ⛔ **Story 17.5's AC
+      says it will point this entry at Epic 17's Story 17.3 as a SCHEDULING note. It must now write
+      a DISPOSITION POINTER naming this note's sha instead**, because a scheduling note pointing at
+      completed work is precisely the defect class 17.5 exists to end.
+    - ⚠️ **THE RESIDUAL, RECORDED RATHER THAN OMITTED.** The collapse is neutral on everything that
+      was measurable, and *neutral on what was measured* is not *neutral by construction*: the
+      extent a consumer now receives is genuinely DIFFERENT on 5.93% of statements. Two call sites
+      read it today, both inside `provenance_evidence`, and both were measured. A THIRD consumer
+      added later inherits the corrected extent without anyone re-running this comparison — which is
+      the direction of correctness, but it is a change in behaviour and not merely a deletion.
 
 - **`DF-AUD-DETECT-E` — two regex precision defects in `secret_scan`: no left word boundary on the
   key alternation, and mismatched quote delimiters accepted as one literal.**
