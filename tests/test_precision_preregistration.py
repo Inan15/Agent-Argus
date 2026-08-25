@@ -46,6 +46,7 @@ from __future__ import annotations
 
 import ast
 import json
+import re
 import subprocess
 import sys
 from fractions import Fraction
@@ -62,6 +63,7 @@ from _manifest import (  # noqa: E402
     eligible_member_count,
     validation_floor_n,
 )
+from argus.precision.adjudication import change_log_head_version  # noqa: E402
 from argus.precision.gate_conditions import CONDITION_VERDICTS  # noqa: E402
 from argus.precision.gate_decision import GATE_OUTCOMES  # noqa: E402
 from argus.precision.replay_harness import PRECISION_GATE_THRESHOLD  # noqa: E402
@@ -77,7 +79,6 @@ from precision_preregistration import (  # noqa: E402
     SUCCESSOR_OUTPUT_PATHS,
     evaluate,
     precision_floor,
-    protocol_change_log_head,
     refuse_protocol_drift,
     resolution_floors,
 )
@@ -283,6 +284,22 @@ def test_TC_ArgusAgent_PRECISION_001_135_the_floors_are_resolved_never_retyped()
     **AC1.2 rides here too:** the protocol version is not asserted, it is CHECKED — the guard
     reads ``precision-validation-protocol.md``'s change-log head off disk (the impure edge the
     pure module refuses to take) and hands it to ``refuse_protocol_drift``.
+
+    **⛔ AND THE ONE DERIVATION IS PROVED, STRUCTURALLY AND BEHAVIOURALLY (iteration-1 review).**
+    Iteration 1 answered *"what is the protocol's head version"* twice: once canonically in
+    ``argus.precision.adjudication.change_log_head_version`` (anchored to the ``## Change log``
+    heading) and once locally, with an unanchored pattern searched over the whole document. The
+    two forked immediately — a same-shaped ``| <date> | Vx.y | ... |`` row planted ABOVE the real
+    table made the local reading resolve the wrong row and ``refuse_protocol_drift`` **silently
+    pass** on real protocol drift. Fixed by deletion, and pinned here two ways so it cannot
+    return: (i) STRUCTURALLY, ``argus.precision.adjudication`` is a REQUIRED visible import
+    below, so the criterion must reach the canonical derivation; (ii) BEHAVIOURALLY, the exact
+    adversarial document is GENERATED from the real protocol — the decoy row is the protocol's
+    own head row, re-dated and re-planted above the ``## Change log`` heading, with the real head
+    moved past ``PROTOCOL_VERSION`` — and the guard asserts, in order, that an unanchored reading
+    of it really does resolve the decoy (so the input genuinely carries the defect), that the
+    anchored reading resolves the moved head, and that ``refuse_protocol_drift`` RAISES. Watched
+    firing, not only passing.
     """
     source = _criterion_source()
     imported = _dotted_imports(source)
@@ -296,6 +313,11 @@ def test_TC_ArgusAgent_PRECISION_001_135_the_floors_are_resolved_never_retyped()
         "argus.precision.gate_yield",
         "argus.precision.gate_breadth",
         "argus.precision.gate_seal",
+        # ⛔ The iteration-1 review finding, pinned structurally: the change-log head is ONE
+        # derivation and it lives here. If this import disappears the criterion has grown a
+        # second parser for a fact `argus.precision.adjudication` already derives (AR7, DN-3,
+        # the DF-8-5-C class) — which is exactly how the unanchored silent-pass got shipped.
+        "argus.precision.adjudication",
     ):
         assert required in imported, (
             f"the criterion does not import {required!r} (saw {sorted(imported)}). That import is "
@@ -349,12 +371,74 @@ def test_TC_ArgusAgent_PRECISION_001_135_the_floors_are_resolved_never_retyped()
         "the generated drift mutant is byte-identical to the real protocol, so the refusal below "
         "would be driven by the SAME input as the pass above and would prove nothing."
     )
-    assert protocol_change_log_head(moved) == "V99.9"
+    assert change_log_head_version(moved) == "V99.9", (
+        "the canonical, anchored derivation does not read the generated drift mutant's head as "
+        "V99.9, so the refusal below would be driven by an input that does not carry the defect."
+    )
     with pytest.raises(Exception) as drift:
         refuse_protocol_drift(moved)
     assert PROTOCOL_VERSION in str(drift.value)
     with pytest.raises(Exception):
         refuse_protocol_drift("a protocol document with no change-log table at all")
+
+    # ── ⛔ THE ITERATION-1 REVIEW FINDING, WATCHED FIRING. An EARLIER SAME-SHAPED ROW MUST NOT
+    #    BE ABLE TO PRODUCE A SILENT PASS. The document is GENERATED from the real protocol, not
+    #    hand-written: the decoy is the protocol's own head row re-dated and re-planted above the
+    #    `## Change log` heading, and the real head is moved past PROTOCOL_VERSION. Under the
+    #    deleted unanchored parser this document passed silently; under the anchored derivation
+    #    it must REFUSE.
+    heading = "## Change log"
+    assert protocol_text.count(heading) == 1, (
+        f"the real protocol carries {protocol_text.count(heading)} {heading!r} headings, so the "
+        "adversarial document generated below would not be the shape the finding describes."
+    )
+    heading_at = protocol_text.index(heading)
+    decoy_row = f"| 2019-01-01 | {PROTOCOL_VERSION} | a row of the same shape | nobody |"
+    planted = (
+        protocol_text[:heading_at]
+        + "## An earlier table that is not the change log"
+        + "\n\n| Date | Version | Description | Author |\n|---|---|---|---|\n"
+        + decoy_row
+        + "\n\n"
+        + moved[heading_at:]
+    )
+
+    # Non-vacuity 1 — the decoy really does precede the real table.
+    assert planted.index(decoy_row) < planted.index(heading), (
+        "the planted row does not sit above the change-log heading, so this document does not "
+        "reproduce the finding and the refusal below would prove nothing."
+    )
+    # Non-vacuity 2 — an UNANCHORED reading of it really does resolve the decoy. This is the
+    # deleted implementation, rebuilt here ONLY to prove the input carries the defect.
+    unanchored = re.search(
+        r"^\|\s*\d{4}-\d{2}-\d{2}\s*\|\s*(V[\w.]*)\s*\|", planted, re.MULTILINE
+    )
+    assert unanchored is not None and unanchored.group(1) == PROTOCOL_VERSION, (
+        "a whole-document scan of the planted document does NOT resolve the decoy row, so this "
+        "input does not reproduce the iteration-1 defect and the assertion below is not watching "
+        "the seam it claims to watch."
+    )
+    # Non-vacuity 3 — the anchored derivation reads the REAL, moved head.
+    assert change_log_head_version(planted) == "V99.9", (
+        "the anchored derivation did not resolve the moved head past the decoy, so the two "
+        "readings do not disagree on this document and it cannot discriminate."
+    )
+    # THE CLAIM: a decoy row cannot buy a silent pass.
+    with pytest.raises(Exception) as planted_drift:
+        refuse_protocol_drift(planted)
+    assert "V99.9" in str(planted_drift.value), (
+        "refuse_protocol_drift raised, but not about the REAL head V99.9 — it must refuse "
+        "because the head moved, not for some incidental reason."
+    )
+    # And the converse: a decoy must not manufacture a FALSE refusal either.
+    benign = planted.replace(decoy_row, decoy_row.replace(PROTOCOL_VERSION, "V0.1"), 1).replace(
+        "| V99.9 |", f"| {PROTOCOL_VERSION} |", 1
+    )
+    assert refuse_protocol_drift(benign) == PROTOCOL_VERSION, (
+        "an unchanged head with a decoy row above it must resolve to PROTOCOL_VERSION; a "
+        "derivation that trips over the decoy in this direction is the same defect wearing the "
+        "other hat."
+    )
 
 
 # ═════════════════════════════════════════════════════════════════════════════════════════

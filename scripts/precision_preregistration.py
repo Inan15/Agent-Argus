@@ -72,10 +72,10 @@ copy.
 
 from __future__ import annotations
 
-import re
 from dataclasses import dataclass
 from fractions import Fraction
 
+from argus.precision.adjudication import change_log_head_version
 from argus.precision.gate_breadth import (
     BREADTH_MEMBER_FLOOR_DERIVATION,
     contributing_member_floor,
@@ -124,7 +124,6 @@ __all__ = [
     "criterion_outcome_meaning",
     "evaluate",
     "precision_floor",
-    "protocol_change_log_head",
     "refuse_protocol_drift",
     "resolution_floors",
 ]
@@ -222,39 +221,25 @@ PROTOCOL_CHANGE_LOG_PATH = (
     "_bmad-output/design-artifacts/ArgusAgent/precision-validation-protocol.md"
 )
 
-#: The change-log table's row shape, as one compiled pattern rather than three string literals
-#: that can drift. ``| <date> | <version> | <description> | <author> |``.
-_CHANGE_LOG_ROW = re.compile(
-    r"^\|\s*(?P<date>\d{4}-\d{2}-\d{2})\s*\|\s*(?P<version>V[\w.]*)\s*\|", re.MULTILINE
-)
-
-
-def protocol_change_log_head(markdown: str) -> str:
-    """The HEAD version of the protocol's change-log table. PURE -- text in, string out.
-
-    The caller reads :data:`PROTOCOL_CHANGE_LOG_PATH` and passes the bytes it decoded; this
-    function never opens anything. That split is what keeps the criterion pure while still making
-    the version claim falsifiable: ``TC-ArgusAgent-PRECISION-001-135`` performs the read and
-    calls :func:`refuse_protocol_drift` with the answer.
-
-    Head means FIRST row, which is how the table is maintained -- newest version on top, every
-    historical row retained and struck rather than erased (architecture section 3.4).
-
-    Raises:
-        ProtocolVersionDrift: if the table has no parseable row at all. An unparseable table is
-            a REFUSAL, never a silent pass: returning the module's own literal on a failed parse
-            is how a check becomes ``f(x) == f(x)``.
-    """
-    match = _CHANGE_LOG_ROW.search(markdown)
-    if match is None:
-        raise ProtocolVersionDrift(
-            "no parseable change-log row was found in the supplied protocol text. The version "
-            "check cannot be performed, and a check that cannot be performed must REFUSE rather "
-            "than return the value it was going to compare against -- that would make it "
-            "trivially true. Supply the full text of "
-            f"{PROTOCOL_CHANGE_LOG_PATH!r}."
-        )
-    return match.group("version")
+#: ``DN-17-1-15`` -- THE CHANGE-LOG HEAD HAS EXACTLY ONE DERIVATION, AND IT IS NOT THIS MODULE'S.
+#: :func:`argus.precision.adjudication.change_log_head_version` already answers *"what is the
+#: protocol's head version"*: it is PURE (text in, string out, no path and no I/O), it is ANCHORED
+#: to the ``## Change log`` heading and stops at the next ``## `` heading, and it is the derivation
+#: this project's own protocol-drift refusals are already built on. AR7 permits ONE derivation per
+#: question and ``DN-3`` is the same rule for a floor; a second one here is the ``DF-8-5-C`` defect
+#: class by name -- two derivations of one fact, agreeing the day they are written and forking
+#: silently afterwards.
+#:
+#: IT DID NOT EVEN AGREE ON THE DAY IT WAS WRITTEN. Iteration 1 of this story shipped a local
+#: ``re`` pattern ``.search()``ed over the WHOLE document from position 0. A same-shaped
+#: ``| <date> | Vx.y | ... |`` row anywhere ABOVE the real change-log table -- and this repository
+#: writes pipe tables everywhere, including inside the protocol document itself -- resolved as
+#: *the head*, so :func:`refuse_protocol_drift` returned SILENTLY on a document whose real head
+#: had moved past :data:`PROTOCOL_VERSION`. That is the precise inversion of this module's own
+#: rule that a table it cannot read is a REFUSAL and never a silent pass. The iteration-1 reviewer
+#: demonstrated it, it was reproduced before it was fixed, and it is now watched failing on every
+#: run: ``TC-ArgusAgent-PRECISION-001-135`` plants that adversarial row and requires the refusal
+#: to fire, so a second derivation of this fact cannot come back unnoticed.
 
 
 def refuse_protocol_drift(markdown: str) -> str:
@@ -268,10 +253,27 @@ def refuse_protocol_drift(markdown: str) -> str:
     Returns:
         The resolved change-log head, so a caller can record what it saw.
 
+    The head itself is resolved by :func:`argus.precision.adjudication.change_log_head_version`
+    and is never re-derived here (``DN-17-1-15``): it anchors on the ``## Change log`` heading, so
+    a same-shaped row planted above the real table cannot be mistaken for the head. Its refusal to
+    read an absent or empty table is a ``ValueError``; it is translated below into this module's
+    own :class:`ProtocolVersionDrift` so a table that cannot be read REFUSES under the same name a
+    moved head does -- returning :data:`PROTOCOL_VERSION` on a failed parse is how a check becomes
+    ``f(x) == f(x)``.
+
     Raises:
-        ProtocolVersionDrift: on a mismatch, or on an unparseable table.
+        ProtocolVersionDrift: on a mismatch, or on a table that cannot be read at all.
     """
-    head = protocol_change_log_head(markdown)
+    try:
+        head = change_log_head_version(markdown)
+    except ValueError as unreadable:
+        raise ProtocolVersionDrift(
+            "the supplied protocol text has no readable change-log head "
+            f"({unreadable}). The version check cannot be performed, and a check that cannot be "
+            "performed must REFUSE rather than return the value it was going to compare against "
+            "-- that would make it trivially true. Supply the full text of "
+            f"{PROTOCOL_CHANGE_LOG_PATH!r}."
+        ) from unreadable
     if head != PROTOCOL_VERSION:
         raise ProtocolVersionDrift(
             f"this criterion was pre-registered under protocol {PROTOCOL_VERSION!r} on "
