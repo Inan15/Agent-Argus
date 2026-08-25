@@ -486,7 +486,7 @@ development_status:
   # protocol_edit NONE. Epics 1-16 are NOT reopened and Story 6.2's closed record is NOT edited.
   # Both epic-*-retrospective keys are created in the SAME act as their epics - AI-E15-9, second
   # consecutive application, still no guard enforcing it.
-  epic-17: backlog  # Say What The Assertion Constrains - grade strength, not wiring. CAPABILITY: the
+  epic-17: in-progress  # Say What The Assertion Constrains - grade strength, not wiring. CAPABILITY: the
     # vacuous-test detector grades what a test's assertions actually constrain about the value the
     # code under test returned, replacing a mock-provenance signal that cannot fire. Measured reason
     # (7d8c9ba): stage 1 selects density_only 1,025 of 1,032 (100%, mock arm never fired), stage 2
@@ -494,7 +494,7 @@ development_status:
     # corpus. consumed==0 is NOT loosened by this epic; it REPLACES the signal rather than widening
     # fact (b) by clause removal. BINDING ORDERING: 17.1 must precede any 17.3 output over a corpus
     # member, by git ancestry, guarded in 17.4.
-  17-1-write-down-what-would-count-as-precision-before-the-number-exists: backlog
+  17-1-write-down-what-would-count-as-precision-before-the-number-exists: in-progress
   17-2-a-different-predicate-argued-as-one: backlog
   17-3-grade-what-the-assertion-constrains: backlog
   17-4-run-it-once-and-let-the-pre-registered-criterion-decide: backlog
