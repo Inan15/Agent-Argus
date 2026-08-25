@@ -6623,6 +6623,173 @@ than filed as its own entry.
     `_is_entropy_candidate`, `_has_no_whitespace` and `_has_letter_digit_mix` thoroughly and says
     nothing about either regex, and Story 2.5 records no such cost. Repairs are one token each: a
     negative lookbehind before the alternation, and a backreference for the closing delimiter.
+  - ⛔ **`DF-AUD-DETECT-E` — CLOSED 2026-08-25 by story `18-3-two-regex-precision-defects` at fix sha `9e3fdc2`.**
+    Append-only note; the original entry above it is NOT rewritten (§3.4 evidence immutability — the
+    `DF-AUD-DETECT-A` / `DF-AUD-DETECT-B` notes are the form).
+    - **BOTH FINDINGS ARE TRUE AND BOTH REPRODUCE EXACTLY.** Re-derived by execution at HEAD `62fd1b9`,
+      not cited. Defect 1: through the shipped `SecretScanDetector.run()` on the non-test path
+      `argus/prod/settings.py`, `topsecret` / `mytoken` / `notapassword` assigned
+      `"correct-horse-battery-staple"` each report **1** `generic_assigned_secret` finding, and this
+      entry's `argus/**` census re-derives as **3** word-char-left matches, **1** of them in a comment,
+      at the three paths it names. Defect 2: **462** spans over `argus/**` whose opening and closing
+      delimiters differ, **3** surviving `_is_entropy_candidate` — including, as the entry says,
+      `secret_scan.py`'s own regex source line (now `:282` after Story 18.2's edit).
+    - ⛔ **FALSIFICATION (i) — THIS ENTRY'S PROPOSED REPAIR FOR DEFECT 1 IS A FALSE GREEN IN ITS ORDINARY
+      SPELLING.** The entry closes *"Repairs are one token each: a negative lookbehind before the
+      alternation..."*. The ordinary spelling of a word boundary is `(?<![A-Za-z0-9_])` — and **every one
+      of this repository's own word-char-left matches is `_`-preceded, not letter-preceded**. Measured,
+      one line each through the shipped `run()`: that spelling drops `DB_PASSWORD = "..."`,
+      `_API_KEY = "..."` and `SMTP_PASSWORD = "..."` from **1 finding to ZERO**, and the whole
+      1,724-test suite under it goes RED at exactly one case —
+      `tests/test_secret_sentinel_matching.py::test_TC_ArgusAgent_SECRET_001_26_live_key_safeguard_no_longer_disables_itself`
+      (*"a live production key is dropped end-to-end by the sentinel short-circuit"*, `assert 0 >= 1`).
+      `_` is the SEPARATOR in `UPPER_SNAKE_CASE`, which is how credentials are named, so excluding it
+      inverts a precision fix into a recall regression on the commonest naming convention there is.
+      ⛔ **The repair taken excludes LETTERS AND DIGITS ONLY: `(?<![A-Za-z0-9])`** (story `DN-18-3-1`).
+      It rejects all three of this entry's own examples and keeps all three of the above.
+    - ⛔ **FALSIFICATION (ii) — THIS ENTRY'S SEVERITY RATIONALE IS FALSE FOR DEFECT 2.** The entry files
+      itself 🟢 on *"error direction is OVER-reporting, never a false green"*. **Measured: defect 2
+      UNDER-reports as well.** The scan is left-to-right and non-overlapping, so an outer `'` opens a
+      span, the negated class eats the assignment prefix, the INNER OPENING `"` is accepted as the
+      closing delimiter, `finditer` resumes INSIDE the credential, and the real literal is never offered
+      to `_is_entropy_candidate` at all. Two-line reproduction through the shipped `run()` on
+      `argus/prod/settings.py` with source `src = 'blob = "<24-char credential>"'`: shipped **0**
+      findings, paired **1** (`high_entropy_string`). At the raw `_scan` level over 252 tracked files the
+      paired engine finds **13** matches the shipped engine does not, at **12** distinct sites, **ten of
+      them canonical credential shapes** (`AKIA...`, an AWS secret key, a `ghp_` token, two
+      `postgres://` URLs with an inline password). ⚠️ **The honest limit of that claim:** all twelve sites
+      are inside this repository's own test corpus, and most land on spans another pattern family
+      already reports, which is why the finding TOTAL still goes DOWN. The claim made is the narrow one
+      — the error direction is BOTH ways, so this entry's 🟢 rests on a falsified premise — not
+      *"a live security hole was found"*. ⛔ The FINDING is not disturbed; only these two claims are
+      corrected, dated and append-only.
+    - ⛔ **FALSIFICATION (iii) — THE DEFECT CLASS OCCURS AT THREE SITES, NOT THE ONE THE ENTRY NAMES.**
+      Greped at the fix sha: `_AWS_SECRET_KEY_RE` (`:282`), `_GENERIC_ASSIGN_RE` (`:289`) and
+      `_ANY_LITERAL_RE` (`:296`) all spelled the literal with two independent delimiter classes; the
+      entry names only the third. Measured over 252 files, pairing all three is **output-identical** to
+      pairing only `_ANY_LITERAL_RE` — same lost set, same new set, same per-file `DetectorResult` — so
+      the wider repair costs nothing and removes the class (story `DN-18-3-2`). Repairing one site would
+      have left `:282`, which is ITSELF one of the three surviving over-reports above, still carrying the
+      shape this note says was repaired.
+    - **THE REPAIR TAKEN, site by site.** One negative lookbehind on `_GENERIC_ASSIGN_RE`, and at all
+      three sites the opening delimiter is CAPTURED (`(?P<q>...)`) and the close is a BACKREFERENCE
+      (`(?P=q)`). The named `secret` group and every call site (`_scan`, `run`, `scan_evidence`,
+      `_evidence_for`, `_line_span`, `_ast_span_for_line`) are otherwise byte-unchanged; no `pattern_id`,
+      threshold or `(?i)` flag moves; no import is added; AR8 purity holds. The module docstring is
+      corrected where this change makes it wrong: the `generic_assigned_secret` bullet now states the
+      left-anchor rule and why it must admit `_`, and the LOCKED *V1 detection scope + KNOWN limits*
+      section now discloses the four residual limits (below).
+    - **THE MEASURED BEFORE/AFTER, engine-vs-engine over ONE identical population.** Driving `run()` over
+      every file in `git ls-files -- '*.py'` and comparing the FULL `DetectorResult` (`entries` +
+      `findings` + `degraded`, canonical JSON) per file, pre-change engine vs post-change engine — never
+      HEAD-vs-worktree over two lists, the disclosure gap Story 18.1's review raised. Over the **252**
+      files of the pre-change tree: **91 → 90** `hardcoded_secret` findings, **77 → 75** spans,
+      **38 → 37** files with ≥1, suppression records **0 → 0**, degraded **0 → 0**, and exactly **five**
+      spans move. ⛔ **THE THREE REMOVALS, EACH ADJUDICATED, AND NOT ONE IS A CREDENTIAL:**
+      `argus/audit/open_llm_adapter.py:170` (an f-string fragment, `')}/v1/chat/completions"`, from
+      `f"{self._api_base.rstrip('/')}/v1/chat/completions"`); `argus/detectors/secret_scan.py:282` (this
+      module's own regex source line); `argus/precision/gate_decision.py:693` (an f-string fragment from
+      `f"...{', '.join(sorted(row_ids)[:5])}"`). **THE TWO ADDITIONS:** `tests/test_secret_scan.py:59`
+      **1 → 2** (recall — `_run('aws_key = "AKIA..."')` realigns) and
+      `_bmad-output/.../research/revalidate-fact-b-widening.py:144` **0 → 1** (an f-string identifier).
+      Both are `advisory=True, depth_supported=None`, `is_verdict_blocking` **False**, and
+      `blocking_finding_count` over their whole result is **0** — proven by execution. ⛔ **Neither is
+      suppressed, annotated, relocated or edited away** (`DF-8-5-B`).
+    - **THE RECALL PROOF THE SWEEP CANNOT GIVE.** Over this repository the safe lookbehind removes
+      **nothing at all** — all ten word-char-left matches are `_`-preceded and every one survives,
+      including the `argus/cache/key.py:181` comment this entry names, which is therefore **still
+      reported** and is NOT fixed by this story. So a repo sweep is a disclosure instrument, not a proof.
+      The proof is synthetic: the eight `KNOWN_SECRET_SHAPES` of `tests/test_secret_scan_precision.py`,
+      each placed in an ordinary `API_TOKEN = "..."` assignment on the non-test path, report
+      **identically before and after** (2/2/3/0/0/0/2/2 — the three zeros are the public-sentinel
+      suppressions, identical on both sides), and the naming matrix `DB_PASSWORD` / `_API_KEY` /
+      `SMTP_PASSWORD` / `API_TOKEN` / `self.token` / `password` / `api-key` / `api_key` reports
+      **1 finding each on both sides**. ⛔ **Not one value goes from reported to unreported.**
+    - ⛔ **`code_identity` IS BUMPED, AND THAT IS THE DELIBERATE INVERSE OF `DN-18-2-5`.**
+      `FROZEN_DETECTOR_SET`'s `hardcoded_secret` descriptor moves `secret_scan.v1` → **`secret_scan.v2`**
+      (`argus/cache/key.py:187`), moving the detector-set content hash
+      `9954e854...` → `fbec7912...`. Story 18.2 declined this bump on the explicit ground that its change
+      was output-neutral; **this one measurably is not**, and `argus/pipeline.py:166` memoizes the detect
+      stage on that token via `argus/cache/stage_memo.py`, so without the bump a repository audited
+      before this fix and re-audited after it would be served the PRE-FIX detect-stage result — the exact
+      failure AR6 / Story 5.3's invalidation lever exists to prevent (story `DN-18-3-6`). ⛔ Nothing else
+      under `argus/cache/` moves: no `CACHE_KEY_SCHEMA_VERSION` bump, no persisted `.argus/` entry
+      migrated or deleted.
+    - **THE COLLATERAL THAT BUMP SPENT, RECORDED SO NO LATER READER FINDS IT SILENT** (this entry's
+      reason for existing at 🟢 does not extend to a silently regenerated golden). **(a)**
+      `tests/test_cache_key.py::test_golden_key_pinned` (`TC-ArgusAgent-CACHE-001-03`) moves
+      `ccf2d132...` → **`78239f689c6dd3c92e3268d0787d3e96293c607f66fc0b710e9d76b19cb92850`**, DERIVED by
+      execution (it matched the story's prediction), with a dated sentence added to its docstring naming
+      this as the **second** documented intentional invalidation — the first being the Story-10.2 schema
+      bump. That golden's own docstring permits exactly this and forbids only doing it silently.
+      **(b)** `tests/test_cache_invalidation.py:229` pinned its *synthetic perturbed* descriptor to the
+      literal `"secret_scan.v2"` — a plausible future REAL value — so a real bump made the perturbation
+      collide with the live set and the three `test_detector_set_change_*` cases failed for a reason
+      unrelated to what they test. The fixture moves to `secret_scan.v99` (the
+      `tests/test_stage_memo_wiring.py:306` precedent), with a comment saying why. ⛔ **That RESTORES the
+      perturbation's non-vacuity rather than loosening an assertion** — verified by execution that the
+      perturbed set's hash (`f4d3d632...`) still differs from the live set's (story `DN-18-3-7`).
+    - **THE CLOSING GUARDS:** `TC-ArgusAgent-SECRET-002-08`..`-12` in the new
+      `tests/test_secret_scan_regex_precision.py`, CONTINUING the `SECRET-002` index whose prior maximum
+      was `-07`; nothing is renumbered. `-08` the LEFT-ANCHOR guard (with a positive control asserted
+      first and a digit-free value so the entropy family cannot make it pass for the wrong reason);
+      `-09` the FALSE-GREEN FENCE (the eight-row naming matrix); `-10` the PAIRED-DELIMITER guard at all
+      **three** sites, each with both matched-delimiter controls; `-11` the REALIGNMENT RECALL guard
+      (the two-line reproduction above); `-12` the CLASS guard, which reads the module's own SOURCE by
+      AST and asserts no pattern constant spells a literal with two uncaptured delimiter classes, with
+      non-vacuity asserted twice (every LOCKED constant must still compile, and the class must still be
+      spelled in at least three of them). ⚠️ The REDs were AUTHOR-DRIVEN, so per the guard-fire rule they
+      are **vacuity evidence** — proof the cases can fail — not *"these guards caught a defect"*. `-08`,
+      `-10`, `-11` and `-12` went RED against the shipped body; ⛔ **`-09` is GREEN before AND after BY
+      DESIGN** — it is a CONTRACT PIN fencing out the mis-repair this entry recommends, not a defect
+      witness (story `DN-18-3-8`), and its non-vacuity was proven separately by executing it against the
+      naive lookbehind, where it goes RED. The RED was taken by monkeypatching the shipped patterns from
+      a copy held OUTSIDE the repository, so the shared working tree was never stashed or reverted.
+    - **THE DOGFOOD ARTIFACTS MOVED, AND NOT BY THE PREDICTED AMOUNT.** Regenerated by
+      `scripts/regenerate_dogfood_artifacts.py` on a clean `argus/` tree at `9e3fdc2`, through the
+      artifacts' own renderers: provenance `2cc5128` → `9e3fdc2`, total physical LOC `33667` → `33703`,
+      total findings emitted **173 → 172**, `hardcoded_secret` over `argus/**` **40 → 39**, and
+      `argus/audit/open_llm_adapter.py:170` leaves the sample-locator list. ⚠️ **The story predicted 37,
+      and the two-finding difference is measured rather than explained away:** the repair removed
+      `secret_scan.py:282`'s over-report, but the two REPAIRED regex source lines (now `:304` and `:317`)
+      are THEMSELVES new `high_entropy_string` over-reports of exactly the same residual class — a text
+      scan is not a Python tokenizer, and a regex source line full of quotes is the shape that class
+      fires on. Both are `advisory=True, depth_supported=None`, `is_verdict_blocking` **False**,
+      `blocking_finding_count` **0**. ⛔ **They are NOT suppressed, annotated, relocated or edited away,
+      and the regex text was NOT re-spelled to dodge them** — re-spelling source to make a self-audit
+      number tidier is `DF-8-5-B`'s forbidden move wearing a new hat.
+    - **RECORDED HERE, NOT FILED** (`AI-E9-8` — filing and scheduling are the Engineering Lead's). Four
+      residual limits were measured while discharging this entry and are deliberately left un-fixed and
+      un-filed; all four are now DISCLOSED in `secret_scan.py`'s own LOCKED *KNOWN limits* section.
+      **(a)** The scan is still not a Python tokenizer: a literal CONTAINING its own delimiter stays
+      invisible to it (`tests/test_verdict_gate.py:719` is the measured example, and it is one of the two
+      mismatched spans outside `argus/**` that survive the entropy predicate). **(b)** Prose in a comment
+      still matches — there is no comment model — so the `argus/cache/key.py:181` comment this entry names
+      is **still reported**; the prose-in-a-comment half of this entry's complaint is NOT fixed here and
+      is not fixable by a lookbehind. **(c)** A JSON-style mapping from a quoted key to a quoted value is
+      still not matched, because the quote between the key and its separator defeats the assignment
+      shape: measured **0 findings before and 0 after**, a recall gap in the shipped family and not a
+      regression of this story's making. **(d)** The left anchor excludes letters and digits only, so a
+      digit-separated name such as `token2secret` would still match; no case in this tree needs it and no
+      cost was measured for excluding digits.
+    - ⛔ **WHAT THIS DISPOSITION DOES NOT TOUCH.** `DF-AUD-DETECT-C` (detector cost) stays OPEN and **no
+      timing figure was taken here**. `DF-AUD-DETECT-D` (Story 17.3) and `DF-AUD-DETECT-F` (Story 18.4,
+      whose file `argus/detectors/base.py` was left byte-unchanged) stay OPEN. `DF-10-3-B`, `DF-10-3-C`
+      and `DF-10-4-B` stay OPEN and untouched; `DF-INV-MERGE-A`, `DF-INV-WHEEL-A` and `DF-INV-REFS-A`
+      stay OPEN; `DF-13-5-A` stays OPEN and **UNSPENT**. No member is ratified, no protocol row added, no
+      FR amended, no third-party source fetched. No `pattern_id` is added, removed or renamed; no
+      threshold (`MIN_GENERIC_SECRET_LENGTH`, `MIN_ENTROPY_TOKEN_LENGTH`, `ENTROPY_BITS_PER_CHAR_FLOOR`)
+      moves; the LOCKED pattern-family set and the LOCKED file-scope rule are unchanged; no finding
+      becomes verdict-eligible; the ≥80% precision keystone stays **NOT CLEARED** and the gate stays
+      `BLOCKED`. `argus/detectors/secret_suppression.py` (Story 18.1, `done`) is byte-unchanged and none
+      of `TC-ArgusAgent-SECRET-001-23`..`-30` is edited. `architecture.md`, `E-PRD/prd.md`, `epics.md`
+      and every `done` story's record are unedited.
+    - ⚠️ **LOCAL / Windows-only evidence** (`AI-E13-1`): suite **1,729** collected (1,724 + this story's
+      five) exit **0**; the seven secret-domain modules **66 passed, unedited**;
+      `TC-ArgusAgent-SECRET-001-26` **GREEN** — a first-class result of this story, since it is the one
+      case the mis-repair reddens; `mypy argus` clean over **95** source files; `bandit -r argus
+      --severity-level medium` clean (0 medium, 0 high). The cross-platform claim belongs to the CI ubuntu
+      matrix and is NOT made here.
 
 - **`DF-AUD-DETECT-F` — the `Detector` Protocol is asserted by exactly one test and used by nothing;
   it cannot dispatch, because no two detectors share a `run` signature.**
