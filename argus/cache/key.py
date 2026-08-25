@@ -184,7 +184,7 @@ class DetectorDescriptor(BaseModel):
 #   detectors/vacuous_test.py::RULE_HEURISTIC = "vacuous_test_heuristic"
 #   detectors/vacuous_test.py::RULE_AST = "vacuous_test_ast"
 FROZEN_DETECTOR_SET: tuple[DetectorDescriptor, ...] = (
-    DetectorDescriptor(rule_id="hardcoded_secret", code_identity="secret_scan.v1"),
+    DetectorDescriptor(rule_id="hardcoded_secret", code_identity="secret_scan.v2"),
     DetectorDescriptor(rule_id="tool_failure", code_identity="tool_runner.v1"),
     DetectorDescriptor(rule_id="traceability_not_establishable", code_identity="tool_runner.v1"),
     DetectorDescriptor(rule_id="vacuous_test_heuristic", code_identity="vacuous_test.heuristic.v1"),

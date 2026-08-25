@@ -48,8 +48,21 @@ Detection is regex pattern families + a Shannon-entropy threshold over candidate
 assigned string literals. This is a V1 HEURISTIC: it false-positives on test
 fixtures / example/placeholder keys and false-negatives on obfuscated / split /
 base64-nested secrets. The finding is therefore ``advisory=True`` in V1 (a
-verdict-blocking promotion is a deferred future story — see Dev Notes). The locked
-pattern families (each documented by its ``pattern_id``):
+verdict-blocking promotion is a deferred future story — see Dev Notes).
+
+KNOWN LIMITS that remain after Story 18.3 / DF-AUD-DETECT-E, each MEASURED and
+DISCLOSED rather than fixed. The scan is a TEXT scan and is NOT a Python tokenizer.
+Every quoted-literal pattern below now closes with the delimiter it opened with, which
+REALIGNS the scan; it does not tokenize it. So: (1) a literal that CONTAINS its own
+delimiter is still invisible to it; (2) prose in a comment still matches — there is no
+comment model, so a commented-out assignment is reported exactly as a live one is;
+(3) a JSON-style mapping from a quoted key to a quoted value is still NOT matched,
+because the quote between the key and its separator defeats the assignment shape the
+pattern requires (measured: 0 findings before that story and 0 after); and (4) the
+left anchor added there rejects a preceding LETTER OR DIGIT only — see
+``generic_assigned_secret`` below for why it must admit ``_``.
+
+The locked pattern families (each documented by its ``pattern_id``):
 
 - ``aws_access_key_id`` — an ``AKIA``/``ASIA``-prefixed 20-char uppercase/digit id.
 - ``aws_secret_access_key`` — a 40-char base64-ish value assigned to an
@@ -58,7 +71,11 @@ pattern families (each documented by its ``pattern_id``):
   (``-----BEGIN ... PRIVATE KEY-----``).
 - ``generic_assigned_secret`` — an assignment whose key matches
   ``api[_-]?key`` / ``secret`` / ``token`` / ``password`` / ``passwd`` / ``pwd``
-  to a quoted string literal of sufficient length.
+  to a quoted string literal of sufficient length. The key word must NOT be preceded
+  by a letter or a digit (so ``topsecret`` / ``mytoken`` / ``notapassword`` are
+  rejected), but ``_`` IS admitted: ``_`` is the SEPARATOR in ``UPPER_SNAKE_CASE``,
+  which is how credentials are really named, and excluding it was measured to drop
+  ``DB_PASSWORD`` / ``_API_KEY`` / ``SMTP_PASSWORD`` to ZERO findings.
 - ``high_entropy_string`` — a quoted string literal whose length ≥
   :data:`MIN_ENTROPY_TOKEN_LENGTH`, whose Shannon entropy (bits/char) ≥
   :data:`ENTROPY_BITS_PER_CHAR_FLOOR` (entropy stored as an exact ``Fraction``),
@@ -277,23 +294,42 @@ class _Match:
 # compute the mask; it is never emitted.
 
 _AWS_ACCESS_KEY_RE = re.compile(r"(?P<secret>(?:AKIA|ASIA)[0-9A-Z]{16})")
+# The opening delimiter is CAPTURED and the close is a BACKREFERENCE to it (Story 18.3
+# / DF-AUD-DETECT-E). Spelling the delimiter as two INDEPENDENT one-of-two classes
+# accepted a span opened with one quote and closed with the other: measured 462 such
+# spans over ``argus/**`` (95 files), 3 of them reportable — one of which was THIS
+# pattern's own source line.
 _AWS_SECRET_KEY_RE = re.compile(
     r"(?i)aws[_-]?(?:secret[_-]?access[_-]?key|secret)\s*[:=]\s*"
-    r"['\"](?P<secret>[A-Za-z0-9/+=]{40})['\"]"
+    r"(?P<q>['\"])(?P<secret>[A-Za-z0-9/+=]{40})(?P=q)"
 )
 _PEM_PRIVATE_KEY_RE = re.compile(
     r"(?P<secret>-----BEGIN (?:RSA |EC |DSA |OPENSSH )?PRIVATE KEY-----)"
 )
+# TWO repairs, both measured (Story 18.3 / DF-AUD-DETECT-E). The LEFT ANCHOR rejects a
+# preceding letter or digit: without it ``topsecret`` / ``mytoken`` / ``notapassword``
+# each reported 1 finding. It deliberately does NOT exclude ``_``: the word-boundary
+# spelling ``(?<![A-Za-z0-9_])`` was executed and drops ``DB_PASSWORD``, ``_API_KEY``
+# and ``SMTP_PASSWORD`` to ZERO, and reddens ``TC-ArgusAgent-SECRET-001-26``, the
+# live-key safeguard — a recall regression wearing a precision fix's clothes. The
+# DELIMITER is captured and back-referenced, as above.
 _GENERIC_ASSIGN_RE = re.compile(
-    r"(?i)(?:api[_-]?key|secret|token|password|passwd|pwd)\s*[:=]\s*"
-    r"['\"](?P<secret>[^'\"\n]+)['\"]"
+    r"(?i)(?<![A-Za-z0-9])(?:api[_-]?key|secret|token|password|passwd|pwd)\s*[:=]\s*"
+    r"(?P<q>['\"])(?P<secret>[^'\"\n]+)(?P=q)"
 )
 # NOTE: this matches ANY quoted literal — docstrings, ``__all__`` entries, help
 # text, log messages — NOT only assigned ones. It was previously named
 # ``_ASSIGNED_LITERAL_RE``, and that name is precisely why an unbounded match was
 # mistaken for a narrow one. The narrowing now lives in the explicit structural
 # predicates applied at the call site, where it is visible.
-_ANY_LITERAL_RE = re.compile(r"['\"](?P<secret>[^'\"\n]+)['\"]")
+# The delimiter is captured and back-referenced here too (Story 18.3 /
+# DF-AUD-DETECT-E). This is the site the entry names, and the direction of its error
+# was BOTH ways rather than over-reporting only: the unpaired form consumed a real
+# credential's opening quote and ``finditer`` then resumed INSIDE the value, so
+# a credential nested inside a single-quoted wrapper reported 0 findings before this
+# repair and 1 after. Over 252 tracked files the paired form finds 13 raw matches the unpaired form
+# does not, ten of them canonical credential shapes.
+_ANY_LITERAL_RE = re.compile(r"(?P<q>['\"])(?P<secret>[^'\"\n]+)(?P=q)")
 
 
 def _has_no_whitespace(value: str) -> bool:

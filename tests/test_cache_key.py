@@ -97,9 +97,16 @@ def test_golden_key_pinned() -> None:
     added per-grammar provenance to the closure payload (DF-AUD-APAA-D). That is a documented
     intentional invalidation, sanctioned by architecture.md R3 and free at this commit because no
     production caller derives a key and no persisted entry exists to migrate.
+
+    Regenerated a SECOND time 2026-08-25 by Story 18.3 / DF-AUD-DETECT-E, which bumped the
+    `hardcoded_secret` descriptor's `code_identity` "secret_scan.v1" -> "secret_scan.v2" because
+    that detector's regexes were repaired and its output measurably moved (91 -> 90 findings over
+    252 tracked files). That is the AR6 invalidation lever working exactly as DN-DETECTORSET
+    documents it, so this move is the intended consequence and not a silent regeneration: without
+    it a memoized re-audit would be served the PRE-FIX detect-stage result.
     """
     golden = derive_cache_key(_baseline())
-    assert golden == "ccf2d132b699060b20afff5a42d4731f72d73f90b0b3cdfd3bc8e48c69f8b6af"
+    assert golden == "78239f689c6dd3c92e3268d0787d3e96293c607f66fc0b710e9d76b19cb92850"
 
 
 # ── AC2: the bidirectional CI canary — each input perturbation moves the key ──
