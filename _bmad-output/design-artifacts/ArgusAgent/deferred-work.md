@@ -6265,6 +6265,51 @@ and `-D`.
   - ⚠️ **A validation-practice observation, filed without blame.** The one idiom the resolver
     implements is the shape of the fixture that proves it works. The fixture passes and the world
     returns zero. Worth remembering when the replacement predicate gets its own control.
+  - ⛔ **`DF-INV-VACUOUS-B` — CLOSED 2026-08-25 as `moot-by-replacement` by story `17-2-a-different-predicate-argued-as-one`.**
+    Append-only note, in the form of the 2026-08-25 `DF-AUD-DETECT-F` disposition further down this
+    ledger (§3.4 evidence immutability — strike, never erase). The original entry above is NOT
+    rewritten and its `id`, `origin`, `owner`, `category` and `severity` fields are left unedited.
+    ⛔ **Neither is the 2026-08-24 roll-up sentence below it**, which reads *"stays OPEN pending
+    Story 17.2's decision on whether mock binding remains an input at all"* — **this note IS that
+    decision**, and a dated addition is how it is recorded rather than by editing the sentence that
+    was waiting for it. Status transition: **OPEN → CLOSED.**
+    - ⛔ **THE DECISION.** The successor vacuity predicate `S1`, specified in
+      `_bmad-output/design-artifacts/ArgusAgent/successor-vacuity-predicate-specification.md`
+      §2.1, takes **NO mock-binding input**. `_mock_bound_names`, `mock_referencing_assertions` and
+      the `mref` clause play no part in `S1`'s (a) reachability, (b′) discard, or (c′) *no
+      assertion in the span constrains an SUT-derived value*. (c′) needs an **SUT-derived name
+      binding** resolver — a **different question**, needing a **different resolver**, which does
+      not exist in the shipped package today and is Story 17.3's to build.
+    - ⛔ **THIS ENTRY'S OWN TRIGGER IS ANSWERED, AND THE ANSWER IS NO.** The severity field above
+      says the gap *"becomes load-bearing only if a future predicate depends on mock binding"*.
+      That was a conditional about a predicate that did not exist when it was written. The
+      predicate now exists as a committed specification, and it does not depend on mock binding.
+      ⛔ **The condition is answered by a committed artifact, TODAY** — not predicted, not deferred.
+    - ⛔ **MEASURED AT HEAD `52ae0e5`, AND PINNED SO IT CANNOT DRIFT.** An `ast` walk over all 95
+      modules of the shipped package, classifying every reference to `mock_referencing_assertions`
+      **by node kind rather than by substring**, finds **EXACTLY ONE DECISION SITE** in the whole
+      package: `argus/detectors/vacuous_test.py:796`,
+      `… and evidence.mock_referencing_assertions >= 1`. The other three references are a field
+      declaration (`argus/detectors/provenance_scan.py:841`), a `SpanScore` field carried so a
+      promotion proposal can see it (`argus/precision/silent_class.py:232`), and that field being
+      populated (`:328`) — **carries, not branches. One comparison. One branch. One predicate.**
+      `TC-ArgusAgent-PRECISION-001-143` re-derives this on every test run and goes RED on a second
+      decision site; it was driven RED at the real seam by an executed mutation of
+      `argus/precision/silent_class.py`, restored byte-exact and verified by sha256.
+    - ⚠️ **THE RESIDUAL, RECORDED WITH THE DISPOSITION RATHER THAN OMITTED FROM IT.**
+      ⛔ **This note does NOT claim the code changed. No shipped byte moved by this story.** Until
+      Story 17.3 lands `S1`, the shipped `mref >= 1` clause still stands and three of the four
+      dominant binding routes are still invisible to `_mock_bound_names`. That residual is
+      **latent and harmless**: the direction of error is **under-claiming** corroboration, which is
+      the safe direction, and the extended resolver covering all four idioms was measured at
+      **0 → 1** over the same 1,032 findings. ⛔ **The ⛔ above therefore survives its own
+      disposition: this is still not the yield fix, and it is still worth 0 → 1.**
+    - ⚠️ **WHAT THIS NOTE DOES NOT DISPOSE OF.** Story 17.2 wrote **exactly ONE** ledger entry and
+      this is it. The stage-mismatch entry, the two Story 16.7 entries, the Story 14.1 / 12.2 /
+      12.3 entries and every detector-audit entry stay exactly as they stand — their re-homing and
+      scheduling notes are **Story 17.5's**, by name, and splitting a re-homing across two stories
+      is how an append-only ledger acquires two half-notes. The bench-expansion round stays **OPEN
+      and UNSPENT**, and its 2026-08-24 substantive trigger is **Story 17.4's** to evaluate.
 
 ## Deferred from: the 2026-08-24 detector-suite audit (operator-directed, NO story)
 

@@ -4,7 +4,7 @@ baseline_commit: 52ae0e5
 
 # Story 17.2: A different predicate, argued as one
 
-Status: in-progress
+Status: review
 
 <!-- Contexted 2026-08-25 at HEAD `52ae0e5` (branch `docs/merge-strategy-decision`) by the
      create-story workflow (Opus 5).
@@ -1068,104 +1068,104 @@ runs an ubuntu matrix and a green local suite has previously shipped POSIX-only 
 
 ### ⛔ Task 0 — RE-MEASURE §0 BEFORE WRITING ANYTHING (AC1.7, AC4.*, AC7)
 
-- [ ] **0.1** Confirm HEAD, branch, and record `git status --porcelain` **verbatim**. ⛔ Note
+- [x] **0.1** Confirm HEAD, branch, and record `git status --porcelain` **verbatim**. ⛔ Note
       the two staged artifact files and decide their handling per §2.2 **before** committing
       anything.
-- [ ] **0.2** Re-derive §0.1: import `scripts/precision_preregistration.py`; confirm
+- [x] **0.2** Re-derive §0.1: import `scripts/precision_preregistration.py`; confirm
       `PREREGISTRATION_COMMIT_SHA` resolves and is an ancestor of HEAD; confirm **both**
       `SUCCESSOR_OUTPUT_PATHS` entries are **absent** on disk.
-- [ ] **0.3** Re-derive §0.2 by **import**: `len(_CORROBORATION_ASSERTION_CALLEES)`,
+- [x] **0.3** Re-derive §0.2 by **import**: `len(_CORROBORATION_ASSERTION_CALLEES)`,
       `len(_ASSERTION_CALLEES)`, `len(_MOCK_CALLEES)`, and read `_ast_corroborated`'s return
       expression.
-- [ ] **0.4** Re-derive §0.3 by **import**: `SILENT_CLASS_DEFINITION`,
+- [x] **0.4** Re-derive §0.3 by **import**: `SILENT_CLASS_DEFINITION`,
       `SpanScore.is_silent_class_member`'s expression, and the four helpers `score_span` calls.
-- [ ] **0.5** Re-run `TC-ArgusAgent-PRECISION-001-127` and record it **green**; confirm the
+- [x] **0.5** Re-run `TC-ArgusAgent-PRECISION-001-127` and record it **green**; confirm the
       fenced-set size and the parsed-module count.
-- [ ] **0.6** Re-derive §0.5 from the harness **source** (do **not** execute it): the six
+- [x] **0.6** Re-derive §0.5 from the harness **source** (do **not** execute it): the six
       variant definitions, the `V5`-is-the-script's-own-reasoning sentence, `CHECKOUTS`, and
       the `per_member["V5:…"]` collection site.
-- [ ] **0.7** Re-derive §0.6: walk `argus/**` with `ast`, classify every
+- [x] **0.7** Re-derive §0.6: walk `argus/**` with `ast`, classify every
       `mock_referencing_assertions` reference, and confirm **exactly one decision site**.
       ⛔ **AC7.3 if a second is found.**
-- [ ] **0.8** Parse `silent-class-record.json` and confirm every §0.7 figure.
-- [ ] **0.9** Re-derive §0.8's five detector-surface rows and §0.0's byte invariants.
-- [ ] **0.10** Record every row in the Dev Agent Record with the command that produced it.
+- [x] **0.8** Parse `silent-class-record.json` and confirm every §0.7 figure.
+- [x] **0.9** Re-derive §0.8's five detector-surface rows and §0.0's byte invariants.
+- [x] **0.10** Record every row in the Dev Agent Record with the command that produced it.
       ⛔ **A row that does not reproduce is AC7, not a number to adjust.**
 
 ### Task 1 — THE SPECIFICATION (AC1, AC2, AC4)
 
-- [ ] **1.1** Write `…/successor-vacuity-predicate-specification.md`: dated **2026-08-25**,
+- [x] **1.1** Write `…/successor-vacuity-predicate-specification.md`: dated **2026-08-25**,
       author role named, in the pre-registration document's house form (a *"values are cited,
       never copied"* preamble; a reproduction command beside every cited figure).
-- [ ] **1.2** §"The predicate": AC1.1, AC1.2, AC1.3, AC1.6 — the three conjuncts, the
+- [x] **1.2** §"The predicate": AC1.1, AC1.2, AC1.3, AC1.6 — the three conjuncts, the
       threshold and its pre-refused widening, the defect shape, and why `S1` is not a `V`.
-- [ ] **1.3** §"The differential": AC1.4's both-directions table and AC1.5's rejected
+- [x] **1.3** §"The differential": AC1.4's both-directions table and AC1.5's rejected
       successors. ⛔ **Quote `SILENT_CLASS_DEFINITION` VERBATIM** (AC1.10) — copy it from the
       **imported constant**, not by eye.
-- [ ] **1.4** §"Instrument provenance": AC1.7 — the two instruments, the two HEADs, the
+- [x] **1.4** §"Instrument provenance": AC1.7 — the two instruments, the two HEADs, the
       `V5`-is-the-script's-own sentence quoted, and **no reach figure for `S1`**. Any
       provisional arithmetic labelled **PROVISIONAL** on its own line.
-- [ ] **1.5** §"What the evidence does and does not support": AC1.8 (36 UNADJUDICATED, operator
+- [x] **1.5** §"What the evidence does and does not support": AC1.8 (36 UNADJUDICATED, operator
       act, smoke-test proportion NOT MEASURED, *"no promotion proposal … carries evidence"*)
       and AC1.9 (two members, breadth floor 3, `UNEVALUABLE` already pre-registered; ⛔ the
       floor is **not** argued down).
-- [ ] **1.6** §"`consumed == 0` is not loosened": AC2.1–AC2.5, four labelled registers plus the
+- [x] **1.6** §"`consumed == 0` is not loosened": AC2.1–AC2.5, four labelled registers plus the
       advisory-until-an-operator clause.
-- [ ] **1.7** §"What this act does not do": AC4.1–AC4.7, each its own sentence, with §1.5's
+- [x] **1.7** §"What this act does not do": AC4.1–AC4.7, each its own sentence, with §1.5's
       four reasons for refusing to measure.
-- [ ] **1.8** §"Hand-off": AC1.11 — 17.3's four constraints and 17.4's three pointers, each
+- [x] **1.8** §"Hand-off": AC1.11 — 17.3's four constraints and 17.4's three pointers, each
       naming the story that owns it.
-- [ ] **1.9** ⛔ Verify: no `_STATUS_CLAIMS` phrase; **not** registered in `_STATUS_DOCUMENTS`;
+- [x] **1.9** ⛔ Verify: no `_STATUS_CLAIMS` phrase; **not** registered in `_STATUS_DOCUMENTS`;
       no corpus checkout path; no host path; no source bytes.
 
 ### Task 2 — THE LEDGER DISPOSITION (AC3)
 
-- [ ] **2.1** Grep `deferred-work.md` for `DF-INV-VACUOUS-B` and for prior art on
+- [x] **2.1** Grep `deferred-work.md` for `DF-INV-VACUOUS-B` and for prior art on
       `moot-by-replacement`. ⛔ **Cite prior art rather than re-filing.**
-- [ ] **2.2** Read `deferred-work.md` in **binary**; record byte / CR / LF counts.
-- [ ] **2.3** Append the dated disposition in `DF-AUD-DETECT-F`'s shape (`:6838`) — AC3.2,
+- [x] **2.2** Read `deferred-work.md` in **binary**; record byte / CR / LF counts.
+- [x] **2.3** Append the dated disposition in `DF-AUD-DETECT-F`'s shape (`:6838`) — AC3.2,
       AC3.3. ⛔ **Do not rewrite the entry above it.** ⛔ **Touch no other entry** (AC3.4).
-- [ ] **2.4** Re-verify byte invariants: **exactly 1 CR**, LF grew by the lines added, 0 CRLF.
-- [ ] **2.5** Apply §2.5's two-branch closure-verb rule to this story record, and confirm
+- [x] **2.4** Re-verify byte invariants: **exactly 1 CR**, LF grew by the lines added, 0 CRLF.
+- [x] **2.5** Apply §2.5's two-branch closure-verb rule to this story record, and confirm
       `TC-ArgusAgent-DOCS-001-78` green **after** the ledger and the record are both written.
 
 ### Task 3 — THE THREE GUARDS (AC5)
 
-- [ ] **3.1** `tests/test_successor_predicate_specification.py` with `-142`, `-143`, `-144`,
+- [x] **3.1** `tests/test_successor_predicate_specification.py` with `-142`, `-143`, `-144`,
       each discharging (i)/(ii)/(iii) in its own docstring.
-- [ ] **3.2** ⛔ **Anchor `-142`'s figure extraction** to a labelled table or an explicit
+- [x] **3.2** ⛔ **Anchor `-142`'s figure extraction** to a labelled table or an explicit
       marker, and drive an adversarial **decoy** through it — 17.1's one review finding was an
       unanchored whole-document scan in this exact area id.
-- [ ] **3.3** ⛔ **`-143` classifies AST nodes, not substrings.** Assert the known decision
+- [x] **3.3** ⛔ **`-143` classifies AST nodes, not substrings.** Assert the known decision
       site is FOUND before asserting no other exists.
-- [ ] **3.4** ⛔ **`-144`'s git half asserts a control path known to carry commits in the same
+- [x] **3.4** ⛔ **`-144`'s git half asserts a control path known to carry commits in the same
       range is NON-EMPTY first** (`-75`/`-139`'s idiom, reused verbatim).
-- [ ] **3.5** Drive **each** guard RED **at its real seam** by an **executed** mutation of the
+- [x] **3.5** Drive **each** guard RED **at its real seam** by an **executed** mutation of the
       real artifact or module; restore **byte-exact** and verify by **sha256**. Record each
       mutation, its RED message and the restore hash.
 
 ### Task 4 — PROVE NOTHING MOVED, AND RUN EVERY GATE (AC4, AC5.3, AC6)
 
-- [ ] **4.1** AC6.3's `git diff` over `argus/`, `scripts/`, the protocol, the PRD, the
+- [x] **4.1** AC6.3's `git diff` over `argus/`, `scripts/`, the protocol, the PRD, the
       architecture, `epics.md` and `validation-corpus/` — **EMPTY**, output recorded.
-- [ ] **4.2** Confirm `eligible_member_count()` is **5**, `PROTOCOL_VERSION` is **V1.3**, and
+- [x] **4.2** Confirm `eligible_member_count()` is **5**, `PROTOCOL_VERSION` is **V1.3**, and
       `-140` is green against the `f906d04` pin.
-- [ ] **4.3** AC6.4's full gate sweep with **every exit code**, ⚠️ labelled **LOCAL
+- [x] **4.3** AC6.4's full gate sweep with **every exit code**, ⚠️ labelled **LOCAL
       (Windows)**; NFR-M1 re-measured for the new test file.
-- [ ] **4.4** `git status --porcelain` and `git diff --stat` against AC6.1's write set, before
+- [x] **4.4** `git status --porcelain` and `git diff --stat` against AC6.1's write set, before
       **each** commit. ⛔ No `git add -A`.
-- [ ] **4.5** Verify `sprint-status.yaml` at **1,264 lines / 1,264 CR** after its edit.
+- [x] **4.5** Verify `sprint-status.yaml` at **1,264 lines / 1,264 CR** after its edit.
 
 ### Task 5 — THE ARC AND THE HAND-OFF (AC6.5, AC7)
 
-- [ ] **5.1** Commit O, A, B per §2.2, staging by explicit path.
-- [ ] **5.2** ⛔ Ledger note + story record + `sprint-status.yaml` transition **together in
+- [x] **5.1** Commit O, A, B per §2.2, staging by explicit path.
+- [x] **5.2** ⛔ Ledger note + story record + `sprint-status.yaml` transition **together in
       commit B**.
-- [ ] **5.3** Record in the story: the four constraints handed to **17.3** by name (`-127`'s
+- [x] **5.3** Record in the story: the four constraints handed to **17.3** by name (`-127`'s
       fence, `-145`'s pin, the `Evidence-partition:` trailer, the missing SUT-derived-binding
       resolver) and the three handed to **17.4** (`SUCCESSOR_OUTPUT_PATHS`,
       `per_member["V5:…"]`, `AI-E16-7`).
-- [ ] **5.4** Record any AC7 escalation with its evidence, or state explicitly that none was
+- [x] **5.4** Record any AC7 escalation with its evidence, or state explicitly that none was
       reached.
 
 ---
@@ -1174,11 +1174,146 @@ runs an ubuntu matrix and a green local suite has previously shipped POSIX-only 
 
 ### Agent Model Used
 
+`claude-opus-5[1m]` (Opus 5, 1M context), via the `bmad-dev-story` workflow. Round 1,
+`implement`. No prior review findings existed for this story.
+
 ### Debug Log References
+
+⚠️ **Every gate below is LOCAL (Windows).** This branch is unpushed and `audit-ci.yml`
+triggers on `master`/`main` only, so **no CI evidence exists at any sha in this arc**, and
+CI runs an **ubuntu matrix** a green Windows suite has previously failed to predict
+(`AI-E13-1`; epic-18 retro SD-4).
+
+#### Task 0 — §0 re-measured by execution at HEAD `52ae0e5`. ⛔ EVERY ROW REPRODUCED.
+
+| § | row | measured | command |
+|---|---|---|---|
+| 0.0 | HEAD / branch | `52ae0e5df79704d02124ae32aa7ecd6d9133d3fc` on `docs/merge-strategy-decision`, **4 commits ahead of `origin/master`** | `git rev-parse HEAD`; `git rev-list --count origin/master..HEAD` |
+| 0.0 | `git status --porcelain` | ⛔ **NOT EMPTY**, and **it had moved since contexting**: `MM sprint-status.yaml` (not `M `), `M  stories/17-1-….md`, `?? stories/17-2-….md`. The extra unstaged hunk is the SM's own `backlog → ready-for-dev` transition for 17-2. §2.6 handling applied — see `DN-17-2-11`. | `git status --porcelain` |
+| 0.0 | next free `PRECISION-001` id | `-142` — confirmed unused | `grep -rn "PRECISION-001-14[2-9]" tests/` → none |
+| 0.0 | `deferred-work.md` invariants | **589,632 bytes · 1 CR · 7,489 LF · 0 CRLF** — exact | binary read, `count(b"\r")` |
+| 0.0 | `sprint-status.yaml` invariants | **1,264 lines · 1,264 CR** — exact, and **all 1,264 are CRLF pairs** | binary read |
+| 0.1 | `PREREGISTRATION_COMMIT_SHA` | `f906d04997b391bea4592aabc0343d1234b3b060`, **ancestor of HEAD: True** | import; `git merge-base --is-ancestor` |
+| 0.1 | `PROTOCOL_VERSION` / `MAX_FALSE_ACCUSATION_EXPOSURE` / `EXPOSURE_SOURCE_SHA` | `V1.3` / `26` / `6c59115…` | import |
+| 0.1 | `SUCCESSOR_OUTPUT_PATHS` | both entries **ABSENT on disk** — `False`, `False` | `Path(...).exists()` |
+| 0.1 | `CRITERION_OUTCOMES` | `{MET, NOT_MET, UNEVALUABLE}` | import |
+| 0.2 | the three vocabularies | `_CORROBORATION_ASSERTION_CALLEES` **23** · `_ASSERTION_CALLEES` **89** · `_MOCK_CALLEES` **10** | `len()` after import |
+| 0.2 | `_ast_corroborated` return | `evidence.sut_result_is_discarded and evidence.mock_referencing_assertions >= 1`, over `provenance_evidence(..., assertion_callees=_CORROBORATION_ASSERTION_CALLEES, mock_callees=_MOCK_CALLEES)`; fact (a) is `len(self._sut_call_sites(span_edges)) >= 1` | source read at `vacuous_test.py:754`–`:796` |
+| 0.3 | `SILENT_CLASS_DEFINITION` | **903 characters**, sha256 `7bc277fa678b09ea…`; carries *"Promoting V2 would be a genuinely DIFFERENT predicate, not a loosening"* verbatim | import |
+| 0.3 | `SpanScore.is_silent_class_member` | `self.discarded_sut_calls >= 1 and not self.asserts_anything` — two conjuncts, no threshold | `inspect.getsource` |
+| 0.3 | `score_span` composes four shipped helpers | `span_provenance` → `provenance_evidence`, `body_statement_count`, `opens_bare_assert`, `is_assertion_callee`; re-implements none | `inspect.getsource` |
+| 0.4 | `TC-ArgusAgent-PRECISION-001-127` | **GREEN**, exit 0 | `pytest tests/test_silent_class.py -k 127` |
+| 0.5 | the six variant definitions | reproduced **verbatim** from the harness docstring `:9`–`:24`; `V0` 0 · `V1` 6 · `V2` 36 · `V3` 6 · `V4` 676 · `V5` 125 (`V3` is in the harness docstring, not in research §5's table) | source read, **not executed** |
+| 0.5 | the `V5` sentence | *"V5 additionally needs SUT-derived name binding, which no shipped helper provides; it is computed with Python `ast` and is therefore THIS SCRIPT'S OWN reasoning, not the shipped predicate."* — present, on the line | source read |
+| 0.5 | `CHECKOUTS`, `per_member["V5:{mid}"]` | five entries incl. `agent-smith` at the depth-5 path; the collection site is at `:219` | source read |
+| 0.6 | ⛔ `mock_referencing_assertions` decision sites | **EXACTLY ONE**: `argus/detectors/vacuous_test.py:796`. The other three are `provenance_scan.py:841` (field decl), `silent_class.py:232` (`SpanScore` field), `:328` (that field populated). **95 modules parsed.** ⛔ **AC7.3 NOT triggered.** | `ast` walk, classified by node kind |
+| 0.7 | `silent-class-record.json` | `class_size` **36** · `{agent-smith: 22, minions: 14}` · `files {10, 9}` · `population_walked` **1032** · `population_skipped` **0** · `protocol_version` **V1.3** · `counts {UNADJUDICATED: 36, TP: 0, FP: 0, BORDERLINE: 0}` · `gates_anything` **False** · `promotes_nothing` **True** · `exhaustiveness {exhaustive: False, adjudicated: 0, residual: 36}` · `smoke_test_proportion.measured` **False** · `independence.status` **NOT_ESTABLISHED** | `json.load` |
+| 0.8 | the detector surface | `Detector` Protocol at `base.py:147`–`:190`, both members read-only `@property`; `@runtime_checkable` **DELIBERATELY ABSENT**; **four** `if TYPE_CHECKING:` pins at `orphan_code.py:310`, `secret_scan.py:633`, `tool_runner.py:459`, `vacuous_test.py:799`; `-145`/`-146` present at `test_detector_base.py:224`/`:257` | source read |
+| 0.9 | `_STATUS_DOCUMENTS` globs | `sprint-change-proposal-*.md` and `epic-*-retro-*.md` — the specification's filename matches **neither**, so it is correctly left unregistered; `-22` re-run **GREEN** | source read + `pytest` |
+| 0.9 | `_STATUS_CLAIMS` | 12 phrases; **zero occur** in the specification, denied or otherwise | executed over the committed document |
+
+⛔ **AC7 was NOT reached.** No §0 row failed to reproduce; `git log 52ae0e5..HEAD -- argus/`
+is empty for this story's arc; the criterion is byte-unchanged at its pin; **no second
+decision site exists**; the ledger's closure vocabulary expressed `moot-by-replacement`
+without rewriting anything; and the specification was written without running a measurement
+and without publishing an unmeasured figure as measured.
+
+⚠️ **One §0 row moved between contexting and dev, and it is recorded rather than adjusted.**
+§0.0 states `git status --porcelain` shows two files staged `M `. At dev time
+`sprint-status.yaml` was `MM`, not `M ` — the extra unstaged hunk being the create-story
+workflow's own `backlog → ready-for-dev` transition for this story, written after §0.0 was
+measured. This is the story's own footprint, not a third party's, so it is a self-consistent
+drift rather than an AC7.1 failure. `DN-17-2-11` records the handling.
+
+#### Task 3.5 — every guard driven RED at its REAL seam by an EXECUTED mutation
+
+| guard | seam mutated | RED message (head) | exit | restore |
+|---|---|---|---|---|
+| `-142` | the **real** specification: `record.class_size` `**36**` → `**37**` in the anchored table | *"the specification's cited figure(s) no longer re-derive from the committed artifacts: `record.class_size`: document says 37, record says 36"* | **1** | sha256 `e0e5eb298bcb317f…` **identical** before and after |
+| `-143` | the **real** `argus/precision/silent_class.py`: a second real comparison `evidence.mock_referencing_assertions >= 2` planted above `score_span` | *"mock_referencing_assertions has 2 decision site(s) in the argus package, not one: [('argus/detectors/vacuous_test.py', 796, 'decision'), ('argus/precision/silent_class.py', 310, 'decision')]"* | **1** | sha256 `8a8299ccf1d2927e…` **identical** before and after |
+| `-144` (quotation half) | the **real** specification: one character of the quotation, `span` → `spam` | *"NOT character-for-character identical to the imported constant. First difference at offset 31: document has 'm reaches the system under tes', constant has 'n reaches…'. Lengths 903 vs 903."* | **1** | sha256 `e0e5eb298bcb317f…` **identical** before and after |
+| `-144` (git half) | ⛔ **not mutable by a file edit — the seam is the object database.** The **unchanged** predicate was driven over **real history**: `base = ee855a6~8` (`9e3fdc2`), scope `(18-4)` → 16 arc commits, **4** scope-matched, **1** argus-touching, **intersection NON-EMPTY**: `0ba6a98 feat(18-4): narrow the Detector Protocol…` | the intersection `-144` asserts empty is **watched non-empty** on real shas | — | nothing written; `git` read-only verbs only |
+
+⚠️ **Why `-144`'s git half is scoped to THIS STORY'S ARC and not to `<base>..HEAD` wholesale**
+(`DN-17-2-12`). AC5.3 words it as *"`git log <base>..HEAD -- argus/` is EMPTY"*. Taken
+literally that guard is **guaranteed to go RED the moment Story 17.3 lands**, because 17.3
+is chartered to write inside the shipped package — and the only available response to that
+RED would be to delete the guard, throwing away a real claim with a badly scoped one. The
+claim Story 17.2 actually makes is about **its own commits**, so the guard intersects the
+range's argus-touching commits with the range's `(17-2)`-scoped commits and asserts the
+intersection empty. **It is strictly stronger where it matters** (it survives 17.3 and still
+fires on a `fix(17-2)` that touched the package) and it stays checkable forever. Two
+non-vacuity preconditions precede it: the `argus` pathspec is proved capable of finding
+commits at all, and the `(17-2)` selector is proved to find this story's own commits.
+
+#### Task 4 — AC6.3: nothing outside the write set moved
+
+`git diff 52ae0e5 HEAD -- argus/ scripts/ …/precision-validation-protocol.md …/E-PRD/ …/architecture.md …/epics.md …/validation-corpus/`
+→ **EMPTY** (exit 0, zero bytes of output), re-verified at commit A and again at commit B.
+
+`eligible_member_count()` = **5** (unchanged) · `PROTOCOL_VERSION` = **V1.3** (unchanged) ·
+`TC-ArgusAgent-PRECISION-001-140` **GREEN** against the `f906d04` pin.
+
+#### Task 4.3 — AC6.4, every gate with its exit code. ⚠️ ALL LOCAL (Windows).
+
+| gate | result | exit |
+|---|---|---|
+| `python -m pytest` | **1741 passed** in 249s, no `F`/`E` markers (1738 at 17.1 close + these three guards) | **0** |
+| `python -m pytest tests/test_successor_predicate_specification.py` | 3 passed | **0** |
+| `python -m pytest --cov=argus --cov-fail-under=80` | *"Required test coverage of 80% reached. Total coverage: **95.69%**"* | **0** |
+| `python -m mypy argus` | *"Success: no issues found in **95** source files"* | **0** |
+| `python -m bandit -r argus --severity-level medium` | **Medium 0, High 0** | **0** |
+| `-127` (the import fence) | GREEN | **0** |
+| `-140` (directional immutability) | GREEN | **0** |
+| `-22` (`_STATUS_DOCUMENTS` closure) | GREEN | **0** |
+| `-78` (ledger cross-check) | GREEN **after** the ledger note and this record were both written | **0** |
+| NFR-M1 sweep (`tests/test_module_size_ceiling.py`) | GREEN; the new module is **735** physical lines against the **1200** ceiling | **0** |
+| `deferred-work.md` invariants after the write | **593,897 bytes · 1 CR · 7,534 LF · 0 CRLF** — +45 lines, **+0 deletions** | — |
+| `sprint-status.yaml` invariants after both writes | **1,264 lines · 1,264 CR** — unchanged | — |
 
 ### Completion Notes List
 
+- **AC1 — the specification exists and states the definition, the defect shape and the differential.** `_bmad-output/design-artifacts/ArgusAgent/successor-vacuity-predicate-specification.md`, dated 2026-08-25, author role named. `S1` is defined as three conjuncts (§2.1); the threshold is *every* assertion at the weakest band with the widening **pre-refused** (§2.2); the defect shape is one sentence (§2.3); `S1` is stated **not** to be a `V0`..`V5` member with the `V6` rejection recorded (§2.4); the differential is given in **both** directions (§3) and the six rejected successors each carry their reason (§3.2).
+- **AC1.7 — the instrument provenance is the load-bearing section, and `S1`'s reach is NOT a number.** §4 names the two instruments and the two HEADs, quotes the harness's own *"THIS SCRIPT'S OWN reasoning, not the shipped predicate"* sentence, and states that summing the two band counts is **PROVISIONAL** arithmetic across two instruments — labelled on its own line, and never written as `S1`'s reach. **The figure `161` does not appear in the document at all.** Story 17.4 measures it.
+- **AC1.10 — the quotation is generated, not typed.** `SILENT_CLASS_DEFINITION` was written into §2.4 **programmatically from the imported constant**; no character of it was transcribed by eye. `-144` compares it back, character for character, on every run.
+- **AC2 — `consumed == 0` is answered in four registers plus the advisory clause** (§6.1–§6.5), including the unhedged admission that `S1`'s population **is larger** than every `cons == 0`-preserving variant. `argus/**` is byte-unchanged and that is proved against the object database, not promised.
+- **AC3 — the mock-binding decision is recorded, and the mock-idiom ledger entry is dispositioned.** ⛔ **`DF-INV-VACUOUS-B` is CLOSED 2026-08-25 as `moot-by-replacement` by this story.**
+  The note is dated, append-only and 45 lines, written in the shape of the 2026-08-25
+  detector-audit Protocol disposition further down the ledger (`§2.4`'s named prior art at
+  `deferred-work.md:6838`). It carries the **residual with the disposition** and rests on the
+  entry's **own** stated trigger being answered NO by a committed artifact, rather than on any
+  claim that the code changed. **Zero deletions** in the ledger diff; the entry above it and the
+  2026-08-24 roll-up sentence below it are both left unedited (§3.4 strike-never-erase).
+  `ledger_closed_ids` recognised the disposition: **39 → 40**, exactly one new id.
+- **AC4 — nothing was measured, ratified, fetched or spent.** No detector was run over any corpus member, no corpus blob was materialised, the research harness was **read but never executed**, and no successor-predicate output was produced. `eligible_member_count()` is 5 before and after. Nothing reached the network. Both `SUCCESSOR_OUTPUT_PATHS` prefixes remain absent on disk.
+- **AC5 — three guards, each with an observable, an executed real-seam mutation and generated adversarial variants.** `-142` generates **19 decoys + 19 perturbations** from the live document on every run; `-143` generates a real second comparison into each of the **3** referencing modules; `-144` generates **41** one-character perturbations from the live constant. No guard was weakened to go green.
+- **AC5 — 17.1's review finding was treated as a live hazard in the same area id.** `-142` extracts figures from a markdown document, which is exactly the shape of 17.1's unanchored whole-document regex. Extraction is anchored to `<!-- CITED-FIGURES:BEGIN/END -->`, and every run plants a decoy row **outside** the anchors that must be **invisible** to the anchored extractor **and visible** to a deliberately-kept unanchored one — the second half is what proves the planted input carries the defect rather than proving the extractor found nothing.
+- **AC6 — the write set is exactly five paths** and the three-commit arc landed as §2.2 specifies, with the ledger note, this record and the `sprint-status.yaml` transition **together in commit B** (`-78`). Staged by explicit path throughout; **no `git add -A`**.
+- **AC7 — no escalation was reached.** Every §0 row reproduced. The one drift (§0.0's porcelain line) is this story's own footprint and is recorded above rather than adjusted.
+
+**Decisions this dev round took, beyond the ten the story locked:**
+
+- **`DN-17-2-11` — the two artifact files staged at contexting were CARRIED in commit O, with a disclosure block in the message.** *Rejected:* `git reset`-ing them and leaving them for the peer session. `sprint-status.yaml` is **one file** and its 17-1 `review → done` hunk cannot be staged apart from 17-2's transition; committing the transition while leaving 17-1's story record uncommitted would produce an inconsistent pair. §2.2 sanctions carrying them *"with a message line saying so"*, and commit O names both files, says whose close-out they are, and states that this story edited neither.
+- **`DN-17-2-12` — `-144`'s git half is scoped to THIS STORY'S ARC by commit scope, not to `<base>..HEAD` wholesale.** *Rejected:* the literal reading of AC5.3. See the Task 3.5 note above: the literal form is guaranteed RED the moment Story 17.3 legitimately writes inside the shipped package, and the only response would be to delete it. ⚠️ **This is a deliberate divergence from the AC's wording in service of the AC's claim**, recorded here with its evidence rather than taken silently. The coupling — that the arc's commits carry a `(17-2)` scope — is written into the guard's own constant with the instruction to **update it, never widen it**.
+- **`DN-17-2-13` — `-142` compares in BOTH directions, not only document-against-authority.** *Rejected:* checking only that cited figures match. A row silently deleted from the table would then pass, and a shrinking comparison is how a guard goes quiet. Every `definition.*` figure the constant states must be present in the document, and every cited key must resolve to a named authority.
+
+**Handed forward, by name:**
+
+- **To Story 17.3** — `-127`'s transitive one-way import fence (the `S1` scorer **cannot** import `silent_class` from the detector package; **never widen the fence**); `-145`'s `if TYPE_CHECKING:` conformance-pin obligation, RED from the moment a new `run() -> DetectorResult` class is written; the `Evidence-partition:` trailer, which a new module under the detector package **does** trigger; and the **SUT-derived name binding resolver**, which does not exist and is the largest piece of unbuilt work in this epic. Plus the three further costs of any shipped byte: dogfood-artifact regeneration, the coverage gate, and `mypy`/`bandit`.
+- **To Story 17.4** — `SUCCESSOR_OUTPUT_PATHS` (both prefixes still absent; successor output lands under one of them and nowhere else); the harness's already-collected `per_member["V5:…"]` breakdown at `investigate-per-call-scoping.py:219`, **one re-run away** and declined here; and `AI-E16-7`, **UNFILLED**, which is 17.4's stated precondition and not this story's problem.
+- **To Story 17.5** — every ledger re-homing note except this story's one entry.
+
 ### File List
+
+- `_bmad-output/design-artifacts/ArgusAgent/successor-vacuity-predicate-specification.md` — **NEW**, 423 lines
+- `tests/test_successor_predicate_specification.py` — **NEW**, 735 lines (`TC-ArgusAgent-PRECISION-001-142`..`-144`)
+- `_bmad-output/design-artifacts/ArgusAgent/deferred-work.md` — **MODIFIED**, +45 lines / −0, pure append
+- `_bmad-output/design-artifacts/ArgusAgent/stories/17-2-a-different-predicate-argued-as-one.md` — **NEW** (this file)
+- `_bmad-output/design-artifacts/ArgusAgent/sprint-status.yaml` — **MODIFIED**, two status transitions for this story plus `last_updated`
+
+⛔ **Nothing else.** `argus/**`, `scripts/**`, `precision-validation-protocol.md`, `epics.md`,
+`architecture.md`, the PRD and `validation-corpus/**` are all **byte-unchanged** (AC6.3,
+verified by `git diff` returning empty).
 
 ---
 
@@ -1187,3 +1322,4 @@ runs an ubuntu matrix and a green local suite has previously shipped POSIX-only 
 | Date | Change | Author |
 |---|---|---|
 | 2026-08-25 | **STORY CONTEXTED** at HEAD `52ae0e5` (branch `docs/merge-strategy-decision`, **two artifact files STAGED** — §0.0). §0's ten rows measured **by execution** against this tree, not copied from `epics.md`, from the 2026-08-24 research or from 17.1's record. Four premises moved against what the epic assumes: (1) `argus/precision/silent_class.py` **already ships** the `V2` half of the successor and `SILENT_CLASS_DEFINITION` already carries this story's core argument in committed words — so it is **quoted verbatim** and `-144` enforces that; (2) `TC-ArgusAgent-PRECISION-001-127` **fences the detector package out of `silent_class.py`** transitively, which is the single most expensive thing Story 17.3 could get wrong; (3) **`V5` = 125 is the research script's OWN `ast` reasoning, not a shipped measurement**, and `V2` = 36 was measured at a different HEAD — so `161` is arithmetic across two instruments and this story **refuses to publish `S1`'s reach as a number**, handing it to 17.4; (4) `mock_referencing_assertions` has **exactly one decision site** in all of `argus/**`, which is what makes AC3's `DF-INV-VACUOUS-B` disposition true **today** rather than a claim about the future. Ten decisions taken (`DN-17-2-1`..`-10`), each with its rejected alternative — notably that the definition-as-code is **17.3's**, not a `scripts/` module that would fork it (`AR7`), and that AC2 is answered in **four registers** including the admission that `S1`'s population **is** larger than every clause-removal variant keeping `cons == 0`. Scope: **one** ledger entry written, `argus/**` byte-unchanged, `scripts/precision_preregistration.py` frozen, **no measurement run**. `backlog` → `ready-for-dev`. | Scrum Master (create-story, Opus 5) |
+| 2026-08-25 | **DEV ROUND 1 (implement) COMPLETE — `in-progress` → `review`.** Three-commit arc `5999624` chore → `126f502` docs → this record. Task 0 re-measured **all ten §0 rows by execution at HEAD `52ae0e5` and EVERY ROW REPRODUCED**, so ⛔ **AC7 was not reached**: the criterion is byte-unchanged at its `f906d04` pin, both `SUCCESSOR_OUTPUT_PATHS` prefixes are still absent, the three vocabularies size 23/89/10, `SILENT_CLASS_DEFINITION` is 903 characters, and `mock_referencing_assertions` still has **exactly one decision site** across all 95 shipped modules. Landed: the specification document (`S1` as three conjuncts, the threshold pre-refused against widening, the differential in **both** directions, six rejected successors, `consumed == 0` answered in four registers including the unhedged admission that `S1`'s population **is larger**, and ⛔ **no reach figure for `S1` anywhere** — `161` does not appear, because it is arithmetic across two instruments at two HEADs and 17.4 measures it); three guards `-142`..`-144`, each driven **RED at its real seam by an executed mutation** of the real artifact or the real module and restored byte-exact by sha256, with the `-144` git half driven to a **non-empty** intersection on real history instead; and ⛔ **exactly ONE ledger entry** — `DF-INV-VACUOUS-B` **CLOSED** as `moot-by-replacement`, append-only, residual attached, zero deletions, `ledger_closed_ids` 39 → 40. Two decisions beyond the story's ten: `DN-17-2-11` (the staged 17.1 files carried in commit O **with a disclosure block**, because `sprint-status.yaml` cannot be split) and ⚠️ `DN-17-2-12` (**a deliberate divergence from AC5.3's literal wording**: `-144`'s git half is scoped to this story's own arc, because the literal form is guaranteed RED the moment 17.3 legitimately writes inside the shipped package). LOCAL (Windows) gates, every exit code **0**: pytest **1741 passed**, coverage **95.69%**, `mypy argus` clean over 95 files, `bandit` 0 medium / 0 high, `-127`/`-140`/`-22`/`-78` green, NFR-M1 735/1200. ⚠️ **No CI evidence at any sha in this arc** — unpushed branch, ubuntu matrix. `argus/**` byte-unchanged; nothing ratified, fetched, measured or spent. | Developer (dev-story, Opus 5) |
