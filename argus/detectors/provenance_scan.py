@@ -109,6 +109,7 @@ __all__ = [
     "logical_statements",
     "opens_bare_assert",
     "provenance_evidence",
+    "result_observing_blocks",
     "result_observing_lines",
     "SutCallSite",
     "assertion_statement_lines",
@@ -798,15 +799,19 @@ def _structural_colon(code: str) -> int:
     return -1
 
 
-def result_observing_lines(source_lines: list[str], start: int, end: int) -> frozenset[int]:
-    """1-based lines of the span that sit inside a result-observing context (DN-3).
+def result_observing_blocks(
+    source_lines: list[str], start: int, end: int
+) -> dict[int, frozenset[int]]:
+    """Each result-observing ``with`` header line of the span → the lines ITS OWN block covers.
 
-    Indentation-scoped, because that is what a ``with`` block actually is. The inline
-    single-line form (``with pytest.raises(X): parse(bad)``) is covered too — it is
-    the same statement, written on one line.
+    ⛔ **THE derivation, and there is exactly one** (DN-3, AR7/§3.3):
+    :func:`result_observing_lines` is its UNION. Indentation-scoped, because that is what a
+    ``with`` block is; the inline form (``with pytest.raises(X): parse(bad)``) is one line and
+    IS its own block, and a nested block's lines belong to every block enclosing it. ⛔ A
+    SIBLING's SUT call is NOT in your block; the span-wide union cannot say (17.3 review 1).
     """
-    covered: set[int] = set()
-    open_indents: list[int] = []
+    covered: dict[int, set[int]] = {}
+    open_blocks: list[tuple[int, int]] = []  # (indent, header line), innermost last
     for line_no in range(start, end + 1):
         index = line_no - 1
         if index < 0 or index >= len(source_lines):
@@ -816,20 +821,28 @@ def result_observing_lines(source_lines: list[str], start: int, end: int) -> fro
         if not stripped:
             continue
         indent = len(code) - len(code.lstrip())
-        while open_indents and indent <= open_indents[-1]:
-            open_indents.pop()
-        if open_indents:
-            covered.add(line_no)
-        if not (stripped.startswith("with ") or stripped.startswith("with(")):
+        while open_blocks and indent <= open_blocks[-1][0]:
+            open_blocks.pop()
+        for _, header in open_blocks:
+            covered[header].add(line_no)
+        if not stripped.startswith(("with ", "with(")):
             continue
         if not _OBSERVING_CALL_RE.search(_blank_strings(code)):
             continue
         colon = _structural_colon(code)
-        if colon >= 0 and code[colon + 1 :].strip():
-            covered.add(line_no)  # inline body — one statement, one line
-        else:
-            open_indents.append(indent)
-    return frozenset(covered)
+        inline = colon >= 0 and bool(code[colon + 1 :].strip())
+        covered[line_no] = {line_no} if inline else set()  # inline body — one line, one block
+        if not inline:
+            open_blocks.append((indent, line_no))
+    return {header: frozenset(lines) for header, lines in sorted(covered.items())}
+
+
+def result_observing_lines(source_lines: list[str], start: int, end: int) -> frozenset[int]:
+    """1-based lines of the span inside a result-observing context (DN-3) — the UNION of
+    :func:`result_observing_blocks`, so span-wide and per-block answers cannot disagree.
+    """
+    blocks = result_observing_blocks(source_lines, start, end)
+    return frozenset(line for lines in blocks.values() for line in lines)
 
 
 def _mock_bound_names(

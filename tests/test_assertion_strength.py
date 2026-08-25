@@ -832,6 +832,131 @@ def test_TC_ArgusAgent_DETECT_001_149_the_fail_closed_test_is_not_accused(tmp_pa
     )
 
 
+#: ⛔ TWO observing blocks in ONE span, and only the FIRST covers a SUT call. The adversary
+#: `-149`'s generated population does NOT reach: every fixture there carries exactly one
+#: block, so a rule that answers *"does an observing block cover a SUT call"* SPAN-WIDE
+#: instead of *"does THIS statement's own block"* passes all nine and still mis-grades here.
+#: The second block observes a plain ``KeyError`` from a dict display — no SUT call, no
+#: SUT-derived name — so it constrains only that something was raised: ``existence``.
+_TWO_OBSERVING_BLOCKS = """
+import pytest
+
+
+def test_x():
+    parse("warm up")
+    with pytest.raises(ValueError):
+        parse("nonsense")
+    with pytest.raises(KeyError):
+        {}["missing"]
+"""
+
+
+def test_TC_ArgusAgent_DETECT_001_149_an_observing_block_does_not_leak_across_siblings(
+    tmp_path: Path,
+) -> None:
+    """TC-ArgusAgent-DETECT-001-149 — AC2.4: the fail-closed rule is scoped to ITS OWN block.
+
+    **Observable:** the per-band counts of a span holding TWO result-observing blocks, of
+    which only the FIRST covers a SUT call.
+
+    ⛔ **THE BAND MEANING IS THE CONTRACT.** ``_STRENGTH_MEANINGS["value"]`` says *"a
+    result-observing context whose block covers a SUT call"* — **whose**, not *"any block in
+    the same test function"*. A span-wide covered-line set makes one block's SUT call leak
+    ``value`` into every unrelated sibling assertion in the same span, which is a claim the
+    counts on ``SuccessorVacuityEvidence`` (17.4's reporting axis) would carry as fact.
+
+    ⚠️ **This boundary carries NO verdict weight** (§0.5 / ``DN-17-3-7``): ``existence`` and
+    ``value`` BOTH refuse ``S1``, so the leak never moved a verdict — which is why this case
+    asserts the ``none`` count and ``S1``'s refusal too, pinning that the repair did not
+    trade a reporting bug for the lethal one.
+
+    **Non-vacuity FIRST:** the span reaches ``discarded_sut_calls >= 1``, grades exactly two
+    assertions, and its two blocks are asserted to be genuinely DISTINCT (different header
+    lines, disjoint covered-line sets) — without that the "sibling" premise is not present.
+
+    **Executed mutation:** the pre-repair seam is restored — ``result_observing_blocks`` is
+    replaced by one that returns a SINGLE block carrying the span-wide union — and the leak
+    reappears (both assertions grade ``value``).
+    """
+    span = _span(tmp_path, _TWO_OBSERVING_BLOCKS, slug="twoblocks")
+    lines, edges, start, end = span
+
+    # ---- NON-VACUITY, FIRST -----------------------------------------------------------
+    assert _discarded_sut_calls(span) >= 1, (
+        "the two-block fixture does not reach discarded_sut_calls >= 1, so (c′) is never "
+        "reached and the band claim below is measured on a span that never got near S1"
+    )
+    blocks = provenance_scan.result_observing_blocks(lines, start, end)
+    assert len(blocks) == 2, (
+        f"the fixture must present exactly two result-observing blocks, not {len(blocks)}; "
+        f"the sibling premise is not present otherwise"
+    )
+    first, second = (blocks[header] for header in sorted(blocks))
+    assert not (first & second), (
+        "the two blocks share a covered line, so they are nested rather than siblings and "
+        "this case is not measuring what it claims"
+    )
+    sut_lines = {
+        site.line
+        for site in provenance_scan.sut_call_classification(
+            lines,
+            edges,
+            assertion_callees=_CORROBORATION_ASSERTION_CALLEES,
+            mock_callees=_MOCK_CALLEES,
+            mock_names=frozenset(),
+            observed_lines=provenance_scan.result_observing_lines(lines, start, end),
+            statement_starts=provenance_scan.logical_statement_starts(lines, start, end),
+            statement_extents={
+                s.start_line: s.end_line
+                for s in provenance_scan.logical_statements(lines, start, end)
+            },
+        )
+    }
+    assert first & sut_lines, "the FIRST block must cover a SUT call"
+    assert not (second & sut_lines), (
+        "the SECOND block must cover NO SUT call -- that asymmetry IS the case"
+    )
+
+    counts = grade_span_assertions(lines, edges, start, end)
+    assert counts.graded == 2 and counts.unestablished == 0, (
+        f"expected exactly two graded assertions, got {counts!r}"
+    )
+    assert counts.none == 0, (
+        f"a result-observing context call graded at the WEAKEST band ({counts!r}). Raising "
+        f"IS the observation; the repair must never trade the reporting boundary for the "
+        f"one that carries verdict weight."
+    )
+    assert (counts.value, counts.existence) == (1, 1), (
+        f"expected the SUT-covering block to grade `value` and its sibling -- which covers "
+        f"no SUT call at all -- to grade `existence`, got {counts!r}. A SPAN-WIDE covered "
+        f"set leaks one block's SUT call into every other observing assertion in the span."
+    )
+    assert not s1_corroborated(lines, edges, start, end), (
+        "S1 must still REFUSE this span: both bands present are above the weakest one"
+    )
+
+    # ---- the executed mutation, at the REAL seam --------------------------------------
+    original = assertion_strength.result_observing_blocks
+
+    def _span_wide(source_lines: list[str], block_start: int, block_end: int):
+        """The PRE-REPAIR seam: every block carrying the SPAN-WIDE observed line set."""
+        real = original(source_lines, block_start, block_end)
+        union = frozenset(line for lines in real.values() for line in lines)
+        return {header: union for header in real}
+
+    assertion_strength.result_observing_blocks = _span_wide  # type: ignore[assignment]
+    try:
+        leaked = grade_span_assertions(lines, edges, start, end)
+    finally:
+        assertion_strength.result_observing_blocks = original  # type: ignore[assignment]
+    assert assertion_strength.result_observing_blocks is original, "the mutation was not restored"
+    assert (leaked.value, leaked.existence) == (2, 0), (
+        f"restoring the span-wide covered set did NOT reproduce the leak ({leaked!r}), so "
+        f"this guard is not observing the seam it claims to observe and would stay green "
+        f"through the defect it exists to close"
+    )
+
+
 # --------------------------------------------------------------------------------------
 # AC3.4/AC3.5 — the unestablished path REFUSES and never raises
 # --------------------------------------------------------------------------------------

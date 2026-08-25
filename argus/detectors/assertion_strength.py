@@ -45,7 +45,8 @@ it made a SUT call inside such a block CONSUMED by construction.
 which is the clause that made ``DN-3``'s verdict bite, so the protection is rebuilt HERE, at
 the band level: ⛔ **a result-observing context call is NEVER graded ``none``, and grades at
 the STRONGEST band when a SUT call is covered by it — raising IS the observation.** The
-covered line set is READ from ``provenance_scan.result_observing_lines``, never re-derived.
+covered line set is READ from ``provenance_scan.result_observing_blocks`` — per BLOCK, so a
+SIBLING block's SUT call cannot leak strength into it — and it is never re-derived here.
 
 ⛔ NO RE-PARSE, NO SECOND GRAMMAR CALL (AR8/AC3)
 ------------------------------------------------
@@ -93,7 +94,7 @@ from argus.detectors.provenance_scan import (
     logical_statement_starts,
     logical_statements,
     provenance_evidence,
-    result_observing_lines,
+    result_observing_blocks,
     sut_call_classification,
 )
 from argus.detectors.vacuous_vocabulary import (
@@ -324,13 +325,13 @@ def _grade_statement(
     *,
     sut_bound: frozenset[str],
     sut_lines: frozenset[int],
-    observed_lines: frozenset[int],
+    own_block_lines: frozenset[int],
 ) -> str:
     """The band of the assertion whose logical statement is *statement*.
 
     ⛔ Reads only the statement's own comment-free code, the names the forward pass bound,
-    the ONE SUT-call classification and the ONE result-observing line set. It re-derives
-    none of them (AR7/§3.3, AC2.4).
+    the ONE SUT-call classification and the lines THIS statement's OWN observing block
+    covers. It re-derives none of them (AR7/§3.3, AC2.4).
     """
     code = statement.code
     masked = _blank_strings(code)
@@ -340,8 +341,16 @@ def _grade_statement(
     # result-observing context call is NEVER the weakest band. It is the STRONGEST band when
     # a SUT call is covered by an observing context; otherwise it still constrains that
     # something was raised/warned/logged, which is an EXISTENCE constraint at least.
+    #
+    # ⛔ **THIS statement's OWN block, never the span-wide observed set** (Story 17.3 review
+    # iteration 1). Two sibling `with pytest.raises(...)` blocks in one test function are two
+    # separate observations: a SUT call covered by the FIRST says nothing about what the
+    # SECOND constrains, and the span-wide union graded both `value` — a claim the module's
+    # own band meaning ("a result-observing context whose block covers a SUT call") does not
+    # make. The band-0 boundary never moved (both bands REFUSE S1, §0.5), so the repair is to
+    # the reporting axis 17.4 reads, and the fail-closed floor below it is unchanged.
     if _OBSERVING_CALL_RE.search(masked) is not None:
-        if (covered | observed_lines) & sut_lines:
+        if (covered | own_block_lines) & sut_lines:
             return "value"
         return "existence"
 
@@ -382,7 +391,10 @@ def grade_span_assertions(
         return AssertionStrengthCounts(unestablished=1)
 
     statements = logical_statements(source_lines, start, end)
-    observed_lines = result_observing_lines(source_lines, start, end)
+    # ⛔ ONE walk of the observing contexts, read TWO ways: per BLOCK for the band rule below,
+    # and as its UNION for fact (b)'s span-wide DN-3 classification. Never two walks (AR7).
+    blocks = result_observing_blocks(source_lines, start, end)
+    observed_lines = frozenset(line for lines in blocks.values() for line in lines)
     starts = logical_statement_starts(source_lines, start, end)
     extents = {statement.start_line: statement.end_line for statement in statements}
     sites = sut_call_classification(
@@ -412,12 +424,20 @@ def grade_span_assertions(
         if statement is None or statement.unterminated or not statement.code.strip():
             unestablished += 1
             continue
+        # The blocks THIS statement opens — a `with` header may wrap over several physical
+        # lines, so every header inside its extent belongs to it, and a statement that opens
+        # no observing block contributes nothing.
+        own_block_lines = frozenset(
+            line
+            for header in range(statement.start_line, statement.end_line + 1)
+            for line in blocks.get(header, frozenset())
+        )
         counts[
             _grade_statement(
                 statement,
                 sut_bound=sut_bound,
                 sut_lines=sut_lines,
-                observed_lines=observed_lines,
+                own_block_lines=own_block_lines,
             )
         ] += 1
     return AssertionStrengthCounts(
