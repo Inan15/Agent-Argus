@@ -6374,6 +6374,25 @@ than filed as its own entry.
       today; the `high_entropy_string` match of the whole 73-character URL was being dropped for
       containing `example.com`. It is `advisory=True, depth_supported=None` and `blocking_finding_count`
       over it is **0**, so it is not verdict-eligible. That file was **not edited, annotated or relocated**.
+    - ⛔ **A SECOND `hardcoded_secret` FINDING IS DISCLOSED HERE — IT IS IN THIS STORY'S OWN NEW TEST
+      MODULE, AND IT IS NOT CAUSED BY THIS REPAIR.** Disclosed 2026-08-24 after code review, iteration 1.
+      The sweep above was taken over the **250**-file population of the audit's original snapshot, which
+      predates the new module; `git ls-files -- '*.py'` at the fix sha is **251** files, and the 251st —
+      `tests/test_secret_sentinel_matching.py` — reports one `hardcoded_secret` finding at **line 135**,
+      the `"-----BEGIN RSA PRIVATE KEY-----" + sentinel` literal that the `-26` live-key enumeration must
+      build to have a PEM cell at all. **Re-measured by execution against BOTH engine bodies:** it fires
+      **identically** under the pre-fix module restored from `8b6c304` and under the repaired module at
+      `ee7e252` — same file, same line 135, same count — so it is a property of the new file's necessary
+      fixture content and **not** of `DN-18-1-1`'s length-gating. It is `advisory=True,
+      depth_supported=None`, `is_verdict_blocking` **False**, and `blocking_finding_count` over the whole
+      result is **0**: proven by execution, not asserted. Re-derived LITERALLY over the current 251-file
+      population the sweep reads **87 findings / 37 files → 88 / 37**, with **LOST = {} and NEW =
+      {`tests/test_deep_pass_wiring.py:397`: 1}** — the new module's own finding is present under both
+      engines and therefore cancels out of the delta, which is why the code-change-attributable result
+      recorded above is unchanged and this closure is not reopened. ⛔ **It is NOT suppressed,
+      whitelisted, annotated or edited away.** The fixture value is exactly what the guard needs, the
+      detector reporting it is the detector working, and making it disappear to keep an arithmetic tidy
+      is `DF-8-5-B`'s forbidden move and the inversion of this entry's own direction.
     - **THE CLOSING GUARDS:** `TC-ArgusAgent-SECRET-001-23`..`-27` in `tests/test_secret_sentinel_matching.py`,
       CONTINUING the SECRET index whose prior maximum was `-22`. `-23` the audit's three lines through
       `run()`, control included; `-24` the TABLE INVARIANT that makes this defect unable to recur by a
