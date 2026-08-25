@@ -4,7 +4,7 @@ baseline_commit: c288d40
 
 # Story 18.2: The redaction call keeps the evidence it computes
 
-Status: review
+Status: done
 
 <!-- Contexted 2026-08-24 at HEAD `c288d40` (branch `docs/merge-strategy-decision`) by the
      create-story workflow (Opus 5).
@@ -1026,6 +1026,90 @@ arc, preceded by four `docs(gov)` commits from the 2026-08-24 self-audit (`DF-IN
       found false**.
 - [x] ⛔ If the PR lands squashed or rebased, re-run the regeneration on `master`
       (`DF-INV-MERGE-A`, AC6.3).
+
+### Review Findings
+
+**Code review complete (2026-08-25, iteration 1, Sonnet 5).** 0 `decision-needed`, 0 `patch`, 0
+`defer`, 0 dismissed. Every load-bearing claim was RE-DERIVED BY EXECUTION rather than read back
+from the dev's notes, per this repository's standing review method:
+
+- **AST single-discarded-statement claim** — re-parsed `argus/detectors/secret_scan.py` at the
+  reviewed HEAD independently: zero discarded-value `_evidence_for` expression statements, one
+  remaining (bound) call site at `:378`. MATCH.
+- **Docstring-stripped AST whole-module diff** — independently re-derived comparing the pre-change
+  body (`git show 58821c3:argus/detectors/secret_scan.py`) against the reviewed HEAD: the ONLY
+  semantic difference is the removal of the one `Expr(Call(self._evidence_for(match)))` statement.
+  MATCH — confirms AC1.1/AC1.4/AC1.5 by construction, not by reading the diff.
+- **Output-neutrality sweep (AC2.1/AC2.1a)** — independently re-implemented the engine-vs-engine
+  sweep (pre-change module loaded from a scratch copy outside the repo via
+  `importlib.util.spec_from_file_location`, tree never stashed) over the SAME 252-file
+  `git ls-files -- '*.py'` population: **91 findings / 38 files with ≥1 on both sides, 0 of 252
+  `DetectorResult`s differing, `_evidence_for` invocations 91 → 0**. Exact match to the story's own
+  figures.
+- **RED/GREEN guard evidence (AC3.5, item 4 of the review brief)** — reproduced `-28`'s behavioural
+  assertion and `-29`'s AST assertion directly against the pre-change engine (no tracked file was
+  touched — an attempt to swap the tracked file was correctly blocked by the sandbox as an
+  unsafe shared-tree mutation, and the safer in-memory technique the dev used was applied
+  instead): `-28` RED (`AssertionError` propagates out of `run()`, confirming `:506` sat outside
+  the `try/except`), `-29` RED (discarded call found at `:506`), `-30` GREEN pre-change *and*
+  post-change — independently confirmed to be a contract pin (a guarantee already true, not a
+  defect witness), exactly as disclosed. No finding here.
+- **`sprint-status.yaml` not staged (`DN-DEV-18-2-A`)** — verified: at committed HEAD (`62fd1b9`)
+  line 512 reads `18-1-...: review` and line 513 reads `18-2-...: backlog`; in the current working
+  tree both lines carry further content (18-1 now shows a peer session's own iteration-2
+  code-review pass to `done`, appended concurrently while this review ran). The two development-
+  status lines are genuinely inseparable from the peer's concurrent edits without either
+  swallowing work this session did not write or publishing an inconsistent state. The reasoning
+  holds and is endorsed; this reviewer's own status write (below) follows the same
+  write-but-do-not-stage discipline for the same reason.
+- **AC5.2 deviation (575 → 594 lines)** — accepted as a legitimate reading, not a defect. AC1.2
+  unambiguously requires the banner to be REPLACED (not merely removed) by a substantive,
+  measured-fact block; AC5.2's "only shrinks" was a pre-implementation prediction that assumed
+  pure deletion. The two ACs are in direct textual tension; AC1.2 (an explicit content
+  requirement) is correctly treated as binding over AC5.2's predictive clause, and the governing
+  NFR (NFR-M1's 1,200-line ceiling) is met with wide headroom (594 vs. 1,200, independently
+  measured via `wc -l`). Disclosed prominently in three places (commit message, ledger closure
+  note, completion note 8); nothing here required an AC7 escalation — the escalation list does not
+  cover this class of in-story AC tension.
+- **§0.7's "166 vs 169" `DF-` line-count discrepancy (item 3)** — independently reproduced all
+  three counting methods against the on-disk ledger: unanchored substring `- id: DF-` → 169;
+  indentation-tolerant anchored `^[[:space:]]*- id: DF-` → 169; strict column-0-anchored
+  `^- id: DF-` → 3 (an artifact of the ledger's entries being indented under a YAML list key, not
+  a real count). Confirms the dev's explanation: a counting-method artifact, not a moved fact —
+  the ledger's byte state (546,616 → 556,678 bytes after this story's own +98/-0 append; 0 CRLF,
+  exactly one lone `\r`) is otherwise exactly as claimed.
+- **Ledger closure note** — read in full on disk (`deferred-work.md:6416`–`:6543`). The original
+  `DF-AUD-DETECT-B` entry above the note is untouched; the append-only closure note correctly
+  states the repair taken, falsifies only the entry's own Story-2.5 sentence (not Story 2.5's
+  record, which is cited, never edited), records the measured before/after, names the guards, and
+  lists what the disposition does NOT touch. `TC-ArgusAgent-DOCS-001-78`'s closure-claim analyzer
+  was re-run and is green; the story's own "`DF-AUD-DETECT-B` is CLOSED..." sentence (completion
+  note 15) is a real closure claim by the analyzer's own rule, but it is correctly backed by the
+  ledger note landing in the SAME commit, ledger first in the diff — verified consistent, not a
+  finding.
+- **Write set / commit arc** — `git diff c288d40..HEAD --stat` matches AC5.1 exactly (7 paths, no
+  extras); `git status --porcelain` at review time shows only the three pre-existing peer-owned
+  files, none of this story's making. Four commits (`57a278f` chore → `2cc5128` feat → `25ff87f`
+  chore → `62fd1b9` docs), all pure ASCII, `feat` carries `Evidence-partition: none` as a whole
+  line. Matches AC6.2 exactly.
+- **Independently executed gates**, all green at this HEAD: full suite (1,724 collected via
+  summed per-module `--collect-only`, 0 `F`/`E` markers, exit 0), the four independently
+  collectible secret-domain modules plus `test_secret_evidence_contract.py` (30 passed;
+  `test_secret_containment.py` reconfirmed uncollectable standalone, pre-existing, and green as
+  part of the full-directory run), `mypy argus` (clean, 95 files), `bandit -r argus
+  --severity-level medium` (clean), coverage `--cov-fail-under=80` (95.69%, matches exactly),
+  `test_module_size_ceiling.py`, `test_release_preflight.py`, `test_dogfood_*.py` (×3),
+  `test_governance_record_integrity.py`, `test_v1_commitment_closure.py`, `test_gate_seal.py`. All
+  LOCAL / Windows-only (`AI-E13-1`); no cross-platform claim is made here, consistent with the
+  standing rule that a green local suite is not cross-platform proof.
+- No SOLID/DRY/coupling/testability concerns: the change is a single dead-statement deletion, two
+  comment/docstring corrections stating only measured facts, and three well-scoped, single-subject
+  guards (`AI-E11-1` non-vacuity checks present in all three, no assertion on a secret value, no
+  planted fixture secret — the AWS documentation example key is the established repo-wide
+  precedent).
+
+No unresolved issues. All ACs independently reconfirmed met except AC5.2's literal "only shrinks"
+clause, which is superseded by AC1.2 as reasoned above and does not block this review.
 
 ---
 

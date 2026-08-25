@@ -4,7 +4,7 @@ baseline_commit: 62fd1b9
 
 # Story 18.3: Two regex precision defects
 
-Status: review
+Status: done
 
 <!-- Contexted 2026-08-25 at HEAD `62fd1b9` (branch `docs/merge-strategy-decision`) by the
      create-story workflow (Opus 5).
@@ -1318,6 +1318,78 @@ Recent arc (last 8 commits): `8b6c304 → ee7e252 → fa5e463 → c288d40` is St
       every exit code, and **any §0 premise found false**.
 - [x] ⛔ If the PR lands squashed or rebased, re-run the regeneration on `master`
       (`DF-INV-MERGE-A`, AC7.3).
+
+### Review Findings
+
+**Code review complete (2026-08-25, iteration 1, Sonnet 5).** 0 `decision-needed`, 0 `patch`, 0
+`defer`, 0 dismissed. Every load-bearing claim was RE-DERIVED BY EXECUTION rather than read back
+from the dev's notes, per this repository's standing review method, with particular scrutiny on the
+two deviations the dev flagged for review:
+
+- **Deviation 1 — dogfood `hardcoded_secret` 40 → 39, not the predicted 37 — CONFIRMED CORRECT, not
+  a defect.** Ran the shipped, repaired `secret_scan.py` against its OWN post-change source: exactly
+  two NEW `high_entropy_string` self-matches appear, at `:304` and `:317` — the two repaired regex
+  source lines themselves (`_AWS_SECRET_KEY_RE`'s and `_GENERIC_ASSIGN_RE`'s new bodies), each a
+  quoted-literal-shaped fragment of the "not a tokenizer" residual class AC2.2 now discloses.
+  Separately re-derived §0.6's PRE-CHANGE-CONTENT sweep (both engines run over `secret_scan.py`'s
+  `62fd1b9` body): shipped finds 6 self-matches including `:282`, repaired finds 5 with `:282` gone
+  and nothing new — reproducing 91→90/38→37/five-spans EXACTLY, as claimed. The two extra dogfood
+  findings are therefore a genuine, correctly-adjudicated side effect of the SOURCE TEXT GROWING
+  (post-change `secret_scan.py` now contains its own new regex bodies, which the scan reads as
+  literals), not an arithmetic error, not a mis-repair, and not a fourth removal-turned-credential.
+  Both are `advisory=True`, non-blocking. The decision NOT to re-spell the regex to dodge them is
+  correctly reasoned as `DF-8-5-B`'s forbidden move — MATCH, no finding.
+- **Deviation 2 — `deferred-work.md` hunk-selective staging via `git apply --cached` — CONFIRMED
+  clean, no peer work captured or clobbered.** Both the worktree blob and the committed blob at
+  `bd110c6` show **0 CRLF, exactly 1 lone `\r`**. `git diff bd110c6~1..bd110c6 -- deferred-work.md`
+  is **167 pure insertions**, one hunk, at `@@ -6623,6 +6623,173 @@` (the `DF-AUD-DETECT-E` region).
+  The peer session's uncommitted 19-line `DF-AUD-DETECT-A` append at `@@ -6374 +6374,19@@` is present,
+  untouched and still uncommitted in the current worktree (`git diff HEAD` shows it as the only
+  outstanding hunk against that file) — MATCH, no finding.
+- **DN-18-3-1's lookbehind spelling** — independently re-executed both spellings against the naming
+  matrix: `(?<![A-Za-z0-9])` (shipped) reports `DB_PASSWORD` / `_API_KEY` / `SMTP_PASSWORD` and
+  rejects `topsecret` / `mytoken` / `notapassword`, exactly as claimed; the naive
+  `(?<![A-Za-z0-9_])` zeroes all three real-secret-naming cases and, driven through
+  `SecretScanDetector().run()` on `API_TOKEN = "ghp_localhost..."`, zeroes the exact case
+  `TC-ArgusAgent-SECRET-001-26` asserts on — confirming the false-green claim and the guard's
+  non-vacuity. MATCH.
+- **The five `SECRET-002-08`..`-12` guards** — read against the shipped body's known behavior:
+  non-vacuous by construction (`AI-E11-1` positive controls before every absence, digit-free/
+  entropy-rejecting fixture values, assertions on `pattern_id`/count/absence only, never on a secret
+  value). `-09`'s fence-not-witness framing and its RED-against-the-naive-lookbehind proof both hold
+  under independent reasoning. No vacuity trap.
+- **`DN-18-3-6` `code_identity` bump** — re-derived `detector_set_content_hash(FROZEN_DETECTOR_SET)`
+  live: **`fbec7912...`**, matching the story's figure exactly. Confirmed `argus/cache/stage_memo.py`
+  and `argus/pipeline.py` both derive from `FROZEN_DETECTOR_SET` live rather than from a
+  hand-maintained copy, so the one-token bump is complete by construction — no second edit site was
+  missed. `tests/test_cache_key.py::test_golden_key_pinned` derives its golden from the same live
+  set rather than a hardcoded detector list, so the regenerated golden self-updates correctly.
+  MATCH.
+- **Scope fences** — `git diff 62fd1b9..bd110c6 --` over `argus/detectors/base.py`,
+  `argus/detectors/secret_suppression.py`, `argus/pipeline.py`, `argus/pipeline_stages.py`,
+  `argus/precision/`, `minions_core/apaa/`, `architecture.md`, `E-PRD/prd.md`, `epics.md`, and all
+  seven secret-domain test modules is **empty** across the whole four-commit range — MATCH, every
+  fence held.
+- **Commit arc** — `e9e649e` chore → `9e3fdc2` feat → `93a7502` chore → `bd110c6` docs, matching
+  AC7.2's forced shape exactly; `Evidence-partition: none` present as a whole line in the `feat`
+  commit; all four commit messages independently confirmed pure ASCII (`DF-16-6-F`).
+- **Independently executed gates**, all green: full suite re-run TWICE from a clean `__pycache__`
+  (1,729 collected, exit 0 both times — not merely read back); the secret-domain modules plus the
+  new guard module targeted-run green; `mypy argus` (95 files, clean); `bandit -r argus
+  --severity-level medium` (clean); `secret_scan.py` 630 lines / new module 484 lines, both under
+  the 1,200 ceiling; `test_module_size_ceiling.py`, `test_gate_seal.py`,
+  `test_governance_record_integrity.py`, `test_dogfood_plan.py`, `test_dogfood_proof.py`,
+  `test_dogfood_artifact_currency.py`, `test_stage_memo_wiring.py`, `test_v1_commitment_closure.py`,
+  `test_release_preflight.py` all green. All LOCAL / Windows-only (`AI-E13-1`); no cross-platform
+  claim is made here.
+- No SOLID/DRY/coupling/testability concerns: the repair is one lookbehind and three
+  named-group-plus-backreference pairs applied uniformly to a real defect class, the new test module
+  has a single clear subject (regex precision/recall) distinct from the existing predicate-pinning
+  module, and the guard fixtures are built in the module with no planted secret and no assertion on
+  a secret value.
+
+No unresolved issues. All ACs independently reconfirmed met, including both deviations the dev
+flagged for scrutiny.
 
 ---
 

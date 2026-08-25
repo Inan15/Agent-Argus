@@ -4,7 +4,7 @@ baseline_commit: bd110c6
 
 # Story 18.4: The `Detector` Protocol is load-bearing or it is deleted
 
-Status: review
+Status: done
 
 <!-- Contexted 2026-08-25 at HEAD `bd110c6` (branch `docs/merge-strategy-decision`) by the
      create-story workflow (Opus 5).
@@ -1191,6 +1191,75 @@ in that shape and the last of the epic.**
       3.10/3.11/3.12 claim belongs to CI at the pushed sha (AC8.6).
 - [x] ⛔ **This is the last story of Epic 18.** State whether `epic-18` is ready for its
       retrospective, and leave `epic-18-retrospective` at `backlog` — ⛔ **do not transition it.**
+
+### Review Findings
+
+**Code review — 2026-08-25 (bmad-code-review, Sonnet 5, iteration 1). VERDICT: PASS.** Every
+load-bearing claim was independently RE-DERIVED BY EXECUTION against this working tree at HEAD
+`28b1f64`, not read back from the story's own numbers:
+
+- `mypy argus` → `Success: no issues found in 95 source files`, re-run directly.
+- Full suite re-run from a fresh collection: **1,731 collected**, exit **0**
+  (`python -m pytest -q`).
+- `python -m pytest --cov=argus --cov-fail-under=80`: **95.69%** total, gate passes.
+- `bandit -r argus --severity-level medium`: **0** medium/high issues.
+- **AC2.3 non-vacuity re-derived independently** (not copied from the story): dropped `rule_id`
+  from `VacuousTestDetector` in a scratch copy outside the repo → `mypy argus` fails at
+  `vacuous_test.py:807` (the pin line) with `Incompatible types in assignment … missing …
+  rule_id`, matching the story's own mutation table.
+- **`-145`/`-146` re-driven RED against the shipped (pre-story, `bd110c6`) detector bodies** with
+  the current test file: `-145` fails with the exact recorded text (`4 detector class(es) …
+  4 carry NO static conformance pin …`); `-146` fails with `Decorators found:
+  ['runtime_checkable']` — both reproduce verbatim.
+- **Cross-version**: `tests/test_detector_base.py` re-run under `py -3.12` — all 7 pass, and
+  `ast.unparse` of the Protocol's `run` return annotation is identical to 3.11's. Confirmed no
+  guard in this story decides by `isinstance`/`issubclass` (`grep` over `argus/`, `tests/`
+  found none against `Detector`), so the 3.11→3.12 `runtime_checkable` behavior change cannot
+  reach these guards.
+- **Dogfood deltas re-derived**: `git show bd110c6:….../minions-dogfood-proof.md` gives
+  `orphan_code 127`, `hardcoded_secret 39`, `LOC 33703`; the committed HEAD artifact gives
+  `orphan_code 128`, `hardcoded_secret 39`, `LOC 33800` — the two disclosed deltas confirmed
+  exactly, and `argus/detectors/base.py:187` is confirmed to be the `rule_id` property
+  definition line the `function:rule_id@187` claim names. Re-running
+  `scripts/regenerate_dogfood_artifacts.py` at current HEAD reproduces the same three counts
+  (only the provenance sha line differs, as expected across a subsequent commit); reverted
+  after comparison, nothing left staged or modified.
+- **AC6.4 full re-derivation re-run independently** with `--checkout-root
+  D:/ProjectX/XAgents/XAgents --snapshot-root` a fresh short scratch path: `OK — the
+  silent-class artifacts are current (36 row(s), re-derived from 1032 recorded finding(s) at
+  the pins)`, `pin verifications: 4 member(s), all proved` — confirmed independently, not
+  copied from the story.
+- **Byte invariants re-derived** on both the committed blob (`git show HEAD:…`) and the
+  worktree: committed blob 587,683 bytes / 0 CRLF / lone CR at 410,341; worktree 589,632 bytes
+  / 0 CRLF / lone CR at 410,341 (the peer's uncommitted +19 append accounts for the delta).
+  `git diff bd110c6..28b1f64 -- deferred-work.md` is a pure `184 insertions(+), 0 deletions`.
+  The peer's uncommitted `DF-AUD-DETECT-A` follow-up paragraph is still present, unstaged and
+  unclobbered, in the current worktree diff.
+- **Write set** (`git diff --stat bd110c6..28b1f64`) matches AC8.1 exactly: the five `argus/`
+  files, `tests/test_detector_base.py`, the three dogfood artifacts, `deferred-work.md` and the
+  story file — nothing else. All fenced paths (`pipeline.py`, `pipeline_stages.py`,
+  `argus/cache/**`, `argus/ledger/**`, `argus/audit/**`, `argus/precision/**`,
+  `detectors/__init__.py`, `provenance_scan.py`, `secret_suppression.py`, `architecture.md`,
+  `E-PRD/prd.md`, `epics.md`) are confirmed byte-identical across the arc.
+  `architecture.md:1174` reads exactly `base.py # detector Protocol + Finding builder`.
+- **AC5.4 judgment**: the dev's removal of a `pytest.raises(TypeError)` isinstance-trigger
+  assertion is the textually correct reading — AC5.4 says no guard may *use*
+  `isinstance`/`issubclass` against a Protocol, unqualified by whether it decides the verdict.
+  Not a defect.
+- **Design/abstraction check**: the narrowed `Detector` Protocol (`rule_id -> str`,
+  `run -> Callable[..., DetectorResult]`) is a real interface-segregation repair, not a shape
+  reverse-fit to the four implementations for its own sake — it was arrived at by falsifying
+  five wider candidate shapes against `mypy` first, and it is enforced at the only place it can
+  be (`if TYPE_CHECKING:` pins inside `argus/`, where the blocking CI gate reads them), not
+  merely asserted. No new consumer, dispatch site or base class was invented to justify it
+  (confirmed `argus/pipeline_stages.py` byte-unchanged), avoiding the premature-abstraction trap
+  the story itself calls out in §2.2.
+
+No `decision-needed`, `patch`, or unresolved `defer` findings. No High/Medium issues. No AC
+violation found across AC1–AC9. Every verification point in the review brief re-derived by
+direct execution and matched the story's own figures exactly, including both disclosed
+deviations (dogfood `orphan_code` 127→128, LOC 33,703→33,800) and both intentionally-unstaged
+files (`sprint-status.yaml` per `DN-DEV-18-2-A`; the peer's `deferred-work.md` hunk).
 
 ---
 

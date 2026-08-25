@@ -4,7 +4,7 @@ baseline_commit: 7a3cc7c
 
 # Story 18.1: The sentinel table matches values, not substrings of them
 
-Status: review
+Status: done
 
 <!-- Contexted 2026-08-24 at HEAD `7a3cc7c` (branch `docs/merge-strategy-decision`) by the
      create-story workflow (Opus 5).
@@ -917,6 +917,78 @@ Recent arc (last 12 commits) is entirely **governance and planning** — `docs(g
       code, and **any §0 premise found false**.
 - [x] ⛔ If the PR lands squashed or rebased, re-run the regeneration on `master` (`DF-INV-MERGE-A`).
 
+### Review Findings
+
+*(code-review, iteration 1, 2026-08-24, Sonnet 5 — adversarial review of `8b6c304`/`ee7e252`/`fa5e463`/`c288d40`)*
+
+⛔ **Independent re-execution confirmed every number this story claims to have measured**: the
+three-line reproduction (`0/0/1 → 1/2/1`, re-run directly through the shipped `run()`), the
+live-key × short-sentinel matrix (`7/7 disabled+suppressed → 0/7`, re-run against both the shipped
+module body — restored from `8b6c304`'s pre-fix commit — and the repaired one), the
+`tests/test_deep_pass_wiring.py:397` delta (3 findings pre-fix → 4 post-fix, exactly the claimed
++1, all `advisory=True`/`blocking_finding_count 0`), the `deferred-work.md` byte invariants
+(544,667 bytes, 0 CRLF, exactly one lone `\r`, +76/-0), the write-set (AC6.1 exactly, `secret_scan.py`
+/ `architecture.md` / `prd.md` / `epics.md` / Story 6.2's record all untouched), the
+`AKIAIOSFODNN7EXAMPLE` docstring correction (not added to the table), and the full suite / mypy /
+bandit / all nine gate modules (all green, all re-run from a clean tree). `DF-AUD-DETECT-A`'s
+closure and `DF-10-3-B`'s falsification note are both genuine, in-place, append-only edits to
+pre-existing entries — not relabels. `DN-18-1-1`/`-3`/`-5`'s locked decisions (the length-20
+boundary, the invariant guard, the `>= 1` assertion) are correctly implemented and not reopened.
+
+- [x] [Review][Patch] Second new `hardcoded_secret` finding, undisclosed [tests/test_secret_sentinel_matching.py:135] — AC4.1's re-derived sweep and AC4.2's disclosure ("the newly reported finding(s) are disclosed by path and cause") were computed over the **pre-existing 250-file population only** (excluding this story's own new test module), matching §0.4's original snapshot. But `git ls-files -- '*.py'` at the story's own committed HEAD is **251** files, not 250, because the new test module is now tracked — and running the shipped `SecretScanDetector.run()` over it finds a `hardcoded_secret` finding at line 135, the `"-----BEGIN RSA PRIVATE KEY-----" + sentinel` literal built for the `-26` live-key fixture. Verified by execution: this finding fires **identically** under both the pre-fix (`8b6c304`) and post-fix (`ee7e252`) `SecretSuppressionEngine` — it is *not* caused by `DN-18-1-1`'s length-gating change, only by the new file's own necessary fixture content — and it is `advisory=True, depth_supported=None`, `blocking_finding_count` 0 (confirmed by execution, not asserted): non-blocking, and it does not reopen `DF-AUD-DETECT-A` or move the security property. A literal re-derivation of AC4.1's sweep over the current 251-file population gives **87 → 88 findings / 37 files** (old-engine vs new-engine), with the *code-change-attributable* delta still `LOST=0, NEW=1` (the `test_deep_pass_wiring.py:397` finding — identical shape to what's recorded), because this second file's finding is present under both engines and cancels out of the diff. So the security-relevant claim (LOST=0, one code-change-caused NEW finding, non-blocking) is **substantively true either way** — but AC4.2's literal disclosure requirement over the current tracked-file population is not fully met: nowhere does the story disclose that its own new test file now also carries a (harmless, pre-existing-under-both-engines) `hardcoded_secret` finding. Suggested fix: append one sentence to the `DF-AUD-DETECT-A` closure note in `deferred-work.md` (binary mode, append-only, per AC5.4/§2.6) and to this story's completion notes, disclosing `tests/test_secret_sentinel_matching.py:135`, its cause (a PEM-header literal in the `-26` fixture, present under both engines, not caused by the repair), and its non-blocking status — consistent with this story's own "measured, not argued" standard.
+
+*(code-review, iteration 2, 2026-08-24, Sonnet 5 — adversarial re-audit of the disclosure-only fix
+round on top of `8b6c304`/`ee7e252`/`fa5e463`/`c288d40`, plus a full independent re-derivation of
+the underlying story, not only the fix delta.)*
+
+⛔ **Iteration 1's one Low finding is genuinely resolved, verified by independent execution, not by
+reading the completion notes back.** The fix round's write set is exactly three prose/state files
+(`git status --porcelain` lists only `deferred-work.md`, `sprint-status.yaml`, this story file) —
+no `argus/` module, test module, sentinel table or detector rule was touched, confirmed against
+`git diff --stat` on all three. Re-ran `SecretScanDetector().run()` over
+`tests/test_secret_sentinel_matching.py` twice — once against the working-tree (post-fix) engine and
+once with `argus.detectors.secret_scan.SecretSuppressionEngine` monkeypatched to a module loaded from
+the pre-fix (`7a3cc7c`) body of `secret_suppression.py` — and got the identical result both times:
+exactly one `hardcoded_secret` finding, at line 135. That is precisely the disclosed fact (pre-existing
+under both engines, not caused by `DN-18-1-1`), independently confirmed rather than trusted.
+`deferred-work.md`'s appended text (`_bmad-output/design-artifacts/ArgusAgent/deferred-work.md:6379`
+region) carries the same disclosure verbatim, in binary-mode append-only form: re-measured byte
+invariants are **546,616 bytes, 0 CRLF pairs, exactly one lone `\r`**, `git diff --stat` shows
+**+19/-0** on that file — a pure append, both `DF-AUD-DETECT-A`'s and `DF-10-3-B`'s original entries
+above the notes left unrewritten (`DF-10-3-B`'s `id`/`owner`/`target_story`/`category`/`severity`
+lines textually unchanged, entry still marked OPEN).
+
+⛔ **The whole underlying story was re-audited from scratch this round, not just the iteration-1
+delta, per the task brief.** Re-derived by direct execution against the current tree (HEAD `c288d40`):
+the three-line reproduction through the shipped `run()` on `argus/prod/settings.py` gives **1 / 2 / 1**
+(matches `DN-18-1-5`'s `>= 1`-per-line contract exactly); `SecretSuppressionEngine.is_live_production_key`
+returns `True` and `evaluate_suppression` returns `(False, None)` for a `ghp_`-shaped value carrying
+`localhost` (the safeguard no longer disables itself); `argus/detectors/secret_suppression.py` reads
+byte-for-byte as the fix round describes — `MIN_CONTAINMENT_SENTINEL_LENGTH = 20`, two disjoint tables
+whose union is `KNOWN_PUBLIC_SENTINELS`, no `lower()`/`casefold()`/`re.IGNORECASE` anywhere on the
+sentinel path, the safeguard's short-circuit gone and its docstring's `AKIAIOSFODNN7EXAMPLE` claim
+corrected rather than the table widened. Ran the five secret-domain test modules directly: **58
+passed** (53 pre-existing + the 5 new `TC-ArgusAgent-SECRET-001-23`..`-27` cases), confirming
+`test_secret_suppression_recording.py`'s `-15`..`-22` are unedited and green (evaluation order intact)
+and `test_secret_suppression.py::test_public_sentinel_suppression` (the line-shaped call) still
+passes. Ran the full suite twice (`python -m pytest tests/ -q`, once as a background long-running
+job): **exit 0** both times, no failures, no skips beyond pre-existing collection quirks
+(`test_secret_containment.py`'s own `_cartridge` import, pre-existing and unrelated). Ran
+`python -m mypy argus`: **0 issues, 95 files**. Ran `python -m bandit -r argus --severity-level
+medium`: **clean** (one non-actionable "Test in comment" scanner warning, not a finding). Ran the
+governance/dogfood/registry/ceiling/preflight gate group (5 modules): **36 passed**. Confirmed via
+`git diff --stat 7a3cc7c..HEAD` that `architecture.md`, `E-PRD/prd.md`, `epics.md`,
+`argus/detectors/secret_scan.py` and `minions_core/apaa/**` are untouched, and that the only file
+under `stories/` to change is `18-1-…md` itself (AC6.1's write set, AC5.6, the epic-18-scope fences).
+Confirmed the four-commit arc's messages are pure ASCII (`DF-16-6-F`) by encoding each `git log`
+message as ASCII and catching no `UnicodeEncodeError`.
+
+**No new finding.** Nothing here contradicts, narrows or reopens any locked `DN-18-1-*` decision, any
+`AC8` escalation trigger, or any of the "what this story is NOT" fences; the one thing iteration 1
+found is now correctly disclosed and independently reproduced by this round's own execution, not
+merely re-read from the story's prose. Per this repository's own standard (AI-E14-1 / "measured, not
+argued") this verdict rests on re-execution, not on trusting the Dev Agent Record.
+
 ---
 
 ## Dev Agent Record
@@ -1102,6 +1174,42 @@ findings on that file carry `advisory=True, depth_supported=None`, `is_verdict_b
 for each, and `blocking_finding_count` over the whole result is **0**. ⛔ `tests/test_deep_pass_wiring.py`
 was **NOT edited, annotated or relocated** — `git status --porcelain` never listed it (AC4.3 / `DF-8-5-B`).
 
+⛔ **A SECOND NEW `hardcoded_secret` FINDING, DISCLOSED — IN THIS STORY'S OWN NEW TEST MODULE, AND
+NOT CAUSED BY THE REPAIR** (AC4.2; raised by code review, iteration 1, and re-measured here rather
+than accepted). The sweep recorded above was taken over the **250**-file population of §0.4's
+original snapshot, which predates this story's own module. `git ls-files -- '*.py'` at the fix sha
+is **251** files, and the 251st — `tests/test_secret_sentinel_matching.py` — itself reports one
+`hardcoded_secret` finding at **line 135**: the `"-----BEGIN RSA PRIVATE KEY-----" + sentinel`
+literal that `-26`'s enumerated live-key space must build to have a PEM cell at all.
+
+**Re-measured by execution against BOTH engine bodies** (`SecretScanDetector().run()` driven over
+that file, once with the working-tree engine and once with the pre-fix module body restored from
+`8b6c304` and swapped into `secret_scan`): **1 finding, line 135, under each** — identical file,
+line and count. So it is a property of the new file's necessary fixture content, **not** of
+`DN-18-1-1`'s length-gating, and it does not reopen `DF-AUD-DETECT-A` or move the security property.
+**Proven non-verdict-eligible, not asserted:** `advisory=True, depth_supported=None`,
+`is_verdict_blocking` **False**, `blocking_finding_count` over the whole result **0**.
+
+Re-derived LITERALLY over the current 251-file population, pre-fix engine vs post-fix engine:
+
+| population | pre-fix | post-fix |
+|---|---|---|
+| 250 files (§0.4's snapshot, excludes this story's module) | 86 / 36 | 87 / 36 |
+| **251 files (tracked at the fix sha, includes it)** | **87 / 37** | **88 / 37** |
+| **LOST** (multiset difference) | — | **{}** |
+| **NEW** (multiset difference) | — | **{`tests/test_deep_pass_wiring.py:397`: 1}** |
+
+The new module's own finding is present under **both** engines and therefore cancels out of the
+delta — which is why the code-change-attributable result (**LOST = 0, NEW = 1, non-blocking**) is
+unchanged by this correction, and why the disclosure is the whole of the fix.
+
+⛔ **IT IS NOT SUPPRESSED, WHITELISTED, ANNOTATED OR EDITED AWAY.** `tests/test_secret_sentinel_matching.py`
+was not modified, no value was added to any sentinel table, and no detector or ignore rule was
+touched. The fixture value is exactly what `-26` needs; the detector reporting it is the detector
+working; making it disappear to keep an arithmetic tidy is `DF-8-5-B`'s forbidden move and would
+invert this story's own thesis. The same disclosure was appended to `DF-AUD-DETECT-A`'s closure note
+in `deferred-work.md` (binary mode, insertion-only: **+19 / -0**).
+
 ⛔ **AC2.5 discharged:** `tests/test_secret_suppression_recording.py` (`-15`..`-22`) was re-run with
 **no edit to any assertion, docstring or fixture in it** — 8 passed, and `git status --porcelain`
 never listed the file. The evaluation ORDER did not move. ⛔ **No assertion anywhere was loosened.**
@@ -1187,13 +1295,45 @@ and `git diff --stat` shows **76 insertions, 0 deletions** — a pure append, wi
 entries above the notes unrewritten. The ledger's closed-id extractor was run pre- and post-edit:
 the set gained **exactly one** id, `DF-AUD-DETECT-A`, and lost none.
 
+#### 8. REVIEW ITERATION 1 — THE ONE FINDING, RESOLVED (2026-08-24)
+
+✅ **Resolved review finding [Low] — `tests/test_secret_sentinel_matching.py:135`, AC4.2 disclosure of
+newly-reported findings.** 1 of 1 findings addressed; the reviewer's own summary records that every
+other claim was independently re-executed and HELD, and nothing else was reopened.
+
+⛔ **THE FIX IS DOCUMENTATION-ONLY, BY DESIGN.** The write set for this iteration is exactly three
+prose/state files — this story file, `deferred-work.md` (+19 / -0) and `sprint-status.yaml` — verified
+with `git status --porcelain`. **No `argus/` module, no test module, no sentinel table, no ignore rule
+and no detector was touched.** Suppressing the finding was the one move available and the one move
+forbidden: this epic's whole thesis is that the detector REPORTS what it finds, and hiding a finding
+raised against the story's own guard would invert it. See §4 above for the measured disclosure.
+
+| gate re-run after the disclosure edit | command | exit |
+|---|---|---:|
+| full suite | `python -m pytest tests/ -q` | **0** — **1,721 passed** |
+| full suite, grammars required | `ARGUS_REQUIRE_LANGUAGE_GRAMMARS=1 python -m pytest tests/` | **0** — **1,721 passed** |
+| types | `python -m mypy argus` | **0** (95 files, no issues) |
+| security | `python -m bandit -r argus --severity-level medium` | **0** |
+| governance / dogfood / registry / ceiling / preflight gates | `python -m pytest tests/test_governance_record_integrity.py tests/test_dogfood_artifact_currency.py tests/test_status_document_registry.py tests/test_module_size_ceiling.py tests/test_release_preflight.py -q` | **0** (36 passed) |
+
+⚠️ **LOCAL / WINDOWS-ONLY** (`AI-E13-1`, AC6.5) — `PYTHONDONTWRITEBYTECODE=1`, `__pycache__` cleared
+first. The cross-platform claim still belongs to the CI ubuntu matrix at the pushed sha.
+⛔ **NO DOGFOOD REGENERATION WAS NEEDED OR DONE.** `argus/**` is byte-identical to `ee7e252`, the sha
+the three committed artifacts already cite, so `TC-ArgusAgent-DOGFOOD-001-50` did not fire
+(re-run green). `TC-ArgusAgent-DOCS-001-78` also stayed green: the ledger already carried the
+`DF-AUD-DETECT-A` closure before this file's edit, and this iteration adds no new closure claim.
+⛔ **The scope fences held**: `secret_scan.py` untouched; `DF-10-3-B` and `DF-10-3-C` stay OPEN;
+`DF-13-5-A` stays OPEN and UNSPENT; `architecture.md` / `E-PRD/prd.md` / `epics.md` / Story 6.2's
+record not edited; the epics.md “AWAITING OPERATOR APPROVAL” paragraphs left as written; nothing new
+filed in the ledger (greped by id first — `DF-INV-LEDGER-A`), prior art cited instead.
+
 ### File List
 
 | path | change |
 |---|---|
 | `argus/detectors/secret_suppression.py` | UPDATE — 231 → 301 lines |
 | `tests/test_secret_sentinel_matching.py` | NEW — 293 lines, `TC-ArgusAgent-SECRET-001-23`..`-27` |
-| `_bmad-output/design-artifacts/ArgusAgent/deferred-work.md` | APPEND-ONLY — +76 lines |
+| `_bmad-output/design-artifacts/ArgusAgent/deferred-work.md` | APPEND-ONLY — +76 lines (implementation) then +19 (review-iteration-1 disclosure); **+95 / -0** total |
 | `_bmad-output/design-artifacts/ArgusAgent/minions-dogfood-partition-plan.md` | REGENERATED by its own renderer |
 | `_bmad-output/design-artifacts/ArgusAgent/minions-dogfood-budget-plan.md` | REGENERATED by its own renderer |
 | `_bmad-output/design-artifacts/ArgusAgent/minions-dogfood-proof.md` | REGENERATED by its own renderer |
@@ -1210,5 +1350,7 @@ in it; nothing under `minions_core/apaa/` is in it.
 
 | Date | Version | Description | Author |
 |---|---|---|---|
+| 2026-08-24 | 0.4 | REVIEW PASS (iteration 2) — VERDICT pass. Independently re-executed, not read back: iteration 1's fix round's write set is exactly three prose/state files (verified with `git status --porcelain`); the disclosed `tests/test_secret_sentinel_matching.py:135` finding re-confirmed to fire identically under the pre-fix (monkeypatched `7a3cc7c` body) and post-fix engines; `deferred-work.md` byte invariants re-verified (546,616 bytes, 0 CRLF, one lone CR, +19/-0 pure append, `DF-10-3-B` still OPEN with its id/owner/target_story/category/severity unedited). The whole underlying story re-audited from scratch, not only the delta: three-line reproduction re-run at 1/2/1; safeguard confirmed non-self-disabling (`ghp_`+`localhost` -> `evaluate_suppression` `(False, None)`); `secret_suppression.py` read byte-for-byte matching the claimed design (length-gated tables, no case-folding, corrected docstring); five secret-domain test modules 58 passed; full suite exit 0 (twice); mypy 0 issues/95 files; bandit clean; 5-module governance/dogfood/registry/ceiling/preflight gate group 36 passed; `architecture.md`/`prd.md`/`epics.md`/`secret_scan.py`/`minions_core/apaa` confirmed untouched via `git diff --stat 7a3cc7c..HEAD`; four-commit-arc messages confirmed pure ASCII. No new finding; no unresolved High/Medium/Low issue remains. Status `done`. | bmad-code-review (Sonnet 5) |
+| 2026-08-24 | 0.3 | REVIEW FIX (iteration 1) — the single Low finding addressed, DISCLOSURE ONLY: no code, test or detector change. AC4.2's disclosure is now literal over the tracked population: `tests/test_secret_sentinel_matching.py:135` (the `-26` PEM-header fixture literal) also reports a `hardcoded_secret` finding, re-measured by execution to fire IDENTICALLY under the pre-fix (`8b6c304`) and post-fix (`ee7e252`) engines — pre-existing, not introduced by the repair — and `advisory=True`, `is_verdict_blocking` False, `blocking_finding_count` 0. Sweep re-derived over the current 251-file population: 87/37 -> 88/37, LOST {} and NEW {test_deep_pass_wiring.py:397: 1} unchanged, because the new module's finding cancels out of the delta. Disclosed in the completion notes and appended to `DF-AUD-DETECT-A`'s closure note (binary mode, +19/-0, invariants re-verified: 0 CRLF, exactly one lone CR). Nothing suppressed, whitelisted or edited away. Status `review`. | bmad-dev-story (Opus 5) |
 | 2026-08-24 | 0.2 | IMPLEMENTED. `is_public_sentinel` is length-gated (`MIN_CONTAINMENT_SENTINEL_LENGTH = 20`, equality below it, containment above); `is_live_production_key`'s self-disabling short-circuit deleted and its docstring corrected; `TC-ArgusAgent-SECRET-001-23`..`-27` added and driven RED (3 cases vs the shipped bodies, the whole module vs a full revert, `-25` vs the rejected uniform-equality variant) then GREEN. Measured: reproduction 0/0/1 -> 1/2/1; live-key cells 7-disabled -> 0-disabled; sweep 86/36 -> 87/36 with LOST 0 and NEW 1 (disclosed, non-blocking). Ledger: DF-AUD-DETECT-A closed, DF-10-3-B's safety claim falsified while the entry stays OPEN, both append-only in binary mode. Two Section 0 premises found false, both about WHICH guard fires (DOGFOOD-001-50 did not; test_dogfood_plan/proof and PRECISION-001-94 did). Full suite exit 0 with and without grammars, coverage 95.69%, mypy/bandit clean - LOCAL, Windows-only. Status `review`. | bmad-dev-story (Opus 5) |
 | 2026-08-24 | 0.1 | Story contexted at HEAD `7a3cc7c`; §0 measured by execution (three-line reproduction 0/0/1, 7-of-7 live-key matrix, 250-file sweep 86→87 LOST 0, three candidate repairs executed, full suite green under the candidate repair at exit 0). Status `ready-for-dev`. | create-story (Opus 5) |
