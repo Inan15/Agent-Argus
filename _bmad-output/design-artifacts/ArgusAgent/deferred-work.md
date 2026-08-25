@@ -7532,3 +7532,38 @@ append.
   - ⛔ **Nothing else is filed and nothing is disposed of by this entry.** `DF-13-5-A` stays **OPEN
     and UNSPENT**; `DF-INV-REFS-A`, `DF-INV-WHEEL-A`, `DF-INV-LEDGER-A` and `DF-INV-DELIVERY-A` all
     keep the status they had; no historical entry is edited — this is a pure append.
+  - ⛔ **`DF-INV-MERGE-A` — CLOSED 2026-08-25 by an operator repository-settings act. NO story and
+    NO fix sha, because the remedy was never code — the entry's own `target_story: NONE — a
+    repository configuration act, not a story` is discharged exactly as written.** Append-only note;
+    the original entry above it is NOT rewritten (§3.4 evidence immutability — the
+    `DF-AUD-DETECT-A` / `DF-AUD-DETECT-F` notes are the form). The entry's `id`, `owner`, `category`
+    and `severity` fields are left unedited. Status transition: **OPEN → CLOSED**, discharging the
+    condition the entry set for itself: *“DECIDED, NOT YET APPLIED — and this entry stays OPEN until
+    it is.”*
+    - ⛔ **THE SETTING IS APPLIED, AND IT IS MEASURED THROUGH THE API RATHER THAN ASSERTED.**
+      `gh api repos/Inan15/Agent-Argus`, read 2026-08-25, returns `allow_merge_commit` **true**,
+      `allow_squash_merge` **false**, `allow_rebase_merge` **false**, `delete_branch_on_merge`
+      **true**, `default_branch` `master`. That is all four parts of the 2026-08-24 decision, each
+      in the state the decision names — merge commits kept, squash off, rebase off, automatic
+      head-branch deletion on. The **404** that stopped the 2026-08-24 attempt was an admin-scope
+      gap on the settings *write*; the read above needs no admin, and the values it reports are the
+      operator's act, not this session's.
+    - ⛔ **WHAT THIS CLOSURE DOES NOT DO.** `TC-ArgusAgent-DOGFOOD-001-49` is not loosened, edited
+      or re-scoped — `DF-8-5-B` forbids that move and the entry above refuses it twice. The hazard
+      is now **prevented at the repository** rather than survived by habit, so the interim rule the
+      entry records — regenerate on `master` after a sha-rewriting merge — is **retired, not struck
+      from the record**: it stops applying because the merges it guarded against can no longer be
+      selected, not because anyone judged it unnecessary.
+    - ⚠️ **THE RESIDUAL, RECORDED BECAUSE A SETTING IS NOT A TEST.** A repository setting is
+      mutable, unversioned and outside CI. Nothing in this tree re-reads those four fields, so a
+      later flip — by an admin, an org policy, or a repository transfer — would restore the hazard
+      silently, and this entry would not reopen itself. That is a genuinely weaker guarantee than a
+      guard in the suite. It is accepted here only because the stronger-looking alternative was
+      already rejected on the record above: a `master` CI job that detects the breakage converts a
+      preventable class into a detected-after-the-fact one, and `master` still goes red first.
+      ⚠️ **This note files nothing** — whether the residual becomes its own entry is the owner's
+      call, not this note's.
+    - ⚠️ **WHAT WAS MEASURED AND WHAT WAS NOT.** The API read is the whole measurement. No pull
+      request was merged to watch GitHub *refuse* a squash, so the behavioural claim — that a PR
+      page now offers only “Create a merge commit” — is inferred from the configuration and is
+      **not** demonstrated here. The first PR to land after this note is that observation.
