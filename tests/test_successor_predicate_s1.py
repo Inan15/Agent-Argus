@@ -162,7 +162,7 @@ def test_TC_ArgusAgent_PRECISION_001_145_s1_is_the_specified_predicate(tmp_path:
     )
 
 
-def test_TC_ArgusAgent_PRECISION_001_146_nothing_flipped() -> None:
+def test_TC_ArgusAgent_PRECISION_001_146_nothing_flipped(tmp_path: Path) -> None:
     """TC-ArgusAgent-PRECISION-001-146 — AC6: the verdict line, the output paths, the diff.
 
     **Observable, three halves.**
@@ -171,18 +171,52 @@ def test_TC_ArgusAgent_PRECISION_001_146_nothing_flipped() -> None:
        AST EXPRESSION to the pinned form. ⛔ Compared as an expression and not as a string on
        purpose: a string comparison goes RED on a reformat that changes nothing and GREEN on
        a semantic change that happens to keep the same text.
-    2. Both ``SUCCESSOR_OUTPUT_PATHS`` prefixes asserted ABSENT on disk. This story commits
-       the predicate's CODE and never its OUTPUT over a corpus member, which is what leaves
-       Story 17.4's ancestry guard nothing to argue about.
+    2. ⛔ **RE-SCOPED 2026-08-26 BY OPERATOR DECISION** (see below): **no commit of THIS
+       STORY'S OWN ARC created either** ``SUCCESSOR_OUTPUT_PATHS`` **prefix** — asked of git
+       over ``_BASELINE_COMMIT..HEAD`` filtered by this story's ``(17-3)`` scope, rather than
+       of the filesystem. This story commits the predicate's CODE and never its OUTPUT over a
+       corpus member, which is what leaves Story 17.4's ancestry guard nothing to argue about.
     3. This story's own commits, read out of REAL history, touch none of ``argus/precision/``,
        ``scripts/`` or the specification document.
 
-    **Non-vacuity FIRST:** a control path KNOWN to carry commits in the same range is
-    asserted NON-empty. A misspelled pathspec returns empty and reads exactly like a clean
-    tree — the failure mode ``-75``/``-94``/``-139`` already answered, reused here.
+    **⛔ THE AMENDMENT TO PART (2), AND WHY.** Part (2) used to assert that both prefixes were
+    ABSENT ON DISK. That form is **self-destructing**: filesystem existence is not scoped by
+    commit ancestry, so it goes RED the moment Story 17.4 legitimately writes the measurement
+    record it is chartered to produce under ``SUCCESSOR_OUTPUT_PATHS[0]`` (17.4 AC6.1) — and no
+    descendant commit can escape it. The claim this part was always making is the one stated in
+    its own original words, *"THIS STORY commits S1's CODE and never its OUTPUT"*, and that
+    claim is permanent and checkable. Re-scoping preserves the guard's real intent; deleting it
+    would not.
 
-    **Executed mutation:** the return expression is altered in the parsed source text and the
-    SAME comparison is driven over it — RED.
+    ⛔ **This is the repair this epic has already accepted once, as ``DN-17-2-12``** — ``-144``'s
+    git half was scoped to its own story's ``(17-2)``-tagged commits for exactly this reason,
+    *"the literal form is guaranteed RED the moment Story 17.3 legitimately writes inside the
+    shipped package, and the only response would be to delete it"*, and iteration 1's review
+    judged that sound. The operator considered and **REJECTED** two alternatives: retiring part
+    (2) into Story 17.4's ``-152``, and deferring 17.4's committed artifact to a follow-up.
+
+    ⛔ **Parts (1) and (3) are untouched and no other frozen guard moved.** The amendment is
+    narrow, is to ``-146`` part (2) ONLY, and was taken as an explicit operator act on
+    2026-08-26 through Story 17.4's dev loop; 17.4's AC9.6 (*"``-135``..``-146`` are not
+    edited"*) is amended to exactly this extent and to no other.
+
+    ⛔ **The residual risk is the same one ``DN-17-2-12`` disclosed** and is bounded by the same
+    convention ``-78`` already relies on: a future ``(17-3)``-scoped commit that writes
+    successor output without carrying the tag would not be seen. It is disclosed here rather
+    than hidden.
+
+    **Non-vacuity FIRST:** a control path KNOWN to carry commits of this story's arc is
+    asserted NON-empty, through the SAME function and the SAME range and tag filter the claim
+    uses. A misspelled pathspec — or a scope filter that matches nothing — returns empty and
+    reads exactly like a clean history: the failure mode ``-75``/``-94``/``-139`` already
+    answered, reused here.
+
+    **Executed mutations, two, and neither touches disk in this repository.** The return
+    expression is altered in the parsed source text and the SAME comparison is driven over it
+    — RED. And part (2)'s re-scoped claim is driven RED at its real seam against a synthetic
+    ``(17-3)``-tagged commit that creates a declared prefix, built in a THROWAWAY repository
+    under ``tmp_path`` (Story 17.4 ``DN-17-4-5``; ⛔ never against this object database, which
+    a peer session commits to). ⛔ A guard that cannot go red is worse than the one it replaced.
     """
     pinned = "evidence.sut_result_is_discarded and evidence.mock_referencing_assertions >= 1"
     source = (_ARGUS_ROOT / "detectors" / "vacuous_test.py").read_text(encoding="utf-8")
@@ -211,16 +245,68 @@ def test_TC_ArgusAgent_PRECISION_001_146_nothing_flipped() -> None:
         "through the change it exists to catch"
     )
 
-    # ---- (2) neither successor output prefix exists ----------------------------------
+    # ---- (2) NO COMMIT OF THIS STORY'S ARC created a successor-output prefix -----------
+    # ⛔ RE-SCOPED 2026-08-26 by operator decision from a FILESYSTEM existence check to this
+    # claim over this story's OWN commit range — see the docstring for the decision, the
+    # DN-17-2-12 precedent it reuses, and the two alternatives that were rejected.
     from scripts.precision_preregistration import SUCCESSOR_OUTPUT_PATHS
 
+    from tests.test_successor_output_ordering import (
+        CONTROL_PATH_WITH_COMMITS,
+        build_violating_history,
+        commits_touching_prefixes,
+    )
+
     assert len(SUCCESSOR_OUTPUT_PATHS) == 2, "the pre-registered output prefixes moved"
-    for prefix in SUCCESSOR_OUTPUT_PATHS:
-        assert not (_REPO_ROOT / prefix).exists(), (
-            f"{prefix!r} exists. This story commits S1's CODE and never its OUTPUT over a "
-            f"corpus member (AC6.4); committing one scored row would make Story 17.4's "
-            f"ancestry guard argue about a commit nobody planned."
-        )
+    assert all(
+        prefix and not prefix.startswith("/") and "\\" not in prefix
+        for prefix in SUCCESSOR_OUTPUT_PATHS
+    ), (
+        f"every SUCCESSOR_OUTPUT_PATHS entry must be repository-relative and forward-slash to "
+        f"work as a git pathspec on both the Windows local gate and the ubuntu CI matrix; got "
+        f"{list(SUCCESSOR_OUTPUT_PATHS)}."
+    )
+
+    arc = f"{_BASELINE_COMMIT}..HEAD"
+
+    def this_arc(hits: list[tuple[str, str]] | tuple[tuple[str, str], ...]) -> dict[str, str]:
+        return {sha[:7]: subject for sha, subject in hits if _STORY_TAG in subject}
+
+    # ── Non-vacuity: the range, the scope filter and the pathspec all FIND things. ──
+    arc_control = this_arc(
+        commits_touching_prefixes(_REPO_ROOT, (CONTROL_PATH_WITH_COMMITS,), arc)
+    )
+    assert arc_control, (
+        f"no {_STORY_TAG} commit in {arc} touches the control path "
+        f"{CONTROL_PATH_WITH_COMMITS!r}, which this story is known to have written. The range, "
+        f"the scope filter or the pathspec is broken, and an invocation that finds nothing "
+        f"reports a clean history for a dirty one. Fix the invocation, never the assertion."
+    )
+
+    # ── THE CLAIM: this story's arc created no successor output. ──
+    created = this_arc(commits_touching_prefixes(_REPO_ROOT, SUCCESSOR_OUTPUT_PATHS, arc))
+    assert not created, (
+        f"{created!r} — commit(s) of THIS story's arc touch a declared successor-output prefix "
+        f"{list(SUCCESSOR_OUTPUT_PATHS)}. This story commits S1's CODE and never its OUTPUT "
+        f"over a corpus member (AC6.4); committing one scored row here would make Story 17.4's "
+        f"ancestry guard argue about a commit nobody planned."
+    )
+
+    # ── ⛔ EXECUTED RED DEMONSTRATION of the re-scoped claim, at its real seam. ──
+    history = build_violating_history(tmp_path, story_tag=_STORY_TAG)
+    rogue_arc = f"{history.rogue_base}..{history.offender}"
+    assert this_arc(
+        commits_touching_prefixes(history.repo, (CONTROL_PATH_WITH_COMMITS,), rogue_arc)
+    ), "the throwaway control is empty, so its RED result below would be unattributable"
+    demonstrated = this_arc(
+        commits_touching_prefixes(history.repo, SUCCESSOR_OUTPUT_PATHS, rogue_arc)
+    )
+    assert demonstrated and history.offender[:7] in demonstrated, (
+        f"a synthetic {_STORY_TAG} commit that CREATES {SUCCESSOR_OUTPUT_PATHS[0]!r} was not "
+        f"reported by the same query the claim above is made with (got {demonstrated!r}). The "
+        f"re-scoped part (2) cannot go RED, which would make it worse than the filesystem "
+        f"check it replaced."
+    )
 
     # ---- (3) this story's commits touch none of the fenced paths ----------------------
     commits = subprocess.run(  # noqa: S603,S607 - read-only git verb, fixed argv
