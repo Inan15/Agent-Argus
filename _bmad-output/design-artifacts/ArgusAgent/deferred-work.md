@@ -4917,6 +4917,69 @@ remains the recorded candidate should it ever be needed.
     - evidence: `research/technical-argusagent-stage-mismatch-measurement-2026-08-24.md`;
       `DF-INV-VACUOUS-A`
 
+  - **⛔ TRIGGER EVALUATED BY MEASUREMENT 2026-08-26 under Story 17.4 — CONDITION 1 DOES NOT
+    FIRE, AND NO BRANCH IS TAKEN.** (Append-only observation; every note above is unrewritten,
+    §3.4. ⛔ **This note carries NO disposition and NO closure verb** — it records what the
+    sharpened trigger asks for, and nothing else.)
+
+    Condition 1, as sharpened 2026-08-24, asks for *"the count of findings the SHIPPED
+    verdict-eligible predicate promotes over the five ALREADY-RATIFIED members — whatever that
+    predicate is at the time of measurement — … reported together with the predicate definition
+    in force"*. Story 17.4 walked that population once, and this is that count.
+
+    ⛔ **THE SHIPPED VERDICT-ELIGIBLE PREDICATE PROMOTES 0 OF 1,032.** Not estimated, not carried
+    forward from the 2026-08-24 research measurement: re-measured at the pins, 1,032 recorded
+    `vacuous_test_heuristic` findings walked and **0 skipped**, over `minions` (648), `agent-smith`
+    (295), `agent-markovich` (72), `xagents-webapp` (17) and `ai-body-runtime` (0). **The
+    definition in force at the measured HEAD**, as the trigger requires it be reported:
+    `VacuousTestDetector._ast_corroborated` — the finding is heuristically vacuous, **and** fact
+    (a) the span reaches a candidate SUT, **and** fact (b)
+    `ProvenanceEvidence.sut_result_is_discarded` (`discarded_sut_calls >= 1 and consumed_sut_calls
+    == 0`, read off the shipped property rather than re-typed), **and**
+    `mock_referencing_assertions >= 1`. **0 is not above zero, so condition 1 DOES NOT FIRE.**
+
+    ⛔ **STORY 17.4's SUCCESSOR PREDICATE `S1` IS NOT THIS NUMBER AND IS NOT A PROMOTION.** `S1`
+    corroborates **85** of the same 1,032 spans (`minions` 54, `agent-smith` 28,
+    `agent-markovich` 3), recorded in
+    [validation-corpus/successor/successor-reach-record.json](validation-corpus/successor/successor-reach-record.json).
+    That figure is disclosed here so the operator is not told a partial truth — **but it is NOT
+    the trigger's metric**, because `S1` landed **ADVISORY** (successor-vacuity predicate
+    specification §6.5): it moves no `verdict_eligible`, no `rule_id` and no `depth_supported`,
+    and `_ast_corroborated`'s return expression is byte-unchanged (`TC-ArgusAgent-PRECISION-001-146`
+    part (1), green). An advisory predicate promotes nothing, so the shipped predicate is still the
+    trigger's subject and its count is still **0**.
+
+    ⛔ **AND THE APERTURE IS STILL STRUCTURALLY SHUT ON THE ARM THAT MATTERS.** The frozen
+    criterion (`scripts/precision_preregistration.py`, `PREREGISTRATION_COMMIT_SHA`
+    `f906d04997b391bea4592aabc0343d1234b3b060`) was CALLED with the measured counts unmodified and
+    returned **`UNEVALUABLE`**: *"sealed contributing members: 0, below the resolved floor of 3"*.
+    `sealed ∩ ratified` is **EMPTY** and only a protocol §6 R2 operator act could change that.
+    ⛔ **That is a reason to look, never a reason to spend** — and this note does neither. It
+    also re-confirms this entry's own 2026-08-24 finding from the other side: *"a larger bench
+    samples more repositories through an aperture that is structurally shut"*.
+
+    ⛔ **CONDITION 2 IS UNTOUCHED: 2026-11-22, still NOT re-dated.** The run date is 2026-08-26,
+    so the backstop is not reached; re-dating it *"would convert a bounded deferral into a rolling
+    one, which is precisely the silence this entry forbids"*.
+
+    ⛔ **THE ENTRY STAYS OPEN.** `DF-13-5-A` is **UNSPENT**. Neither (a) nor (b) has been taken,
+    and nothing published changes: the externalization gate stays `BLOCKED`, `protocol_cleared`
+    stays `False`, the ≥80% keystone stays **NOT CLEARED**, and FR34's disclosure stands.
+    - observed_by: **Story 17.4** (dev-story, Opus 5) — an OBSERVATION against the trigger, not a
+      disposition and not an operator act
+    - observed_on: 2026-08-26 (the measurement itself was taken 2026-08-25 and is recorded once)
+    - condition_1: **NOT FIRED** — shipped verdict-eligible promotions **0** of 1,032, measured
+    - condition_2: **NOT REACHED and NOT RE-DATED** — 2026-11-22 stands
+    - branch_taken: **NEITHER** — (a) not executed, (b) not declared
+    - members_ratified: **NONE** — `eligible_member_count()` reads **5** before and after
+    - round_state: **UNSPENT** — no round is spent by a measurement, and none was
+    - protocol_edit: **NONE** — no `V1.x` row added; the change-log head is unmoved and
+      `scripts/precision_preregistration.py` is BYTE-FROZEN (`TC-ArgusAgent-PRECISION-001-140`)
+    - third_party_sources_fetched: **NONE** — read-only git verbs against already-present
+      checkouts at their pinned shas; `adjudication-record.json` byte-unchanged
+    - evidence: `_bmad-output/design-artifacts/ArgusAgent/validation-corpus/successor/successor-reach-record.json`;
+      `stories/17-4-run-it-once-and-let-the-pre-registered-criterion-decide.md`
+
 ## Correct-course 2026-08-17b — the three multi-language gaps Story 14.3 does NOT fix
 
 > **All three were found by EXECUTION**, not by reading: an out-of-tree probe imported the shipped
