@@ -74,6 +74,7 @@ Test area: ArgusAgent-ORPHAN (``TC-ArgusAgent-ORPHAN-001-NN`` — index from ``-
 from __future__ import annotations
 
 from collections import Counter
+from typing import TYPE_CHECKING
 
 from argus.detectors.base import (
     DegradedCondition,
@@ -304,3 +305,14 @@ class OrphanCodeDetector:
         if definition_name_counts.get(name, 0) > 1:
             return False
         return True
+
+
+if TYPE_CHECKING:  # pragma: no cover - static conformance pin; TYPE_CHECKING is False at runtime
+    # Story 18.4 / AC2 - the STATIC conformance pin. `mypy argus` is a blocking CI gate
+    # and this line is what it checks: drop `rule_id`, retype it non-`str`, drop `run` or
+    # regress its return type and THIS goes red. It lives inside `argus/` on purpose -
+    # there is no [tool.mypy] section in this repository and CI runs `mypy argus` only, so
+    # the same pin written under `tests/` would be enforced by nothing.
+    from argus.detectors.base import Detector
+
+    _DETECTOR_CONFORMANCE_PIN: Detector = OrphanCodeDetector()

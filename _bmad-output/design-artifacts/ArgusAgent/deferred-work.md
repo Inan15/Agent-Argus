@@ -1784,6 +1784,31 @@ document that specifies it.
     yet exist (AI-E9-8: a wrong owner-story is how a deferral becomes nobody's).
   - category: capability
   - severity: 🟢
+  - ⛔ **SAFETY CLAIM FALSIFIED 2026-08-24 by story `18-1-the-sentinel-table-matches-values-not-substrings-of-them`**
+    — append-only note. ⛔ **THIS ENTRY STAYS OPEN, and it is NOT CLOSED by that story.** Its `id`,
+    `owner`, `target_story`, `category` and `severity` above are NOT edited, and its actual subject —
+    that the BUILT-IN suppression layers are still not disclosed to a reader of a report — is entirely
+    untouched by it. A repaired sentinel test is still a SILENT test.
+    - **The falsified clause, quoted verbatim:** *“no live production key can be suppressed by any of
+      these paths except an explicit inline annotation, which is reviewable in the diff”*, and with it
+      the classification *“a reporting enhancement, not a correctness defect”*.
+    - **The measurement that falsifies it.** Enumerating every value that genuinely matches a
+      `LIVE_KEY_PATTERNS` member AND carries one of the five short sentinels gives **7 cells** — one
+      `ghp_` body, one Slack tail, and five PEM headers, the PEM pattern being a `search` so any
+      sentinel anywhere in the snippet reaches it. Measured on the shipped engine: the Live-Key
+      Safeguard was DISABLED for **7 of 7** and `evaluate_suppression` suppressed **7 of 7**. None of
+      the seven involves an operator flag, and none involves an inline annotation. So a live production
+      key COULD be suppressed by a path the entry said could not suppress one, and the built-in layer
+      WAS a correctness defect and not only a reporting gap.
+    - **The repair repairs it.** After story 18.1 the same seven cells measure **0 disabled / 0
+      suppressed**, and the three published full-length sentinels are still answered at step 2 and
+      never reach the safeguard, so no documented non-secret started being reported.
+    - ⚠️ **The probability is stated rather than suppressed, because it cuts both ways.** A GitHub PAT
+      body is effectively random base62, so carrying that exact nine-character run is astronomically
+      unlikely: the live-key half is **structural, not probable**. What was probable — and what actually
+      dropped a credential — is the `generic_assigned_secret` / `high_entropy_string` half, where the
+      value is an operator-authored connection string. The entry's wording rested on the improbable
+      half, and that is exactly why the wording had to move rather than the entry.
 
 - **DF-10-3-C** — **`--ignore-pattern` matches by bare substring, so a short pattern is a wide net.**
   After Story 10.3 no `--ignore-pattern` can reach a high-confidence live production key, and any
@@ -6317,6 +6342,57 @@ than filed as its own entry.
     unexamined. Suggested repair: exact comparison against a `frozenset` (also O(1) rather than the
     present O(table x snippet) scan), keeping containment — if wanted — only for the three
     full-length published keys, whose length makes accidental containment impossible.
+  - ⛔ **`DF-AUD-DETECT-A` — CLOSED 2026-08-24 by story `18-1-the-sentinel-table-matches-values-not-substrings-of-them` at fix sha `ee7e252`.**
+    Append-only note; the original entry above it is NOT rewritten (§3.4 evidence immutability — the `DF-1-3-A` note is the form).
+    - **THE REPAIR IS THE ONE THIS ENTRY ITSELF PROPOSED**, and it is LENGTH-GATED rather than
+      uniform (story `DN-18-1-1`). `secret_suppression.py` now carries `MIN_CONTAINMENT_SENTINEL_LENGTH = 20`
+      and two disjoint tables: `EQUALITY_PUBLIC_SENTINELS` (the five short members, matched by exact
+      equality of `snippet.strip()` through a `frozenset`, so also O(1) rather than the previous O(table
+      × snippet) scan) and `CONTAINMENT_PUBLIC_SENTINELS` (the three published full-length credentials,
+      39–40 chars, which keep containment because a value that long cannot be an accidental
+      substring). `KNOWN_PUBLIC_SENTINELS` survives as their ORDER-PRESERVING union, byte-equal to the
+      tuple the module exported before (NFR-M2). ⛔ **No member was added or removed** — in particular
+      `AKIAIOSFODNN7EXAMPLE` was NOT added, because adding it would widen suppression, the opposite of
+      this repair's direction.
+    - **The self-disabling short-circuit inside `is_live_production_key` is DELETED**, and its docstring
+      is corrected rather than trimmed: it claimed to exclude `AKIAIOSFODNN7EXAMPLE`, and that value is
+      not in the table and never was — the table holds the AWS *secret* key, not the *access-key id*.
+      So the text named an exclusion the code did not implement. Recorded, corrected, not implemented.
+    - ⛔ **THE EVALUATION ORDER IS BYTE-UNCHANGED.** Steps 1–5 keep their positions and their reason
+      tokens; only what step 2 DECIDES moved. `TC-ArgusAgent-SECRET-001-15`..`-22` were re-run with no
+      edit to any assertion, docstring or fixture in `tests/test_secret_suppression_recording.py`: 8 passed.
+    - **THE MEASURED BEFORE/AFTER**, re-derived by execution at the story's own HEAD rather than cited:
+      the three-line reproduction goes **0 / 0 / 1 → 1 / 2 / 1** through the shipped `run()` on the
+      non-test path (the `example.com` line legitimately yields TWO findings — `run()` de-duplicates on
+      `(start_line, end_line, pattern_id)` and two patterns hit that span — which is why the guard
+      asserts `>= 1` per line and the exact triple is RECORDED here instead). The live-key × short-sentinel
+      enumeration goes **7 cells / 7 safeguard-disabled / 7 suppressed → 7 cells / 0 disabled / 0
+      suppressed**. The 250-file sweep over `git ls-files -- '*.py'` goes **86 findings / 36 files → 87 /
+      36**, with **LOST = 0**.
+    - **THE ONE NEW FINDING IS DISCLOSED, NOT REMOVED** (`DF-8-5-B`): it is `tests/test_deep_pass_wiring.py:397`,
+      a synthetic literal whose sibling `aws_access_key_id` match on the same line is ALREADY reported
+      today; the `high_entropy_string` match of the whole 73-character URL was being dropped for
+      containing `example.com`. It is `advisory=True, depth_supported=None` and `blocking_finding_count`
+      over it is **0**, so it is not verdict-eligible. That file was **not edited, annotated or relocated**.
+    - **THE CLOSING GUARDS:** `TC-ArgusAgent-SECRET-001-23`..`-27` in `tests/test_secret_sentinel_matching.py`,
+      CONTINUING the SECRET index whose prior maximum was `-22`. `-23` the audit's three lines through
+      `run()`, control included; `-24` the TABLE INVARIANT that makes this defect unable to recur by a
+      table edit; `-25` no suppression lost; `-26` the enumerated live-key space; `-27` both call shapes
+      of `is_public_sentinel`. ⚠️ The REDs were AUTHOR-DRIVEN, so per the guard-fire rule they are
+      **vacuity evidence** — proof the cases can fail — and not “these guards caught a defect”. Against the
+      shipped bodies restored by monkeypatch: `-23`, `-26`, `-27` fail. Against a full revert of the
+      module: collection `ImportError`, so `-24` has no pre-fix meaning either. `-25` stays GREEN against
+      the shipped engine BY DESIGN (it is the no-loss invariant, which holds before and after) and was
+      probed separately against the rejected uniform-equality variant, which it catches.
+    - ⛔ **NOTHING ELSE IS DISPOSITIONED BY THIS CLOSURE.** The `--ignore-pattern` semantics entry stays
+      OPEN and untouched; `DF-AUD-DETECT-B` / `-C` / `-D` / `-E` / `-F` keep the status and the target
+      story they had; the ≥80% precision keystone is still NOT CLEARED and the gate is still `BLOCKED`;
+      `DF-13-5-A` stays **OPEN and UNSPENT**. ⚠️ The equality arm's incidental O(1) improvement does NOT
+      dispose of the detector-cost entry, which stays OPEN as context only.
+    - ⚠️ **Verified LOCALLY on Windows only** (`AI-E13-1`): full suite 1,716 collected, exit 0, with and
+      without `ARGUS_REQUIRE_LANGUAGE_GRAMMARS=1`; coverage 95.69% against a floor of 80; `mypy argus`
+      clean over 95 files; `bandit -r argus --severity-level medium` clean. The cross-platform claim
+      belongs to the CI ubuntu matrix and is not made here.
 
 - **`DF-AUD-DETECT-B` — `run()`'s producer-side redaction call computes evidence and discards it, so
   every shipped `hardcoded_secret` finding carries NO evidence. The comment claims a guarantee the
@@ -6348,6 +6424,104 @@ than filed as its own entry.
     carry it (an additive schema change under NFR-M2). ⛔ The second is the one that matches what
     Story 2.5 says; the first is the one that matches what ships. Choosing is the Engineering
     Lead's.
+  - ⛔ **`DF-AUD-DETECT-B` — CLOSED 2026-08-24 by story `18-2-the-redaction-call-keeps-the-evidence-it-computes` at fix sha `2cc5128`.**
+    Append-only note; the original entry above it is NOT rewritten (§3.4 evidence immutability — the
+    `DF-AUD-DETECT-A` / `DF-1-3-A` notes are the form).
+    - **THE REPAIR TAKEN IS THE FIRST OF THE TWO THIS ENTRY OFFERS** — *delete the call and correct the
+      comment* (story `DN-18-2-1`) — on four measured grounds. (i) **Story 2.5's own record forecloses the
+      widening arm**: `2-5-hardcoded-secret-detector-producer-side-redaction.md:613` states
+      *"`SecretFindingEvidence` is **NOT** folded into `DetectorResult` and is **NOT** persisted"*, so widening
+      would reverse a `done` story's locked decision — an escalation, not a story decision. (ii) **No FR
+      requires the evidence to be carried.** FR11 (`E-PRD/prd.md:528`), this detector's FR, asks for hardcoded
+      secrets reported *with the secret value redacted* and requires no evidence at all; FR28 is satisfied
+      STRUCTURALLY, which is what this entry itself says at 🟡 (*"no secret leaks and none can"*).
+      (iii) Widening would produce **a field no consumer reads** — precisely `DF-10-4-B`'s already-filed
+      defect class (`DetectorResult.degraded` *"recorded and no production code reads it back"*), reproduced
+      one layer up in the same model. (iv) Reaching an operator would additionally require moving the frozen
+      1.2 `Recording` and the report renderer, making it a cross-detector schema story rather than this one.
+      ⛔ The widening arm remains **available by escalation** if the Engineering Lead reads `:613` differently.
+    - ⚠️ **THIS ENTRY'S REASONING IS CORRECTED; ITS FINDING IS NOT.** The finding — the call computes evidence
+      and discards it — was re-measured by execution and is TRUE. What is falsified is the closing sentence
+      *"The second is the one that matches what Story 2.5 says"*: that sentence rests on `2-5-…md:349`
+      (*"Redaction in `_evidence_for`"*) alone, while `:613` **in the same record** states the widening as a
+      thing Story 2.5 deliberately did NOT do. The shipped code said it a third time at
+      `secret_scan.py:367`. ⛔ Recorded here, dated and append-only; **Story 2.5's record is NOT edited**.
+    - **WHAT CHANGED, AND WHAT DELIBERATELY DID NOT.** `argus/detectors/secret_scan.py` loses the
+      expression statement `self._evidence_for(match)`; the banner above it is REPLACED (not merely removed)
+      by the measured truth — redaction is the ABSENCE of a value field on `FindingDraft` / `Recording` /
+      `Locator` / `DetectorResult`, all `frozen=True, extra="forbid"`; and one further FALSE SENTENCE found
+      while measuring is corrected in the same module's docstring (`:26`–`:27` claimed *"the masked indicator
+      + the location are the ONLY things that survive into a finding"* — measured, only the LOCATION
+      survives; the mask has nowhere to go). ⛔ **The CARRIER is NOT deleted**: `SecretFindingEvidence`,
+      `SECRET_EVIDENCE_SCHEMA_VERSION`, `_evidence_for` and `scan_evidence()` all survive unchanged and
+      `__all__` is untouched. Verified by docstring-stripped AST comparison of the whole module before vs
+      after: **the ONLY semantic difference in the file is the removal of that one statement**.
+    - **THE MEASURED BEFORE/AFTER**, re-derived by execution at the story's own HEAD rather than cited from
+      this entry. By AST the module carried exactly ONE discarded-value `_evidence_for` expression statement,
+      at `:506`; the other call site (`:376`, inside `scan_evidence`) binds its return and is genuine. Driving
+      `SecretScanDetector().run()` over an IDENTICAL file list on both sides — **252** tracked `*.py`, the
+      population that INCLUDES the story's own new test module — comparing the FULL `DetectorResult`
+      (`entries` + `findings` + `degraded`, canonical JSON) per file, pre-change engine vs post-change engine:
+      **91 findings / 38 files with ≥1 on both sides, and 0 of 252 files differ**, while `_evidence_for`
+      invocations go **91 → 0**. Over the 251-file population that predates the new module the same sweep
+      re-derives this entry's own figure: **88 findings / 37 files / 0 differing**. ⚠️ Both sides were taken
+      over ONE list, engine-vs-engine, rather than HEAD-vs-worktree over two lists — the disclosure gap
+      Story 18.1's review raised.
+    - ⛔ **THE COST IS NOISE AND NO PERFORMANCE CLAIM RESTS ON THIS.** The sweep measured **1.462 s**
+      pre-change vs **1.455 s** post-change, and on a separate shipped-vs-nulled pair the NULLED side was the
+      *slower* of the two (1.467 s vs 1.477 s). That is how far inside the noise the difference sits.
+    - **`code_identity` IS NOT BUMPED** (story `DN-18-2-5`). `FROZEN_DETECTOR_SET`'s `secret_scan.v1`
+      (`argus/cache/key.py:187`) stands and `argus/cache/**` is untouched: the sweep proves no cached result
+      is stale, and bumping would invalidate every cached result for a provably output-neutral change.
+    - **THE CLOSING GUARDS:** `TC-ArgusAgent-SECRET-001-28`..`-30` in the new
+      `tests/test_secret_evidence_contract.py`, CONTINUING the SECRET index whose prior maximum was `-27`;
+      nothing is renumbered. `-28` the BEHAVIOURAL guard (with `_evidence_for` monkeypatched to raise,
+      `run()` still emits byte-identical findings); `-29` the NON-RECURRENCE AST guard (no `_evidence_for`
+      call site discards its return value, scoped to `_evidence_for` so `findings.append(...)` and
+      `seen.add(...)` do not trip it, and at least one call site must remain so the guard cannot pass by the
+      function having vanished); `-30` the FR28 STRUCTURAL guard (the whole `DetectorResult` carries neither
+      the secret nor any evidence field NAME, and neither `FindingDraft` nor `DetectorResult` has a field
+      matching the forbidden token set — extending `TC-ArgusAgent-EVIDENCE-001-04`'s discipline to the two
+      models it does not cover). ⚠️ The REDs were AUTHOR-DRIVEN, so per the guard-fire rule they are
+      **vacuity evidence** — proof the cases can fail — not *"these guards caught a defect"*. `-28` and `-29`
+      went RED against the shipped body (`-28` because `:506` sat OUTSIDE the `try/except` wrapping only
+      `self._scan(source)`, so a raise propagated out of `run()`); `-30` is GREEN before AND after **by
+      design** — it pins a guarantee that was already true, so that a future widening cannot land silently.
+      The RED was taken by loading a pre-change copy of the module from OUTSIDE the repository, so the shared
+      working tree was never stashed or reverted.
+    - **THE NEW TEST MODULE'S OWN FINDINGS ARE DISCLOSED, NOT REMOVED** (`DF-8-5-B`).
+      `tests/test_secret_evidence_contract.py` reports **3** `hardcoded_secret` findings against itself, all
+      at **line 111**, its `_SYNTHETIC_SECRET` constant — the published AWS documentation access-key example
+      the guards must build in-module to have a detectable subject at all. Three patterns hit that one span
+      and `run()` de-duplicates on `(start_line, end_line, pattern_id)`, which is why it is 3 and not 1. All
+      three are `advisory=True, depth_supported=None`, `is_verdict_blocking` **False**, and
+      `blocking_finding_count` over the whole result is **0** — proven by execution. They are present under
+      BOTH engine bodies and therefore cancel out of the pre/post delta. ⛔ The file was **not** suppressed,
+      whitelisted, annotated, relocated or edited to make them disappear.
+    - **RECORDED HERE, NOT FILED** (`AI-E9-8` — filing and scheduling are the Engineering Lead's). Two gaps
+      were measured while discharging this entry and are deliberately left un-filed and un-fixed. **(a)**
+      `argus/detectors/base.py:63`–`:72` says `FindingDraft` carries *"the supported coverage depth (the
+      verdict-fold input), and the evidence the finding carries WITH it"*; measured at the fix sha,
+      `FindingDraft`'s fields are exactly `advisory, ast_span, cartridge_id, coverage_envelope_slice,
+      end_line, file_path, rule_id, start_line` — **neither** a `depth_supported` nor any evidence field.
+      Same claim class as the banner this story repaired, but `base.py` is another story's module and was
+      left byte-unchanged. **(b)** The evidence-carrying gap is **repository-wide and older than this entry**:
+      `VacuousTestDetector().run()` over the `test_widget` fixture emits one finding whose full payload
+      carries `depth_supported`, `locators`, `rule_id` and no assertion-density, no mock-ratio and no count of
+      anything — structurally it cannot, since `Recording`'s ten fields include none that could hold a count.
+      That makes *"one detector widened in isolation"* the wrong shape of repair and is the strongest
+      available reason for the arm taken above.
+    - ⛔ **WHAT THIS DISPOSITION DOES NOT TOUCH.** `DF-AUD-DETECT-C` (detector cost) stays OPEN and the
+      timing figures above do NOT disposition it. `DF-10-4-B` is cited as prior art only. `DF-10-3-B`,
+      `DF-10-3-C`, `DF-AUD-DETECT-D`, `DF-AUD-DETECT-E` and `DF-AUD-DETECT-F` stay OPEN and untouched, and
+      `DF-13-5-A` stays OPEN and UNSPENT. No FR is amended, no `Recording` / `DetectorResult` /
+      `FindingDraft` / `Locator` field is added, no threshold moves, no finding becomes verdict-eligible, the
+      ≥80% precision keystone stays NOT CLEARED and the gate stays `BLOCKED`. `architecture.md`,
+      `E-PRD/prd.md`, `epics.md` and every `done` story's record are unedited.
+    - ⚠️ **LOCAL / Windows-only evidence** (`AI-E13-1`): suite **1,724** collected exit 0, the six
+      secret-domain modules **61 passed**, `mypy argus` clean over **95** source files, `bandit -r argus
+      --severity-level medium` clean, coverage **95.69%** against the 80% floor. The cross-platform claim
+      belongs to the CI ubuntu matrix and is NOT made here.
 
 - **`DF-AUD-DETECT-C` — the detector layer costs MORE than tree-sitter parsing, and its hot path is
   the statement counter re-scanning the same characters.**
@@ -6449,6 +6623,173 @@ than filed as its own entry.
     `_is_entropy_candidate`, `_has_no_whitespace` and `_has_letter_digit_mix` thoroughly and says
     nothing about either regex, and Story 2.5 records no such cost. Repairs are one token each: a
     negative lookbehind before the alternation, and a backreference for the closing delimiter.
+  - ⛔ **`DF-AUD-DETECT-E` — CLOSED 2026-08-25 by story `18-3-two-regex-precision-defects` at fix sha `9e3fdc2`.**
+    Append-only note; the original entry above it is NOT rewritten (§3.4 evidence immutability — the
+    `DF-AUD-DETECT-A` / `DF-AUD-DETECT-B` notes are the form).
+    - **BOTH FINDINGS ARE TRUE AND BOTH REPRODUCE EXACTLY.** Re-derived by execution at HEAD `62fd1b9`,
+      not cited. Defect 1: through the shipped `SecretScanDetector.run()` on the non-test path
+      `argus/prod/settings.py`, `topsecret` / `mytoken` / `notapassword` assigned
+      `"correct-horse-battery-staple"` each report **1** `generic_assigned_secret` finding, and this
+      entry's `argus/**` census re-derives as **3** word-char-left matches, **1** of them in a comment,
+      at the three paths it names. Defect 2: **462** spans over `argus/**` whose opening and closing
+      delimiters differ, **3** surviving `_is_entropy_candidate` — including, as the entry says,
+      `secret_scan.py`'s own regex source line (now `:282` after Story 18.2's edit).
+    - ⛔ **FALSIFICATION (i) — THIS ENTRY'S PROPOSED REPAIR FOR DEFECT 1 IS A FALSE GREEN IN ITS ORDINARY
+      SPELLING.** The entry closes *"Repairs are one token each: a negative lookbehind before the
+      alternation..."*. The ordinary spelling of a word boundary is `(?<![A-Za-z0-9_])` — and **every one
+      of this repository's own word-char-left matches is `_`-preceded, not letter-preceded**. Measured,
+      one line each through the shipped `run()`: that spelling drops `DB_PASSWORD = "..."`,
+      `_API_KEY = "..."` and `SMTP_PASSWORD = "..."` from **1 finding to ZERO**, and the whole
+      1,724-test suite under it goes RED at exactly one case —
+      `tests/test_secret_sentinel_matching.py::test_TC_ArgusAgent_SECRET_001_26_live_key_safeguard_no_longer_disables_itself`
+      (*"a live production key is dropped end-to-end by the sentinel short-circuit"*, `assert 0 >= 1`).
+      `_` is the SEPARATOR in `UPPER_SNAKE_CASE`, which is how credentials are named, so excluding it
+      inverts a precision fix into a recall regression on the commonest naming convention there is.
+      ⛔ **The repair taken excludes LETTERS AND DIGITS ONLY: `(?<![A-Za-z0-9])`** (story `DN-18-3-1`).
+      It rejects all three of this entry's own examples and keeps all three of the above.
+    - ⛔ **FALSIFICATION (ii) — THIS ENTRY'S SEVERITY RATIONALE IS FALSE FOR DEFECT 2.** The entry files
+      itself 🟢 on *"error direction is OVER-reporting, never a false green"*. **Measured: defect 2
+      UNDER-reports as well.** The scan is left-to-right and non-overlapping, so an outer `'` opens a
+      span, the negated class eats the assignment prefix, the INNER OPENING `"` is accepted as the
+      closing delimiter, `finditer` resumes INSIDE the credential, and the real literal is never offered
+      to `_is_entropy_candidate` at all. Two-line reproduction through the shipped `run()` on
+      `argus/prod/settings.py` with source `src = 'blob = "<24-char credential>"'`: shipped **0**
+      findings, paired **1** (`high_entropy_string`). At the raw `_scan` level over 252 tracked files the
+      paired engine finds **13** matches the shipped engine does not, at **12** distinct sites, **ten of
+      them canonical credential shapes** (`AKIA...`, an AWS secret key, a `ghp_` token, two
+      `postgres://` URLs with an inline password). ⚠️ **The honest limit of that claim:** all twelve sites
+      are inside this repository's own test corpus, and most land on spans another pattern family
+      already reports, which is why the finding TOTAL still goes DOWN. The claim made is the narrow one
+      — the error direction is BOTH ways, so this entry's 🟢 rests on a falsified premise — not
+      *"a live security hole was found"*. ⛔ The FINDING is not disturbed; only these two claims are
+      corrected, dated and append-only.
+    - ⛔ **FALSIFICATION (iii) — THE DEFECT CLASS OCCURS AT THREE SITES, NOT THE ONE THE ENTRY NAMES.**
+      Greped at the fix sha: `_AWS_SECRET_KEY_RE` (`:282`), `_GENERIC_ASSIGN_RE` (`:289`) and
+      `_ANY_LITERAL_RE` (`:296`) all spelled the literal with two independent delimiter classes; the
+      entry names only the third. Measured over 252 files, pairing all three is **output-identical** to
+      pairing only `_ANY_LITERAL_RE` — same lost set, same new set, same per-file `DetectorResult` — so
+      the wider repair costs nothing and removes the class (story `DN-18-3-2`). Repairing one site would
+      have left `:282`, which is ITSELF one of the three surviving over-reports above, still carrying the
+      shape this note says was repaired.
+    - **THE REPAIR TAKEN, site by site.** One negative lookbehind on `_GENERIC_ASSIGN_RE`, and at all
+      three sites the opening delimiter is CAPTURED (`(?P<q>...)`) and the close is a BACKREFERENCE
+      (`(?P=q)`). The named `secret` group and every call site (`_scan`, `run`, `scan_evidence`,
+      `_evidence_for`, `_line_span`, `_ast_span_for_line`) are otherwise byte-unchanged; no `pattern_id`,
+      threshold or `(?i)` flag moves; no import is added; AR8 purity holds. The module docstring is
+      corrected where this change makes it wrong: the `generic_assigned_secret` bullet now states the
+      left-anchor rule and why it must admit `_`, and the LOCKED *V1 detection scope + KNOWN limits*
+      section now discloses the four residual limits (below).
+    - **THE MEASURED BEFORE/AFTER, engine-vs-engine over ONE identical population.** Driving `run()` over
+      every file in `git ls-files -- '*.py'` and comparing the FULL `DetectorResult` (`entries` +
+      `findings` + `degraded`, canonical JSON) per file, pre-change engine vs post-change engine — never
+      HEAD-vs-worktree over two lists, the disclosure gap Story 18.1's review raised. Over the **252**
+      files of the pre-change tree: **91 → 90** `hardcoded_secret` findings, **77 → 75** spans,
+      **38 → 37** files with ≥1, suppression records **0 → 0**, degraded **0 → 0**, and exactly **five**
+      spans move. ⛔ **THE THREE REMOVALS, EACH ADJUDICATED, AND NOT ONE IS A CREDENTIAL:**
+      `argus/audit/open_llm_adapter.py:170` (an f-string fragment, `')}/v1/chat/completions"`, from
+      `f"{self._api_base.rstrip('/')}/v1/chat/completions"`); `argus/detectors/secret_scan.py:282` (this
+      module's own regex source line); `argus/precision/gate_decision.py:693` (an f-string fragment from
+      `f"...{', '.join(sorted(row_ids)[:5])}"`). **THE TWO ADDITIONS:** `tests/test_secret_scan.py:59`
+      **1 → 2** (recall — `_run('aws_key = "AKIA..."')` realigns) and
+      `_bmad-output/.../research/revalidate-fact-b-widening.py:144` **0 → 1** (an f-string identifier).
+      Both are `advisory=True, depth_supported=None`, `is_verdict_blocking` **False**, and
+      `blocking_finding_count` over their whole result is **0** — proven by execution. ⛔ **Neither is
+      suppressed, annotated, relocated or edited away** (`DF-8-5-B`).
+    - **THE RECALL PROOF THE SWEEP CANNOT GIVE.** Over this repository the safe lookbehind removes
+      **nothing at all** — all ten word-char-left matches are `_`-preceded and every one survives,
+      including the `argus/cache/key.py:181` comment this entry names, which is therefore **still
+      reported** and is NOT fixed by this story. So a repo sweep is a disclosure instrument, not a proof.
+      The proof is synthetic: the eight `KNOWN_SECRET_SHAPES` of `tests/test_secret_scan_precision.py`,
+      each placed in an ordinary `API_TOKEN = "..."` assignment on the non-test path, report
+      **identically before and after** (2/2/3/0/0/0/2/2 — the three zeros are the public-sentinel
+      suppressions, identical on both sides), and the naming matrix `DB_PASSWORD` / `_API_KEY` /
+      `SMTP_PASSWORD` / `API_TOKEN` / `self.token` / `password` / `api-key` / `api_key` reports
+      **1 finding each on both sides**. ⛔ **Not one value goes from reported to unreported.**
+    - ⛔ **`code_identity` IS BUMPED, AND THAT IS THE DELIBERATE INVERSE OF `DN-18-2-5`.**
+      `FROZEN_DETECTOR_SET`'s `hardcoded_secret` descriptor moves `secret_scan.v1` → **`secret_scan.v2`**
+      (`argus/cache/key.py:187`), moving the detector-set content hash
+      `9954e854...` → `fbec7912...`. Story 18.2 declined this bump on the explicit ground that its change
+      was output-neutral; **this one measurably is not**, and `argus/pipeline.py:166` memoizes the detect
+      stage on that token via `argus/cache/stage_memo.py`, so without the bump a repository audited
+      before this fix and re-audited after it would be served the PRE-FIX detect-stage result — the exact
+      failure AR6 / Story 5.3's invalidation lever exists to prevent (story `DN-18-3-6`). ⛔ Nothing else
+      under `argus/cache/` moves: no `CACHE_KEY_SCHEMA_VERSION` bump, no persisted `.argus/` entry
+      migrated or deleted.
+    - **THE COLLATERAL THAT BUMP SPENT, RECORDED SO NO LATER READER FINDS IT SILENT** (this entry's
+      reason for existing at 🟢 does not extend to a silently regenerated golden). **(a)**
+      `tests/test_cache_key.py::test_golden_key_pinned` (`TC-ArgusAgent-CACHE-001-03`) moves
+      `ccf2d132...` → **`78239f689c6dd3c92e3268d0787d3e96293c607f66fc0b710e9d76b19cb92850`**, DERIVED by
+      execution (it matched the story's prediction), with a dated sentence added to its docstring naming
+      this as the **second** documented intentional invalidation — the first being the Story-10.2 schema
+      bump. That golden's own docstring permits exactly this and forbids only doing it silently.
+      **(b)** `tests/test_cache_invalidation.py:229` pinned its *synthetic perturbed* descriptor to the
+      literal `"secret_scan.v2"` — a plausible future REAL value — so a real bump made the perturbation
+      collide with the live set and the three `test_detector_set_change_*` cases failed for a reason
+      unrelated to what they test. The fixture moves to `secret_scan.v99` (the
+      `tests/test_stage_memo_wiring.py:306` precedent), with a comment saying why. ⛔ **That RESTORES the
+      perturbation's non-vacuity rather than loosening an assertion** — verified by execution that the
+      perturbed set's hash (`f4d3d632...`) still differs from the live set's (story `DN-18-3-7`).
+    - **THE CLOSING GUARDS:** `TC-ArgusAgent-SECRET-002-08`..`-12` in the new
+      `tests/test_secret_scan_regex_precision.py`, CONTINUING the `SECRET-002` index whose prior maximum
+      was `-07`; nothing is renumbered. `-08` the LEFT-ANCHOR guard (with a positive control asserted
+      first and a digit-free value so the entropy family cannot make it pass for the wrong reason);
+      `-09` the FALSE-GREEN FENCE (the eight-row naming matrix); `-10` the PAIRED-DELIMITER guard at all
+      **three** sites, each with both matched-delimiter controls; `-11` the REALIGNMENT RECALL guard
+      (the two-line reproduction above); `-12` the CLASS guard, which reads the module's own SOURCE by
+      AST and asserts no pattern constant spells a literal with two uncaptured delimiter classes, with
+      non-vacuity asserted twice (every LOCKED constant must still compile, and the class must still be
+      spelled in at least three of them). ⚠️ The REDs were AUTHOR-DRIVEN, so per the guard-fire rule they
+      are **vacuity evidence** — proof the cases can fail — not *"these guards caught a defect"*. `-08`,
+      `-10`, `-11` and `-12` went RED against the shipped body; ⛔ **`-09` is GREEN before AND after BY
+      DESIGN** — it is a CONTRACT PIN fencing out the mis-repair this entry recommends, not a defect
+      witness (story `DN-18-3-8`), and its non-vacuity was proven separately by executing it against the
+      naive lookbehind, where it goes RED. The RED was taken by monkeypatching the shipped patterns from
+      a copy held OUTSIDE the repository, so the shared working tree was never stashed or reverted.
+    - **THE DOGFOOD ARTIFACTS MOVED, AND NOT BY THE PREDICTED AMOUNT.** Regenerated by
+      `scripts/regenerate_dogfood_artifacts.py` on a clean `argus/` tree at `9e3fdc2`, through the
+      artifacts' own renderers: provenance `2cc5128` → `9e3fdc2`, total physical LOC `33667` → `33703`,
+      total findings emitted **173 → 172**, `hardcoded_secret` over `argus/**` **40 → 39**, and
+      `argus/audit/open_llm_adapter.py:170` leaves the sample-locator list. ⚠️ **The story predicted 37,
+      and the two-finding difference is measured rather than explained away:** the repair removed
+      `secret_scan.py:282`'s over-report, but the two REPAIRED regex source lines (now `:304` and `:317`)
+      are THEMSELVES new `high_entropy_string` over-reports of exactly the same residual class — a text
+      scan is not a Python tokenizer, and a regex source line full of quotes is the shape that class
+      fires on. Both are `advisory=True, depth_supported=None`, `is_verdict_blocking` **False**,
+      `blocking_finding_count` **0**. ⛔ **They are NOT suppressed, annotated, relocated or edited away,
+      and the regex text was NOT re-spelled to dodge them** — re-spelling source to make a self-audit
+      number tidier is `DF-8-5-B`'s forbidden move wearing a new hat.
+    - **RECORDED HERE, NOT FILED** (`AI-E9-8` — filing and scheduling are the Engineering Lead's). Four
+      residual limits were measured while discharging this entry and are deliberately left un-fixed and
+      un-filed; all four are now DISCLOSED in `secret_scan.py`'s own LOCKED *KNOWN limits* section.
+      **(a)** The scan is still not a Python tokenizer: a literal CONTAINING its own delimiter stays
+      invisible to it (`tests/test_verdict_gate.py:719` is the measured example, and it is one of the two
+      mismatched spans outside `argus/**` that survive the entropy predicate). **(b)** Prose in a comment
+      still matches — there is no comment model — so the `argus/cache/key.py:181` comment this entry names
+      is **still reported**; the prose-in-a-comment half of this entry's complaint is NOT fixed here and
+      is not fixable by a lookbehind. **(c)** A JSON-style mapping from a quoted key to a quoted value is
+      still not matched, because the quote between the key and its separator defeats the assignment
+      shape: measured **0 findings before and 0 after**, a recall gap in the shipped family and not a
+      regression of this story's making. **(d)** The left anchor excludes letters and digits only, so a
+      digit-separated name such as `token2secret` would still match; no case in this tree needs it and no
+      cost was measured for excluding digits.
+    - ⛔ **WHAT THIS DISPOSITION DOES NOT TOUCH.** `DF-AUD-DETECT-C` (detector cost) stays OPEN and **no
+      timing figure was taken here**. `DF-AUD-DETECT-D` (Story 17.3) and `DF-AUD-DETECT-F` (Story 18.4,
+      whose file `argus/detectors/base.py` was left byte-unchanged) stay OPEN. `DF-10-3-B`, `DF-10-3-C`
+      and `DF-10-4-B` stay OPEN and untouched; `DF-INV-MERGE-A`, `DF-INV-WHEEL-A` and `DF-INV-REFS-A`
+      stay OPEN; `DF-13-5-A` stays OPEN and **UNSPENT**. No member is ratified, no protocol row added, no
+      FR amended, no third-party source fetched. No `pattern_id` is added, removed or renamed; no
+      threshold (`MIN_GENERIC_SECRET_LENGTH`, `MIN_ENTROPY_TOKEN_LENGTH`, `ENTROPY_BITS_PER_CHAR_FLOOR`)
+      moves; the LOCKED pattern-family set and the LOCKED file-scope rule are unchanged; no finding
+      becomes verdict-eligible; the ≥80% precision keystone stays **NOT CLEARED** and the gate stays
+      `BLOCKED`. `argus/detectors/secret_suppression.py` (Story 18.1, `done`) is byte-unchanged and none
+      of `TC-ArgusAgent-SECRET-001-23`..`-30` is edited. `architecture.md`, `E-PRD/prd.md`, `epics.md`
+      and every `done` story's record are unedited.
+    - ⚠️ **LOCAL / Windows-only evidence** (`AI-E13-1`): suite **1,729** collected (1,724 + this story's
+      five) exit **0**; the seven secret-domain modules **66 passed, unedited**;
+      `TC-ArgusAgent-SECRET-001-26` **GREEN** — a first-class result of this story, since it is the one
+      case the mis-repair reddens; `mypy argus` clean over **95** source files; `bandit -r argus
+      --severity-level medium` clean (0 medium, 0 high). The cross-platform claim belongs to the CI ubuntu
+      matrix and is NOT made here.
 
 - **`DF-AUD-DETECT-F` — the `Detector` Protocol is asserted by exactly one test and used by nothing;
   it cannot dispatch, because no two detectors share a `run` signature.**
@@ -6475,6 +6816,190 @@ than filed as its own entry.
     `depth_supported: object | None` (`base.py:166`) is passed to `Recording` under a
     `# type: ignore[arg-type]` (`:200`), erasing the type at the single construction point every
     finding in the system passes through. `mypy` is clean because the ignore silences it.
+  - ⛔ **`DF-AUD-DETECT-F` — CLOSED 2026-08-25 by story `18-4-the-detector-protocol-is-load-bearing-or-it-is-deleted` at fix sha `0ba6a98`.**
+    Append-only note; the original entry above it is NOT rewritten (§3.4 evidence immutability — the
+    `DF-AUD-DETECT-A` / `DF-AUD-DETECT-B` / `DF-AUD-DETECT-E` notes are the form). The entry's `id`,
+    `owner`, `category` and `severity` fields are left unedited. Status transition: **OPEN → CLOSED.**
+    - ⛔ **THE ARM TAKEN: LOAD-BEARING, NOT DELETED** (`DN-18-4-1`). The `Detector` Protocol survives,
+      narrowed to the two members all four shipped detectors actually have, and each detector module
+      carries a static conformance pin against it INSIDE `argus/` where the blocking `mypy argus` CI
+      gate checks it. The either/or in the epic's AC is decided by measurement, and the measurement
+      decided against deletion.
+    - ⛔ **FALSIFICATION (i) — THIS ENTRY'S CENTRAL MECHANISM IS FALSE. THE PROTOCOL WAS NOT UNUSED,
+      IT WAS UNUSABLE.** The entry says *"the widened signature is what makes them all 'satisfy' it"*.
+      **Measured, `mypy` 2.3.0, 4 of 4 REJECTED:** assigning each shipped detector to a
+      `Detector`-typed variable yields `Incompatible types in assignment` for `VacuousTestDetector`,
+      `SecretScanDetector`, `ToolRunnerDetector` and `OrphanCodeDetector` alike —
+      `Expected: def run(self, *args: object, **kwargs: object) -> DetectorResult` against each
+      detector's keyword-only `Got:`. `Found 4 errors in 1 file`. `*args: object, **kwargs: object`
+      does not *widen* a protocol member; it **narrows what can implement it**, because an
+      implementation must accept everything the protocol permits and a keyword-only signature accepts
+      no positional argument. The Protocol therefore lacked a consumer **because it could not have
+      one** — it would have failed the moment anyone used it — and the middle position the entry
+      describes is not *"`run` is decoration"* but *"`run` is an active falsehood"*. Its four
+      downstream repetitions are the shipped docstrings at `orphan_code.py:174`, `secret_scan.py:389`,
+      `tool_runner.py:291` and `vacuous_test.py:602`, each claiming its class *"satisfies the
+      `detectors.base.Detector` protocol structurally"*. ⛔ **Those four claims were FALSE as written
+      and are TRUE as of this fix; they were not rewritten, they were made true.** Also measured:
+      `issubclass(VacuousTestDetector, Detector)` raised
+      `TypeError: Protocols with non-method members don't support issubclass()`, because `rule_id: str`
+      was a data member.
+    - ⛔ **FALSIFICATION (ii) — THE LONE ASSERTION IS VACUOUS ON EVERY INTERPRETER CI RUNS, AND ITS
+      VERDICT IS NOT EVEN STABLE ACROSS THEM.** `tests/test_detector_base.py:89` was
+      `assert isinstance(VacuousTestDetector(), Detector)`. A `runtime_checkable` protocol's
+      `isinstance` checks member PRESENCE only — never callability, never signature, never return
+      type. Driven against five decoys on CPython **3.11.15, 3.12.10 and 3.13.14**: a class whose
+      `run` returns `str` → **True**; a class with an incompatible `run(self, banana: int)` → **True**;
+      ⛔ **a class whose `run` is the integer `42` → True on all three.** Only *no `rule_id`* and
+      *empty class* were rejected. ⚠️ **And one row DIFFERS across the CI matrix:** a `rule_id`
+      supplied by `__getattr__` satisfies on **3.11** and does **not** on **3.12/3.13**, because 3.12
+      switched `runtime_checkable` from `hasattr` to `inspect.getattr_static`. **CI runs 3.10, 3.11
+      and 3.12** (`.github/workflows/audit-ci.yml:15`), so this is a live matrix difference. The
+      assertion detected exactly two things: *has an attribute named `run`* and *has an attribute
+      named `rule_id`*.
+    - ⛔ **FALSIFICATION (iii) — "THE FIVE CONCRETE DETECTORS" IS FOUR.** An AST walk of `argus/**`
+      finds exactly **six** classes defining `run`: the four detectors (all `-> DetectorResult`), the
+      Protocol itself, and `DeepAuditSeam.run -> LLMRecording` (`argus/audit/deep_audit.py:110`, not a
+      detector). `argus/detectors/provenance_scan.py` defines no detector class. **Five is the number
+      of `rule_id`s in `FROZEN_DETECTOR_SET`** (`vacuous_test` contributes two), not the number of
+      classes.
+    - ⛔ **THE ANSWER TO THIS ENTRY'S OWN HONEST COUNTER-ARGUMENT, in its own terms.** The
+      counter-argument says the detectors are genuinely heterogeneous, that forcing a common `run`
+      signature would be a worse design, and that in that case the repair is to delete the Protocol
+      and its test. ⛔ **Its premise is accepted in full and NO SIGNATURE IS FORCED.** Not one
+      detector's `run` signature, body, decorator or call site was touched, and
+      `argus/pipeline_stages.py` — where all four are constructed and called concretely — is
+      **byte-unchanged**. The counter-argument's own closing sentence names the repair that was
+      taken: *"`rule_id` + `DetectorResult` is the real shared contract and `run` is decoration"*.
+      **That is exactly what the new Protocol encodes**, and the reason the middle position did not
+      persist is that the contract stopped describing `run`'s parameters at all and started
+      constraining `run`'s existence, callability and return type — the part that is genuinely shared.
+      ⚠️ **What deletion would have cost, weighed and rejected:** it removes a public `__all__` symbol
+      from a shipped distribution, a `done` story's contract and the test id `TC-ArgusAgent-DETECT-001-84`
+      that Story 1.5's record names; it makes `architecture.md:1174` (*"base.py # detector Protocol +
+      Finding builder"*) stale, which would have forced this epic's first architecture edit for a
+      cosmetic reason; and it leaves four shipped docstrings asserting a conformance with nothing left
+      to check them against. ⛔ **It is also the IRREVERSIBLE arm of the two** — a narrowed Protocol
+      can be deleted later by anyone; a deleted one has to be re-litigated.
+    - ⛔ **THE SHAPE, MEASURED AGAINST ALL FOUR DETECTORS, AND THE FIVE DECOYS IT REJECTS.** Five
+      candidate shapes were type-checked against the four shipped detectors, unedited. `rule_id: str`
+      + `run(self, *args: object, **kwargs: object)` → **4 errors**; `rule_id: str` +
+      `run: Callable[..., DetectorResult]` as a settable attribute → **4 errors**, *"Protocol member
+      Detector.run expected settable variable, got read-only attribute"*; `rule_id: str` +
+      `run(self, **kwargs: Any)` → **4 errors**; `rule_id: str` alone → accepted, but constrains
+      nothing about the result (the deletion arm with extra steps). ⛔ **Exactly one shape is accepted
+      by all four — both members as READ-ONLY PROPERTIES:**
+
+      ```python
+      class Detector(Protocol):
+          @property
+          def rule_id(self) -> str: ...
+
+          @property
+          def run(self) -> Callable[..., DetectorResult]: ...
+      ```
+
+      ⛔ **And it is not permissive.** With the pins written inside `if TYPE_CHECKING:`, five decoys
+      the shipped Protocol accepted or was silent about are each an error: no `rule_id`; `rule_id = 7`;
+      `run` returning `str`; no `run`; and `run = 42` — the last reported as
+      *`run: expected "Callable[..., DetectorResult]", got "int"`*. **`Found 5 errors in 1 file`, 5 of
+      5 rejected**, against a shipped `isinstance` that accepted three of them on every interpreter CI
+      runs. ⛔ The property spelling is **already this repository's idiom**:
+      `argus/detectors/vacuous_test.py:404`'s `_HasFilePath` uses it verbatim and is load-bearing.
+    - ⛔ **THE PINS ARE INSIDE `argus/`, AND THAT IS THE WHOLE POINT.** There is **no `[tool.mypy]`
+      section, no `mypy.ini`, no `setup.cfg`** in this repository, and CI runs **`mypy argus`** only
+      (`audit-ci.yml:70`) — `tests/` is type-checked by **no gate**. ⛔ **A `Detector`-typed assertion
+      written under `tests/` would be enforced by NOTHING**: it would look like a guard, pass forever,
+      and be precisely the vacuity Epic 18 exists to remove. Each of the four detector modules
+      therefore ends with an `if TYPE_CHECKING:` block binding its class to `Detector`. `TYPE_CHECKING`
+      is `False` at runtime (asserted, not assumed), so no pin exists at import time, no detector is
+      constructed at import time, and `argus/detectors/__init__.py` is untouched (Story 1.5's
+      *"do NOT add them here"* note is a locked decision). **Non-vacuity of the pins, executed:** five
+      mutations on a scratch copy — drop `rule_id`, retype `rule_id` to `int`, regress `run`'s return
+      type to `str`, make `run` the integer `42`, remove `run` entirely — each makes **`mypy argus`
+      FAIL at the pin line**. 5 of 5.
+    - ⛔ **THE ENTRY'S SECOND, NARROWER ITEM IS TRUE AND WORSE THAN IT STATES — DISCHARGED.**
+      `build_recording`'s `depth_supported: object | None` was passed to `Recording` under
+      `# type: ignore[arg-type]` at the single construction point every finding in the system passes
+      through. **Before:** `build_recording(d, depth_supported="not-a-depth")` and
+      `build_recording(d, depth_supported=object())` were both **`mypy: Success: no issues found`**,
+      while at runtime `pydantic` raised
+      `ValidationError: Input should be 'audited_deep', 'audited_shallow', ...`. ⛔ **The ignore
+      converted a compile-time error into an audit-time crash.** **After:** the parameter is
+      `CoverageDepth | None`, the ignore is DELETED, and the same probe is
+      **`error: Argument "depth_supported" to "build_recording" has incompatible type "str"; expected
+      "CoverageDepth | None" [arg-type]`** — `Found 2 errors in 1 file`. The runtime behaviour is
+      unchanged (`pydantic` still raises), asserted rather than assumed. `mypy argus` stays
+      **`Success: no issues found in 95 source files`** with all **seven** existing `depth_supported=`
+      call sites UNEDITED, and **no new import edge** is created — `CoverageDepth` comes from
+      `argus.ledger.coverage_ledger`, which `base.py` already imported for `CoverageLedgerEntry`.
+      `argus/detectors/base.py` now carries **zero** `# type: ignore`; the other **30** in `argus/`
+      are untouched.
+    - ⛔ **AND A THIRD ITEM IN THE SAME MODULE, HANDED OVER BY NAME BY STORY 18.2 — DISCHARGED AS
+      PROSE ONLY.** `FindingDraft`'s docstring claimed the draft carries *"the supported coverage depth
+      (the verdict-fold input), and the evidence the finding carries WITH it (FR10 …)"*. Measured from
+      the live models: `FindingDraft` has **eight** fields (`advisory`, `ast_span`, `cartridge_id`,
+      `coverage_envelope_slice`, `end_line`, `file_path`, `rule_id`, `start_line`) and **neither
+      exists**. `depth_supported` is a **parameter of `build_recording`**, not a draft field; and no
+      evidence field exists on `FindingDraft`, on `DetectorResult`, or on the ten-field `Recording`.
+      ⛔ **The docstring now STATES both absences; no field was added and no FR was amended**
+      (`DN-18-4-6`). Story 18.2 measured the evidence half as repository-wide and older than this
+      entry — `Recording` has no field that could hold a count — so *"one detector widened in
+      isolation"* is the wrong shape of repair and **the FR10 evidence-carrying gap stays OPEN**.
+    - ⛔ **OUTPUT NEUTRALITY, PROVEN THREE WAYS** (`DN-18-4-7`). **By construction:** a
+      docstring-stripped AST comparison of the five changed modules shows the only executable
+      differences are the Protocol's member declarations, the removed decorator, the four
+      `if TYPE_CHECKING:` blocks, the added imports and the parameter annotation —
+      `from __future__ import annotations` is in force, so the `depth_supported` annotation is the
+      **string** `'CoverageDepth | None'` at runtime and the retype is provably inert.
+      **Engine-vs-engine:** the shipped engine and the changed engine were run over **ONE identical
+      population of all 253 tracked `*.py` files, including this story's own edits** — **459 findings
+      each, per-file `DetectorResult`s identical, whole-index `orphan_code` and `tool_runner`
+      identical. THE DIFFERING SET IS EMPTY.** **Suite:** `mypy argus` `Success … 95 source files`
+      **with the pins present** (which is what proves the four detectors conform), `bandit` clean, and
+      `build_silent_class_record.py --check` OK over 36 rows.
+    - ⚠️ **DISCLOSED, NOT SMOOTHED — two dogfood counts moved.** Total physical LOC **33,703 → 33,800**
+      (the story predicted ~33,726 from one candidate spelling; the extra lines are the `Detector`
+      docstring, which now records why the Protocol does not describe `run`'s parameters, why both
+      members are read-only properties and why `@runtime_checkable` is deliberately absent, each with
+      its measurement). `orphan_code` **127 → 128**: one new advisory row, `function:rule_id@187` in
+      `argus/detectors/base.py`, because the narrowed Protocol declares `rule_id` as a `@property`
+      FUNCTION rather than a data member and `orphan_code` conservatively accuses a lone uncalled
+      definition — `run` is not accused because six classes define it and `orphan_code` refuses to
+      accuse a twinned name. ⛔ **This is a POPULATION-CONTENT effect, not an engine effect**: the
+      SHIPPED engine over the POST-edit sources produces the same 128, which is why the
+      engine-vs-engine differing set above is empty. The finding is `advisory=True` with
+      `depth_supported=None` and is therefore **verdict-INELIGIBLE by construction**.
+      `hardcoded_secret` is **UNCHANGED at 39**, as predicted. The three artifacts were regenerated by
+      their OWN renderer on a clean `argus/`; **no assertion was loosened** (`DF-8-5-B`).
+    - ⛔ **NO `code_identity` BUMP** (`DN-18-4-8`, `DN-18-2-5`'s arm and the deliberate inverse of
+      `DN-18-3-6`). `FROZEN_DETECTOR_SET` (`argus/cache/key.py:186`) is five hand-declared descriptors
+      and **none of them is `base.py`**; no detector's logic changed and the output is proven
+      identical. **Nothing under `argus/cache/` is touched.**
+    - ⛔ **WHAT THIS NOTE DOES NOT DISPOSITION.** `DF-10-4-B`, `DF-10-3-B`, `DF-10-3-C`,
+      `DF-AUD-DETECT-C`, `DF-AUD-DETECT-D`, `DF-INV-MERGE-A`, `DF-INV-WHEEL-A` and `DF-INV-REFS-A` all
+      stay **OPEN and untouched**, and ⛔ **`DF-13-5-A` stays OPEN and UNSPENT** — no member was
+      ratified, no protocol row added, no third-party source fetched. No FR is amended, no model field
+      is added, no threshold moves, **no finding becomes verdict-eligible**, the ≥80%-precision
+      keystone stays **NOT CLEARED** and the gate stays `BLOCKED`. `architecture.md` (`:1174` **stays
+      true** under the arm taken), `E-PRD/prd.md`, `epics.md` and every `done` story's record are
+      **unedited**. Nothing under `minions_core/apaa/` was touched.
+    - ⛔ **RECORDED, NOT FILED** (`AI-E9-8` — filing and scheduling are the Engineering Lead's).
+      **(a)** `OrphanCodeDetector.rule_id == "orphan_code"` is **absent from `FROZEN_DETECTOR_SET`**,
+      which carries five `rule_id`s and not this one. It is a cache-key question, not a typing one.
+      **(b)** `FROZEN_DETECTOR_SET`'s comment claims its `rule_id`s *"mirror the live detector
+      constants"* and **nothing enforces it**; binding it would require `argus/cache/key.py` to import
+      `argus.detectors.*`, dragging the AST/tree-sitter import surface into the determinism module —
+      a design decision with a real cost. **(c)** the **FR10 evidence-carrying gap** is
+      repository-wide and older than this entry (above, and Story 18.2's record).
+    - ⚠️ **LOCAL / Windows-only evidence** (`AI-E13-1`). Every figure here was measured on a Windows
+      host on CPython 3.11.15, with the two cross-version rows additionally executed on 3.12.10 and
+      3.13.14. ⛔ **The 3.10/3.11/3.12 claim belongs to the CI ubuntu matrix at the pushed sha and is
+      not claimed here.** It is claimed deliberately rather than inherited: every guard this story
+      lands is decided by `ast` or by static typing, both version-stable, and **no guard in it decides
+      anything by `isinstance`/`issubclass` against a Protocol** — not even to assert the `TypeError`,
+      because that is the exact spelling measured vacuous above.
+
 
 ## Epic 17 / Epic 18 re-homing and scheduling — 2026-08-24
 

@@ -335,6 +335,40 @@ _STATUS_DOCUMENTS: tuple[str, ...] = (
     # ⚠️ It must be committed TOGETHER with this line — `-22` closes in BOTH directions, so the
     # document without this entry and this entry without the document red `master` equally.
     "sprint-change-proposal-2026-08-24.md",
+    # Registered 2026-08-25 for the Epic-18 retrospective — `AI-E12-1`'s second half ("make the
+    # registration part of the retrospective step's own DoD") on its SIXTH consecutive retrospective,
+    # after the Epic-13 INTERIM, Epic-14, FINAL Epic-13, Epic-15 and Epic-16 entries above. It is
+    # written by the session that wrote the document, which is the form `AI-E16-15` asked to return
+    # to: that session was chartered READ-ONLY over `tests/` and correctly refused, filing the
+    # omission against itself; this one carries no such charter, so the line lands with the document
+    # instead of as a follow-up act by a separately chartered session.
+    # Same one-line edit and same verification-before-registration as every entry above, by
+    # execution: `_split_sentences()` returns 354 sentences, so `-21` is genuinely reading the
+    # document rather than passing over an unparseable one; `_status_assertions()` returns 0 — no
+    # phrase in `_STATUS_CLAIMS` occurs in it at all, denied or otherwise — so `-21`'s per-document
+    # loop short-circuits and this registration is inert rather than load-bearing; and
+    # `_executed_gate_citations()` returns 0, so it mints an excuse for nothing. `-22` was observed
+    # RED against this document before this line (`status-asserting document(s) exist but are not
+    # registered: ['epic-18-retro-2026-08-25.md']`) and GREEN after, on the live tree, with the full
+    # suite re-run green afterwards. ⛔ No `_EXCLUDED_BY_DESIGN` entry was added and not one
+    # assertion in `-22` was weakened, reworded or exempted.
+    # WHAT THE DOCUMENT ASSERTS, so the registration is judged against its contents: Epic 18's four
+    # stories are `done` and it closes `DF-AUD-DETECT-A`, `-B`, `-E` and `-F`; `-C` and `-D` stay
+    # OPEN and it dispositions NEITHER — §10 RE-DERIVES the ledger against `deferred-work.md` on disk
+    # and edits it not at all. It changes NO release status of any kind: cross-platform verification,
+    # deployment and release are all recorded as NOT ESTABLISHED, the >=80% precision gate is
+    # UNCHANGED and not cleared, the precision figure STILL DOES NOT EXIST, nothing is ratified and
+    # the protocol is not re-versioned. `DF-13-5-A` stays OPEN and UNSPENT — declined a second time
+    # on 2026-08-24, its trigger now conditioned on shipped promotions rising above zero — and this
+    # document explicitly does NOT spend it. It amends no FR, no threshold, no epic container and no
+    # planning document: its Epic-17 finding (the narrowed `Detector` Protocol and the four
+    # conformance pins that landed after Epic 17's plan was written) is filed as a RECOMMENDATION to
+    # the orchestrator and the operator, and `epics.md` is not touched.
+    # ⚠️ The only `development_status` value its session wrote is `epic-18-retrospective` -> `done`;
+    # the `epic-18` roll-up is the orchestrator's and was left `in-progress`.
+    # ⚠️ It must be committed TOGETHER with this line — `-22` closes in BOTH directions, so the
+    # document without this entry and this entry without the document red `master` equally.
+    "epic-18-retro-2026-08-25.md",
 )
 
 # Exactly the set the epic's AC names — "any future change proposal or retrospective".

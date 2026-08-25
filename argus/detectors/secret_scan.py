@@ -23,8 +23,10 @@ The keystone: producer-side redaction
 --------------------------------------
 Redaction happens AT THE PRODUCER, before any model is constructed or any byte is
 written. The detector is the single point that KNOWS the secret value, so it is
-the single point at which the value must be DROPPED. The masked indicator + the
-location are the ONLY things that survive into a finding. The secret value's bytes
+the single point at which the value must be DROPPED. The LOCATION is the ONLY thing
+that survives into a finding: the masked indicator is computed by
+:meth:`SecretScanDetector.scan_evidence`'s in-memory carrier and NEVER enters one —
+no emitted model has a field that could hold it. The secret value's bytes
 NEVER enter a ``FindingDraft`` field, a ``Locator``, a ``rule_id``, a
 ``coverage_envelope_slice``, the :class:`SecretFindingEvidence`, a
 ``DegradedCondition.reason``, a log line, or a raised exception message. The
@@ -46,8 +48,21 @@ Detection is regex pattern families + a Shannon-entropy threshold over candidate
 assigned string literals. This is a V1 HEURISTIC: it false-positives on test
 fixtures / example/placeholder keys and false-negatives on obfuscated / split /
 base64-nested secrets. The finding is therefore ``advisory=True`` in V1 (a
-verdict-blocking promotion is a deferred future story — see Dev Notes). The locked
-pattern families (each documented by its ``pattern_id``):
+verdict-blocking promotion is a deferred future story — see Dev Notes).
+
+KNOWN LIMITS that remain after Story 18.3 / DF-AUD-DETECT-E, each MEASURED and
+DISCLOSED rather than fixed. The scan is a TEXT scan and is NOT a Python tokenizer.
+Every quoted-literal pattern below now closes with the delimiter it opened with, which
+REALIGNS the scan; it does not tokenize it. So: (1) a literal that CONTAINS its own
+delimiter is still invisible to it; (2) prose in a comment still matches — there is no
+comment model, so a commented-out assignment is reported exactly as a live one is;
+(3) a JSON-style mapping from a quoted key to a quoted value is still NOT matched,
+because the quote between the key and its separator defeats the assignment shape the
+pattern requires (measured: 0 findings before that story and 0 after); and (4) the
+left anchor added there rejects a preceding LETTER OR DIGIT only — see
+``generic_assigned_secret`` below for why it must admit ``_``.
+
+The locked pattern families (each documented by its ``pattern_id``):
 
 - ``aws_access_key_id`` — an ``AKIA``/``ASIA``-prefixed 20-char uppercase/digit id.
 - ``aws_secret_access_key`` — a 40-char base64-ish value assigned to an
@@ -56,7 +71,11 @@ pattern families (each documented by its ``pattern_id``):
   (``-----BEGIN ... PRIVATE KEY-----``).
 - ``generic_assigned_secret`` — an assignment whose key matches
   ``api[_-]?key`` / ``secret`` / ``token`` / ``password`` / ``passwd`` / ``pwd``
-  to a quoted string literal of sufficient length.
+  to a quoted string literal of sufficient length. The key word must NOT be preceded
+  by a letter or a digit (so ``topsecret`` / ``mytoken`` / ``notapassword`` are
+  rejected), but ``_`` IS admitted: ``_`` is the SEPARATOR in ``UPPER_SNAKE_CASE``,
+  which is how credentials are really named, and excluding it was measured to drop
+  ``DB_PASSWORD`` / ``_API_KEY`` / ``SMTP_PASSWORD`` to ZERO findings.
 - ``high_entropy_string`` — a quoted string literal whose length ≥
   :data:`MIN_ENTROPY_TOKEN_LENGTH`, whose Shannon entropy (bits/char) ≥
   :data:`ENTROPY_BITS_PER_CHAR_FLOOR` (entropy stored as an exact ``Fraction``),
@@ -109,7 +128,7 @@ import math
 import re
 from collections import Counter
 from fractions import Fraction
-from typing import Sequence
+from typing import TYPE_CHECKING, Sequence
 
 from pydantic import BaseModel, ConfigDict, Field
 
@@ -275,23 +294,42 @@ class _Match:
 # compute the mask; it is never emitted.
 
 _AWS_ACCESS_KEY_RE = re.compile(r"(?P<secret>(?:AKIA|ASIA)[0-9A-Z]{16})")
+# The opening delimiter is CAPTURED and the close is a BACKREFERENCE to it (Story 18.3
+# / DF-AUD-DETECT-E). Spelling the delimiter as two INDEPENDENT one-of-two classes
+# accepted a span opened with one quote and closed with the other: measured 462 such
+# spans over ``argus/**`` (95 files), 3 of them reportable — one of which was THIS
+# pattern's own source line.
 _AWS_SECRET_KEY_RE = re.compile(
     r"(?i)aws[_-]?(?:secret[_-]?access[_-]?key|secret)\s*[:=]\s*"
-    r"['\"](?P<secret>[A-Za-z0-9/+=]{40})['\"]"
+    r"(?P<q>['\"])(?P<secret>[A-Za-z0-9/+=]{40})(?P=q)"
 )
 _PEM_PRIVATE_KEY_RE = re.compile(
     r"(?P<secret>-----BEGIN (?:RSA |EC |DSA |OPENSSH )?PRIVATE KEY-----)"
 )
+# TWO repairs, both measured (Story 18.3 / DF-AUD-DETECT-E). The LEFT ANCHOR rejects a
+# preceding letter or digit: without it ``topsecret`` / ``mytoken`` / ``notapassword``
+# each reported 1 finding. It deliberately does NOT exclude ``_``: the word-boundary
+# spelling ``(?<![A-Za-z0-9_])`` was executed and drops ``DB_PASSWORD``, ``_API_KEY``
+# and ``SMTP_PASSWORD`` to ZERO, and reddens ``TC-ArgusAgent-SECRET-001-26``, the
+# live-key safeguard — a recall regression wearing a precision fix's clothes. The
+# DELIMITER is captured and back-referenced, as above.
 _GENERIC_ASSIGN_RE = re.compile(
-    r"(?i)(?:api[_-]?key|secret|token|password|passwd|pwd)\s*[:=]\s*"
-    r"['\"](?P<secret>[^'\"\n]+)['\"]"
+    r"(?i)(?<![A-Za-z0-9])(?:api[_-]?key|secret|token|password|passwd|pwd)\s*[:=]\s*"
+    r"(?P<q>['\"])(?P<secret>[^'\"\n]+)(?P=q)"
 )
 # NOTE: this matches ANY quoted literal — docstrings, ``__all__`` entries, help
 # text, log messages — NOT only assigned ones. It was previously named
 # ``_ASSIGNED_LITERAL_RE``, and that name is precisely why an unbounded match was
 # mistaken for a narrow one. The narrowing now lives in the explicit structural
 # predicates applied at the call site, where it is visible.
-_ANY_LITERAL_RE = re.compile(r"['\"](?P<secret>[^'\"\n]+)['\"]")
+# The delimiter is captured and back-referenced here too (Story 18.3 /
+# DF-AUD-DETECT-E). This is the site the entry names, and the direction of its error
+# was BOTH ways rather than over-reporting only: the unpaired form consumed a real
+# credential's opening quote and ``finditer`` then resumed INSIDE the value, so
+# a credential nested inside a single-quoted wrapper reported 0 findings before this
+# repair and 1 after. Over 252 tracked files the paired form finds 13 raw matches the unpaired form
+# does not, ten of them canonical credential shapes.
+_ANY_LITERAL_RE = re.compile(r"(?P<q>['\"])(?P<secret>[^'\"\n]+)(?P=q)")
 
 
 def _has_no_whitespace(value: str) -> bool:
@@ -502,8 +540,25 @@ class SecretScanDetector:
                 continue
 
             ast_span = _ast_span_for_line(ast_entry.definitions, match.start_line)
-            # ── PRODUCER-SIDE REDACTION (the keystone) ──
-            self._evidence_for(match)
+            # ── PRODUCER-SIDE REDACTION IS STRUCTURAL — THERE IS NO STEP TO PERFORM HERE ──
+            # The value is dropped by never being CARRIED, not by a call made here. No emitted
+            # model has a field that could hold it: `FindingDraft` (below), `Recording` /
+            # `Locator` (built by the 1.5 `build_recording`) and `DetectorResult` (returned
+            # below) are all `frozen=True, extra="forbid"`, so there is nowhere to put a value
+            # and no way to add one at runtime. `match.value` never reaches a constructor —
+            # only the LOCATION does. `scan_evidence()` remains the IN-MEMORY evidence carrier
+            # (masked indicator + length + kind + entropy, never the value); the pipeline does
+            # not call it, and Story 2.5 locked it that way — evidence is NOT folded into
+            # `DetectorResult` and is NOT persisted.
+            #
+            # This banner read "PRODUCER-SIDE REDACTION (the keystone)" over a
+            # `self._evidence_for(match)` expression statement whose return value was bound to
+            # nothing (Story 18.2 / `DF-AUD-DETECT-B`): it computed the mask, the length, the
+            # kind, the pattern id and an exact-`Fraction` entropy and discarded all five,
+            # while reading as the load-bearing guarantee. Deleting it changed 0 of 251 tracked
+            # files' `DetectorResult`s. ⛔ Do not reinstate it — `TC-ArgusAgent-SECRET-001-29`
+            # asserts by AST that no `_evidence_for` call site discards its return, and `-28`
+            # asserts `run()`'s output does not depend on that computation at all.
             draft = FindingDraft(
                 file_path=file_path,
                 start_line=match.start_line,
@@ -573,3 +628,14 @@ class SecretScanDetector:
             )
 
         return matches
+
+
+if TYPE_CHECKING:  # pragma: no cover - static conformance pin; TYPE_CHECKING is False at runtime
+    # Story 18.4 / AC2 - the STATIC conformance pin. `mypy argus` is a blocking CI gate
+    # and this line is what it checks: drop `rule_id`, retype it non-`str`, drop `run` or
+    # regress its return type and THIS goes red. It lives inside `argus/` on purpose -
+    # there is no [tool.mypy] section in this repository and CI runs `mypy argus` only, so
+    # the same pin written under `tests/` would be enforced by nothing.
+    from argus.detectors.base import Detector
+
+    _DETECTOR_CONFORMANCE_PIN: Detector = SecretScanDetector()

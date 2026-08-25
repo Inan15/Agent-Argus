@@ -225,8 +225,13 @@ def test_invalidate_rejections_busts_each_ledger_record(tmp_path: Path) -> None:
 def _edited_detector_set() -> tuple[DetectorDescriptor, ...]:
     """A two-detector-set fixture: edit one descriptor's code_identity so the
     detector-set content hash MOVES (the AR6 invalidation lever)."""
+    # The token is deliberately UNMISTAKABLY SYNTHETIC (the tests/test_stage_memo_wiring.py
+    # precedent). It read "secret_scan.v2" until 2026-08-25, when Story 18.3 bumped the LIVE
+    # token to exactly that value - so the "perturbed" set collided with the real one, the
+    # hash stopped moving, and these three cases failed for a reason that had nothing to do
+    # with what they test. A plausible future real value is not a perturbation.
     return (
-        DetectorDescriptor(rule_id="hardcoded_secret", code_identity="secret_scan.v2"),
+        DetectorDescriptor(rule_id="hardcoded_secret", code_identity="secret_scan.v99"),
         *FROZEN_DETECTOR_SET[1:],
     )
 
