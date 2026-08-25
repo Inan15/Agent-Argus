@@ -18,9 +18,15 @@ reused VERBATIM; this module does NOT modify ``ledger/recording.py``.
 
 Contract decisions locked here (frozen for downstream detectors)
 ----------------------------------------------------------------
-- The detector ``Protocol`` is a ``typing.Protocol`` (``run(...) -> DetectorResult``).
-  A concrete detector (Story 1.5 ``vacuous_test``) satisfies it structurally — no
-  inheritance required.
+- The detector ``Protocol`` is a ``typing.Protocol`` declaring the two members the
+  shipped detectors actually share: a ``str`` ``rule_id`` and a callable ``run``
+  returning a ``DetectorResult``. It deliberately does NOT describe ``run``'s
+  parameters — the detectors take different keyword-only signatures on purpose, and
+  the 1.5 ``run(self, *args: object, **kwargs: object)`` spelling was measured to make
+  ``mypy`` REJECT all four of them. A concrete detector satisfies it structurally — no
+  inheritance required — and every detector module carries a static conformance pin
+  against it under ``if TYPE_CHECKING:``, so the blocking ``mypy argus`` gate is what
+  enforces this bullet rather than prose (Story 18.4).
 - ``DetectorResult`` is a frozen ``extra="forbid"`` pure model (the Story 1.1/1.2
   precedent): the per-file ``CoverageLedgerEntry`` candidates the detector graded
   via ``grade_entry``, the ``Recording`` findings, and the per-file DEGRADED
@@ -39,11 +45,12 @@ Contract decisions locked here (frozen for downstream detectors)
 from __future__ import annotations
 
 import hashlib
-from typing import Protocol, runtime_checkable
+from collections.abc import Callable
+from typing import Protocol
 
 from pydantic import BaseModel, ConfigDict, Field
 
-from argus.ledger.coverage_ledger import CoverageLedgerEntry
+from argus.ledger.coverage_ledger import CoverageDepth, CoverageLedgerEntry
 from argus.ledger.recording import (
     Locator,
     Recording,
@@ -63,12 +70,26 @@ __all__ = [
 class FindingDraft(BaseModel):
     """A pre-validation finding description the builder turns into a ``Recording``.
 
-    Frozen ``extra="forbid"`` (the Story 1.1/1.2 precedent). Carries the inputs
-    the FR13 builder needs: the file + 1-based line span, an optional 1.4
-    ``Definition.ast_span`` token, the ``rule_id`` provenance, the
-    advisory-by-contract flag, the supported coverage depth (the verdict-fold
-    input), and the evidence the finding carries WITH it (FR10 "carrying their
-    evidence counts" — a JSON-primitive dict of fixed-precision/int leaves).
+    Frozen ``extra="forbid"`` (the Story 1.1/1.2 precedent). Its EIGHT fields are
+    exactly the inputs the FR13 builder needs: ``file_path`` + the 1-based
+    ``start_line``/``end_line`` span, an optional 1.4 ``Definition.ast_span`` token,
+    the ``rule_id`` provenance, the advisory-by-contract flag, an optional
+    ``cartridge_id``, and the ``coverage_envelope_slice`` reference.
+
+    Two things this draft does NOT carry, stated because the 1.5 docstring claimed
+    both and neither exists on the model (Story 18.4 item C, measured from
+    ``FindingDraft.model_fields``):
+
+    - **the supported coverage depth.** ``depth_supported`` is a keyword PARAMETER of
+      :func:`build_recording`, never a draft field. It reaches the ``Recording``
+      through the builder's signature, so a detector chooses it per finding at
+      construction time rather than declaring it on the draft.
+    - **the evidence the finding carries with it.** No evidence field exists on
+      ``FindingDraft``, on ``DetectorResult`` or on the ten-field ``Recording``. The
+      FR10 "carrying their evidence counts" gap is REPOSITORY-WIDE and OPEN: Story
+      18.2 measured that ``Recording`` has no field that could hold a count and
+      concluded that widening one detector in isolation is the wrong shape of repair.
+      This docstring therefore states the absence; it does not add a field (DN-18-4-6).
     """
 
     model_config = ConfigDict(frozen=True, extra="forbid")
@@ -123,20 +144,50 @@ class DetectorResult(BaseModel):
     )
 
 
-@runtime_checkable
 class Detector(Protocol):
-    """The detector contract — a pure ``run`` producing a :class:`DetectorResult`.
+    """The detector contract — a ``rule_id`` and a pure ``run`` yielding a :class:`DetectorResult`.
 
     A concrete detector satisfies this structurally (``typing.Protocol``); no
     base-class inheritance is required. ``run`` MUST be pure (AR8): a function over
     recorded inputs (test source text + the Story 1.4 ``AstIndexEntry``), no I/O,
-    no clock, no LLM, no ``uuid4``/``random``.
+    no clock, no LLM, no ``uuid4``/``random``. (``ToolRunnerDetector`` is the one
+    disclosed exception — see its module docstring, Story 2.6.)
+
+    Why it does NOT describe ``run``'s parameters (Story 18.4)
+    ---------------------------------------------------------
+    The four shipped detectors take deliberately different keyword-only signatures;
+    forcing a common one would be a worse design. The 1.5 declaration tried to admit
+    them with ``run(self, *args: object, **kwargs: object)``, which does the OPPOSITE:
+    an implementation must accept everything the protocol permits, and a keyword-only
+    signature accepts no positional argument — so ``mypy`` REJECTED all four shipped
+    detectors against it. The protocol was not unused, it was UNUSABLE. What the four
+    genuinely share is a ``str`` ``rule_id`` and a callable ``run`` returning a
+    ``DetectorResult``; that is what is declared here, and every detector module
+    carries a static conformance pin against it under ``if TYPE_CHECKING:`` so the
+    blocking ``mypy argus`` gate checks it.
+
+    Both members are read-only properties BY MEASUREMENT, not by taste: a settable
+    ``rule_id: str`` data member makes ``issubclass`` raise ``TypeError`` and the
+    member invariant, and a settable ``run: Callable[...]`` attribute is rejected for
+    all four with *"expected settable variable, got read-only attribute"*. The
+    property spelling is the only one all four satisfy unedited, and it is already
+    this package's idiom (``vacuous_test._HasFilePath``).
+
+    ``@runtime_checkable`` is DELIBERATELY ABSENT, so ``isinstance``/``issubclass``
+    against this protocol is a ``TypeError``, not a weak yes. The runtime check it
+    used to offer was measured vacuous — it answers ``True`` for a class whose ``run``
+    is the integer ``42`` on CPython 3.11, 3.12 and 3.13 alike — and its verdict is
+    not even stable across the CI matrix (3.12 switched ``runtime_checkable`` from
+    ``hasattr`` to ``inspect.getattr_static``, so a ``__getattr__``-provided member
+    satisfies on 3.11 and does not on 3.12+). Restoring the decorator is a DECISION,
+    not the repair of an omission: say why, and do not let it displace the static pins.
     """
 
-    rule_id: str
+    @property
+    def rule_id(self) -> str: ...  # pragma: no cover - structural declaration
 
-    def run(self, *args: object, **kwargs: object) -> DetectorResult:  # pragma: no cover - protocol
-        ...
+    @property
+    def run(self) -> Callable[..., DetectorResult]: ...  # pragma: no cover - structural
 
 
 def _recording_id(draft: FindingDraft) -> str:
@@ -163,7 +214,7 @@ def _recording_id(draft: FindingDraft) -> str:
 def build_recording(
     draft: FindingDraft,
     *,
-    depth_supported: object | None = None,
+    depth_supported: CoverageDepth | None = None,
     claim_present: bool = False,
 ) -> Recording:
     """Mint a 1.2 ``Recording`` from a ``FindingDraft`` (FR13 locator-or-reject).
@@ -197,7 +248,7 @@ def build_recording(
         rule_id=draft.rule_id,
         cartridge_id=draft.cartridge_id,
         advisory=draft.advisory,
-        depth_supported=depth_supported,  # type: ignore[arg-type]
+        depth_supported=depth_supported,
         claim_present=claim_present,
         locators=(locator,),
         coverage_envelope_slice=draft.coverage_envelope_slice,
