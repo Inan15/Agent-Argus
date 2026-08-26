@@ -4,7 +4,7 @@ baseline_commit: 3696e44
 
 # Story 19.6: Every ledger entry has a container or a dated deferral
 
-Status: ready-for-dev
+Status: review
 
 <!-- Contexted 2026-08-26 at HEAD `3696e44` (branch `docs/merge-strategy-decision`, 37 ahead of
      `origin/master`, working tree CLEAN) by the create-story workflow (Opus 5).
@@ -347,41 +347,41 @@ half-verifying all 47.
 
 ### ⛔ Task 0 — RE-MEASURE §0 BEFORE WRITING ANYTHING (AC1.1, AC4.2)
 
-- [ ] Re-run the guard's exported analyzers; reproduce every row of §0.1.
-- [ ] Re-confirm `DF-AUD-DETECT-C` is absent from the violations (§0.3).
-- [ ] Re-confirm 0 `### DW-` blocks / 166 `- id: DF-` blocks (§0.5).
-- [ ] Re-measure the byte invariants (§0.6) and the next free ids (§0.7).
-- [ ] ⛔ Report **every** row — moved and unmoved — with its command.
+- [x] Re-run the guard's exported analyzers; reproduce every row of §0.1.
+- [x] Re-confirm `DF-AUD-DETECT-C` is absent from the violations (§0.3).
+- [x] Re-confirm 0 `### DW-` blocks / 166 `- id: DF-` blocks (§0.5).
+- [x] Re-measure the byte invariants (§0.6) and the next free ids (§0.7).
+- [x] ⛔ Report **every** row — moved and unmoved — with its command.
 
 ### Task 1 — THE DERIVATION SEARCH, RECORDED (`AI-E17-5`)
 
-- [ ] Grep `argus/` and `scripts/` for any existing derivation of "is this entry still open".
-- [ ] Record command + result **before** writing any new analyzer.
-- [ ] ⛔ Reuse `stale_target_pointers` and friends; do not re-implement the partition.
+- [x] Grep `argus/` and `scripts/` for any existing derivation of "is this entry still open".
+- [x] Record command + result **before** writing any new analyzer.
+- [x] ⛔ Reuse `stale_target_pointers` and friends; do not re-implement the partition.
 
 ### Task 2 — VERIFY THE 47 (AC1)
 
-- [ ] Per entry: read the block, read the code it names, run something that decides.
-- [ ] Record outcome + command + output.
-- [ ] `NEEDS-A-HUMAN` for anything needing a ruling — state the question, do not answer it.
+- [x] Per entry: read the block, read the code it names, run something that decides.
+- [x] Record outcome + command + output.
+- [x] `NEEDS-A-HUMAN` for anything needing a ruling — state the question, do not answer it.
 
 ### Task 3 — THE DISPOSITIONS (AC2)
 
-- [ ] Append-only dated notes, binary mode, invariants re-measured before and after.
-- [ ] ⛔ `git diff` proving no existing field moved.
+- [x] Append-only dated notes, binary mode, invariants re-measured before and after.
+- [x] ⛔ `git diff` proving no existing field moved.
 
 ### Task 4 — THE REGISTRY (AC3, AC4)
 
-- [ ] Move only `ALREADY-RESOLVED` pairs with three-way evidence to `_DISPOSING_STORY_POINTERS`.
-- [ ] Remove exactly those from `_POINTS_AT_DONE_AT_LANDING`, same commit.
-- [ ] Run `-80`; confirm green both directions; record it.
-- [ ] ⛔ If the shrink is zero, **say so plainly** and move on.
+- [x] Move only `ALREADY-RESOLVED` pairs with three-way evidence to `_DISPOSING_STORY_POINTERS`.
+- [x] Remove exactly those from `_POINTS_AT_DONE_AT_LANDING`, same commit.
+- [x] Run `-80`; confirm green both directions; record it.
+- [x] ⛔ If the shrink is zero, **say so plainly** and move on.
 
 ### Task 5 — GATES AND HAND-OFF (AC5)
 
-- [ ] `git diff --stat` proving `argus/**` and the three frozen artifacts are untouched.
-- [ ] Full suite; state the platform.
-- [ ] Stage by explicit path; disclose carried peer files by name.
+- [x] `git diff --stat` proving `argus/**` and the three frozen artifacts are untouched.
+- [x] Full suite; state the platform.
+- [x] Stage by explicit path; disclose carried peer files by name.
 
 ---
 
@@ -421,8 +421,219 @@ usually already knows, and a re-filed entry is worse than none.
 
 ### Agent Model Used
 
+`claude-opus-5[1m]` (bmad-dev-story workflow), 2026-08-26, Windows 11 / Python 3.11.15.
+
 ### Debug Log References
+
+**Task 0 — §0 re-measured at HEAD `ffffcef`** (story contexted at `3696e44`; four commits back, all
+Story 19.1's). ⛔ Every row reported, moved and unmoved (`AI-E17-11`). Measured through the guard's
+**own exported analyzers**, not a re-implementation.
+
+| §0 row | contexted | re-measured | verdict |
+|---|---:|---:|---|
+| `target_story` fields parsed | 150 | **150** | unmoved |
+| …resolving to ≥1 `done` story | 70 | **70** | unmoved |
+| AFFIRMATIVE | 52 | **52** | unmoved |
+| LANDMARK | 18 | **18** | unmoved |
+| LANDMARK ids blanked | 13 | **13** | unmoved |
+| violations = registry pairs | 49 = 49 | **49 = 49** | unmoved |
+| distinct violating ids | 46 | **46** | unmoved |
+| `_DISPOSING_STORY_POINTERS` | 1 | **1** | unmoved |
+| `done` STORY keys | 86 | **86** | unmoved |
+| canonical `- id: DF-` blocks | 166 | **166** two-space / **169** any-indent | ⚠️ **view-dependent — below** |
+| `### DW-` blocks (§0.5) | 0 | **0** | unmoved |
+| `DF-AUD-DETECT-C` in violations (§0.3) | absent | **absent** | unmoved |
+| `deferred-work.md` | 0 CRLF / 8,225 LF / 1 CR @ 5569 b425623 | **identical** | unmoved |
+| `epics.md` · `sprint-status.yaml` | 3,903 · 1,402 CRLF | **identical** | unmoved |
+| next free TC ids | PRECISION 153 · DOCS 81 · DETECT 153 · AUDIT 75 | PRECISION **154** · DOCS 81 · DETECT 153 · AUDIT 75 | ⛔ **ONE MOVED** |
+
+⛔ **THE ROW THAT MOVED, AND IT IS SELF-INFLICTED.** `PRECISION-001` next-free is **154**, not 153,
+because **Story 19.1 took 153 earlier in this same session**. Recorded rather than quietly used —
+this story allocates no TC id at all, so nothing depended on it, but a §0 row that moved because of
+a sibling story is exactly the kind of drift `AI-E17-11` exists to surface.
+
+⚠️ **`- id: DF-` BLOCK COUNT IS VIEW-DEPENDENT (`AI-E17-10`), and the guard uses the LARGER view.**
+§0.5 says 166. That is the count of **two-space-indented** blocks. The guard's own matcher is
+`^ *- id: (DF-…)`, which also takes **three zero-indent blocks** — `DF-AUD-APAA-E` (line 1742),
+`DF-11-4-A` (2566) and `DF-11-4-B` (2586) — for **169**. ⛔ **Two of those three are live registry
+entries**, so a verification pass that used the 166-view matcher would have silently skipped them.
+This story used the guard's matcher. Both numbers are true of different questions; the one that
+matters is 169.
+
+**Task 1 — THE DERIVATION SEARCH, RECORDED BEFORE ANY NEW ANALYZER (`AI-E17-5`).**
+
+| question | command | result | disposition |
+|---|---|---|---|
+| the stale-pointer partition | import from `tests/test_governance_record_integrity.py` | `done_story_keys`, `ledger_target_pointers`, `is_affirmative_target`, `named_done_stories`, `stale_target_pointers` all exported | ⛔ **REUSED — zero re-implementation** |
+| which guards parse the ledger | `grep -rln "deferred-work\.md" tests/*.py` then intersect with `grep -l "id: DF-"` | **17** tests read the file; **exactly 1** also parses `- id: DF-` blocks | §0.5 confirmed, with the qualifier it needed |
+| sweep-skill applicability | `grep -n "BMAD_LOOP_MODE\|### DW-" .claude/skills/bmad-loop-sweep/SKILL.md` | line 34 requires `### DW-<n>:` blocks; this ledger has **0** | ⛔ **NOT RUN, NOT MIGRATED** (§0.5) |
+
+⛔ **Zero new analyzers were written.** The partition in this story's record is the guard's own.
+
+⛔ **§0.5 IS CORRECT, AND NEEDED A SHARPER QUALIFIER.** *"Guards parsing the ledger: exactly one"* is
+true of **entry-structure** parsing and only that. **Seventeen** test modules read
+`deferred-work.md` for content assertions, so an append to it can still disturb them — which is why
+the full suite, not just `-80`, is the gate here. It did not disturb them.
+
+**Task 2 — THE 47, VERIFIED BY EXECUTION.** ⛔ **All 47 completed in one pass — no partition was
+needed** (§2.5 / AC6.3 were available and are not invoked). Every row carries its command and that
+command's output in
+[ledger-verification/ledger-verification-worklist.md](../ledger-verification/ledger-verification-worklist.md).
+
+| outcome | count |
+|---|---:|
+| **STILL-OPEN** | **23** |
+| **ALREADY-RESOLVED** | **18** |
+| **NEEDS-A-HUMAN** | **4** |
+| **BLOCKED** | **2** |
+
+⛔ **ALL SIX `"17-5"` ENTRIES ARE STILL-OPEN**, exactly as AC1.3 anticipated — their prior
+disposition is a corrected pointer on an entry that stays open, never evidence of resolution.
+`DF-12-2-D`/`DF-12-3-A` share one live root cause (`open_llm_adapter.py` still constructs
+`structured_output=()` at three sites); `DF-16-7-B`/`DF-INV-VACUOUS-A` are both still unmeasured in
+`silent-class-record.json`.
+
+**Rows that moved, reported not absorbed:**
+
+- `DF-12-2-C` — **moved in the WRONG direction**: entry recorded 1,412 lines (212 over the cap);
+  measured **1,711** (511 over). The split Story 12.3 owns grew by a further 299 lines.
+- `DF-13-2-A` — **moved half-way**: its 31 rows are no longer `UNADJUDICATED` (26 FP + 5
+  BORDERLINE), but `expert_hours` is still `null` and the gate is still `BLOCKED`, so it stays open
+  on the unmoved half.
+- `DF-14-3-H` — 1,161/1,200 (39 lines of headroom, *"the tightest tracked module"*) → **791**.
+- `DF-11-5-A` — 14,997/15,000 (3 lines) → **14,758** (242). The named cliff is gone.
+- `DF-8-2-A` — 1,199/1,200 → **1,111**.
+
+**Task 3 — THE DISPOSITIONS, APPEND-ONLY AND BINARY-MODE (AC2).**
+
+```
+BEFORE bytes=653103 CRLF=0 loneLF=8225 loneCR=1   (lone CR grep-line 5569, byte 425623)
+AFTER  bytes=661724 CRLF=0 loneLF=8327 loneCR=1   (lone CR grep-line 5569, byte 425623)
+prefix byte-identical: True
+git diff --numstat -- deferred-work.md  ->  102  0
+```
+
+⛔ **`+102 / −0`, and the prefix is byte-identical** — append-only proven by bytes, not asserted.
+The lone CR did not move. Three structural assertions ran **before** the write and would have
+aborted it: no `\r` in the addition, no line matching `^ *- id: DF-`, no line matching
+`^ *- target_story:` — so the note provably cannot create a new entry block or a new pointer.
+
+**Task 4 — THE REGISTRY (AC3, AC4).**
+
+⛔ **THE SHRINK IS TWO PAIRS, AND IT IS AN OUTCOME.** Eighteen entries verified ALREADY-RESOLVED;
+only **two** clear `DF-1-7-B`'s three-way bar. Measured per candidate:
+
+| candidate | story file | retrospective | code | admitted |
+|---|---|---|---|---|
+| `DF-14-2-A` | ✅ names it | ✅ *"2 closed (`DF-14-2-A`, `DF-14-2-B`)"* | ✅ `importorskip` = 0 | ✅ |
+| `DF-14-2-B` | ✅ names it | ✅ same, *"both verified as genuinely received by the ledger"* | ✅ `\A`/`\Z`, docstring names Story 14.3 | ✅ |
+| `DF-AUD-APAA-D`/`-E`/`-F`, `DF-13-1-A` | ✅ names it | ⛔ **retro does NOT name it** | ✅ | ❌ |
+| 12 others | — | — | ✅ | ❌ |
+
+⛔ **`DF-10-3-A` is the case that proves the rule.** It is genuinely fixed, and **its own entry says
+the fix landed in Story 12.8 while its pointer names 12.9** — *"so it was invisible to the story
+that fixed it"*. Rewriting that pointer would be §0.4 mechanism 2. It stays registered.
+
+⛔ **No `target_story` was rewritten. No `target_story: NONE` was introduced. No assertion in `-80`
+was weakened, reworded, exempted or narrowed, and no `_EXCLUDED_BY_DESIGN`-style escape was added.**
+
+**The six non-vacuity floors, re-measured AFTER the write (§0.9):**
+
+```
+1 len(pointers) > 0            True (150)
+2 len(pointers) >= 100         True (150)
+3 landmark == 18               True (18)
+4 affirmative == 52            True (52)
+5 blanked landmark == 13       True (13)
+6 len(violations) > 0          True (47)
+violations == registry pairs   True (47 == 47)
+```
+
+⛔ **AC4.2 did not fire: none of constants 3–5 moved**, so none was updated and none was nudged.
+The registry went 49 → **47** pairs and 46 → **44** ids; `_DISPOSING_STORY_POINTERS` went 1 → **3**.
+Registry line and ledger note land in the **same commit** (§2.1).
+
+**Task 5 — GATES.**
+
+```
+python -m pytest tests/test_governance_record_integrity.py -q   5 passed
+python -m pytest                                                1779 passed in 254.31s   [exit 0]
+git diff --stat -- argus/ tests/corpus/_manifest.py \
+    precision-validation-protocol.md adjudication-record.json   (empty - all untouched)
+```
+
+⛔ **PLATFORM: WINDOWS ONLY.** 1,779 → **1,779**: this story adds no test, and that is correct — its
+evidence is 47 executed commands, and `-80` already existed and was deliberately not widened
+(AC4.3). ⛔ **Do not read the unchanged count as "no verification happened"**; read the record.
+PR #9 still has no CI result (Actions outage), so `AI-E17-3` stays open.
 
 ### Completion Notes List
 
+**All 47 verified by execution in a single pass.** 23 STILL-OPEN · 18 ALREADY-RESOLVED · 4
+NEEDS-A-HUMAN · 2 BLOCKED. ⛔ **No entry was closed by argument** — `AI-E12-3` is this story's named
+defect and every disposition carries a command and its output.
+
+⛔ **THE REGISTRY SHRANK BY TWO, AND THAT IS THE RESULT — not a shortfall.** §0.4 gives the registry
+exactly one clean exit and AC3.4 says a shrink of zero is acceptable and must not be argued around.
+Eighteen entries are genuinely resolved; sixteen of them keep a pointer that names a story which did
+not discharge them, so admitting them would have required rewriting pointers — the forbidden
+mechanism, and the `AI-E12-3` defect committed inside the story written to end it.
+
+⛔ **FOUR QUESTIONS ARE STATED AND NOT ANSWERED (AC6.1).** `DF-10-4-A` — the ledger records it
+**CLOSED 2026-08-16** while the all-or-nothing trigger it describes is **still live**, and
+`DF-11-4-A` says in terms it is *"the SAME trigger"* and is itself open: was this a closure by
+supersession (coherent) or an `AI-E12-6` false closure? `DF-AUD-DETECT-C` — two **non-equivalent**
+repairs, and the entry says choosing is the Engineering Lead's. `DF-11-4-B` — whether to re-validate
+and lift the `tree-sitter <0.26` bound, which needs a throwaway environment. `DF-11-4-D` — the
+Epic-11 checkpoint review reading a five-edit pattern, which no code change can discharge.
+
+⛔ **TWO ARE BLOCKED ON THE OPERATOR ACTS THIS EPIC EXISTS FOR.** `DF-6-6-A` and `DF-7-2-A` both ask
+for the human TP/FP adjudication that clears the ≥80% gate — Story 19.4, and 19.2 before it. AC6.2
+says adjudicating a finding is not an autonomous act, so verification stopped there rather than
+estimating.
+
+⛔ **§0.5 CONFIRMED AND SHARPENED, AND THE PROPOSAL IT CORRECTS STAYS CORRECTED.** `bmad-loop-sweep`
+was **not run and nothing was migrated**: the skill triages `### DW-<n>:` blocks and this ledger has
+**zero** of them against 169 `- id: DF-` blocks. `sprint-change-proposal-2026-08-26.md` §3.3's
+recommendation remains false. The added qualifier: *"exactly one guard parses the ledger"* is true of
+**entry-structure** parsing — 17 test modules read the file for content, which is why the full suite
+was the gate.
+
+⛔ **A MEASUREMENT TRAP FOUND AND AVOIDED.** Three `- id: DF-` blocks sit at **zero indentation**, two
+of them live registry entries (`DF-11-4-A`, `DF-11-4-B`). A pass that matched only the 166
+two-space blocks would have skipped both while appearing complete. This story used the guard's own
+matcher and covered all 169.
+
+**Delivered:**
+
+1. **The record** — `ledger-verification/ledger-verification-record.json`, 47 rows, closed
+   four-value vocabulary, each row carrying `command`, `output`, `finding`, `registry_bound`,
+   `target_story` and `registry_exit`.
+2. **The worklist** — `ledger-verification-worklist.md` in the `blocking-worklist.md` house form.
+   ⛔ Its name matches **neither** `sprint-change-proposal-*.md` **nor** `epic-*-retro-*.md` (§0.8);
+   `tests/test_status_document_registry.py` re-run and green.
+3. **The dispositions** — one dated append-only section, `+102 / −0`, byte-identical prefix.
+4. **The registry** — two evidence-backed pairs moved, in the same commit.
+
+⛔ **NOTHING WAS RATIFIED, FETCHED, ADJUDICATED OR SPENT.** `DF-13-5-A` stays OPEN and UNSPENT, the
+§2 External adjudicator stays UNFILLED, the gate stays BLOCKED, `protocol_cleared` stays `False`,
+and `argus/**` is byte-unchanged — this story wrote no production code.
+
 ### File List
+
+| file | status |
+|---|---|
+| `_bmad-output/design-artifacts/ArgusAgent/ledger-verification/ledger-verification-record.json` | **new** — 47-row machine record |
+| `_bmad-output/design-artifacts/ArgusAgent/ledger-verification/ledger-verification-worklist.md` | **new** — human worklist |
+| `_bmad-output/design-artifacts/ArgusAgent/deferred-work.md` | modified — **append-only**, `+102 / −0` |
+| `tests/test_governance_record_integrity.py` | modified — 2 pairs moved to `_DISPOSING_STORY_POINTERS`, same 2 removed from `_POINTS_AT_DONE_AT_LANDING` |
+| `_bmad-output/design-artifacts/ArgusAgent/stories/19-6-…md` | modified — permitted sections only |
+| `_bmad-output/design-artifacts/ArgusAgent/sprint-status.yaml` | modified — `19-6` → `review` (peer-shared, disclosed) |
+
+⛔ No file outside this list was touched; `argus/**` and the three frozen artifacts are byte-unchanged.
+
+### Change Log
+
+| date | change |
+|---|---|
+| 2026-08-26 | Story 19.6 implemented. All 47 ledger entries pointing at a closed story verified **by execution** — 23 STILL-OPEN, 18 ALREADY-RESOLVED, 4 NEEDS-A-HUMAN, 2 BLOCKED — each with its command and output. Registry shrank by **exactly 2** (`DF-14-2-A`, `DF-14-2-B`), the only pairs clearing `DF-1-7-B`'s three-way bar; 16 other resolved entries deliberately kept their registration rather than have a pointer rewritten. Dispositions appended `+102 / −0` in binary mode with the lone CR unmoved at 5569. All six `-80` non-vacuity floors re-measured and unmoved. 1,779 passed, Windows only. Nothing ratified, fetched, adjudicated or spent. |

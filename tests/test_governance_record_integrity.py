@@ -500,7 +500,25 @@ def stale_target_pointers(
 #: docstring all record it. ⛔ **Its exclusion is asserted here rather than left to a reviewer's
 #: memory**, which is the whole difference between a registry and a habit.
 _DISPOSING_STORY_POINTERS: frozenset[tuple[str, str]] = frozenset(
-    {("DF-1-7-B", "6-2-full-python-ast-grounding-of-audited-deep-claims")}
+    {
+        ("DF-1-7-B", "6-2-full-python-ast-grounding-of-audited-deep-claims"),
+        # ── Story 19.6, 2026-08-26. Verified by execution, then admitted here — the ONLY
+        # legitimate exit from the registry below (narrowing 2). Both clear `DF-1-7-B`'s
+        # three-way bar: the 14.3 story file names them, the Epic-14 retrospective records
+        # "**2 closed** (`DF-14-2-A`, `DF-14-2-B`)" and "both verified as genuinely received
+        # by the ledger", and the shipped code agrees — `importorskip` in
+        # `tests/test_vacuous_detector.py` is now 0, and `provenance_scan.py`'s
+        # `_ASSIGNMENT_RE` uses `\A`/`\Z` with its docstring recording "re-anchored `\A`
+        # 2026-08-18 (Story 14.3)".
+        #
+        # ⛔ SIXTEEN other entries were ALSO verified ALREADY-RESOLVED and are deliberately
+        # NOT admitted here: their `target_story` does not name the story that discharged
+        # them, so the pointer is stale for a different reason and stays registered as
+        # evidence. `DF-10-3-A` is the clearest — fixed by Story 12.8 while its pointer
+        # names 12.9. Rewriting a pointer to manufacture an exit is the forbidden mechanism.
+        ("DF-14-2-A", "14-3-the-assertion-vocabulary-crosses-the-languages-the-installer-ships"),
+        ("DF-14-2-B", "14-3-the-assertion-vocabulary-crosses-the-languages-the-installer-ships"),
+    }
 )
 
 #: **The historical population this guard found the day it landed** — registered BY NAME, with
@@ -554,16 +572,6 @@ _POINTS_AT_DONE_AT_LANDING: frozenset[tuple[str, str, str]] = frozenset(
         ("DF-13-1-A", "13-1-decide-what-validation-set-is-then-build-it", "unverified"),
         ("DF-13-2-A", "13-2-adjudicate-every-finding-by-a-named-human", "unverified"),
         ("DF-14-1-A", "6-2-full-python-ast-grounding-of-audited-deep-claims", "17-5"),
-        (
-            "DF-14-2-A",
-            "14-3-the-assertion-vocabulary-crosses-the-languages-the-installer-ships",
-            "unverified",
-        ),
-        (
-            "DF-14-2-B",
-            "14-3-the-assertion-vocabulary-crosses-the-languages-the-installer-ships",
-            "unverified",
-        ),
         (
             "DF-14-3-D",
             "15-1-a-bench-with-the-defect-class-in-it-chosen-before-anyone-looks",

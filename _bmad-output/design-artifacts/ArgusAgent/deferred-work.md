@@ -8223,3 +8223,105 @@ unpushed and there is no CI evidence at any sha in this arc.**
   test ids are byte-unchanged. ⛔ **No canonical entry moved, no `_POINTS_AT_DONE_AT_LANDING`
   pair was added or removed, `TC-ArgusAgent-DOCS-001-80` was not touched, and `ledger_closed_ids`
   is 42 before and 42 after.**
+
+---
+
+## Story 19.6 — every entry that points at a closed story is verified against the code (2026-08-26)
+
+**Append-only, as always (§3.4 evidence immutability).** Nothing above this line was edited. No
+`id`, `origin_story`, `owner`, `category`, `severity` or `target_story` field was touched on any
+entry — proven by this file's diff being `+n / -0`. ⛔ **The six `"17-5"` entries keep their
+deliberately-unrewritten pointers**; Story 17.5's decision is cited, not reopened.
+
+⛔ **NOTHING HERE IS CLOSED BY ARGUMENT.** Each of the 47 carries the command that decided it and
+that command's output, in
+[ledger-verification/ledger-verification-worklist.md](ledger-verification/ledger-verification-worklist.md)
+and its machine record. `AI-E12-3` is this story's named defect and the reason every disposition
+is executed rather than reasoned.
+
+**Population 47** — the 46 registry-bound ids plus `DF-AUD-DETECT-C`, which is **not** in the
+registry (Story 17.3 corrected its pointer), so its verification cannot and does not change it.
+
+**Outcomes:** **23 STILL-OPEN** · **18 ALREADY-RESOLVED** · **4 NEEDS-A-HUMAN** · **2 BLOCKED**
+
+### The registry shrinks by TWO pairs, and the number is an OUTCOME rather than a target
+
+Only `DF-14-2-A` and `DF-14-2-B` clear `DF-1-7-B`'s three-way bar — story file **and**
+retrospective **and** shipped code. The Epic-14 retrospective records *"**2 closed**
+(`DF-14-2-A`, `DF-14-2-B`)"* and *"both verified as genuinely received by the ledger"*; their
+`target_story` names `14-3-…`, the story that discharged them; and the code agrees —
+`importorskip` in `tests/test_vacuous_detector.py` is now **0**, and `provenance_scan.py`'s
+`_ASSIGNMENT_RE` uses `\A`/`\Z` with its own docstring recording *"re-anchored `\A` 2026-08-18
+(Story 14.3)"*. Both pairs move to `_DISPOSING_STORY_POINTERS` in the same commit as this note.
+
+⛔ **SIXTEEN further entries are ALREADY-RESOLVED and do NOT leave the registry**, because their
+pointer does not name the story that discharged them, or the retrospective does not record the
+closure. `DF-10-3-A` is the clearest case and its own entry already said so: the fix landed in
+Story **12.8** while the pointer names **12.9**, *"so it was invisible to the story that fixed
+it"*. ⛔ **No pointer was rewritten to manufacture an exit** (mechanism 2) and **no
+`target_story: NONE` was introduced** (mechanism 3).
+
+### Verified ALREADY-RESOLVED — the described defect is no longer in the tree
+
+- **`DF-10-3-A`** — exit 1 ; exit 1
+- **`DF-11-5-A`** — 14638 / 14758 against the 15000 budget
+- **`DF-11-5-C`** — 0 markers; 3 command assets ship (argus-audit.md, argus-audit-report.md, argus-audit-security.md)
+- **`DF-13-1-A`** — 21 members; eligible N = 5; floor = 5
+- **`DF-14-2-A`** — 0
+- **`DF-14-2-B`** — _ASSIGNMENT_RE now uses \A ... \Z; docstring :80 corrected to 'No pattern below is anchored with ^ or $ - every one uses \A'; :171 records 'Also re-anchored \A 2026-08-18 (Story 14.3)'
+- **`DF-14-3-H`** — 791
+- **`DF-5-1-A`** — minions_core path ABSENT; argus/cache/key.py:308 prompt_template_version field present
+- **`DF-8-1-A`** — row 4 renders WARNING 'Release readiness is NOT VOUCHED - Argus found nothing blocking, but ... This is a statement about the audit, not about the code.'
+- **`DF-8-2-A`** — 1111
+- **`DF-8-2-B`** — suffixes now _spec.rb/_test.rs/... ; latest.java->False, myspec.rb->False, foo_spec.rb->True
+- **`DF-8-3-B`** — line 874 call is inside try; 876 except ShipReadinessError; 879 except ValueError
+- **`DF-8-4-A`** — exit 1 -> AUDIT_FAILED, documented 'NOT a verdict ... never read as a ran-and-under-covered result'
+- **`DF-8-5-A`** — proof_run.py:227 DOGFOOD_ArgusAgent_VERSION = _ARGUS_VERSION ; pyproject version = 0.1.0
+- **`DF-9-2-C`** — 0
+- **`DF-AUD-APAA-D`** — line 315 '~~multi-language AST,~~' STRUCK; line 317 'multi-language AST grounding is delivered in V1'; line 1406 '~~multi-language AST (V2),~~' STRUCK
+- **`DF-AUD-APAA-E`** — entry's own status: 'CLOSED 2026-08-10 - remedy delivered, and the entry's own enumeration corrected from four to six'; README 21 / first-run 5 documented invocations
+- **`DF-AUD-APAA-F`** — ast_index.py:434-436 documents 'This function USED TO BE one try ending in except (ImportError, Exception): pass'; arms now split - 405 tree_sitter_runtime_unvalidated, 492 grammar_load_failed_<lang>
+
+### Verified STILL-OPEN — the defect is still present, measured
+
+- **`DF-10-2-A`** — 0 occurrences
+- **`DF-10-4-B`** — 1 hit, and it is generator.py:421 DOCSTRING saying 'no production code reads it back - filed as DF-10-4-B'
+- **`DF-10-4-C`** — token recorded; no exception-class detail persisted
+- **`DF-10-4-D`** — line 241 git ls-files -z (the INDEX)
+- **`DF-11-2-A`** — c and php still exempt, still targeting 12.5
+- **`DF-11-2-B`** — 'c' and 'php' both still registered exemptions, reasons still naming target 12.5
+- **`DF-11-4-A`** — 'if eligible: return []' still live at the trigger; docstring says 'The all-or-nothing trigger below is Story 12.5's, not this one's'
+- **`DF-12-1-A`** — 1326
+- **`DF-12-1-B`** — line 129 deferred_work_id="DF-12-1-B" - the exemption is still registered
+- **`DF-12-1-C`** — 1203
+- **`DF-12-2-C`** — 1711
+- **`DF-12-2-D`** — lines 139, 166, 200 all construct structured_output=()
+- **`DF-12-3-A`** — structured_output never populated
+- **`DF-12-7-B`** — no hits
+- **`DF-13-2-A`** — 31 rows; dispositions FP=26 BORDERLINE=5; expert_hours_numerator/denominator = None/None
+- **`DF-14-1-A`** — vacuous_test.py:85 section 'Why fact (b) is not mock_sites >= 1'
+- **`DF-14-3-D`** — advisory=True + depth_supported=None still the non-corroborated path (:52-54)
+- **`DF-16-7-A`** — lines 119-121: requirement 3's 'no consumed SUT call' still whole-function scoped
+- **`DF-16-7-B`** — smoke_test_proportion measured=False, 0 of 36 assessed, proportion_numerator/denominator None
+- **`DF-8-3-A`** — 4 sites, ALL of the form 'if not verdict.critical_subsystems_all_deep'
+- **`DF-AUD-APAA-A`** — no hits - zero production callers outside the package
+- **`DF-AUD-APAA-C`** — audit-ci.yml present; CI has never run on this branch (Actions outage from 2026-08-26 15:11:58 UTC)
+- **`DF-INV-VACUOUS-A`** — class_size 36, rule_id vacuous_test_heuristic, proportion NOT MEASURED
+
+### ⛔ NEEDS-A-HUMAN — the question is stated here and is NOT answered
+
+- **`DF-10-4-A`** — CONTRADICTION FOUND, REPORTED NOT RESOLVED. The ledger records 'status: CLOSED 2026-08-16', but the defect it describes (the all-or-nothing readability trigger) is still in the code, and DF-11-4-A explicitly says 'the SAME trigger already filed as DF-10-4-A' and is itself open. QUESTION FOR THE OPERATOR, NOT ANSWERED HERE: was DF-10-4-A closed by supersession into DF-11-4-A (coherent), or is this an AI-E12-6 false closure? Only the operator can say which was intended.
+- **`DF-11-4-B`** — QUESTION FOR THE OPERATOR, NOT ANSWERED HERE: should the <0.26 bound be re-validated against a real 0.26 install and lifted? The entry names owner 'XAgent007 (operator) for the decision'. Re-validation needs a throwaway environment, which is an operator action.
+- **`DF-11-4-D`** — QUESTION FOR THE OPERATOR, NOT ANSWERED HERE: the entry asks the Epic-11 CHECKPOINT REVIEW to read this file's edit history after the pattern ran to five consecutive _NOTE_SECTIONS edits. That is a human review act, not a code defect, and no code change can discharge it.
+- **`DF-AUD-DETECT-C`** — NOT IN THE REGISTRY (s0.3) so this verification cannot and does not change it. QUESTION FOR THE OPERATOR, NOT ANSWERED HERE: the entry names two NON-EQUIVALENT repairs - delete the call and correct the comment (matches what ships), or widen DetectorResult to carry evidence (matches what Story 2.5 SAYS). The entry itself says choosing is the Engineering Lead's.
+
+### BLOCKED on an operator act
+
+- **`DF-6-6-A`** — BLOCKED ON AN OPERATOR ACT. Asks for the human TP/FP adjudication that clears the >=80% gate - that is Story 19.4 (and 19.2 before it). Story 19.6 AC6.2: adjudicating a finding is NOT an autonomous act, so this STOPS here.
+- **`DF-7-2-A`** — BLOCKED ON THE SAME OPERATOR ACT as DF-6-6-A - the human adjudication over the dogfood findings. Not verifiable further without 19.4.
+
+⛔ **Nothing else is filed, closed, disposed of or spent by this note.** `DF-13-5-A` stays **OPEN
+and UNSPENT**, the protocol §2 External adjudicator stays **UNFILLED**, no corpus member is
+ratified, the gate stays **BLOCKED** and `protocol_cleared` stays `False`. Every entry not named
+above keeps its status.
+
