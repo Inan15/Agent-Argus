@@ -4,7 +4,7 @@ baseline_commit: 83ecc8d
 
 # Story 19.1: The ratification package the operator cannot rule without
 
-Status: ready-for-dev
+Status: review
 
 <!-- Contexted 2026-08-26 at HEAD `83ecc8d` (branch `docs/merge-strategy-decision`, 36 ahead of
      `origin/master`) by the create-story workflow (Opus 5).
@@ -430,45 +430,45 @@ measurements. See §0.8.
 
 ### ⛔ Task 0 — RE-MEASURE §0 BEFORE WRITING ANYTHING (AC3.3, AC1.1)
 
-- [ ] Re-probe all six pins with `git cat-file -e <sha>^{commit}`; re-walk each tree.
-- [ ] Re-dump the six manifest rows field by field; confirm §0.2's claim that the package is
+- [x] Re-probe all six pins with `git cat-file -e <sha>^{commit}`; re-walk each tree.
+- [x] Re-dump the six manifest rows field by field; confirm §0.2's claim that the package is
       already carried.
-- [ ] Re-measure `eligible_member_count()`, the sealed/ratified intersection, and the byte
+- [x] Re-measure `eligible_member_count()`, the sealed/ratified intersection, and the byte
       invariants of §0.8.
-- [ ] Re-scan the four TC-id families for their maxima.
-- [ ] ⛔ Record the result of **every** row — moved and unmoved — with the command used.
+- [x] Re-scan the four TC-id families for their maxima.
+- [x] ⛔ Record the result of **every** row — moved and unmoved — with the command used.
 
 ### Task 1 — THE DERIVATION SEARCH, RECORDED (AC4.2)
 
-- [ ] For each factual question the worksheet answers, grep for an existing derivation.
-- [ ] Record command + result in the Dev Agent Record **before** writing any new function.
+- [x] For each factual question the worksheet answers, grep for an existing derivation.
+- [x] Record command + result in the Dev Agent Record **before** writing any new function.
 
 ### Task 2 — THE RECORD (AC1.1, AC1.2, AC1.4, AC1.5, AC2.4)
 
-- [ ] Build the closed schema; populate from the manifest; leave the two measured columns empty.
-- [ ] ⛔ Assert no recommendation/rank/score field exists.
+- [x] Build the closed schema; populate from the manifest; leave the two measured columns empty.
+- [x] ⛔ Assert no recommendation/rank/score field exists.
 
 ### Task 3 — THE TWO MEASURED COLUMNS (AC1.2, AC1.4)
 
-- [ ] Run `audit_validation_corpus.py` per member with a **SHORT** `--snapshot-root` and an
+- [x] Run `audit_validation_corpus.py` per member with a **SHORT** `--snapshot-root` and an
       **explicit `--output-name`** under the ratification prefix (§0.5).
-- [ ] ⛔ `git status` `validation-corpus/` after the FIRST run, before doing the other five —
+- [x] ⛔ `git status` `validation-corpus/` after the FIRST run, before doing the other five —
       confirm `adjudication-set.json` is untouched. The default `--output-name` would clobber it.
-- [ ] Record the exact command per member in the story record.
-- [ ] Any member that fails to measure → `UNMEASURED` + reason.
+- [x] Record the exact command per member in the story record.
+- [x] Any member that fails to measure → `UNMEASURED` + reason.
 
 ### Task 4 — THE GUARD (AC5)
 
-- [ ] Write it at the next free id; non-vacuity precondition first.
-- [ ] Drive it **RED** against the tree before the record lands; record the failure text.
-- [ ] Land the record; confirm **GREEN**; record it.
+- [x] Write it at the next free id; non-vacuity precondition first.
+- [x] Drive it **RED** against the tree before the record lands; record the failure text.
+- [x] Land the record; confirm **GREEN**; record it.
 
 ### Task 5 — SCOPE, GATES, HAND-OFF (AC2.1, AC2.2, AC5.4, AC6)
 
-- [ ] `git diff --stat` proving the three frozen artifacts are untouched.
-- [ ] Full suite; ⛔ **state the platform** — Windows only unless CI has recovered (§2.4).
-- [ ] Stage by explicit path; disclose any carried peer file by name.
-- [ ] Re-measure byte invariants after every write.
+- [x] `git diff --stat` proving the three frozen artifacts are untouched.
+- [x] Full suite; ⛔ **state the platform** — Windows only unless CI has recovered (§2.4).
+- [x] Stage by explicit path; disclose any carried peer file by name.
+- [x] Re-measure byte invariants after every write.
 
 ---
 
@@ -517,8 +517,192 @@ No new package, no new import outside the standard library and what `argus/` alr
 
 ### Agent Model Used
 
+`claude-opus-5[1m]` (bmad-dev-story workflow), 2026-08-26, Windows 11 / Python 3.11.15.
+
 ### Debug Log References
+
+**Task 0 — §0 re-measured at HEAD `d2e8844` (story was contexted at `83ecc8d`; tree CLEAN, 38
+ahead of `origin/master`).** Every row re-measured by execution. ⛔ The result of every row is
+recorded, moved and unmoved, per `AI-E17-11`.
+
+| §0 row | contexted value | re-measured | verdict |
+|---|---|---|---|
+| §0.1 six pins reachable | all 6 ✅ | all 6 ✅ (`git cat-file -e <sha>^{commit}`) | unmoved |
+| §0.1 files @ pin | 3919/823/1252/2164/**639**/374 | 3919/823/1252/2164/**638**/374 | ⛔ **ONE MOVED — see below** |
+| §0.1 `.py` @ pin | 1703/419/366/447/499/192 | identical | unmoved |
+| §0.2 manifest carries the package | all 8 fields, all 6 rows | confirmed by field-by-field dump | unmoved |
+| §0.3 `eligible_member_count()` | 5 | 5 | unmoved |
+| §0.3 sealed/open split | 6 sealed / 8 open, all `eligible_for_n=False` | identical | unmoved |
+| §0.3 sealed ∩ ratified | `[]` | `[]` | unmoved |
+| §0.4 checkouts on disk | all 6 present under `D:/_bench` | all 6 present | unmoved |
+| §0.7 next free TC ids | PRECISION 153 · DOCS 81 · DETECT 153 · AUDIT 75 | PRECISION 153 · DOCS 81 · DETECT **154 (md view) / 153 (py view)** · AUDIT 75 | ⚠️ **view-dependent — see below** |
+| §0.8 `deferred-work.md` | 0 CRLF / 8,225 LF / 1 CR @ 5569, offset 425,623 | identical | unmoved |
+| §0.8 `epics.md` | 3,903 CRLF | 3,903 CRLF | unmoved |
+| §0.8 `sprint-status.yaml` | 1,402 CRLF | 1,402 CRLF | unmoved |
+
+⛔ **THE ROW THAT MOVED — `getsentry-sentry-python`, 639 → 638 files at pin (AC3.2).**
+Both numbers are correct about different questions, and the cause is measured rather than guessed:
+
+```
+git -C D:/_bench/sentrypy ls-tree -r 064542dd2cbd | awk '{print $2}' | sort | uniq -c
+    638 blob
+      1 commit
+160000 commit 6d2c435b8ce3a67e2065f38374bb437f274d0a6c	checkouts/data-schemas
+```
+
+§0.1 measured with a raw `git ls-tree -r --name-only | wc -l`, which counts the **submodule
+gitlink** as a file. The shipped `pinned_corpus_snapshot.pinned_tree` helper keeps `blob` entries
+and drops `commit`/`tree` entries, so it reports **638**. A gitlink is a pointer to a commit in
+another repository and its bytes are not in this checkout at all, so counting it would have
+overstated the auditable surface of the only sealed member that has one. **638 is recorded**, and
+the distinction is carried in the record's own `file_count_semantics` field rather than only here.
+⛔ This is a §0.1 correction found *because* the one-derivation rule was obeyed — a hand-rolled
+walk would have reproduced the 639.
+
+⚠️ **The `DETECT-001` next-free id is view-dependent (`AI-E17-10`), and it does not affect this
+story.** `py`-only view: max 152. `py`+`md` view: max **153**, from a *prose reservation* in
+`17-3-grade-what-the-assertion-constrains.md` that was never allocated in code. Recorded, not
+resolved — this story allocates in the `PRECISION` family, whose maximum is 152 in **both** views,
+so the guard took **153** unambiguously.
+
+**Task 1 — THE DERIVATION SEARCH, RECORDED BEFORE ANY NEW FUNCTION WAS WRITTEN (AC4.2,
+`AI-E17-5`).** Commands and results:
+
+| question | command | result | disposition |
+|---|---|---|---|
+| the 8 manifest facts | field-by-field dump of `tests.corpus._manifest.VALIDATION_CORPUS` | all 8 present and populated for all 6 | ⛔ **CARRIED VERBATIM — not re-derived** |
+| pin reachability | `grep -rn "PinUnreachable\|cat-file -e\|rev-parse" scripts/*.py argus/**/*.py` | `scripts/pinned_corpus_snapshot.py::pin_is_reachable` (exported in `__all__`) | ⛔ **REUSED** |
+| tree walk at pin | `grep -rn "ls-tree" scripts/*.py argus/**/*.py` | `pinned_corpus_snapshot.py::pinned_tree`; `build_silent_class_record.py` already reuses it | ⛔ **REUSED** |
+| checkout path mapping | `grep -rn "overrides\|--map" scripts/*.py` | `audit_validation_corpus.py` `--map MEMBER_ID=RELATIVE_PATH` | ⛔ **SAME FLAG SHAPE COPIED** |
+| heuristic finding count | `--help` read off `main()` at HEAD | `scripts/audit_validation_corpus.py` — **REFUSES** (below) | ⛔ **UNMEASURED, not forked** |
+| CI-safe record check | `grep -n "_check_without_corpus" scripts/build_silent_class_record.py` | precedent for the `--check` path | ⛔ **PATTERN REUSED** |
+| AST network ban | `grep -rn "PRECISION-001-141" tests/*.py` | `tests/test_precision_preregistration.py:741` | ⛔ **SHAPE REUSED** |
+
+⛔ **Zero new derivations of an already-answered question were written.**
+
+**Task 3 — the finding-count producer, EXECUTED twice and REFUSED both times.**
+
+```
+python scripts/audit_validation_corpus.py --checkout-root D:/_bench \
+  --map aws-aws-sam-cli=samcli --only aws-aws-sam-cli \
+  --snapshot-root D:/_argus_snap --output-name ratification-probe-19-1.json
+REFUSED - no eligible members selected            [exit 2]
+
+# and again with all six mapped and all six --only'd:
+REFUSED - no eligible members selected            [exit 2]
+```
+
+⛔ `git status` on `validation-corpus/` **before and after both runs: clean.**
+`adjudication-set.json` was **not** clobbered — the explicit `--output-name` held, and the refusal
+occurs at member selection (`audit_validation_corpus.py:568-570`) before any write is attempted.
+
+**Task 4 — the guard driven RED then GREEN by execution (AC5.3).**
+
+```
+# RED, before the record landed:
+python -m pytest tests/test_ratification_record.py -q
+E  Failed: no committed ratification record at .../ratification/ratification-record.json.
+   Story 19.1's deliverable is the record; without it every assertion below would pass vacuously.
+   -> 2 errors (the AST network-ban test passed, as it reads only the producer's source)
+
+# GREEN, after:
+python -m pytest tests/test_ratification_record.py -q    ->  3 passed
+python scripts/build_ratification_record.py --check      ->  OK - 6 rows, eligible_member_count 5
+```
+
+**Task 5 — gates.**
+
+```
+python -m pytest                                          1763 passed in 308.02s   [exit 0]
+python -m mypy scripts/build_ratification_record.py tests/test_ratification_record.py
+                                                          Success: no issues found in 2 source files
+git diff --stat -- tests/corpus/_manifest.py \
+    .../precision-validation-protocol.md .../adjudication-record.json
+                                                          (empty - all three byte-unchanged)
+```
+
+⛔ **PLATFORM: WINDOWS ONLY.** Baseline 1,760 → **1,763** (+3 new, 0 removed, 0 skipped, 0
+weakened). No `ruff`/`flake8` is configured in `pyproject.toml`, so no lint gate was available to
+run; `mypy` is the static gate and it is clean.
 
 ### Completion Notes List
 
+⛔⛔ **THE CENTRAL FINDING, AND IT FALSIFIES §0.5's PREMISE (AC3.2).** §0.5 states *"THE FINDING
+COUNT HAS EXACTLY ONE PRODUCER, and it already exists"*. **It exists, and it structurally refuses
+every sealed member.** `audit_validation_corpus.py:568` folds over `manifest.eligible_members()`,
+which is `tuple(spec for spec in VALIDATION_CORPUS if spec.eligible_for_n)`. All six sealed
+candidates carry `eligible_for_n = False` / `"candidate - awaiting operator ratification (protocol
+section 6 R2)"`, so the selection is empty and the runner exits `REFUSED` with code 2. Measured
+twice, by execution, above.
+
+⛔ **THIS IS A MOAT, NOT A DEFECT, AND IT WAS NOT "FIXED".** The three routes to the number were
+all refused: **(a)** flip `eligible_for_n` — that **IS** the §6 R2 operator act this record exists
+to inform, and AC6.2 says STOP; **(b)** write a second walker — barred by AR7/`DN-3` and by AC4.1
+in terms; **(c)** widen the runner to audit unratified repositories — which would delete the very
+refusal that keeps corpus-shopping unexpressible, and is a scope widening AC6.4 requires be
+escalated *before* the write, not after. **None was taken.** `heuristic_findings_at_pin` is
+recorded `UNMEASURED` for all six with the reason in the record's own
+`finding_count_unmeasured_reason` field, and no member is dropped (§1.3, `POPULATION_DERIVATION`).
+
+⛔ **THE SEQUENCING CONSEQUENCE, RECORDED AS AN OBSERVATION AND NOT AS A RECOMMENDATION (AC6.3).**
+Epic 19 put 19.1 in front of 19.2 so the operator would hold a finding count before ratifying.
+Measurement says that count **cannot exist before that ratification**. The operator therefore holds
+**12 of the 13 columns** and not the 13th. ⛔ **Whether that is enough to rule on is the operator's
+decision, and this story does not take it** — the record carries the observation in its
+`sequencing_observation` field and argues neither for ratification nor against it. **It does not
+change the answer to `DF-13-5-A`**, whose pre-registered rule turns on what a *round* returns after
+members are ratified; that entry stays **OPEN and UNSPENT** and no round was spent here.
+
+**Delivered — all three separable pieces (§"What this story IS"):**
+
+1. **The record** — `validation-corpus/ratification/ratification-record.json`, closed schema, 6
+   rows keyed by `member_id`, 8 carried manifest fields + 5 measured columns each, plus
+   `ratifies_nothing` / `recommends_nothing` / `adjudicates_nothing` / `scope_disclaimer` /
+   `sequencing_observation` / `eligible_member_count_before|after` / `eligible_for_n_moved_for` /
+   `sealed_ratified_intersection` / `file_count_semantics` / `derivation_sources`.
+2. **The worklist** — `ratification-worklist.md`, in the `blocking-worklist.md` house form. ⛔ Its
+   name matches **neither** `sprint-change-proposal-*.md` **nor** `epic-*-retro-*.md`, asserted by
+   the guard rather than assumed, so `TC-ArgusAgent-DOCS-001-22` stays green (§0.9, `AI-E17-1`).
+3. **The guard** — `TC-ArgusAgent-PRECISION-001-153`, three tests, reading the **committed record
+   and the manifest only**. It names no checkout root and no drive letter, so it is green on the
+   ubuntu matrix with no corpus present.
+
+**Non-vacuity, per §2.1:** the row count is asserted `== 6` and the key extractor asserted to have
+parsed `>= 14` distinct keys **before** any absence is claimed; the worklist's length is asserted
+`> 500` bytes before it is searched; the AST walk is proved to SEE `pinned_corpus_snapshot` and a
+dotted `tests.corpus` import before the network absence is claimed; and the network ban is driven
+RED by **17 generated mutants** (8 banned names × 2 import forms, plus 1 submodule form), every one
+caught.
+
+⛔ **NOTHING WAS RATIFIED, FETCHED, ADJUDICATED OR SPENT.** `eligible_member_count()` = **5** before
+and after, asserted by execution and by the guard. Sealed ∩ ratified = `[]`.
+`tests/corpus/_manifest.py`, `precision-validation-protocol.md` and `adjudication-record.json` are
+**byte-unchanged** (`git diff --stat` empty). No network call: banned structurally over the
+producer's AST in the `-141` shape. No ledger entry was filed — nothing new was found that
+`deferred-work.md` does not already know, and the 46 stale `target_story` pointers remain
+**19.6's**.
+
+⛔ **WHAT REMAINS OPEN, NAMED SO SILENCE IS NOT READ AS COVERAGE (§1.4).** The protocol §2 External
+adjudicator stays **UNFILLED** (`AI-E17-8`; it blocks 19.4). `DF-13-5-A` stays **OPEN and UNSPENT**.
+The gate stays **BLOCKED** and `protocol_cleared` stays `False`. `AI-E17-3` is **not** closed: PR #9
+still has no CI result (Actions outage from 2026-08-26 15:11:58 UTC), so every figure above is
+**local Windows only** and none of it is cross-platform evidence.
+
 ### File List
+
+| file | status |
+|---|---|
+| `scripts/build_ratification_record.py` | **new** — the producer |
+| `tests/test_ratification_record.py` | **new** — `TC-ArgusAgent-PRECISION-001-153` (3 tests) |
+| `_bmad-output/design-artifacts/ArgusAgent/validation-corpus/ratification/ratification-record.json` | **new** — the record |
+| `_bmad-output/design-artifacts/ArgusAgent/validation-corpus/ratification/ratification-worklist.md` | **new** — the human worklist |
+| `_bmad-output/design-artifacts/ArgusAgent/stories/19-1-the-ratification-package-the-operator-cannot-rule-without.md` | modified — permitted sections only |
+| `_bmad-output/design-artifacts/ArgusAgent/sprint-status.yaml` | modified — `19-1` → `review` (peer-shared file, disclosed by name) |
+
+⛔ No file outside this list was touched; `git status --porcelain` showed only these paths.
+
+### Change Log
+
+| date | change |
+|---|---|
+| 2026-08-26 | Story 19.1 implemented. Ratification evidence package built for the 6 sealed members: 8 manifest fields carried verbatim, `files_at_pin` / `python_files_at_pin` measured through the shipped `pinned_tree` helper, `heuristic_findings_at_pin` recorded **UNMEASURED** because the one producer refuses unratified members by construction. Guard `TC-ArgusAgent-PRECISION-001-153` added (RED→GREEN proven). §0.1 corrected: `getsentry-sentry-python` is **638** files at pin, not 639 (one submodule gitlink). 1,760 → 1,763 tests, mypy clean, Windows only. Nothing ratified, fetched, adjudicated or spent. |
