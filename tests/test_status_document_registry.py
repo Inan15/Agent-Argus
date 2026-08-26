@@ -427,7 +427,10 @@ _STATUS_DOCUMENTS: tuple[str, ...] = (
     # 2026-08-22 and 2026-08-24 entries above, and this session carries no read-only-over-`tests/`
     # charter, so the line lands in the same commit as the document.
     # Same verification-before-registration as every entry above, by execution: `_split_sentences()`
-    # returns 151 sentences, so `-21` is genuinely reading the document rather than passing over an
+    # returned 151 sentences AT REGISTRATION and returns 161 after the same-day §3.3 correction
+    # (Story 19.6's contexting struck the `bmad-loop-sweep` recommendation as false and recorded
+    # why) — re-measured rather than left to rot, which is the `DF-8-5-C` class. Either way `-21`
+    # is genuinely reading the document rather than passing over an
     # unparseable one; `_status_assertions()` returns 0 — no phrase in `_STATUS_CLAIMS` occurs in it
     # at all, denied or otherwise — so `-21`'s per-document loop short-circuits and this
     # registration is inert rather than load-bearing; and `_executed_gate_citations()` returns 0, so

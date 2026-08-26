@@ -191,8 +191,28 @@ team"* bar is untouched.
 ### 3.3 `AI-E17-7` — widen from 7 to 46, and pair every container with a registry shrink
 
 Give the six `"17-5"` entries and `DF-AUD-DETECT-C` a destination in Story 19.6, and **measure the 43
-`"unverified"` pairs in the same pass** — they are the same defect, unmeasured. `bmad-loop-sweep`
-already exists to produce exactly this partition and should be used rather than re-derived.
+`"unverified"` pairs in the same pass** — they are the same defect, unmeasured. ~~`bmad-loop-sweep`
+already exists to produce exactly this partition and should be used rather than re-derived.~~
+
+> ⛔ **CORRECTED 2026-08-26, SAME DAY, BY MEASUREMENT — the struck sentence above is FALSE (§3.4:
+> struck, never erased).** Found while contexting Story 19.6 at `3696e44`. `bmad-loop-sweep`
+> triages `### DW-<n>:` blocks carrying a `status:` line. **This ledger holds ZERO of them,
+> against 166 `- id: DF-` blocks.** The skill is also automation-only — it refuses to run unless
+> `BMAD_LOOP_MODE=1` — and its `--migrate` mode would rewrite `deferred-work.md` into a format
+> that `tests/test_governance_record_integrity.py`, **the only guard that parses this file**,
+> cannot read. ⛔ **Do not run it. Do not migrate.**
+>
+> **What produces the partition instead:** the guard's own exported analyzers —
+> `done_story_keys`, `ledger_target_pointers`, `is_affirmative_target`, `named_done_stories`,
+> `stale_target_pointers`. Every figure in this document's §1 came from them, and Story 19.6's
+> §0.1 reproduces all of them unmoved. That is the one derivation; there is no second one to
+> reach for.
+>
+> ⚠️ **A second thing this section understated.** The registry's only clean exit is a pair
+> moving to `_DISPOSING_STORY_POINTERS` with three-way evidence. Rewriting a `target_story` is
+> forbidden for the six `"17-5"` entries by §3.4, and `target_story: NONE` is forbidden by the
+> registry's own comment. **The shrink named in §5's success criteria is therefore an OUTCOME of
+> the evidence and never a target, and a shrink of zero is an acceptable result.**
 
 ### 3.4 ⛔ Open question the operator must rule on before 19.2 starts
 
