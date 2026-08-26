@@ -8202,3 +8202,24 @@ unpushed and there is no CI evidence at any sha in this arc.**
   cleared one; the corrected disposition lives in that entry's 2026-08-26 append-only note above,
   and the module comment now says so. Comment-only, no behaviour change, and the entry itself is
   byte-untouched.
+- **CORRECTED 2026-08-26 by Story 17.5's fix round 3, on code-review iteration 2's finding.** The
+  bullet above claimed the amendment was made *"in the same form `TC-ArgusAgent-DOCS-001-77`
+  already anchors"*. ~~That claim~~ **is STRUCK as OVERSTATED, never erased (§3.4)** — the
+  reviewer is right. `-77` asserts only that the anchor STRINGS *"AMENDED 2026-08-18 by Story 13.5
+  / AC5"* and *"The floor is narrowed, never removed"* are PRESENT in `architecture.md`; it
+  asserts nothing about an amendment's SHAPE and nothing about adjacency, so no guard ever backed
+  that claim. And the shape round 2 actually used was not this document's own: it rewrote the
+  sentence in place with no strike marker at the site and relocated the struck quotation to a
+  trailing sentence at the end of an ~800-word paragraph, decoupled from its replacement.
+- **What round 3 changed, and it is the only change:** `architecture.md:1146`'s correction was
+  RESTRUCTURED into the adjacent `~~struck original~~ **AMENDED … STRUCK, never erased (§3.4):
+  …**` form every other exemplar in that file already uses (`:425`-`:427`, and the four
+  `AMENDED` instances inside the Gate-decision block at `:1136` — Story 13.5/AC5, 16.1/AC1,
+  16.2/AC3, 16.3/AC1), following
+  `stories/10-1-release-status-must-cite-evidence.md` §C's standing rule to COPY the committed
+  shape rather than invent one. Measured: `+1 / −1`, line-count NEUTRAL at 1,418 lines, CR 1,418,
+  CRLF-uniform, 189,011 → 188,986 bytes. The struck evidence is not erased and now sits AT the
+  point of change; the block's 2026-08-17 measurement, its rule text, its enforcing module and its
+  test ids are byte-unchanged. ⛔ **No canonical entry moved, no `_POINTS_AT_DONE_AT_LANDING`
+  pair was added or removed, `TC-ArgusAgent-DOCS-001-80` was not touched, and `ledger_closed_ids`
+  is 42 before and 42 after.**

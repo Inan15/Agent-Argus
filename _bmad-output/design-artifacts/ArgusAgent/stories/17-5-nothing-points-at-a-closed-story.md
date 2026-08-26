@@ -395,6 +395,72 @@ elsewhere in this same file (Story 12.1/13.2 precedent); any such addition is a 
 file in this story's own declared write set, not a silent bypass, so it is recorded here as a
 verified observation rather than a new finding.
 
+Adversarial code review, iteration 2 (`claude-sonnet-5`), FOCUSED re-review of the fix arc
+`259f7a4` → `0cabdda` → `3179532` (base `948d35d`), not a from-scratch repeat. Independently
+re-executed rather than trusted:
+
+- `argus/audit/deep_pass.py` is AST-EQUAL to `948d35d` once docstrings are stripped —
+  re-derived by parsing both revisions and comparing `ast.dump()` on the tree with each
+  `Module`/`FunctionDef`/`ClassDef`'s leading docstring `Expr` popped; the `DF-12-2-D` note's
+  new wording (*"That entry's own `target_story` field... is left byte-frozen as evidence...
+  its corrected disposition... lives in the entry's 2026-08-26 append-only note..."*) is TRUE
+  against both `deferred-work.md:3333`'s byte-frozen `target_story:` field (confirmed
+  unedited, still affirmatively reads *"6-2-style claim-grammar work"*) and against
+  `_POINTS_AT_DONE_AT_LANDING`'s live tuple `("DF-12-2-D",
+  "6-2-full-python-ast-grounding-of-audited-deep-claims", "17-5")` — the registry still
+  carries it as a LIVE row, matching the comment's own claim.
+- Regression surface confirmed clean: `TC-ArgusAgent-DOCS-001-80` untouched (`tests/` byte-
+  identical `948d35d`→`3179532`) and green, and directly re-executed — it still never calls
+  `ledger_closed_ids`; `ledger_closed_ids()` re-derived at 42 (identical set); `story_closure_claims`
+  over this story file re-derived as `()`; no `_POINTS_AT_DONE_AT_LANDING` pair added.
+  `deferred-work.md` pure append `+26/−0`, 651,225 B, 1 CR / 0 CRLF (re-measured). `sprint-status.yaml`
+  1,264 lines / 1,264 CR (re-measured). `scripts/precision_preregistration.py`, the vacuity-predicate
+  spec and `validation-corpus/**` byte-identical to `b8eaeee` (re-diffed, empty). Dogfood artifacts
+  regenerated at `0cabdda` (provenance `259f7a4`): LOC 34,531 → 34,533 = exactly the docstring's
+  net `+5/−3` line delta; the reduced `160/11511` NFR-C1 fraction is `480/34533` after GCD
+  reduction (Python `Fraction` auto-reduces — not a stale or forked figure). `python -m mypy argus`
+  — Success, 96 files (re-run). `python -m bandit -r argus -f txt --severity-level medium` — 0
+  medium/high (re-run). `python -m pytest` locally reproduces 26 pre-existing FAILED (missing
+  optional `[languages]` tree-sitter grammars and `dev`/`build`/`flit_core` tooling in this
+  sandbox) — confirmed identical failures reproduce byte-for-byte at base `948d35d` in an isolated
+  worktree, so this is a sandbox-configuration gap, not a regression from this arc; 1,760 total
+  collected matches the dev's cited total exactly (1,700 passed + 26 failed + 34 skipped here vs.
+  1,760 passed / 0 failed in the dev's fully-provisioned environment).
+
+One Low-severity item, docs-only, not blocking:
+
+- [x] [Review][Patch] `architecture.md:1146` — `DN-17-5-12`'s AMENDED form breaks this project's
+      own §3.4 adjacency invariant [architecture.md:1146]. Every existing exemplar in this file
+      (Story 13.5/AC5, 16.1/AC1, 16.2/AC3, 16.3/AC1, and the canonical form at
+      `architecture.md:428-433` that `stories/10-1-release-status-must-cite-evidence.md` §C
+      names as the shape to copy) keeps the struck original and its bolded replacement ADJACENT —
+      `~~old~~ **new**` as one visual unit, at the point of change. This edit instead silently
+      rewrites the sentence in place (*"remains **Story 6.2**'s scope"* → *"is **UNSCHEDULED**,
+      owner XAgent007..."*, no strike marker at that location) and relocates the struck quotation
+      of the old text to a new trailing sentence appended at the end of an ~800-word paragraph,
+      decoupled from its replacement. A reader who stops at the corrected clause — plausible in a
+      paragraph this size — sees no indication anything changed; only a reader who finishes the
+      whole paragraph reaches the struck evidence. The content is TRUE and the evidence is not
+      erased (§3.4's minimum bar is met), so this does not block, but the story's own claim that
+      this "keeps the superseded text legible in a struck quotation beside a dated correction, in
+      the same form `TC-ArgusAgent-DOCS-001-77` already anchors" overstates the match — TC-77
+      only asserts the anchor STRINGS are present in `architecture.md`, never the shape's
+      adjacency, and the shape used here is not the one it anchors. Suggested fix: restructure to
+      `~~"full dataflow-grounded assertion provenance remains Story 6.2's scope"~~ **AMENDED
+      2026-08-26 by Story 17.5 / `DN-17-5-12`: is UNSCHEDULED, owner XAgent007 (Engineering
+      Lead), its destination a scope change** (`DF-14-1-A`)` in place, matching every other
+      instance in this document, and either drop the trailing "same form" claim or correct it to
+      describe the actual (non-adjacent) shape used.
+      **RESOLVED 2026-08-26, fix round 3 — the restructure was taken, not the wording escape.**
+      `architecture.md:1146` now carries the correction in the adjacent
+      `~~struck original~~ **AMENDED … STRUCK, never erased (§3.4): …**` form at the point of
+      change, copied from the file's own exemplars (`:425`-`:427` and the four `AMENDED` instances
+      in the Gate-decision block at `:1136`) per
+      `stories/10-1-release-status-must-cite-evidence.md` §C; the trailing decoupled sentence is
+      gone; and the overstated `TC-ArgusAgent-DOCS-001-77` claim is struck and corrected BOTH in
+      `DN-17-5-12` below and in `deferred-work.md`. `+1 / −1`, line-count neutral. See *Fix round 3*
+      in the Completion Notes.
+
 ---
 
 ## Dev Notes
@@ -734,6 +800,8 @@ same branch, which is the standing reason `git add -A` is forbidden.
 ### Agent Model Used
 
 `claude-opus-5[1m]` (Opus 5, 1M context), `bmad-dev-story` round 1 — implement. Baseline `b8eaeee`.
+Fix rounds 2 and 3 — same model, same workflow, stateless between rounds: each round read the
+reviewer's findings out of this file rather than out of a remembered conversation.
 
 ### Debug Log References
 
@@ -977,11 +1045,17 @@ and the call is recorded rather than absorbed.**
     set for *"§Enforcement registration"*. This is a prose correction to a DIFFERENT §Enforcement
     block, so it is outside the declared write set **as written**. Recorded here first, in
     `DN-17-3-16`'s form, and only then taken.
-  - *Why it does not breach §3.4:* the original sentence is **NOT erased**. The correction follows
-    `architecture.md`'s own established amendment form — the one `TC-ArgusAgent-DOCS-001-77`
-    already anchors at *"AMENDED 2026-08-18 by Story 13.5 / AC5 … The floor is narrowed, never
-    removed"* — keeping the superseded text legible in a struck quotation beside a dated
-    correction. The 2026-08-17 measurement the block records is untouched.
+  - *Why it does not breach §3.4:* the original sentence is **NOT erased**. ~~The correction
+    follows `architecture.md`'s own established amendment form — the one
+    `TC-ArgusAgent-DOCS-001-77` already anchors at *"AMENDED 2026-08-18 by Story 13.5 / AC5 … The
+    floor is narrowed, never removed"*~~ **STRUCK 2026-08-26 as OVERSTATED, never erased (§3.4) —
+    review iteration 2 was right on both halves: `-77` asserts only that those anchor STRINGS are
+    PRESENT in `architecture.md`, never an amendment's SHAPE and never adjacency, so no guard ever
+    backed that claim; and the shape round 2 used was NOT the file's own — it rewrote the sentence
+    in place with no strike marker at the site and put the struck quotation in a trailing sentence
+    at the end of the paragraph. Fix round 3 restructured it into the adjacent form; see below.**
+    The superseded text is kept legible in a struck quotation beside its dated replacement, and the
+    2026-08-17 measurement the block records is untouched.
   - *Blast radius, measured BEFORE the write:* no `-77` anchor quotes any part of the sentence
     (checked against the live anchor tuple, not remembered), and no module under `tests/` or
     `scripts/` matches *"dataflow-grounded assertion provenance"* or *"Vacuity-corroboration"*.
@@ -1020,6 +1094,63 @@ now-false line 14, still **NOT EDITED**), `successor-vacuity-predicate-specifica
 **explicit paths**; ⛔ `git add -A` was never used and nothing authored by the peer session was
 amended, rebased or touched.
 
+#### Fix round 3 — the adjacency finding, 2026-08-26
+
+Review iteration 2 (Sonnet 5) confirmed **both** round-1 findings genuinely fixed and every
+regression invariant clean, and returned **exactly one** new Low, docs-only finding: `DN-17-5-12`'s
+amendment at `architecture.md:1146` did not use the adjacency shape the rest of that document uses.
+⛔ **It is fixed by RESTRUCTURE, not by rewording the claim.** The reviewer offered a wording escape
+as its weaker option; this project's own standing rule —
+`stories/10-1-release-status-must-cite-evidence.md` §C, *"copy the shape from the committed
+exemplars"* — makes the restructure the right one, and the overstated claim is corrected **as
+well**, not instead.
+
+- **The shape was measured, not remembered.** Every amendment exemplar in `architecture.md` keeps
+  the struck original and its bolded replacement ADJACENT, at the point of change: `:425`-`:427`
+  (Story 10.2 — the canonical form §C names), and the four `AMENDED` instances inside the
+  Gate-decision block at `:1136` (Story 13.5/AC5, 16.1/AC1, 16.2/AC3, 16.3/AC1), each reading
+  `~~old~~ **AMENDED <date> by <story> — STRUCK, never erased (§3.4): <new>**`. Round 2's edit did
+  neither half: no strike marker at the site, and the struck quotation relocated to a trailing
+  sentence at the end of the paragraph, decoupled from its replacement. The reviewer is right.
+- **What round 3 wrote.** One line, in place: the struck original — *"full dataflow-grounded
+  assertion provenance remains Story 6.2's scope"* — now sits IMMEDIATELY before its dated bolded
+  replacement, and the trailing decoupled sentence is **gone**, its content folded into the
+  replacement so the correction reads as one visual unit. Measured: `+1 / −1`, **line-count NEUTRAL
+  at 1,418 lines**, **CR 1,418**, CRLF-uniform, 189,011 → 188,986 bytes. §Enforcement's structure,
+  the block's 2026-08-17 measurement, its rule text, its enforcing module and its test ids are all
+  byte-unchanged, and the struck evidence is not erased — it is now closer to the change, not
+  further from it.
+- ⚠️ **The overstated claim is STRUCK in both places it was written.** Round 2 claimed the amendment
+  was made *"in the same form `TC-ArgusAgent-DOCS-001-77` already anchors"*. Verified by reading the
+  guard rather than recalling it: `-77` asserts only that the anchor STRINGS *"AMENDED 2026-08-18 by
+  Story 13.5 / AC5"* and *"The floor is narrowed, never removed"* are PRESENT in `architecture.md`.
+  It asserts nothing about an amendment's SHAPE and nothing about adjacency — **no guard ever backed
+  that claim**. It is struck in `DN-17-5-12` above, and corrected in `deferred-work.md` by a dated
+  APPEND (that file is append-only, so a correction there is never an edit).
+- ⛔ **Nothing else moved, and it is asserted rather than assumed.** `tests/**` and `argus/**` carry
+  **zero** worktree changes this round, so `TC-ArgusAgent-DOCS-001-80` is untouched — not edited,
+  not extended, not narrowed, no `_POINTS_AT_DONE_AT_LANDING` pair added or removed — and no dogfood
+  regeneration was owed or taken (`TC-ArgusAgent-DOGFOOD-001-49`..`-52` re-run green).
+  `ledger_closed_ids` is **42 before and 42 after, identical set, zero gained and zero lost**
+  (re-executed against `git show b8eaeee:…deferred-work.md`); `story_closure_claims` over this story
+  file is **`()`**. `deferred-work.md` is a **pure append `+21 / −0`**, 651,225 → 653,103 bytes,
+  **1 CR / 0 CRLF**. §2.2's frozen list re-verified byte-identical to `b8eaeee`:
+  `scripts/precision_preregistration.py` (its now-false line 14 still **NOT EDITED**),
+  `successor-vacuity-predicate-specification.md`, `validation-corpus/**`.
+  `TC-ArgusAgent-PRECISION-001-140` unmoved. `DF-13-5-A` still OPEN and UNSPENT.
+
+**Round-3 evidence — LOCAL (Windows) only; the branch is unpushed and there is no CI evidence at any
+sha in this arc.** `python -m pytest` — **exit 0, 1,760 collected / 1,760 passed / 0 failed / 0
+skipped** (the repository's `addopts = "-ra -q"` plus a second `-q` suppresses the tally line; the
+count is the collected total and the progress stream carries 1,760 `.` marks and no `F`, `E` or `s`)
+· `python -m mypy argus` — **Success, 96 source files** · `python -m bandit -r argus -f txt
+--severity-level medium` — **0 Medium / 0 High** · `python -m pytest --cov=argus
+--cov-fail-under=80` — **95.87 %** against an 80 % floor, exit 0. ⚠️ **The 26 failures review
+iteration 2 saw did NOT reproduce here**: they were its sandbox's missing optional `[languages]`
+tree-sitter grammars and build tooling, which it proved by reproducing them at base `948d35d`; this
+environment carries the optional extras, and its suite is fully green. Neither figure is papered
+over — both are stated as measured.
+
 ### File List
 
 | path | change |
@@ -1051,6 +1182,13 @@ deferral) · this story file · `sprint-status.yaml`. ⛔ **`tests/test_governan
 was NOT touched in round 2** — no guard was edited, extended, narrowed or re-registered to make a
 finding go away.
 
+**Fix round 3 (2026-08-26) touched a strict SUBSET of round 2's set and added no file:**
+`architecture.md` (`DN-17-5-12` restructured into the adjacent amendment form, `+1 / −1`,
+line-count neutral) · `deferred-work.md` (pure append `+21 / −0`: the dated correction of the
+overstated `TC-ArgusAgent-DOCS-001-77` claim) · this story file · `sprint-status.yaml`.
+⛔ **`tests/**` and `argus/**` were NOT touched in round 3**, so no dogfood artifact moved and no
+guard was edited, extended, narrowed or re-registered.
+
 ### Change Log
 
 | date | version | change | by |
@@ -1059,3 +1197,5 @@ finding go away.
 | 2026-08-26 | 0.2.0 | Round 1 implement. Six entries RE-HOMED in their own bodies with live owners; `DF-AUD-DETECT-C` given a corrected pointer and an owner only; five already-terminal entries given disposition pointers replacing the superseded scheduling AC; Epic 17's `UNEVALUABLE` outcome recorded against six surfaces as dated appends; 12 forward references corrected across 7 `argus/**` modules with the dogfood artifacts regenerated in their own commit; `TC-ArgusAgent-DOCS-001-80` landed with a dated shrink-only 49-pair registry and registered in `architecture.md` §Enforcement. **Nothing open was disposed of.** `ready-for-dev` → `in-progress` → `review`. | `bmad-dev-story` (Opus 5) |
 | 2026-08-26 | 0.3.0 | Code review, iteration 1 (CONCERNS). Core deliverable independently re-verified by execution (AST-equivalence of all 7 `argus/**` modules, §0's re-derived counts, `ledger_closed_ids` false positives, full suite, every byte/line/CR invariant, all frozen files, both provenance shas). Two Low findings written to Review Findings: one Patch (`deep_pass.py:98` overclaims "NO target story"), one Defer (`architecture.md:1146`'s own out-of-scope Story-6.2 forward reference, appended to `deferred-work.md`). `review` → `in-progress`. | `bmad-code-review` (Sonnet 5) |
 | 2026-08-26 | 0.4.0 | Fix round 2 — **2 of 2 review findings addressed**, both Low and docs-only. Finding 1: `argus/audit/deep_pass.py`'s `DF-12-2-D` note reworded so it no longer asserts *"It has NO target story"* about a ledger field that is deliberately preserved byte-unedited and still affirmatively names 6-2-style work (`259f7a4`; docstring prose only, AST-equal ignoring docstrings; dogfood artifacts regenerated in their own commit at provenance `259f7a4` — `0cabdda`). Finding 2: `architecture.md:1146`'s live Story-6.2 forward reference **CORRECTED IN PLACE** rather than left deferred — `DN-17-5-12`, an AC10 escalation recorded before the write, §3.4 honoured by amendment with the struck text kept legible; the reviewer's ledger deferral reconciled by a dated **SUPERSEDED** append carrying no disposition verb. ⛔ **Nothing was disposed, no measurement moved, `TC-ArgusAgent-DOCS-001-80` was not touched and no registry pair was added.** `in-progress` → `review`. | `bmad-dev-story` (Opus 5) |
+| 2026-08-26 | 0.5.0 | Code review, iteration 2 (CONCERNS) — focused re-review of `259f7a4`→`0cabdda`→`3179532`. Both round-1 findings independently re-verified fixed: `deep_pass.py` re-confirmed AST-equal to `948d35d` ignoring docstrings and its new wording checked TRUE against `deferred-work.md:3333`'s byte-frozen field and the guard's live `_POINTS_AT_DONE_AT_LANDING` row; every regression invariant re-derived by execution (`ledger_closed_ids` 42→42, `story_closure_claims` = `()`, `TC-ArgusAgent-DOCS-001-80` green and untouched, `deferred-work.md`/`sprint-status.yaml` byte/line counts, `precision_preregistration.py`/vacuity-spec/`validation-corpus/**` byte-identical to `b8eaeee`, dogfood LOC delta exactly matches the docstring's `+5/-3`). One new Low finding on `DN-17-5-12`'s architecture.md amendment: the struck original and its replacement are not kept ADJACENT as every other exemplar in this document does (`~~old~~ **new**` as one unit) — the sentence was rewritten in place with no strike marker, and the struck quotation was relocated to a trailing sentence at the end of the paragraph, decoupled from the correction; the "same form `TC-77` anchors" claim overstates the match. Content is true and evidence is not erased, so this does not block. `python -m pytest` reproduces 26 pre-existing FAILED in this sandbox (missing optional `[languages]` tree-sitter grammars / `dev` build tooling) — confirmed identical at base `948d35d` in an isolated worktree, so pre-existing and unrelated to this arc; `mypy`/`bandit` clean. `review` → `in-progress`. | `bmad-code-review` (Sonnet 5) |
+| 2026-08-26 | 0.6.0 | Fix round 3 (LAST PERMITTED) — **1 of 1 review-iteration-2 findings addressed**, Low and docs-only. `architecture.md:1146`'s `DN-17-5-12` amendment RESTRUCTURED into the adjacent `~~struck original~~ **AMENDED … STRUCK, never erased (§3.4): …**` form the file's own exemplars use (`:425`-`:427`; the four `AMENDED` instances at `:1136` — 13.5/AC5, 16.1/AC1, 16.2/AC3, 16.3/AC1), per `stories/10-1…` §C's rule to copy a committed shape rather than invent one: the struck original now sits immediately before its dated replacement at the point of change and the trailing decoupled sentence is gone (`+1 / −1`, line-count neutral 1,418, CR 1,418). The overstated *"same form `TC-ArgusAgent-DOCS-001-77` already anchors"* claim is STRUCK in the story record and corrected by a dated append in `deferred-work.md` (`+21 / −0`, 1 CR / 0 CRLF) — `-77` asserts only that the anchor STRINGS are present, never adjacency. ⛔ **`tests/**` and `argus/**` untouched: `TC-ArgusAgent-DOCS-001-80` not edited and no registry pair moved, no dogfood regeneration owed, `ledger_closed_ids` 42→42 identical, `story_closure_claims` = `()`, §2.2's frozen list byte-identical to `b8eaeee`.** Gates LOCAL (Windows): pytest exit 0, 1,760 / 1,760 passed / 0 failed; mypy Success over 96 files; bandit 0 Medium / 0 High; coverage 95.87 %. `in-progress` → `review`. | `bmad-dev-story` (Opus 5) |
