@@ -369,6 +369,58 @@ _STATUS_DOCUMENTS: tuple[str, ...] = (
     # ⚠️ It must be committed TOGETHER with this line — `-22` closes in BOTH directions, so the
     # document without this entry and this entry without the document red `master` equally.
     "epic-18-retro-2026-08-25.md",
+    # Registered 2026-08-26 for the Epic-17 retrospective — `AI-E12-1`'s second half ("make the
+    # registration part of the retrospective step's own DoD") on its SEVENTH consecutive
+    # retrospective, after the Epic-13 INTERIM, Epic-14, FINAL Epic-13, Epic-15, Epic-16 and Epic-18
+    # entries above. Written by the session that wrote the document, which is the form `AI-E16-15`
+    # asked to return to; this session carries no read-only-over-`tests/` charter, so the line lands
+    # with the document instead of as a follow-up act by a separately chartered session.
+    # Same one-line edit and same verification-before-registration as every entry above, by
+    # execution: `_split_sentences()` returns 401 sentences, so `-21` is genuinely reading the
+    # document rather than passing over an unparseable one; `_status_assertions()` returns 0 — no
+    # phrase in `_STATUS_CLAIMS` occurs in it at all, denied or otherwise — so `-21`'s per-document
+    # loop short-circuits and this registration is inert rather than load-bearing; and
+    # `_executed_gate_citations()` returns 0, so it mints an excuse for nothing. `-22` was observed
+    # RED against this document before this line (`status-asserting document(s) exist but are not
+    # registered: ['epic-17-retro-2026-08-26.md']`) and GREEN after, on the live tree. ⛔ No
+    # `_EXCLUDED_BY_DESIGN` entry was added and not one assertion in `-22` was weakened, reworded
+    # or exempted.
+    # WHAT THE DOCUMENT ASSERTS, so the registration is judged against its contents: Epic 17's five
+    # stories are `done`, and the pre-registered precision criterion was called ONCE and returned
+    # ⛔ `UNEVALUABLE` — sealed contributing members 0 against a resolved floor of 3,
+    # `measured_precision` null, 1,032 walked / 0 skipped, 85 `S1`-eligible across 3 contributing
+    # members. The population and breadth floors CLEARED; only the sealed arm failed. ⛔ NO successor
+    # predicate was promoted: `S1` is ADVISORY, `argus/detectors/vacuous_test.py:796` is
+    # byte-unchanged and no finding's `verdict_eligible` moved. It changes NO release status of any
+    # kind: cross-platform verification, deployment and release are all recorded as NOT ESTABLISHED,
+    # the precision gate is UNCHANGED and not cleared, the externalization gate stays `BLOCKED`,
+    # `protocol_cleared` stays `False`, nothing is ratified, nothing was fetched and the protocol is
+    # not re-versioned. `DF-13-5-A` stays OPEN and UNSPENT — its 2026-08-24 trigger was evaluated by
+    # Story 17.4's measurement and condition 1 did NOT fire (0 shipped promotions of 1,032). It
+    # dispositions NO ledger entry and `deferred-work.md` is absent from its write set: the two
+    # Epic-17 dispositions (`DF-INV-VACUOUS-B`, `DF-AUD-DETECT-D`) were made by Stories 17.2 and
+    # 17.3, and §10 RE-DERIVES the ledger against the file on disk without editing it. It amends no
+    # FR, no threshold, no epic container and no planning document: its findings — chiefly that
+    # sealing ratified members AND filling `AI-E16-7` are BOTH blocking prerequisites for any
+    # evaluable successor measurement — are filed as RECOMMENDATIONS to the orchestrator and the
+    # operator, and `epics.md`/`architecture.md`/the PRD are not touched.
+    # ⚠️ The only `development_status` value its session wrote is `epic-17-retrospective` -> `done`;
+    # the `epic-17` roll-up is the orchestrator's and was left `in-progress`. The thirteen Epic-17
+    # action items `AI-E17-1`..`AI-E17-13` WERE appended to `action_items:` in the house form, after
+    # the operator widened that session's write scope. ⛔ An earlier revision of THIS comment, of the
+    # document's section 12 and of `sprint-status.yaml`'s `last_updated` recorded them as WITHHELD;
+    # all three are reconciled and that claim no longer stands anywhere. The append is PURE and was
+    # verified after the write: 116 lines at end of file, `git diff` +118/-2 (the two being the
+    # `last_updated` and `epic-17-retrospective` lines), NOT ONE existing `action`/`owner`/
+    # `destination`/`priority`/`status` field edited, every comment and the STATUS DEFINITIONS block
+    # intact, YAML re-parsed clean at 112 `action_items` entries and 122 `development_status` keys,
+    # and the CRLF invariant re-verified at 1,380 lines / 1,380 CR / 1,380 CRLF / 0 lone CR / 0 lone
+    # LF. ⚠️ Section 5.1's Epic-18 follow-through verdicts are still recorded in the document ONLY
+    # — no existing status field was edited, on `AI-E12-3`'s rule that a worker does not dispose of
+    # governance.
+    # ⚠️ It must be committed TOGETHER with this line — `-22` closes in BOTH directions, so the
+    # document without this entry and this entry without the document red `master` equally.
+    "epic-17-retro-2026-08-26.md",
 )
 
 # Exactly the set the epic's AC names — "any future change proposal or retrospective".
