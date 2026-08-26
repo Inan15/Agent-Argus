@@ -3886,5 +3886,18 @@ clean and on any unlisted affirmative stale pointer
 ⛔ **No mass re-homing** (`AI-E12-3`) and **no narrowing until it goes green** (Story 12.1's named
 anti-pattern).
 
-**Given** `deferred-work.md` carries a **lone CR at line 5459** and is otherwise CRLF-uniform
+**Given** `deferred-work.md` is **LF-uniform** — 8,225 lone LF, **zero CRLF** — and carries
+**exactly one lone CR**, at line **5569**
+>
+> ⛔ **CORRECTED 2026-08-26, SAME DAY, BY MEASUREMENT (§3.4 — the original is struck, not
+> erased).** This clause originally read *"carries a **lone CR at line 5459** and is otherwise
+> **CRLF-uniform**"*. **Both halves were wrong.** The file is **LF**-uniform, so an edit that
+> normalised it to CRLF would rewrite all 8,225 line endings while appearing to preserve the
+> invariant. And `5459` was carried forward from `AI-E17-10` after the ledger had grown — the
+> lone CR sits at **5569** today, at byte offset **425,623**.
+>
+> ⛔ **RE-MEASURE IT AGAIN AT TASK 0.** This number moves every time the ledger is appended to,
+> which is exactly why `AI-E17-10` asks for the measurement and not for the literal. The two
+> line-number views **agree at 5569** and disagree only on the file TOTAL — `grep -n` reports
+> 8,225, `splitlines()` reports 8,226, because `splitlines()` counts the lone CR as a break.
 **Then** every edit is made in binary mode and both byte invariants are re-measured before and after.
