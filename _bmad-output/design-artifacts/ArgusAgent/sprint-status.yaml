@@ -486,7 +486,7 @@ development_status:
   # protocol_edit NONE. Epics 1-16 are NOT reopened and Story 6.2's closed record is NOT edited.
   # Both epic-*-retrospective keys are created in the SAME act as their epics - AI-E15-9, second
   # consecutive application, still no guard enforcing it.
-  epic-17: in-progress  # Say What The Assertion Constrains - grade strength, not wiring. CAPABILITY: the
+  epic-17: done  # Say What The Assertion Constrains - grade strength, not wiring. CAPABILITY: the
     # vacuous-test detector grades what a test's assertions actually constrain about the value the
     # code under test returned, replacing a mock-provenance signal that cannot fire. Measured reason
     # (7d8c9ba): stage 1 selects density_only 1,025 of 1,032 (100%, mock arm never fired), stage 2
