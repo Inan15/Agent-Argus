@@ -8163,3 +8163,16 @@ no byte of `scripts/precision_preregistration.py`,
 `successor-vacuity-predicate-specification.md`, `validation-corpus/**`, `adjudication-record.json`
 or any retrospective. ⚠️ **Every measurement in this section is LOCAL (Windows); this branch is
 unpushed and there is no CI evidence at any sha in this arc.**
+
+## Deferred from: code review of 17-5-nothing-points-at-a-closed-story (2026-08-26)
+
+- **`architecture.md:1146`** (Vacuity-corroboration enforcement block, added 2026-08-17) still
+  reads *"full dataflow-grounded assertion provenance remains **Story 6.2**'s scope
+  (`DF-14-1-A`)"* — a live, uncorrected forward reference to a `done` story, sitting two lines
+  above the brand-new Stale-target-story enforcement block Story 17.5 adds directly beneath it.
+  Verified by execution: `git diff b8eaeee HEAD -- architecture.md` touches only the new block
+  (+2/-0); this pre-existing line is untouched. Out of Story 17.5's declared scope — AC4's sweep is
+  `argus/**` only (§0.6 never measured `architecture.md`) — and invisible to
+  `TC-ArgusAgent-DOCS-001-80`, which inspects only `deferred-work.md`'s own `- target_story:`
+  fields, never `architecture.md` prose. Owner: XAgent007 (Engineering Lead). Candidate for a future
+  documentation sweep or the Epic-17 retrospective's action list.
