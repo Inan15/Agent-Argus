@@ -349,6 +349,18 @@ M1 enforced repo-wide E12/12.1; S2/S4/C3/R1/SC1→E2; C1/C2/R2/P1/P2→E3; S1/S3
 > "finished there."** The Epic 14–16 index drift is **NOT** fixed by this proposal: it predates it
 > and fixing it here would be scope creep. Recorded for the Epic 17 retrospective.
 
+> **Correction, 2026-08-26** *(Story `17-5-nothing-points-at-a-closed-story`, measured at HEAD
+> `b8eaeee`)*. The paragraph above says *"Epic 17 **repairs** FR10's detector"*. ⛔ **Epic 17 has now
+> run, and it did not.** Stories 17.1–17.4 are `done` and Story 17.4's recorded outcome is
+> **`UNEVALUABLE`**: sealed contributing members **0**, below the resolved floor of **3**;
+> `measured_precision` **null**; 1,032 walked / 0 skipped; S1-eligible **85** across **3**
+> contributing members; and the successor predicate `S1` shipped **ADVISORY**, so the
+> verdict-eligible stage still promotes **0 of 1,032** — the same figure the paragraph above quotes
+> as the reason the epic was needed. ⚠️ **The paragraph is left exactly as written** (§3.4 evidence
+> immutability); it was the true intent when it was authored. The full correction, with every figure
+> and the six surfaces it applies to, is recorded once in
+> [deferred-work.md](deferred-work.md) under *"Story 17.5 dispositions — 2026-08-26"* §(e).
+
 ## Epic List
 
 ### Epic 1: Signature-Demo Vertical Slice — "the false-green catch"
@@ -3427,6 +3439,40 @@ that cannot fire.
 bench round** — that is the point.
 **Blocks:** nothing currently scheduled. It is the named condition of `DF-13-5-A`'s 2026-08-24
 trigger: the entry returns to the operator when shipped promotions rise above zero.
+
+> **Correction, 2026-08-26** *(Story `17-5-nothing-points-at-a-closed-story`, measured at HEAD
+> `b8eaeee`)*. ⛔ **This epic's header and three of its acceptance criteria were written 2026-08-24,
+> before Epic 18 ran and before any Epic-17 story ran. They are left exactly as written (§3.4) and
+> corrected here.** Four statements above are now false, and one is self-defeating:
+>
+> 1. **"Capability delivered: … replacing a mock-provenance vacuity signal that cannot fire."**
+>    Nothing was replaced at the verdict layer. `S1` landed **ADVISORY** in Story 17.3;
+>    `argus/detectors/vacuous_test.py:796` is byte-unchanged as a parsed AST expression; no finding's
+>    `verdict_eligible` moved.
+> 2. **`**Covers:**` lists `DF-INV-VACUOUS-A`, `DF-14-1-A`, `DF-16-7-A`, `DF-16-7-B`, `DF-12-2-D`,
+>    `DF-12-3-A`.** ⛔ **None of the six was delivered by Epic 17.** All six are **STILL OPEN**, each
+>    now carrying a dated append-only note under its own ledger block with a corrected pointer and a
+>    live owner (XAgent007, Engineering Lead). The only entries Epic 17 disposed of are
+>    `DF-AUD-DETECT-D` (Story 17.3) and `DF-INV-VACUOUS-B` (Story 17.2).
+> 3. **Story 17.5's first AC — *"re-homing notes pointing at Epic 17"*.** ⛔ **A pointer at Epic 17
+>    would be the same defect one epic later**, since Epic 17 is itself ending. The six are re-homed
+>    to a **named human owner** plus a scope change to be argued through `bmad-correct-course`, on
+>    `DF-16-7-B`'s precedent — never to a story or an epic that has already run.
+> 4. **Story 17.5's second AC — *"`DF-AUD-DETECT-A`/`-B`/`-E`/`-F` are pointed at Epic 18 and `-D` at
+>    Story 17.3 — scheduling notes only"*.** ⛔ **DISCHARGED AND SUPERSEDED.** All five entries
+>    already carry terminal dispositions and all five stories are `done`, so executing this literally
+>    would point five entries at five closed stories — the exact defect the story exists to end. It
+>    is replaced by dated **disposition pointers** naming each disposing story and fix sha
+>    (`DF-AUD-DETECT-D` → `2db5ce0`, `-E` → `9e3fdc2`, `-F` → `0ba6a98`).
+> 5. **Story 17.5's third AC names *four* modules carrying stale Story-6.2 forward references.**
+>    Measured at `b8eaeee` the set is **12 sites across 7 modules**, of which the AC names 5 across
+>    4. ⚠️ **One of the twelve, `argus/detectors/assertion_strength.py:64`, was created by Story 17.3
+>    on 2026-08-25** — one story before the story chartered to remove the sentence. All twelve are
+>    corrected; true-historical references, two behaviour-bearing strings and `tests/**` are carved
+>    out by name and left byte-identical.
+>
+> Full record, with every figure and every line reference:
+> [deferred-work.md](deferred-work.md) under *"Story 17.5 dispositions — 2026-08-26"*.
 
 > ⛔ **THE MEASURED REASON THIS EPIC EXISTS** (`7d8c9ba`,
 > [research/technical-argusagent-stage-mismatch-measurement-2026-08-24.md](research/technical-argusagent-stage-mismatch-measurement-2026-08-24.md)).

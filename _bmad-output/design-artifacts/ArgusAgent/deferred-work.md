@@ -3337,6 +3337,44 @@ re-taken). **CI evidence: NOT ESTABLISHED** — no CI run has executed any Epic 
   - category: correctness
   - severity: 🟡 (the capability is incomplete, but it fails SAFE and is now disclosed at
     every site a user or a reader of FR36 would otherwise be misled)
+  - ⛔ **`DF-12-2-D` — RE-HOMED 2026-08-26 by story `17-5-nothing-points-at-a-closed-story`. THE ENTRY STAYS OPEN.**
+    Append-only note; the entry above it is NOT rewritten (§3.4 evidence immutability — the
+    `DF-AUD-DETECT-D` and `DF-INV-VACUOUS-B` notes are the form this copies). Its `id`,
+    `origin`/`origin_story`, `owner`, `category`, `severity` and `target_story` fields are left
+    unedited, so the stale pointer stays readable as evidence of when it was written.
+    ⛔ **This note disposes of nothing, ratifies nothing, schedules nothing and spends nothing.**
+    - ⛔ **THE POINTER IS STALE, MEASURED AT `b8eaeee`, NOT ASSERTED.** `target_story` above reads
+      *"**6-2-style claim-grammar work** — the story that gives the deep pass a declared claim
+      format and a response contract"*. `sprint-status.yaml` records
+      `6-2-full-python-ast-grounding-of-audited-deep-claims` as **`done`** (signed off 2026-06-29
+      at code-review iteration 1). That story shipped a DETERMINISTIC STRUCTURAL grounding fact —
+      *≥ 1 real `Definition` in the pre-built Story 1.4 index* — and built **no** declared claim
+      grammar, **no** prompt contract, **no** redacting parser and **no**
+      `DEEP_PROMPT_TEMPLATE_VERSION` bump. All four things this entry names as its remedy have had
+      **no container** since 2026-06-29.
+    - ⛔ **THE CORRECTED POINTER AND THE LIVE OWNER.** Owner: **XAgent007 (Engineering Lead)**
+      (`AI-E9-8` — no entry is left without a named human). The destination is a **scope change
+      argued through `bmad-correct-course`**, on `DF-16-7-B`'s recorded precedent that a different
+      predicate is a different predicate — ⛔ **not an absorption into an existing story, and not
+      scheduled here.** The entry's secondary trigger (*"the next story that changes
+      `argus/audit/open_llm_adapter.py`'s response handling"*) is a LANDMARK, not an owner, and is
+      left exactly as written.
+    - ⚠️ **WHAT EPIC 17 ACTUALLY DELIVERED FOR THIS ENTRY: NOTHING.** `epics.md`'s Epic 17
+      `**Covers:**` list names this entry. Measured at `b8eaeee`: 17.1 froze the criterion, 17.2
+      specified `S1`, 17.3 landed `S1` **ADVISORY**, 17.4 ran the single measurement and the frozen
+      fold returned **`UNEVALUABLE`** — sealed contributing members **0** against a resolved floor
+      of **3**, `measured_precision` **null**, 1,032 walked / 0 skipped, and the shipped
+      verdict-eligible predicate promotes **0 of 1,032**. The only two ledger entries Epic 17
+      disposed of are `DF-AUD-DETECT-D` (Story 17.3) and `DF-INV-VACUOUS-B` (Story 17.2).
+    - ⚠️ **THE 2026-08-24 CHARTER SECTION ALREADY RE-HOMED THIS ENTRY IN A TABLE** (*"Epic 17 /
+      Epic 18 re-homing and scheduling — 2026-08-24"*, §(a)). ⛔ **It is CITED here, never
+      re-filed.** `AI-E18-10` recorded the residual that table left — *"the schedule is visible
+      only in the 2026-08-24 proposal's table — a reader of the ledger alone cannot see it"* — and
+      this per-entry note is that finding's remedy. ⚠️ **One clause of `AI-E18-10` is imprecise and
+      is corrected here rather than repeated:** it says the six *"still read `target_story: NONE`
+      in their own bodies"*. Measured at `b8eaeee`, **not one of the six reads `NONE`** — all six
+      carry an AFFIRMATIVE pointer at Story 6.2 or at 6.2-style work, which is a STRONGER form of
+      the same defect, not a weaker one. The substance of the finding reproduces exactly.
 
 ## Deferred from: story 12-3-a-re-run-returns-the-recorded-result (2026-08-13)
 
@@ -3408,6 +3446,43 @@ premise, confirmed). Closure probe re-run against the guard's own builder: **74*
     which is slower, never wrong — and it is now disclosed at four sites)
   - cross-reference: `DF-12-2-D` (why the `delivered` branch is unreachable today), `DF-5-1-A`
     (closed — the prompt-template slot that makes the eventual fix additive)
+  - ⛔ **`DF-12-3-A` — RE-HOMED 2026-08-26 by story `17-5-nothing-points-at-a-closed-story`. THE ENTRY STAYS OPEN.**
+    Append-only note; the entry above it is NOT rewritten (§3.4 evidence immutability — the
+    `DF-AUD-DETECT-D` and `DF-INV-VACUOUS-B` notes are the form this copies). Its `id`,
+    `origin`/`origin_story`, `owner`, `category`, `severity` and `target_story` fields are left
+    unedited, so the stale pointer stays readable as evidence of when it was written.
+    ⛔ **This note disposes of nothing, ratifies nothing, schedules nothing and spends nothing.**
+    - ⛔ **THE POINTER IS STALE, MEASURED AT `b8eaeee`, NOT ASSERTED.** `target_story` above reads
+      *"**the same 6.2-style claim-grammar work `DF-12-2-D` already names**"*. `sprint-status.yaml`
+      records `6-2-full-python-ast-grounding-of-audited-deep-claims` as **`done`** (2026-06-29);
+      that story shipped a deterministic structural grounding fact and no declared claim format, so
+      this pointer inherits `DF-12-2-D`'s staleness exactly and for the same reason.
+    - ⛔ **WHICH HALF IS DISPOSED AND WHICH HALF IS OPEN — STATED SO THE ENTRY'S TRUE STATE IS
+      READABLE WITHOUT RUNNING AN EXTRACTOR** (`AI-E12-3`). This id carries **two** blocks in this
+      ledger. The **DISCLOSURE half** received a terminal disposition 2026-08-16 under *"Story 13.2
+      dispositions"* (`deferred-work.md:4292`), as one of the four entries `AI-E12-3` names. The
+      **MECHANISM half is the block above, and it is OPEN**: the `delivered` branch of the
+      memoization record stays unreachable until a declared claim format exists, and no story owns
+      that. ⚠️ **`ledger_closed_ids` reports this whole id as disposed on the strength of that one
+      half-disposition line**, which is the measured reason `TC-ArgusAgent-DOCS-001-80` refuses to
+      decide openness with that extractor (§(f) below). ⛔ **The block above is NOT disposed of by
+      this note.**
+    - ⛔ **THE CORRECTED POINTER AND THE LIVE OWNER.** Owner: **XAgent007 (Engineering Lead)**
+      (`AI-E9-8`), for the MECHANISM half only. Destination: the same **scope change argued through
+      `bmad-correct-course`** that `DF-12-2-D` now names — ⛔ **not scheduled here.**
+    - ⚠️ **WHAT EPIC 17 ACTUALLY DELIVERED FOR THIS ENTRY: NOTHING.** `epics.md`'s Epic 17
+      `**Covers:**` list names it. Epic 17's recorded outcome is **`UNEVALUABLE`** (sealed
+      contributing members **0** against a floor of **3**; `measured_precision` **null**; `S1`
+      ADVISORY, promoting **0 of 1,032**).
+    - ⚠️ **THE 2026-08-24 CHARTER SECTION ALREADY RE-HOMED THIS ENTRY IN A TABLE** (*"Epic 17 /
+      Epic 18 re-homing and scheduling — 2026-08-24"*, §(a)). ⛔ **It is CITED here, never
+      re-filed.** `AI-E18-10` recorded the residual that table left — *"the schedule is visible
+      only in the 2026-08-24 proposal's table — a reader of the ledger alone cannot see it"* — and
+      this per-entry note is that finding's remedy. ⚠️ **One clause of `AI-E18-10` is imprecise and
+      is corrected here rather than repeated:** it says the six *"still read `target_story: NONE`
+      in their own bodies"*. Measured at `b8eaeee`, **not one of the six reads `NONE`** — all six
+      carry an AFFIRMATIVE pointer at Story 6.2 or at 6.2-style work, which is a STRONGER form of
+      the same defect, not a weaker one. The substance of the finding reproduces exactly.
 
 ### Corrections to an existing entry — recorded as a new append (§3.4 append-only)
 
@@ -4486,6 +4561,41 @@ one is NOT delivered and its story record was wrong.**
   - severity: 🟡 — it is a DISCLOSED limit of a conservative predicate, not a defect. The failure
     direction is under-claiming corroboration, which leaves a real vacuous test advisory; the lethal
     direction (a false 🔴) is the one it closes.
+  - ⛔ **`DF-14-1-A` — RE-HOMED 2026-08-26 by story `17-5-nothing-points-at-a-closed-story`. THE ENTRY STAYS OPEN.**
+    Append-only note; the entry above it is NOT rewritten (§3.4 evidence immutability — the
+    `DF-AUD-DETECT-D` and `DF-INV-VACUOUS-B` notes are the form this copies). Its `id`,
+    `origin`/`origin_story`, `owner`, `category`, `severity` and `target_story` fields are left
+    unedited, so the stale pointer stays readable as evidence of when it was written.
+    ⛔ **This note disposes of nothing, ratifies nothing, schedules nothing and spends nothing.**
+    - ⛔ **THE POINTER IS STALE, MEASURED AT `b8eaeee`, NOT ASSERTED.** `target_story` above reads
+      *"**6-2** (full multi-construct AST grounding / dataflow provenance)"*. `sprint-status.yaml`
+      records `6-2-full-python-ast-grounding-of-audited-deep-claims` as **`done`** (2026-06-29).
+      That story shipped a DETERMINISTIC STRUCTURAL grounding fact — *≥ 1 real `Definition` in the
+      pre-built Story 1.4 index* — and its own scope section fences dataflow out by name:
+      assertion-target provenance appears there as the *"honest what it can/cannot prove"* register
+      the validator MIRRORS, never as something it builds. The work this pointer names has had **no
+      container** since 2026-06-29.
+    - ⛔ **THE CORRECTED POINTER AND THE LIVE OWNER.** Owner: **XAgent007 (Engineering Lead)**
+      (`AI-E9-8`). ⚠️ The entry's `owner` field above reads **`unassigned` — carried until Story
+      6.2's scope is scheduled**, which is precisely the shape this note corrects: the story it
+      waits on has been `done` for two months, so the wait had no end condition. Destination: a
+      **scope change argued through `bmad-correct-course`** (`DF-16-7-B`'s precedent) — ⛔ **not an
+      absorption into an existing story and not scheduled here.**
+    - ⚠️ **WHAT EPIC 17 ACTUALLY DELIVERED FOR THIS ENTRY: NOTHING, AND IT SAID SO IN CODE.**
+      `epics.md`'s Epic 17 `**Covers:**` list names this entry. Story 17.3 cited it twice while
+      landing `S1` — in `argus/detectors/assertion_strength.py` and
+      `argus/detectors/provenance_scan.py` — in both cases as the limit `S1` explicitly does NOT
+      reach: `S1` is NAME-level structural evidence over an UNRESOLVED edge set (`DF-1-4-A`), not
+      dataflow, and it shipped **ADVISORY**. Epic 17's recorded outcome is **`UNEVALUABLE`**.
+    - ⚠️ **THE 2026-08-24 CHARTER SECTION ALREADY RE-HOMED THIS ENTRY IN A TABLE** (*"Epic 17 /
+      Epic 18 re-homing and scheduling — 2026-08-24"*, §(a)). ⛔ **It is CITED here, never
+      re-filed.** `AI-E18-10` recorded the residual that table left — *"the schedule is visible
+      only in the 2026-08-24 proposal's table — a reader of the ledger alone cannot see it"* — and
+      this per-entry note is that finding's remedy. ⚠️ **One clause of `AI-E18-10` is imprecise and
+      is corrected here rather than repeated:** it says the six *"still read `target_story: NONE`
+      in their own bodies"*. Measured at `b8eaeee`, **not one of the six reads `NONE`** — all six
+      carry an AFFIRMATIVE pointer at Story 6.2 or at 6.2-style work, which is a STRONGER form of
+      the same defect, not a weaker one. The substance of the finding reproduces exactly.
 
 - **`DF-13-3-B` — `TC-ArgusAgent-DOCS-001-46` goes VACUOUS the moment `protocol_cleared` is
   derived, which is the correct design.** Reproduced by execution on this tree:
@@ -5797,6 +5907,39 @@ disposed and three new ones are filed, one of which bounds Epic 15.
     **not adjudicated** and no claim is made that any of the 122 is a true positive.
   - ⛔ **Not a proposal to loosen fact (b).** Its asymmetry is correct and was the Story 14.1
     conformance repair. The fix is a **finer** predicate, never a weaker one.
+  - ⛔ **`DF-16-7-A` — RE-HOMED 2026-08-26 by story `17-5-nothing-points-at-a-closed-story`. THE ENTRY STAYS OPEN.**
+    Append-only note; the entry above it is NOT rewritten (§3.4 evidence immutability — the
+    `DF-AUD-DETECT-D` and `DF-INV-VACUOUS-B` notes are the form this copies). Its `id`,
+    `origin`/`origin_story`, `owner`, `category`, `severity` and `target_story` fields are left
+    unedited, so the stale pointer stays readable as evidence of when it was written.
+    ⛔ **This note disposes of nothing, ratifies nothing, schedules nothing and spends nothing.**
+    - ⛔ **THE POINTER IS STALE, MEASURED AT `b8eaeee`, NOT ASSERTED.** `target_story` above reads
+      *"**6.2** (`6-2-full-python-ast-grounding-of-audited-deep-claims`) — the full dataflow /
+      scope-resolved grounding already chartered by `DF-14-1-A`"*. `sprint-status.yaml` records
+      that key as **`done`** (2026-06-29), and the story shipped a deterministic structural
+      grounding fact rather than dataflow. ⛔ **The entry's own claim that it *"does not create new
+      work"* is TRUE and is not disturbed:** what it records is that a prerequisite is unmet, and
+      the prerequisite's pointer is the thing that was wrong.
+    - ⛔ **THE CORRECTED POINTER AND THE LIVE OWNER.** Owner: **XAgent007 (Engineering Lead)** —
+      unchanged from the `owner` field above and now with a destination that exists: the same
+      **scope change argued through `bmad-correct-course`** that `DF-14-1-A` now names. ⛔ **Not
+      scheduled here.** The measured **122**-finding reach this entry records is the research
+      script's OWN `ast` reasoning, is **not adjudicated**, and is cited unchanged — not
+      re-derived, not re-dated, not promoted.
+    - ⚠️ **WHAT EPIC 17 ACTUALLY DELIVERED FOR THIS ENTRY: NOTHING.** `epics.md`'s Epic 17
+      `**Covers:**` list names it. 17.4's single measurement reports S1-eligible **85** across
+      **3** contributing members. ⛔ **That figure and this entry's 122 must not be compared**:
+      they are different predicates over different populations computed by different instruments,
+      and neither is adjudicated. Epic 17's recorded outcome is **`UNEVALUABLE`**.
+    - ⚠️ **THE 2026-08-24 CHARTER SECTION ALREADY RE-HOMED THIS ENTRY IN A TABLE** (*"Epic 17 /
+      Epic 18 re-homing and scheduling — 2026-08-24"*, §(a)). ⛔ **It is CITED here, never
+      re-filed.** `AI-E18-10` recorded the residual that table left — *"the schedule is visible
+      only in the 2026-08-24 proposal's table — a reader of the ledger alone cannot see it"* — and
+      this per-entry note is that finding's remedy. ⚠️ **One clause of `AI-E18-10` is imprecise and
+      is corrected here rather than repeated:** it says the six *"still read `target_story: NONE`
+      in their own bodies"*. Measured at `b8eaeee`, **not one of the six reads `NONE`** — all six
+      carry an AFFIRMATIVE pointer at Story 6.2 or at 6.2-style work, which is a STRONGER form of
+      the same defect, not a weaker one. The substance of the finding reproduces exactly.
 
 ## Deferred from: Story 16.5 (2026-08-23)
 
@@ -6233,6 +6376,40 @@ and `-D`.
     `DF-16-6-F`, `DF-16-5-A`, `DF-16-5-B`, `DF-16-1-A`, `DF-15-2-E`, `DF-14-1-A` and the three
     `DF-12-1-*` entries all stay **OPEN**, and no historical entry on this ledger is edited —
     this is a pure append.
+  - ⛔ **`DF-16-7-B` — RE-HOMED 2026-08-26 by story `17-5-nothing-points-at-a-closed-story`. THE ENTRY STAYS OPEN.**
+    Append-only note; the entry above it is NOT rewritten (§3.4 evidence immutability — the
+    `DF-AUD-DETECT-D` and `DF-INV-VACUOUS-B` notes are the form this copies). Its `id`,
+    `origin`/`origin_story`, `owner`, `category`, `severity` and `target_story` fields are left
+    unedited, so the stale pointer stays readable as evidence of when it was written.
+    ⛔ **This note disposes of nothing, ratifies nothing, schedules nothing and spends nothing.**
+    - ⛔ **THE POINTER IS STALE, MEASURED AT `b8eaeee`, NOT ASSERTED.** `target_story` above reads
+      *"**(a)** stays **6.2** with `DF-16-7-A` — this entry creates no new work for it and only
+      re-dates its figure"*. `sprint-status.yaml` records
+      `6-2-full-python-ast-grounding-of-audited-deep-claims` as **`done`** (2026-06-29), and that
+      story shipped a deterministic structural grounding fact rather than dataflow, so arm **(a)**
+      points at a story that ended without the scope it is waiting for. Arm **(b)** — the 36
+      `UNADJUDICATED` rows — is correctly recorded as *"an operator act, not a story"* and is
+      **untouched by this note**.
+    - ⛔ **THE CORRECTED POINTER AND THE LIVE OWNER.** Arm **(a)**: owner **XAgent007 (Engineering
+      Lead)**, destination the same **scope change argued through `bmad-correct-course`** that
+      `DF-16-7-A` and `DF-14-1-A` now name — ⛔ **not scheduled here.** Arm **(b)** keeps its
+      existing owner (**XAgent007**, with **Veer Pratap Singh (QA Lead)** as registered second
+      reviewer). ⚠️ **The External adjudicator tie-break (`AI-E16-7`) remains UNFILLED**, and a run
+      that reaches protocol §4's third ladder step must still STOP.
+    - ⚠️ **WHAT EPIC 17 ACTUALLY DELIVERED FOR THIS ENTRY: NOTHING.** `epics.md`'s Epic 17
+      `**Covers:**` list names it. Story 17.2 specified `S1` as a genuinely different predicate,
+      resting on this entry's own V1/V2/V3 argument, and Story 17.3 landed `S1` **ADVISORY** —
+      neither adjudicated a row, all **36** remain `UNADJUDICATED`, and the proportion this arm
+      exists to measure is still **NOT MEASURED**. Epic 17's recorded outcome is **`UNEVALUABLE`**.
+    - ⚠️ **THE 2026-08-24 CHARTER SECTION ALREADY RE-HOMED THIS ENTRY IN A TABLE** (*"Epic 17 /
+      Epic 18 re-homing and scheduling — 2026-08-24"*, §(a)). ⛔ **It is CITED here, never
+      re-filed.** `AI-E18-10` recorded the residual that table left — *"the schedule is visible
+      only in the 2026-08-24 proposal's table — a reader of the ledger alone cannot see it"* — and
+      this per-entry note is that finding's remedy. ⚠️ **One clause of `AI-E18-10` is imprecise and
+      is corrected here rather than repeated:** it says the six *"still read `target_story: NONE`
+      in their own bodies"*. Measured at `b8eaeee`, **not one of the six reads `NONE`** — all six
+      carry an AFFIRMATIVE pointer at Story 6.2 or at 6.2-style work, which is a STRONGER form of
+      the same defect, not a weaker one. The substance of the finding reproduces exactly.
 
 ## Deferred from: the 2026-08-24 stage-mismatch measurement session (operator-directed, NO story)
 
@@ -6297,6 +6474,42 @@ and `-D`.
     (`ai-body-runtime`) contributes **ZERO** findings to this rule class, and **`minions` alone
     contributes 63%** (648 of 1,032). This is filed as a property of the corpus. ⛔ **It is NOT an
     argument for a bigger bench** — see the reading error above.
+  - ⛔ **`DF-INV-VACUOUS-A` — RE-HOMED 2026-08-26 by story `17-5-nothing-points-at-a-closed-story`. THE ENTRY STAYS OPEN.**
+    Append-only note; the entry above it is NOT rewritten (§3.4 evidence immutability — the
+    `DF-AUD-DETECT-D` and `DF-INV-VACUOUS-B` notes are the form this copies). Its `id`,
+    `origin`/`origin_story`, `owner`, `category`, `severity` and `target_story` fields are left
+    unedited, so the stale pointer stays readable as evidence of when it was written.
+    ⛔ **This note disposes of nothing, ratifies nothing, schedules nothing and spends nothing.**
+    - ⛔ **THE POINTER IS STALE, MEASURED AT `b8eaeee`, NOT ASSERTED.** `target_story` above reads
+      *"**6.2** (`argus` dataflow / scope-resolved grounding) — ⛔ **as a SCOPE CHANGE, not an
+      absorption**"*. `sprint-status.yaml` records
+      `6-2-full-python-ast-grounding-of-audited-deep-claims` as **`done`** (2026-06-29), and that
+      story shipped a deterministic structural grounding fact rather than dataflow. ⛔ **The
+      entry's own qualifier was already right, and it is what makes this pointer repairable rather
+      than simply wrong:** it says the destination is a SCOPE CHANGE argued through
+      `bmad-correct-course`. What was stale is that it named a `done` story as the thing to be
+      re-scoped.
+    - ⛔ **THE CORRECTED POINTER AND THE LIVE OWNER.** Owner: **XAgent007 (Engineering Lead)** —
+      unchanged from the `owner` field above. Destination: the **scope change argued through
+      `bmad-correct-course`**, with no `done` story named as its container. ⛔ **Not scheduled
+      here.** The pre-registration condition this entry sets — *"the precision guard must be
+      pre-registered BEFORE the widening lands"* — is **unchanged and still binding**.
+    - ⚠️ **WHAT EPIC 17 ACTUALLY DELIVERED FOR THIS ENTRY, AND WHY IT IS NOT WHAT THE ENTRY
+      DESCRIBES.** `epics.md`'s Epic 17 `**Covers:**` list names it. Story 17.2 specified the
+      successor predicate `S1` and Story 17.3 landed it — but **ADVISORY**, with
+      `argus/detectors/vacuous_test.py:796` byte-unchanged as a parsed AST expression, so **no
+      finding's `verdict_eligible` moved** and the flagging/corroboration mismatch this entry
+      measures is intact at HEAD. 17.4 measured the successor's reach once and the frozen fold
+      returned **`UNEVALUABLE`**. ⛔ **Nothing here is a remedy for this entry.**
+    - ⚠️ **THE 2026-08-24 CHARTER SECTION ALREADY RE-HOMED THIS ENTRY IN A TABLE** (*"Epic 17 /
+      Epic 18 re-homing and scheduling — 2026-08-24"*, §(a)). ⛔ **It is CITED here, never
+      re-filed.** `AI-E18-10` recorded the residual that table left — *"the schedule is visible
+      only in the 2026-08-24 proposal's table — a reader of the ledger alone cannot see it"* — and
+      this per-entry note is that finding's remedy. ⚠️ **One clause of `AI-E18-10` is imprecise and
+      is corrected here rather than repeated:** it says the six *"still read `target_story: NONE`
+      in their own bodies"*. Measured at `b8eaeee`, **not one of the six reads `NONE`** — all six
+      carry an AFFIRMATIVE pointer at Story 6.2 or at 6.2-style work, which is a STRONGER form of
+      the same defect, not a weaker one. The substance of the finding reproduces exactly.
 
 - **`DF-INV-VACUOUS-B` — `_mock_bound_names` cannot see three of the four dominant Python mock
   idioms. A latent defect, filed so it is NOT mistaken for the remedy.**
@@ -6689,6 +6902,27 @@ than filed as its own entry.
     over a list the index already sorts by `(line, callee)` (AR11), where `bisect` gives
     O(log E + k). Neither is measurable next to the above; both are recorded so a future pass does
     not re-derive them.
+  - ⚠️ **`DF-AUD-DETECT-C` — CORRECTED POINTER AND LIVE OWNER RECORDED 2026-08-26 by story
+    `17-5-nothing-points-at-a-closed-story`. ⛔ NO DISPOSITION, NO SEVERITY CHANGE, NO STATUS
+    CHANGE. THE ENTRY STAYS OPEN.** Append-only note; the entry above it is NOT rewritten (§3.4).
+    - ⛔ **WHY THIS ENTRY GETS LESS THAN THE OTHERS, STATED SO IT IS NOT READ AS AN OVERSIGHT.**
+      This is a **performance** entry and Story 17.5 is not a performance story. Story 17.3
+      measured a span-scan cost REDUCTION (10,056 → 9,680 calls, −3.7%) and **explicitly declined**
+      to disposition it. `AI-E18-10` assigns the destination decision to the **Governance Owner**.
+      ⛔ **Taking that decision inside a pointer-rewrite story would be `AI-E12-3`'s defect —
+      resolving an entry in prose rather than against evidence — committed inside the story
+      written to end it.**
+    - ⛔ **THE CORRECTED POINTER.** `target_story` above reads *"**NONE — unscheduled; Engineering
+      Lead to schedule**"*. That is a LANDMARK form and it names no `done` story, so it is **not**
+      the defect class this story ends and it is left byte-unedited. What was stale is elsewhere:
+      the 2026-08-24 charter section's §(b) scheduling table (see §(c) of *"Story 17.5 dispositions
+      — 2026-08-26"*) lists this entry beside four siblings that have since received terminal
+      dispositions, which reads as though this one were scheduled too. **It is not, and it never
+      was.**
+    - ⛔ **THE LIVE OWNER: XAgent007 (Engineering Lead)** for custody (`AI-E9-8`), with the
+      **destination decision reserved to the Governance Owner** per `AI-E18-10`. ⚠️ **`AI-E13-12`
+      applies:** every `target_story: NONE` entry needs a destination before its epic closes, and
+      this one does not have one yet. That is recorded, not resolved.
 
 - **`DF-AUD-DETECT-D` — `_logical_statement_end` and `_scan_span` are two spellings of "where does a
   statement end" and they disagree on 5.96% of statements. LATENT: no behavioural effect could be
@@ -7684,3 +7918,248 @@ append.
       request was merged to watch GitHub *refuse* a squash, so the behavioural claim — that a PR
       page now offers only “Create a merge commit” — is inferred from the configuration and is
       **not** demonstrated here. The first PR to land after this note is that observation.
+
+## Story 17.5 dispositions — 2026-08-26
+
+> **What this section is.** Story `17-5-nothing-points-at-a-closed-story`, run 2026-08-26 at HEAD
+> `b8eaeee` on branch `docs/merge-strategy-decision`. ⛔ **A POINTER REWRITE IS NOT A DISPOSITION
+> AND A DISPOSITION IS NOT A RE-MEASUREMENT.** This section rewrites pointers and records
+> dispositions. It changes **no result**: `scripts/precision_preregistration.py` stays BYTE-FROZEN
+> (including its now-false line 14, which is evidence of when it was written and must not be
+> "tidied"), `successor-vacuity-predicate-specification.md` and
+> `validation-corpus/successor/successor-reach-record.json` are byte-unchanged, `DF-13-5-A` stays
+> **OPEN and UNSPENT**, no corpus member is ratified, no source is fetched, no row is adjudicated
+> and no finding becomes verdict-eligible. Every write below is a pure append (§3.4).
+
+### §(a) The population, RE-MEASURED at `b8eaeee` — and it is not six
+
+⛔ **`epics.md` says six. Measured, the class is an order of magnitude wider**, and the widening is
+evidence, not ambition. Derived by executing the ledger's own committed analyzer over the live
+`deferred-work.md` and `sprint-status.yaml` — never transcribed from the story's §0.
+
+| measured | count | how |
+|---|---:|---|
+| canonical `- id: DF-…` entry blocks | **169** | `^ *- id: DF-` |
+| `development_status` keys / of them `done` | **122 / 119** | the only non-`done` keys are `epic-17`, this story, and `epic-17-retrospective` |
+| blocks whose own `- target_story:` line resolves to ≥ 1 `done` story key | **70** | full story keys plus `N-M` / `N.M` short forms |
+| of those, **AFFIRMATIVE** — a `done` story named as the OWNER of remaining work | **52** | the real defect surface |
+| of those, **LANDMARK** — `NONE …` / `the first story that …` / `whichever story …` | **18** | ⛔ **not a violation.** A guard reddening on these measures English, not pointers |
+| AFFIRMATIVE blocks whose id `ledger_closed_ids` does NOT report disposed | **28 blocks / 26 ids** | |
+| entries whose `target_story` names Story **6.2** | **7** | six re-homed above; `DF-1-7-B` is the one true pointer and is **byte-untouched** |
+
+⚠️ **DRIFT FROM THE STORY'S OWN §0.2, RECORDED RATHER THAN ABSORBED** (its AC1 requires the figures
+to be re-derived, not copied). The **70** and the **7** reproduce exactly. The AFFIRMATIVE /
+LANDMARK split measured **52 / 18** against §0.2's **47 / 23**, and the not-reported-disposed subset
+measured **28 blocks / 26 ids** against §0.2's *"24 blocks / 23 distinct ids"*. Three causes, each
+located:
+
+1. **§0.2's own enumeration lists 24 distinct ids, not 23**, and two of those ids (`DF-10-4-B` at
+   `:1945` and `:2102`, `DF-12-1-A` at `:3023` and `:3119`) carry **two** blocks each, so its own
+   list implies **26** blocks. The prose figure and the list beneath it disagree; the list is the
+   better evidence and it is a strict SUBSET of what was measured here.
+2. **Two ids are additional and are named:** `DF-8-3-B` (`:652`, → `8-4-tell-integrators-what-changed`,
+   `done`) and `DF-14-3-H` (`:5285`, → `13-5-re-measure-the-gate-against-the-corrected-instrument`,
+   `done`). ⚠️ `DF-16-5-A`'s own body at `:5820` already predicted the second one in terms —
+   *"Pinning it to a story nobody has written yet is how `DF-14-3-H`'s `target_story: 13-5` went
+   stale"* — so the ledger knew, and no guard was watching. That is the whole argument for
+   `TC-ArgusAgent-DOCS-001-80`.
+3. **The form rule is stated mechanically here so it can be re-run**, which §0.2's could not be: a
+   field is LANDMARK iff its value, after stripping markdown emphasis, begins with `NONE` / `N/A` /
+   `TBD` / `UNASSIGNED` / `UNSCHEDULED`, or with an indefinite story selector (`the first story…`,
+   `the next story…`, `the story that…`, `whichever story…`, `any story…`). Everything else is
+   AFFIRMATIVE. Under that rule the AFFIRMATIVE population is **52** and is **stable** — it does not
+   move whether or not `DF-…` ids are scrubbed out of the field before story references are resolved
+   (scrubbing moves the total population 70 → 65 and the LANDMARK count 18 → 13, because five
+   landmark fields such as *"NONE — coupled to `DF-14-3-B`"* resolve a done key only through an
+   **id**, which is not a pointer; the guard scrubs, and the number that matters is unchanged either
+   way).
+4. ⚠️ **THE LINE NUMBERS THEMSELVES DIVERGE, AND THAT IS WORTH ONE SENTENCE BECAUSE IT MAKES A
+   LINE-CITED RECORD UNREPRODUCIBLE.** This ledger holds a **lone CR byte** inside a code span at
+   line **5459** (a `CR` byte quoted as text, not a line ending). `grep -n` / `sed -n` do not treat it as a
+   break; Python's `str.splitlines()` does. So every citation below line 5459 is identical under
+   both, and every citation above it differs by one. ⛔ **All line numbers in this section are
+   `grep -n` numbering, measured at `b8eaeee` BEFORE these appends shifted everything below
+   `:3339`** — reproducible with `git show b8eaeee:_bmad-output/design-artifacts/ArgusAgent/deferred-work.md | grep -n …`.
+   The story's own §0 mixes the two conventions: its `:6726` / `:6807` / `:7000` / `:7185` /
+   `:6331` are `grep -n`, while its `:5788` / `:6210` / `:6259` / `:5752` are `splitlines()` and read
+   one high here as `:5787` / `:6209` / `:6258` / `:5751`. Same lines, different rulers.
+
+
+⛔ **NO MEASURED ID IS ABSENT FROM BOTH LISTS.** Every one of the 52 AFFIRMATIVE blocks is either
+dispositioned by this story (the six above), excluded by a narrowing this section states and the
+guard asserts (`DF-1-7-B`, the disposing-story form), or **registered by name** in
+`_POINTS_AT_DONE_AT_LANDING` with a date, an owner and a reason (§(h)).
+
+### §(b) The six 6.2-pointed entries — dispositioned IN THEIR OWN BODIES
+
+`AI-E18-10`'s residual is discharged: each of the six now carries a dated, append-only note under
+its **own** bullet block, not only in the 2026-08-24 table nine hundred lines away.
+
+| entry | its `target_story` line | note appended under |
+|---|---:|---|
+| `DF-12-2-D` | `:3333` | its own block |
+| `DF-12-3-A` | `:3400` | its own block (with the half-open statement `AI-E12-3` requires) |
+| `DF-14-1-A` | `:4484` | its own block |
+| `DF-16-7-A` | `:5787` | its own block |
+| `DF-16-7-B` | `:6209` | its own block |
+| `DF-INV-VACUOUS-A` | `:6258` | its own block |
+
+⛔ **`DF-1-7-B` (`:174`) IS LEFT BYTE-UNTOUCHED.** It names Story 6.2 because Story 6.2 is the story
+that discharged it, on 2026-06-29. That is the one true pointer shape in this file, re-homing it
+would falsify a signed record, and its exclusion is asserted mechanically by the guard's
+`_DISPOSING_STORY_POINTERS` constant rather than left to a reviewer's memory.
+
+⛔ **None of the six is disposed of.** Each is **STILL OPEN with a corrected pointer and a live
+owner** — `XAgent007 (Engineering Lead)`, `AI-E9-8` — and each destination is a scope change to be
+argued through `bmad-correct-course` on `DF-16-7-B`'s precedent. ⚠️ **Re-homing 26 measured ids in
+prose would be `AI-E12-3`'s defect committed inside the story written to end it**; the remainder is
+REGISTERED, not resolved.
+
+### §(c) The Epic-18 / Story-17.3 scheduling pointers: DISCHARGED AND SUPERSEDED
+
+`epics.md`'s Epic 17 acceptance criterion reads *"`DF-AUD-DETECT-A`/`-B`/`-E`/`-F` are pointed at
+Epic 18 and `-D` at this epic's Story 17.3 — scheduling notes only"*. ⛔ **Executed literally at
+`b8eaeee` that would point five entries at five `done` stories — it would CREATE the defect this
+story exists to end.** It is therefore recorded as **DISCHARGED AND SUPERSEDED**, deliberately and
+on the record, not deviated from quietly. The replacement is a dated **disposition pointer** naming
+each entry's disposing story and fix sha:
+
+| entry | disposing story (`sprint-status.yaml`: `done`) | fix sha | recorded at |
+|---|---|---|---|
+| `DF-AUD-DETECT-A` | `18-1-…` | — (per its own note) | its own block |
+| `DF-AUD-DETECT-B` | `18-2-…` | — (per its own note) | its own block |
+| `DF-AUD-DETECT-D` | `17-3-grade-what-the-assertion-constrains` | **`2db5ce0`** | `:6726` |
+| `DF-AUD-DETECT-E` | `18-3-…` | **`9e3fdc2`** | `:6807` |
+| `DF-AUD-DETECT-F` | `18-4-…` | **`0ba6a98`** | `:7000` |
+
+⛔ **Story 17.3's hand-off is HONOURED, in the terms it set.** Its Completion Notes demanded *"a
+DISPOSITION POINTER naming this note's sha instead of a schedule"* for `DF-AUD-DETECT-D`; `2db5ce0`
+is named above, and no scheduling note is written for any of the five. ⚠️ **All five entries were
+already terminal at `b8eaeee`** — this section corrects the POINTERS that described them as
+scheduled, and disposes of nothing that was not already disposed of.
+
+### §(d) `DF-AUD-DETECT-C` — a corrected pointer and a live owner, and nothing else
+
+See the dated note under its own block. ⛔ **No disposition, no severity change, no status change.**
+It is a performance entry; Story 17.3 declined it explicitly; `AI-E18-10` reserves the destination
+decision to the **Governance Owner**. `AI-E13-12` applies and is recorded, not resolved.
+
+### §(e) Epic 17's ACTUAL outcome, against six documents that assume a different one
+
+⛔ **Recorded ONCE, here, dated, naming the stale statements by line. §3.4 holds: the Epic-18
+retrospective and the 2026-08-21 research are NOT rewritten.** Story 17.4's recorded outcome is
+**`UNEVALUABLE`** — sealed contributing members **0**, below the resolved floor of **3**;
+`measured_precision` **null**; 1,032 walked / 0 skipped; S1-eligible **85** across **3**
+contributing members; `S1` shipped **ADVISORY**, promoting **0 of 1,032**.
+
+| surface | the stale claim | measured at `b8eaeee` |
+|---|---|---|
+| `epics.md:346` | *"Epic 17 **repairs** FR10's detector"* | `S1` is ADVISORY; the verdict-eligible stage still promotes **0 of 1,032** |
+| `epics.md`, Epic 17 header | *"Capability delivered: … replacing a mock-provenance vacuity signal"* | **nothing was replaced at the verdict layer**; `argus/detectors/vacuous_test.py:796` is byte-unchanged as a parsed AST expression |
+| `epics.md`, Epic 17 `**Covers:**` | lists `DF-INV-VACUOUS-A`, `DF-14-1-A`, `DF-16-7-A`, `DF-16-7-B`, `DF-12-2-D`, `DF-12-3-A` | **none of the six was delivered by Epic 17.** The only two entries Epic 17 disposed of are `DF-AUD-DETECT-D` and `DF-INV-VACUOUS-B` |
+| `epic-18-retro-2026-08-25.md:480` | *"Epic 17 has no retrospective because Epic 17 has not run"* | 17.1–17.4 are `done`; only `epic-17-retrospective` is outstanding |
+| `epic-18-retro-2026-08-25.md:523`–`:527` | *"before its first story is contexted"* | four stories are contexted and delivered |
+| `epic-18-retro-2026-08-25.md:580` | *"`DF-AUD-DETECT-D` OPEN — Story 17.3 — an epic that has not started"* | terminal disposition at `2db5ce0`, recorded at `:6726` |
+
+⛔ **`scripts/precision_preregistration.py:14` — *"Epic 17 is about to move the verdict-eligible
+population"* — IS NOW FALSE AND IS DELIBERATELY NOT EDITED.** The module is byte-frozen by Story
+17.1 and pinned by `TC-ArgusAgent-PRECISION-001-140`; the sentence is evidence of when the criterion
+was written, and moving it would move the guard. ⚠️ **Recorded here so a later editor cannot "tidy"
+it into a RED suite.**
+
+### §(f) `ledger_closed_ids` is measured DEFECTIVE for the openness question — a THIRD independent measurement
+
+Run over the live ledger at `b8eaeee` it returns **42** ids. Three lines fool it, on two entries
+this story handles. ⚠️ **The verb is elided as `[v]` in every quote below, deliberately** —
+reproducing it beside the id would make this table itself a claim against two entries it is
+documenting as OPEN, which is the defect demonstrating itself inside its own evidence.
+
+| id | line | why the extractor is fooled | truth |
+|---|---:|---|---|
+| `DF-13-5-A` | `:4752` | a FUTURE CONDITIONAL — *"… `[v]` when 13.5 records its outcome"* | **OPEN and UNSPENT** |
+| `DF-13-5-A` | `:5751` | a NEGATION the lookbehind misses — *"Neither `[v]` anything."*; `_NEGATED` knows `not` / `never` / `cannot be` / `is not` / `none is` / `no entry is` / `un`, and **not** `Neither` | **OPEN and UNSPENT** |
+| `DF-12-3-A` | `:4292` | a HALF-disposition — *"the DISCLOSURE half is `[v]` 2026-08-16; the MECHANISM half is re-recorded"* | **half open** (§(b)) |
+
+⛔ **All three reproduced by execution at `b8eaeee`**, independently of the story's §0.4, by running
+`tests/test_governance_record_integrity.ledger_closed_ids` and the `_CLOSURE_VERB` / `_NEGATED`
+predicates line by line. This is the **third** independent measurement of `DF-16-6-D`'s counted
+class. ⛔ **Story 17.5 repairs neither the extractor nor the record, and takes no side in the open
+`DF-INV-LEDGER-A` vs `DF-16-6-D` question** — that is a Governance Owner act, and `DF-16-6-D` also
+carries an ordering hazard (`DF-INV-LEDGER-A` did not know about it) whereby repairing the analyzer
+UNMASKS a surviving instance and turns the full suite RED. What this story does is **refuse to build
+`TC-ArgusAgent-DOCS-001-80` on top of the contested predicate**, and record the measurement as
+evidence for whoever does reconcile them.
+
+### §(g) Three module-comment observations this story records rather than sweeps
+
+Story 17.5 corrected **12** stale forward references across **7** `argus/**` modules (`epics.md`
+names 5 sites across 4). Three classes were carved out by name and left byte-identical, and the
+reasons are recorded here so a later sweep does not re-derive them:
+
+- ⛔ **BEHAVIOUR-BEARING, OPEN, owner XAgent007 (Engineering Lead)** — `argus/ledger/depth_semantics.py:134`
+  and `:138` are `DEPTH_SEMANTICS` **payload strings a user reads**, and
+  `argus/ledger/recording.py:77` is a pydantic `Field(description=…)` that **reaches the emitted
+  schema** (`tests/test_recording_schema.py`, `tests/test_verdict_schema_bump.py` sit on it). Both
+  still describe Story 6.2 as the future owner of AST-grounded provenance. ⛔ **Editing either is a
+  behaviour change and is out of scope for a comment story.** Recorded, not fixed.
+- ⚠️ **A THIRTEENTH SITE MEASURED HERE THAT THE STORY'S OWN §0.6 DID NOT ENUMERATE:**
+  `argus/ledger/recording.py:68`, the docstring twin of `:77` (*"reserves an optional AST-node span
+  reference for AST-grounded detectors (Story 6.2)"*). It is a comment and would have been in
+  scope — but it is the same sentence as the behaviour-bearing `:77` four lines below it, and
+  correcting one while the other stands would leave the module internally inconsistent, which is
+  worse than leaving both. ⛔ **Deliberately NOT edited**, recorded here with its line so the pair
+  moves together when the behaviour-bearing half is scheduled.
+- ⚠️ **STALE IN THE OTHER DIRECTION, a different defect, recorded not fixed:**
+  `argus/ledger/coverage_ledger.py:27` and `:171`, and `argus/ledger/depth_semantics.py:37` and
+  `:41`, defer to 6.2 work that Story 6.2 **actually delivered** (`argus/pipeline_stages.py:138`).
+- ⛔ **TRUE HISTORICAL, correct as written, byte-identical:** `argus/pipeline.py:9` `:35` `:43`
+  `:55` `:115`, `argus/pipeline_persist.py:13`, `argus/pipeline_stages.py:138`,
+  `argus/verdict/prosecutor.py:29` `:50` `:227`. These record what Story 6.2 **did**.
+
+⛔ **THE SITE THAT MATTERS MOST.** `argus/detectors/assertion_strength.py:64` was created by **Story
+17.3 on 2026-08-25** — one story before the story chartered to remove the sentence, inside an epic
+whose charter names the defect — carrying the identical stale claim that *"real assertion provenance
+is Story 6.2's"*. That is `DF-16-6-D`'s lesson measured again (*"knowing about it does not prevent
+it"*), and it is the strongest available argument for the guard in §(h) existing at all.
+
+### §(h) The guard, and a registry that can only shrink
+
+`TC-ArgusAgent-DOCS-001-80` lands in `tests/test_governance_record_integrity.py` (whose stated
+cohesion is *"every guard below closes over the governance documents rather than over code"*), and
+is registered in `architecture.md` §Enforcement under **Stale-target-story enforcement**, because
+`TC-ArgusAgent-DOCS-001-77` asserts that a rule in a test is not a rule. ⛔ **No id is renumbered**;
+`-79` was the highest `ArgusAgent-DOCS` id in the tree.
+
+- **The rule.** A canonical entry block's own `- target_story:` field must not AFFIRMATIVELY name a
+  story key `sprint-status.yaml` records as `done`, unless the pair is registered.
+- **Two narrowings, each with a positive control over synthetic input:** the LANDMARK form is not a
+  violation (**18** blocks excluded, count asserted), and the DISPOSING-STORY form is not a
+  violation (`DF-1-7-B` → Story 6.2, excluded **by name**).
+- ⛔ **The guard does NOT use `ledger_closed_ids` to decide openness**, for the measured reason in
+  §(f). It never calls it.
+- **`_POINTS_AT_DONE_AT_LANDING`** registers the historical population **by name, with the date
+  2026-08-26, the owner XAgent007 (Engineering Lead) and a per-entry reason**, in the
+  `_UNBACKED_AT_LANDING` / `_EXEMPT_BY_DESIGN` form this project already uses. ⛔ **It is a
+  REGISTRY, not an amnesty:** `-80` fails if a registered pair becomes clean, so it can only shrink,
+  and it fails immediately on any affirmative stale pointer NOT listed.
+- ⛔ **Both alternatives are rejected on the record.** *Mass re-homing* the 26 measured ids this
+  story never verified is `AI-E12-3`'s defect. *Narrowing the population until it goes green* is
+  Story 12.1's named anti-pattern, which `tests/test_module_size_ceiling.py::_REMEDY` already
+  forbids in shape.
+- ⚠️ **Seventeen of the registered entries point at closed Epic 8–14 work** and belong to epics
+  Story 17.5 has no standing to reopen. They are **REGISTERED, NOT RESOLVED**, with a named human
+  owner rather than `target_story: NONE` alone (`AI-E9-8`). Whether they get a sweep of their own is
+  the Epic-17 retrospective's call; `AI-E13-12` already says every `target_story: NONE` entry needs
+  a destination before its epic closes.
+
+### §(i) What this section does NOT do
+
+⛔ It disposes of no entry that was open at `b8eaeee`. ⛔ It does not spend `DF-13-5-A`'s round:
+`branch_taken` NEITHER, `members_ratified` NONE, `round_state` UNSPENT, `protocol_edit` NONE, the
+`2026-11-22` backstop NOT re-dated. ⛔ It ratifies no corpus member, fetches no third-party source,
+adjudicates no row and promotes nothing. ⛔ It does not reconcile `DF-INV-LEDGER-A` with
+`DF-16-6-D`. ⛔ It edits no line of `argus/**` outside the 12 measured forward-reference sites, and
+no byte of `scripts/precision_preregistration.py`,
+`successor-vacuity-predicate-specification.md`, `validation-corpus/**`, `adjudication-record.json`
+or any retrospective. ⚠️ **Every measurement in this section is LOCAL (Windows); this branch is
+unpushed and there is no CI evidence at any sha in this arc.**
