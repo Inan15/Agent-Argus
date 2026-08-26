@@ -57,6 +57,7 @@ if str(_REPO_ROOT / "scripts") not in sys.path:
 
 from pinned_corpus_snapshot import (  # noqa: E402
     PinnedSnapshotError,
+    map_path_is_absolute,
     pin_is_reachable,
     pinned_tree,
 )
@@ -470,8 +471,14 @@ def main(argv: list[str] | None = None) -> int:
         if not sep or not member_id.strip() or not rel.strip():
             print(f"REFUSED — --map {pair!r} is not MEMBER_ID=RELATIVE_PATH", file=sys.stderr)
             return 2
-        if Path(rel.strip()).is_absolute():
-            print(f"REFUSED — --map {pair!r} names an ABSOLUTE path", file=sys.stderr)
+        if map_path_is_absolute(rel.strip()):
+            print(
+                f"REFUSED — --map {pair!r} names an ABSOLUTE path. It must be relative to "
+                "--checkout-root: pathlib discards the root when the right operand is "
+                "absolute, so an absolute value would silently read a tree outside the "
+                "directory the operator scoped this run to.",
+                file=sys.stderr,
+            )
             return 2
         overrides[member_id.strip()] = rel.strip()
 

@@ -470,6 +470,41 @@ measurements. See §0.8.
 - [x] Stage by explicit path; disclose any carried peer file by name.
 - [x] Re-measure byte invariants after every write.
 
+### Review Findings
+
+Adversarial code review of commit `cbd6218` (vs parent `d2e8844`), 2026-08-26. The central claim
+(§0.5's premise falsified — `audit_validation_corpus.py` structurally refuses every sealed member
+via `manifest.eligible_members()`) was independently re-executed and confirmed: `python
+scripts/audit_validation_corpus.py --checkout-root D:/_bench --only aws-aws-sam-cli --map
+aws-aws-sam-cli=samcli --snapshot-root D:/_argus_snap --output-name probe.json` returned `REFUSED —
+no eligible members selected`, exit 2, on a sandbox with **no `D:/_bench` present at all** —
+proving the refusal fires at member-selection time, before any checkout is touched. No second
+walker, no `eligible_for_n` flip, no runner-widening was found in the diff. All three frozen
+artifacts (`tests/corpus/_manifest.py`, `precision-validation-protocol.md`,
+`adjudication-record.json`) are confirmed byte-unchanged by `git diff --stat`. The `getsentry-
+sentry-python` 638-vs-639 claim is confirmed against `pinned_tree`'s own `parts[1] != "blob"`
+filter. `TC-ArgusAgent-PRECISION-001-153` (3 tests) passes in isolation and inside the full suite
+(1,763 passed, exit 0); `mypy` clean; `--check` reports `OK`; the DOCS-001-22 guard stays green.
+
+- [x] [Review][Patch] `--map` absolute-path guard in the new producer is weaker than the sibling
+  precedent it copied its flag shape from, and is untested
+  [scripts/build_ratification_record.py:473] — `if Path(rel.strip()).is_absolute():` uses only the
+  native-platform check. On this project's own (Windows) platform, `Path("/etc/passwd").is_absolute()`
+  is `False` (verified by execution), so a POSIX-style absolute value given to `--map` is NOT
+  rejected and reaches `checkout = checkout_root / overrides.get(member_id, member_id)`, which
+  resolves to `<checkout_root-drive>:\etc\passwd` — outside the intended `--checkout-root` subtree.
+  `scripts/audit_validation_corpus.py` (the module this producer explicitly copied the `--map
+  MEMBER_ID=RELATIVE_PATH` shape from — see this story's own Task 1 derivation-search table, "SAME
+  FLAG SHAPE COPIED") already fixed this exact defect class with `PurePosixPath(rel.replace("\\",
+  "/")).is_absolute() or Path(rel).is_absolute()`, documented in its own comments as a previously
+  shipped bug ("pathlib discards the left operand ... Both are refusals now"). The new producer
+  reused the flag shape but not the validation, so the same defect class now has two forks — one
+  fixed, one not — which is itself the AR7/one-derivation violation this codebase repeatedly
+  flags against itself. No test in `tests/test_ratification_record.py` exercises `--map` at all, so
+  the gap is silent. **Fix:** replace line 473's check with the precedent's combined predicate (or
+  factor it into one shared helper both scripts import, which would be the stronger fix and remove
+  the fork entirely).
+
 ---
 
 ## Dev Notes
@@ -706,3 +741,83 @@ still has no CI result (Actions outage from 2026-08-26 15:11:58 UTC), so every f
 | date | change |
 |---|---|
 | 2026-08-26 | Story 19.1 implemented. Ratification evidence package built for the 6 sealed members: 8 manifest fields carried verbatim, `files_at_pin` / `python_files_at_pin` measured through the shipped `pinned_tree` helper, `heuristic_findings_at_pin` recorded **UNMEASURED** because the one producer refuses unratified members by construction. Guard `TC-ArgusAgent-PRECISION-001-153` added (RED→GREEN proven). §0.1 corrected: `getsentry-sentry-python` is **638** files at pin, not 639 (one submodule gitlink). 1,760 → 1,763 tests, mypy clean, Windows only. Nothing ratified, fetched, adjudicated or spent. |
+
+---
+
+## Review Round 1 — resolution (2026-08-26)
+
+**Verdict received:** `fail` · 1 × [Med], 0 High, 0 Low. **Resolved: 1/1.**
+
+✅ **Resolved review finding [Med] — the `--map` absolute-path guard was half the sibling's
+predicate, and untested.** ⛔ **The finding is CORRECT and was reproduced before it was fixed:**
+
+```
+python -c "from pathlib import Path; print(Path('/etc/passwd').is_absolute())"   ->  False
+python -c "from pathlib import Path; print(Path('D:/_bench') / '/etc/passwd')"   ->  D:\etc\passwd
+```
+
+On Windows a POSIX-style absolute value carries no drive, so `Path.is_absolute()` is `False` and
+the value escaped the scoped root; on POSIX — **the platform CI actually runs** — the left operand
+is discarded entirely. `scripts/audit_validation_corpus.py` already carried the correct combined
+predicate, and its own comment records this as an *already-shipped-and-fixed* bug. This producer
+copied the flag shape and only half the defence.
+
+⛔ **FIXED AS ONE DERIVATION, NOT AS A SECOND FORK — which is the whole point of the finding.**
+Duplicating the corrected predicate into this producer would have left the repository with two
+copies of a defence that has now been half-fixed once already. Instead:
+
+| change | file |
+|---|---|
+| `map_path_is_absolute()` added — pure, both path flavours, exported in `__all__` | `scripts/pinned_corpus_snapshot.py` |
+| the inline predicate replaced by a call to it (behaviour-identical, message unchanged) | `scripts/audit_validation_corpus.py` |
+| the half-predicate replaced by a call to it, and the refusal message brought up to the sibling's | `scripts/build_ratification_record.py` |
+
+⛔ **`pinned_corpus_snapshot` is the home, and the choice is deliberate:** it is lightweight, it is
+already imported by **both** callers, and it owns checkout-path resolution.
+`audit_validation_corpus` was rejected as the home because it transitively imports
+`argus.detectors.vacuous_test` — putting the shared helper there would have pulled **the detector**
+into an evidence-package producer that must never look at the instrument's verdict.
+
+**10 new regression tests, covering the gap the reviewer named ("no test in the new suite exercises
+`--map` at all"):**
+
+- 6 × absolute forms refused with exit 2 — `/etc/passwd`, `/`, `//server/share`, `C:/Windows`,
+  `C:\Windows`, `D:/_bench`
+- 3 × relative forms accepted — ⛔ **the ban's OTHER outcome, so it is not vacuous:** a predicate
+  answering `True` to everything would pass the refusal tests while making the flag unusable
+- 1 × malformed pairs refused — `no-equals-sign`, `=empty-id`, `empty-path=`
+
+**Gates after the fix:**
+
+```
+python -m pytest tests/test_ratification_record.py -q   13 passed (was 3), no warnings
+python -m pytest                                        1773 passed   [exit 0]
+python -m mypy <the 4 touched files>                    1 error - PRE-EXISTING, see below
+python scripts/build_ratification_record.py --check     OK - 6 rows, eligible_member_count 5
+```
+
+⚠️ **The one `mypy` error is PRE-EXISTING and was NOT introduced by this round, proven rather than
+asserted:** `audit_validation_corpus.py:703 error: Value of type "object" is not indexable`.
+Stashing this round's edits and re-running reports the identical error at **line 702** — the single
+line of drift is this round's one added import. ⛔ **Not fixed here:** it is untouched pre-existing
+debt in an operator-side runner, outside this story's scope, and repairing it would widen a review
+round into an unrelated module (`AI-E17-9`: 17.5's three docs-only fix rounds consumed an entire
+safety margin).
+
+⛔ **The record's own bytes did not change.** `--map` validation is input-gating; regenerating the
+record produced a byte-identical artifact. Nothing was ratified, fetched, adjudicated or spent by
+this round: `eligible_member_count()` = **5**, sealed ∩ ratified = `[]`, and the three frozen
+artifacts remain byte-unchanged.
+
+⛔ **Still WINDOWS ONLY.** This round *strengthens* the POSIX story (the escape it closes is worse
+on POSIX than on Windows) but does not test it there. PR #9 still has no CI result and `AI-E17-3`
+stays open.
+
+### Files changed in this round
+
+| file | change |
+|---|---|
+| `scripts/pinned_corpus_snapshot.py` | **+** `map_path_is_absolute()`, exported |
+| `scripts/audit_validation_corpus.py` | routed through it; dead `PurePosixPath` import removed |
+| `scripts/build_ratification_record.py` | routed through it; refusal message aligned |
+| `tests/test_ratification_record.py` | **+10** `--map` regression tests |

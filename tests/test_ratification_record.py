@@ -28,6 +28,7 @@ if str(_REPO_ROOT) not in sys.path:
 if str(_REPO_ROOT / "scripts") not in sys.path:
     sys.path.insert(0, str(_REPO_ROOT / "scripts"))
 
+import build_ratification_record  # noqa: E402
 from build_ratification_record import (  # noqa: E402
     CARRIED_MANIFEST_FIELDS,
     MEASURED_FIELDS,
@@ -306,3 +307,79 @@ def test_TC_ArgusAgent_PRECISION_001_153_the_worklist_is_committed_beside_the_re
         "the worklist does not carry the reason the finding-count column is empty. The operator "
         "would meet a blank column with no account of why it is blank."
     )
+
+
+# ═════════════════════════════════════════════════════════════════════════════════════════
+# The --map escape, closed. Review round 1 (2026-08-26) found this producer had copied the
+# --map flag shape from `audit_validation_corpus` but only HALF its absolute-path predicate.
+# ═════════════════════════════════════════════════════════════════════════════════════════
+
+
+@pytest.mark.parametrize(
+    "relative",
+    [
+        "/etc/passwd",  # POSIX-absolute: Path.is_absolute() is FALSE for this on Windows
+        "/",
+        "//server/share",
+        "C:/Windows",
+        r"C:\Windows",
+        "D:/_bench",
+    ],
+)
+def test_TC_ArgusAgent_PRECISION_001_153_absolute_map_paths_are_refused(relative: str) -> None:
+    r"""TC-ArgusAgent-PRECISION-001-153 (AC5.4) — an absolute ``--map`` value cannot escape the root.
+
+    **Observable.** :func:`map_path_is_absolute` is ``True`` for every absolute value in BOTH path
+    flavours, and ``main()`` refuses the run with exit 2 rather than reading the mapped tree.
+
+    **Why it matters, measured rather than asserted.** ``--map MEMBER_ID=PATH`` promises a path
+    *relative to* ``--checkout-root``, and pathlib **discards the left operand** when the right one
+    is rooted. ``Path("/etc/passwd").is_absolute()`` is **False** on Windows, so the narrow
+    predicate this producer shipped in review round 1 let ``/etc/passwd`` through, and
+    ``Path("D:/_bench") / "/etc/passwd"`` resolves to ``D:\etc\passwd`` — already outside the
+    directory the operator scoped the run to. On POSIX the root is discarded entirely, which is
+    the platform this repository's CI actually runs on.
+
+    ⛔ **ONE DERIVATION, TWO CALLERS.** The predicate lives in ``pinned_corpus_snapshot`` and
+    ``audit_validation_corpus`` routes through the same function, so this defect class cannot be
+    fixed in one script and left standing in the other (AR7 / ``DN-3``).
+    """
+    from pinned_corpus_snapshot import map_path_is_absolute
+
+    assert map_path_is_absolute(relative), (
+        f"{relative!r} was not recognised as absolute. Joined onto --checkout-root it would read "
+        f"a tree outside the directory the operator scoped the run to."
+    )
+
+    exit_code = build_ratification_record.main(
+        ["--checkout-root", "irrelevant", "--map", f"aws-aws-sam-cli={relative}"]
+    )
+    assert exit_code == 2, (
+        f"--map aws-aws-sam-cli={relative} was accepted (exit {exit_code}). An absolute mapped "
+        f"path must be a refusal, never a silently re-rooted read."
+    )
+
+
+@pytest.mark.parametrize("relative", ["samcli", "sub/dir", "a/b/c"])
+def test_TC_ArgusAgent_PRECISION_001_153_relative_map_paths_are_not_refused(relative: str) -> None:
+    """TC-ArgusAgent-PRECISION-001-153 (AC5.4) — the ban's OTHER outcome, so it is not vacuous.
+
+    A predicate that answered ``True`` to everything would pass the refusal test above while
+    making the flag unusable. These are the real values the operator passes (``samcli``,
+    ``sentrypy``, ``gauth`` …) and every one must be accepted as relative.
+    """
+    from pinned_corpus_snapshot import map_path_is_absolute
+
+    assert not map_path_is_absolute(relative), (
+        f"{relative!r} was refused as absolute. The ban has swallowed the legitimate values and "
+        f"the refusal test above proves nothing."
+    )
+
+
+def test_TC_ArgusAgent_PRECISION_001_153_malformed_map_pairs_are_refused() -> None:
+    """TC-ArgusAgent-PRECISION-001-153 (AC5.4) — a ``--map`` without ``=`` is a named refusal."""
+    for pair in ("no-equals-sign", "=empty-id", "empty-path="):
+        assert (
+            build_ratification_record.main(["--checkout-root", "irrelevant", "--map", pair])
+            == 2
+        ), f"--map {pair!r} was accepted; a malformed pair must be a refusal, not a silent skip."

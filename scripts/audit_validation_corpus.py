@@ -67,7 +67,7 @@ import tempfile
 from collections import Counter
 from collections.abc import Sequence
 from dataclasses import dataclass
-from pathlib import Path, PurePosixPath
+from pathlib import Path
 
 _REPO_ROOT = Path(__file__).resolve().parents[1]
 if str(_REPO_ROOT) not in sys.path:  # running as a script, not an installed console entry
@@ -99,6 +99,7 @@ from pinned_corpus_snapshot import (  # noqa: E402
     PinnedTree,
     PinVerification,
     dirty_in_scope_paths,
+    map_path_is_absolute,
     materialize_pinned_bytes,
     pinned_tree,
     verify_pinned_bytes,
@@ -553,7 +554,7 @@ def main(argv: list[str] | None = None) -> int:
         if not member_id.strip() or not rel.strip():
             print(f"REFUSED — --map {pair!r} has an empty member id or path", file=sys.stderr)
             return 2
-        if PurePosixPath(rel.replace("\\", "/")).is_absolute() or Path(rel).is_absolute():
+        if map_path_is_absolute(rel):
             print(
                 f"REFUSED — --map {pair!r} names an ABSOLUTE path. It must be relative to "
                 "--checkout-root: pathlib discards the root when the right operand is "

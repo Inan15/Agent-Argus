@@ -48,11 +48,12 @@ import os
 import subprocess
 from collections.abc import Callable, Sequence
 from dataclasses import dataclass
-from pathlib import Path
+from pathlib import Path, PurePosixPath
 from typing import Any
 
 __all__ = [
     "MAX_ABSOLUTE_PATH_CHARS",
+    "map_path_is_absolute",
     "PinUnreachable",
     "PinVerification",
     "PinnedBytesRefusal",
@@ -198,6 +199,26 @@ def _git(
         capture_output=True,
         timeout=_GIT_TIMEOUT_SECONDS,
     )
+
+
+def map_path_is_absolute(relative: str) -> bool:
+    r"""Whether *relative* is absolute in EITHER path flavour. PURE — no I/O (AR8).
+
+    ⛔ **BOTH flavours, and the second one is the whole point.** A ``--map MEMBER_ID=PATH`` value
+    is promised to be relative to ``--checkout-root``, and pathlib discards the left operand when
+    the right one is rooted — so an absolute value silently reads a tree outside the directory
+    the operator scoped the run to. ``Path.is_absolute()`` alone does NOT catch this on Windows:
+    ``Path("/etc/passwd").is_absolute()`` is **False** there (no drive letter), and
+    ``Path("D:/_bench") / "/etc/passwd"`` resolves to ``D:\etc\passwd`` — already outside the
+    scoped root. On POSIX the same value discards the root entirely.
+
+    ⛔ **ONE DERIVATION, TWO CALLERS (AR7 / DN-3).** :mod:`audit_validation_corpus` shipped this
+    predicate inline first; :mod:`build_ratification_record` copied the ``--map`` flag shape and,
+    in its first round, copied only the ``Path.is_absolute()`` half — reintroducing exactly the
+    defect the original comment records as already-shipped-and-fixed. It lives here, in the
+    module both already import, so the class cannot be half-fixed again.
+    """
+    return PurePosixPath(relative.replace("\\", "/")).is_absolute() or Path(relative).is_absolute()
 
 
 def pin_is_reachable(checkout: Path, commit_sha: str) -> bool:
