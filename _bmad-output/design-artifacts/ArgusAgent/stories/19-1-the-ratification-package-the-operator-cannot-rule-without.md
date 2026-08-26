@@ -505,6 +505,67 @@ filter. `TC-ArgusAgent-PRECISION-001-153` (3 tests) passes in isolation and insi
   factor it into one shared helper both scripts import, which would be the stronger fix and remove
   the fork entirely).
 
+### Review Round 2 (2026-08-26) — verification of the round-1 fix, commit `107f2d1`
+
+**Verdict received: `concerns`.** The round-1 [Med] finding was independently re-verified as
+correctly and completely fixed. One NEW, narrower gap was found in the same mechanism during
+adversarial re-probing; it is Low severity and does not reopen the round-1 finding.
+
+**Round-1 fix, verified rather than trusted:**
+
+- `map_path_is_absolute()` in `scripts/pinned_corpus_snapshot.py` is confirmed **pure** (stdlib
+  only — `hashlib`, `os`, `subprocess`, `collections.abc`, `dataclasses`, `pathlib`, `typing`;
+  no `argus.*` import at all), so routing `build_ratification_record.py` through it does **not**
+  transitively import `argus.detectors.vacuous_test`. Checked by importing the producer and
+  inspecting `sys.modules` directly: zero `argus.detectors*` modules loaded.
+- `scripts/audit_validation_corpus.py`'s predicate is confirmed **behaviour-identical**: the
+  extracted function body is character-for-character the same expression the inline check used,
+  and the refusal message text is unchanged.
+- The 10 new `--map` regression tests (6 absolute-refused, 3 relative-accepted, 1 malformed-pairs)
+  all pass and exercise `main()` end-to-end, not just the predicate in isolation — re-run
+  directly (`-v`): 6/6 passed.
+- Full suite: exit 0, all green. Independently cross-checked the **1,773** figure by summing
+  `pytest --collect-only`'s per-file counts — **1,773**, exact match.
+- Record and worklist confirmed **byte-identical** by `md5sum` across `cbd6218` → `107f2d1` →
+  working tree (both files, not just the record). `eligible_member_count()` still **5**; the three
+  frozen artifacts remain byte-unchanged.
+- The `audit_validation_corpus.py:703` mypy error's **pre-existence was independently reproduced**,
+  not merely re-trusted: swapping in the round-1 file content and re-running mypy moves the
+  identical error to line **702**, matching the claimed one-line import drift exactly.
+- No file outside the claimed six was touched (`git diff --name-only cbd6218 107f2d1`).
+
+**New finding — the round-1 defect class has a THIRD, still-open path flavour:**
+
+- [x] [Review][Patch] `map_path_is_absolute()` does not catch Windows drive-relative `--map`
+  values, which discard `--checkout-root` the same way the round-1 finding did
+  [scripts/pinned_corpus_snapshot.py:229] — neither `PurePosixPath(...).is_absolute()` nor
+  `Path(...).is_absolute()` is `True` for a drive-relative form like `C:foo` (a drive letter with
+  no root, e.g. `--map member=C:foo`): pathlib deliberately does not treat this as absolute.
+  Verified by execution: `Path("D:/_bench") / "C:foo"` **also discards the left operand**,
+  resolving to bare `C:foo` — the exact "pathlib discards the left operand" bug class this round
+  exists to close, via a mechanism neither of the function's two checks catches. Untested (the 10
+  new regression tests cover fully-absolute and relative forms, not drive-relative ones) and
+  unfixed. **Severity Low, not Medium:** this producer is a trusted, single-operator local CLI
+  (`--map` values are never untrusted/remote input), the form requires an unusual single-letter-
+  drive-plus-colon-no-slash value that none of the real member names resemble, and it is inert on
+  POSIX/CI (the platform this repository's CI actually runs, and where the round-1 fix mattered
+  most). Worth one more line — e.g. `PureWindowsPath(relative).drive != "" or ...` — but does not
+  block this story.
+
+**Scope question, not a regression — `..`-traversal remains unhandled, as it was pre-round-1:**
+Neither `map_path_is_absolute()` nor its caller reject `--map member=../../etc`. This reviewer
+agrees the judgement to leave it out of scope is reasonable and does not dispute it: `--map`'s
+value is entirely operator-supplied on the operator's own machine (no untrusted or remote input
+reaches this CLI), the operator already has full local filesystem access, and the sibling
+`audit_validation_corpus.py` — the precedent this story explicitly follows — carries the identical
+posture. Recorded here so silence is not later read as an oversight.
+
+**Cosmetic, not filed as an action item:** `map_path_is_absolute` was inserted into
+`pinned_corpus_snapshot.py`'s `__all__` between `MAX_ABSOLUTE_PATH_CHARS` and `PinUnreachable`;
+under the list's own established two-block (constants/classes, then lowercase functions)
+alphabetical convention it belongs in the second block, between `dirty_in_scope_paths` and
+`materialize_pinned_bytes`. Zero functional effect; noted for polish only.
+
 ---
 
 ## Dev Notes
@@ -821,3 +882,74 @@ stays open.
 | `scripts/audit_validation_corpus.py` | routed through it; dead `PurePosixPath` import removed |
 | `scripts/build_ratification_record.py` | routed through it; refusal message aligned |
 | `tests/test_ratification_record.py` | **+10** `--map` regression tests |
+
+---
+
+## Review Round 2 — resolution (2026-08-26)
+
+**Verdict received:** `concerns` · round 1's [Med] confirmed **fixed and complete**; 1 new [Low].
+**Resolved: 1/1.**
+
+✅ **Resolved review finding [Low] — the drive-relative `--map` form, which neither round had
+closed.** ⛔ **Reproduced before it was fixed:**
+
+```
+Path('D:/_bench') / 'C:foo'   ->  C:foo          # left operand discarded ENTIRELY
+map_path_is_absolute('C:foo') ->  False          # caught by NEITHER existing check
+```
+
+⛔ **THE POINT THE REVIEWER FOUND, AND IT IS SHARPER THAN "ONE MORE CASE".** `C:foo` is not
+absolute *in the ordinary sense at all* — it names a drive and then a path relative to **that
+drive's own working directory**. Both existing checks ask about *rootedness*, and this form is not
+rooted. It nevertheless discards the left operand just as completely as `/etc/passwd` does, so the
+same escape opens through a shape the predicate was not built to see. The third check asks for the
+**drive** rather than for rootedness, which is the question this form actually answers to.
+
+⛔ **THE ONE-DERIVATION ARGUMENT PAID OUT HERE, AND IT IS WORTH RECORDING AS EVIDENCE RATHER THAN
+AS AN OPINION.** Round 1 moved the predicate into `pinned_corpus_snapshot` on the argument that a
+forked defence gets half-fixed. Round 2 then found a third flavour **neither caller had ever
+handled** — including `audit_validation_corpus`, which had shipped the "correct" version for
+months. Because there is now exactly one derivation, **that fix protected both callers at once**,
+with no possibility of the sibling being left behind.
+
+**+6 regression cases, and the non-vacuity half matters more than the refusals:**
+
+| added | why |
+|---|---|
+| `C:foo`, `C:`, `D:sub/dir` refused | the three drive-relative shapes |
+| `weird:name` **accepted** | ⛔ proves the new drive check did not simply start refusing every colon — a drive must be a single letter |
+| `sentrypy`, `agent-smith/nested` accepted | real member directory names, unaffected |
+
+⛔ **Scope held.** `..` traversal remains **deliberately unhandled**, and the reviewer examined that
+judgement and did not dispute it: the sibling does not handle it either, and closing it would
+change `audit_validation_corpus`'s accepted inputs — a behaviour change to an operator-side runner
+that no finding in either round asked for (`AI-E17-9`).
+
+**Gates after the fix:**
+
+```
+python -m pytest tests/test_ratification_record.py -q -W error   19 passed (was 13), zero warnings
+python -m pytest                                                 1779 passed   [exit 0]
+python -m mypy <the 3 touched files>                             Success: no issues found
+md5 ratification-record.json    92d48a65b2ce05cd7707a3c6b7131830 — UNCHANGED across all 3 rounds
+```
+
+⛔ **The record's bytes have not moved since it was first written.** All three rounds changed only
+input-gating and tests. `eligible_member_count()` = **5**, sealed ∩ ratified = `[]`, the three
+frozen artifacts remain byte-unchanged, and nothing was ratified, fetched, adjudicated or spent.
+
+⚠️ `audit_validation_corpus.py` was **not touched this round**, so its pre-existing `mypy` error
+(line 703, independently reproduced by the reviewer via an A/B file swap) stands unchanged and
+still out of scope.
+
+⛔ **STILL WINDOWS ONLY.** ⛔ **And this round's finding is the one place where that matters least
+and reads worst:** the drive-relative form is a **Windows-only** shape, inert on the ubuntu matrix,
+so it is the rare case where the local-only gate was the *right* place to catch it. That does not
+generalise. PR #9 still has no CI result and `AI-E17-3` stays open.
+
+### Files changed in this round
+
+| file | change |
+|---|---|
+| `scripts/pinned_corpus_snapshot.py` | third check added to `map_path_is_absolute()`; `PureWindowsPath` imported; `__all__` ordering restored |
+| `tests/test_ratification_record.py` | **+6** cases — 3 drive-relative refusals, 3 acceptances incl. the not-a-drive colon |

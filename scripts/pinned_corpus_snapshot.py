@@ -48,12 +48,11 @@ import os
 import subprocess
 from collections.abc import Callable, Sequence
 from dataclasses import dataclass
-from pathlib import Path, PurePosixPath
+from pathlib import Path, PurePosixPath, PureWindowsPath
 from typing import Any
 
 __all__ = [
     "MAX_ABSOLUTE_PATH_CHARS",
-    "map_path_is_absolute",
     "PinUnreachable",
     "PinVerification",
     "PinnedBytesRefusal",
@@ -63,6 +62,7 @@ __all__ = [
     "PorcelainEntry",
     "blob_sha1",
     "dirty_in_scope_paths",
+    "map_path_is_absolute",
     "materialize_pinned_bytes",
     "parse_porcelain_z",
     "pin_is_reachable",
@@ -202,9 +202,10 @@ def _git(
 
 
 def map_path_is_absolute(relative: str) -> bool:
-    r"""Whether *relative* is absolute in EITHER path flavour. PURE — no I/O (AR8).
+    r"""Whether *relative* fails to be a plain relative path in ANY path flavour. PURE (AR8).
 
-    ⛔ **BOTH flavours, and the second one is the whole point.** A ``--map MEMBER_ID=PATH`` value
+    ⛔ **THREE FLAVOURS, AND EACH ONE WAS FOUND BY A SEPARATE REVIEW OF THE SAME MECHANISM.** A
+    ``--map MEMBER_ID=PATH`` value
     is promised to be relative to ``--checkout-root``, and pathlib discards the left operand when
     the right one is rooted — so an absolute value silently reads a tree outside the directory
     the operator scoped the run to. ``Path.is_absolute()`` alone does NOT catch this on Windows:
@@ -212,13 +213,29 @@ def map_path_is_absolute(relative: str) -> bool:
     ``Path("D:/_bench") / "/etc/passwd"`` resolves to ``D:\etc\passwd`` — already outside the
     scoped root. On POSIX the same value discards the root entirely.
 
-    ⛔ **ONE DERIVATION, TWO CALLERS (AR7 / DN-3).** :mod:`audit_validation_corpus` shipped this
-    predicate inline first; :mod:`build_ratification_record` copied the ``--map`` flag shape and,
-    in its first round, copied only the ``Path.is_absolute()`` half — reintroducing exactly the
-    defect the original comment records as already-shipped-and-fixed. It lives here, in the
-    module both already import, so the class cannot be half-fixed again.
+    ⛔ **THE THIRD FLAVOUR — DRIVE-RELATIVE, AND IT IS NOT ROOTED AT ALL.** ``C:foo`` (a drive with
+    no separator after the colon) is absolute to NEITHER check above: it names drive ``C:`` and
+    then a path relative to *that drive's own working directory*. Measured:
+    ``Path("D:/_bench") / "C:foo"`` → ``C:foo`` — the left operand is discarded just as
+    completely as by a rooted value, so the same escape opens through a form that is not
+    "absolute" in the ordinary sense. Caught by asking for the DRIVE rather than for rootedness.
+    Legitimate member directories (``samcli``, ``sentrypy``, ``sub/dir``, even ``weird:name`` —
+    a drive must be a single letter) all report an empty drive and are unaffected.
+
+    ⛔ **ONE DERIVATION, TWO CALLERS (AR7 / DN-3), AND THAT IS WHY THIS KEEPS GETTING SAFER.**
+    :mod:`audit_validation_corpus` shipped the first two checks inline; :mod:`build_ratification_record`
+    copied the ``--map`` flag shape and, in its first round, copied only the ``Path.is_absolute()``
+    half — reintroducing exactly the defect the original comment records as
+    already-shipped-and-fixed. Review round 1 closed that by moving the predicate HERE; review
+    round 2, probing the same mechanism again, found the drive-relative form neither caller had
+    ever handled. ⛔ **Because there is now one derivation, that third fix protects both callers
+    at once** — the whole argument for not forking it.
     """
-    return PurePosixPath(relative.replace("\\", "/")).is_absolute() or Path(relative).is_absolute()
+    return (
+        PurePosixPath(relative.replace("\\", "/")).is_absolute()
+        or Path(relative).is_absolute()
+        or bool(PureWindowsPath(relative).drive)
+    )
 
 
 def pin_is_reachable(checkout: Path, commit_sha: str) -> bool:

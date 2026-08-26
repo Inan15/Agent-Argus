@@ -324,6 +324,14 @@ def test_TC_ArgusAgent_PRECISION_001_153_the_worklist_is_committed_beside_the_re
         "C:/Windows",
         r"C:\Windows",
         "D:/_bench",
+        # ── Review round 2: DRIVE-RELATIVE, absolute to NEITHER of the first two checks. ──
+        # `C:foo` names a drive and then a path relative to THAT DRIVE's working directory.
+        # Measured: Path("D:/_bench") / "C:foo" -> "C:foo" — the left operand is discarded just
+        # as completely as by a rooted value, so the escape opens through a form that is not
+        # "absolute" in the ordinary sense at all.
+        "C:foo",
+        "C:",
+        "D:sub/dir",
     ],
 )
 def test_TC_ArgusAgent_PRECISION_001_153_absolute_map_paths_are_refused(relative: str) -> None:
@@ -360,7 +368,19 @@ def test_TC_ArgusAgent_PRECISION_001_153_absolute_map_paths_are_refused(relative
     )
 
 
-@pytest.mark.parametrize("relative", ["samcli", "sub/dir", "a/b/c"])
+@pytest.mark.parametrize(
+    "relative",
+    [
+        "samcli",
+        "sub/dir",
+        "a/b/c",
+        "sentrypy",
+        "agent-smith/nested",
+        # ⛔ A colon that is NOT a drive. Round 2 added a drive check, and this is the
+        # value that proves the check did not simply start refusing every colon.
+        "weird:name",
+    ],
+)
 def test_TC_ArgusAgent_PRECISION_001_153_relative_map_paths_are_not_refused(relative: str) -> None:
     """TC-ArgusAgent-PRECISION-001-153 (AC5.4) — the ban's OTHER outcome, so it is not vacuous.
 
