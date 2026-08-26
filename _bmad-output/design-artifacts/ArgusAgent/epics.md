@@ -3761,3 +3761,130 @@ and its lone test with it, and the choice is recorded with its reason.
 **Given** nothing is wrong at runtime today
 **Then** this story changes **no detector output**, proven by re-running the suite and the
 1,032-finding harness.
+
+---
+
+## Epic 19: Give The Operator Acts A Container — then let the fold decide · *Argus repo*
+
+*Created 2026-08-26 by [sprint-change-proposal-2026-08-26.md](sprint-change-proposal-2026-08-26.md).
+Filed at `backlog`.*
+
+> ✅ **APPROVED 2026-08-26 by XAgent007 (Engineering Lead).** The paragraph above is left exactly as
+> written (§3.4). **What the approval unblocks:** the filing of this container and the drafting of
+> **19.1** and **19.6**, which are autonomous and depend on no operator act. ⛔ **It unblocks
+> NOTHING ELSE.** It ratifies no member, writes no disposition, spends no round and moves no
+> threshold. **19.2 and 19.4 are NOT approved by it** — they are operator acts and are filed
+> `operator-act` precisely so that approving the epic cannot be mistaken for approving them.
+
+⛔ **THE SEQUENCING IS INVERTED FROM THE NORMAL LOOP, AND THAT IS THE POINT.** Epic 17 froze a
+criterion and measured it once; the fold returned **`UNEVALUABLE`** because both of its arms were
+true at the same time — the sealed∩ratified intersection is **EMPTY**, and there are **ZERO**
+adjudicated rows of any successor class. Neither is a code defect and neither can be cleared by a
+dev story. An epic of dev stories placed in front of an unperformed operator act buys a **second**
+`UNEVALUABLE` (`AI-E17-4`). So the operator acts come first, and each autonomous story is built to
+produce the package the human needs and then **STOP** — the shape Story 13.1's ESCALATION and Story
+17.4's HALT already established.
+
+**Capability delivered:** the two blocking prerequisites for ever evaluating a successor predicate
+have a container, and every ledger entry has a destination or a dated deferral. ⛔ **NOT a promoted
+successor predicate, and NOT a cleared gate.**
+
+**Covers:** `AI-E17-4` · `AI-E17-8` (= `AI-E16-7`) · `AI-E17-7` (= `AI-E18-10`) · `AI-E16-1`
+**Depends on:** two dated operator rulings — the `DF-13-5-A` question (§3.4 of the proposal) blocks
+19.2, and the External-adjudicator naming blocks 19.4.
+**Blocks:** any future epic that proposes to promote a successor predicate.
+
+> ⛔ **THIS EPIC MAY END WITH `NOT_MET`, AND THAT IS A SUCCESS OF IT.** An epic that can only
+> succeed by producing a passing number is the artifact Epic 13 exists to make impossible. 19.5
+> records whatever the frozen fold returns.
+
+> ⛔ **THE `Covers:` LIST ABOVE IS RE-DERIVED FROM `deferred-work.md` ON DISK AT ROLL-UP** — per
+> `AI-E17-13`, before `epic-19: done` may be written. Epic 17's header named six ledger entries it
+> would cover and delivered none of the six; the falsification stood until one story happened to be
+> chartered to look.
+
+### Story 19.1: The ratification package the operator cannot rule without
+
+As an Engineering Lead,
+I want one worksheet carrying, for each sealed bench member, the facts a §6 R2 ratification turns on,
+So that the operator act is a judgement on measured evidence rather than on a list of names.
+
+**Acceptance Criteria:**
+
+**Given** `SEALED_PARTITION_TABLE` carries six `sealed` members, all `eligible_for_n = False`
+**Then** the worksheet carries, per member, its pinned sha, licence, primary language, size, and the
+finding count the **unmodified** shipped detector produces at that sha.
+
+**Given** protocol §6 R2 reads *"choosing which repositories are legitimate members, and fetching
+third-party source, are not autonomous acts"*
+**Then** this story ratifies nothing, flips no `eligible_for_n`, reaches no network, and ends by
+STOPPING at the operator act — asserted structurally over the module's AST, as `-141` does.
+
+### Story 19.2: ⛔ RATIFY SEALED MEMBERS — **OPERATOR ACT (§6 R2)**
+
+⛔ **NOT A DEV STORY.** Filed `operator-act`. A `bmad-dev` subagent must refuse it.
+⛔ **BLOCKED** until the `DF-13-5-A` question is ruled, either way, with a date and a name.
+
+### Story 19.3: The successor-class adjudication worklist
+
+As an Engineering Lead,
+I want `UNADJUDICATED` rows with locators for the successor class over the ratified-and-sealed
+population,
+So that the named humans have something to judge and the machine has judged nothing.
+
+**Acceptance Criteria:**
+
+**Given** `UNADJUDICATED` is the only vocabulary member an automated producer may write, and
+`AdjudicationRow.__post_init__` raises `UnregisteredAdjudicator` on any attributed row
+**Then** every row this story writes carries no adjudicator and no date, and the story STOPS.
+
+**Given** the record today holds 31 rows of the **incumbent** class `vacuous_test_ast`
+**Then** those 31 rows are byte-unchanged, and the new rows are distinguishable from them by
+`rule_id` alone.
+
+### Story 19.4: ⛔ ADJUDICATE THE SUCCESSOR-CLASS SAMPLE — **NAMED-HUMAN ACT (§4)**
+
+⛔ **NOT A DEV STORY.** Filed `operator-act`. Engineering Lead + QA Lead, per §2.
+⛔ **BLOCKED** until §2's **External adjudicator** is named and dated. The one comparable population
+produced **5 borderlines in 31 rows (16%)**, so §4's third rung is reached at a rate that is not
+low, and a role filled mid-adjudication is indistinguishable on the record from a role filled to
+obtain a result (the 2026-08-22 discipline).
+
+### Story 19.5: Re-run the frozen fold and let it decide
+
+As an Engineering Lead,
+I want the pre-registered criterion evaluated once more against the record as it then stands,
+So that the outcome is the criterion's and not the story's.
+
+**Acceptance Criteria:**
+
+**Given** the criterion was frozen at pre-registration and `CRITERION_OUTCOMES` is closed at three
+**Then** nothing is re-frozen, re-derived or re-typed, and `evaluate()` is imported rather than
+re-implemented — the `AI-E17-5` one-derivation obligation, with the search recorded.
+
+**Given** `MET`, `NOT_MET` and `UNEVALUABLE` are all admissible results
+**Then** the outcome is recorded **whatever it is**, with the counts that produced it, and no
+threshold moves in either direction.
+
+### Story 19.6: Every ledger entry has a container or a dated deferral
+
+As an Engineering Lead,
+I want every `deferred-work.md` entry whose `target_story` names a `done` story to carry a
+destination or a dated deferral,
+So that work with no container is visible as such rather than parked behind a stale pointer.
+
+**Acceptance Criteria:**
+
+**Given** `_POINTS_AT_DONE_AT_LANDING` carries **49 pairs across 46 distinct ids** — 6 tagged
+`"17-5"` and **43 tagged `"unverified"` that have never been measured against the codebase**
+**Then** each is verified against the tree and partitioned, and `DF-AUD-DETECT-C` — which is in
+`AI-E17-7` but not in the registry — is included by name.
+
+**Given** the registry **can only shrink** and `-80` fails both on a registered pair that becomes
+clean and on any unlisted affirmative stale pointer
+**Then** the registry shrinks by exactly the entries that gained a container, in the same commit.
+⛔ **No mass re-homing** (`AI-E12-3`) and **no narrowing until it goes green** (Story 12.1's named
+anti-pattern).
+
+**Given** `deferred-work.md` carries a **lone CR at line 5459** and is otherwise CRLF-uniform
+**Then** every edit is made in binary mode and both byte invariants are re-measured before and after.

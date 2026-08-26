@@ -421,6 +421,43 @@ _STATUS_DOCUMENTS: tuple[str, ...] = (
     # ⚠️ It must be committed TOGETHER with this line — `-22` closes in BOTH directions, so the
     # document without this entry and this entry without the document red `master` equally.
     "epic-17-retro-2026-08-26.md",
+    # Registered 2026-08-26 by the `bmad-correct-course` session that wrote it — the registration is
+    # part of writing the document, not a later cleanup (`AI-E12-1`'s second half). This is the
+    # THIRD `bmad-correct-course` registration written by its authoring session, after the
+    # 2026-08-22 and 2026-08-24 entries above, and this session carries no read-only-over-`tests/`
+    # charter, so the line lands in the same commit as the document.
+    # Same verification-before-registration as every entry above, by execution: `_split_sentences()`
+    # returns 151 sentences, so `-21` is genuinely reading the document rather than passing over an
+    # unparseable one; `_status_assertions()` returns 0 — no phrase in `_STATUS_CLAIMS` occurs in it
+    # at all, denied or otherwise — so `-21`'s per-document loop short-circuits and this
+    # registration is inert rather than load-bearing; and `_executed_gate_citations()` returns 0, so
+    # it mints an excuse for nothing. `-22` was observed RED against this document before this line
+    # (`status-asserting document(s) exist but are not registered:
+    # ['sprint-change-proposal-2026-08-26.md']`) and GREEN after, on the live tree. ⛔ No
+    # `_EXCLUDED_BY_DESIGN` entry was added and not one assertion in `-22` was weakened, reworded or
+    # exempted.
+    # WHAT THE DOCUMENT ASSERTS, so the registration is judged against its contents: it CREATES one
+    # epic container (19) and six story keys, of which TWO are filed `operator-act` rather than
+    # `backlog` because a §6 R2 ratification and a §4 adjudication are not autonomous acts. It
+    # changes NO release status of any kind: the >=80% externalization gate is UNCHANGED, still
+    # `BLOCKED` and still NOT CLEARED; `protocol_cleared` stays `False`; the precision figure STILL
+    # DOES NOT EXIST; `eligible_member_count()` is 5, all 14 bench candidates remain
+    # `eligible_for_n=False` and the sealed-vs-ratified intersection it measures is EMPTY; nothing
+    # is ratified, no third-party source is fetched and the protocol is not re-versioned. It amends
+    # no FR and no threshold, and it reopens no delivered epic — Epics 1–18 stand.
+    # ⚠️ `DF-13-5-A` stays OPEN and UNSPENT, and the document REFUSES to decide by implication
+    # whether ratifying already-manifested sealed members would spend it: §3.4 puts that to the
+    # operator as a dated ruling owed BEFORE Story 19.2, rather than answering it here.
+    # ⚠️ It dispositions NO ledger entry. `deferred-work.md` is absent from its write set; the 46
+    # stale `target_story` pointers it measures are carried to Story 19.6, not re-homed here, and
+    # `_POINTS_AT_DONE_AT_LANDING` is byte-unchanged by it.
+    # ⚠️ Its §3.2 finding is a PROTOCOL-FORM finding and is recorded as a recommendation, not taken:
+    # filling §2's External adjudicator is a holder-cell change (a dated block, no change-log row),
+    # whereas pre-recording a stuck-pair rule would be a §4 METHOD change requiring V1.4 and would
+    # re-stamp `protocol_version` across the 31 committed judgements of 2026-08-17.
+    # ⚠️ It must be committed TOGETHER with this line — `-22` closes in BOTH directions, so the
+    # document without this entry and this entry without the document red `master` equally.
+    "sprint-change-proposal-2026-08-26.md",
 )
 
 # Exactly the set the epic's AC names — "any future change proposal or retrospective".
