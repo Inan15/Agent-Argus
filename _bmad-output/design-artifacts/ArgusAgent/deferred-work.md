@@ -8176,3 +8176,29 @@ unpushed and there is no CI evidence at any sha in this arc.**
   `TC-ArgusAgent-DOCS-001-80`, which inspects only `deferred-work.md`'s own `- target_story:`
   fields, never `architecture.md` prose. Owner: XAgent007 (Engineering Lead). Candidate for a future
   documentation sweep or the Epic-17 retrospective's action list.
+
+- **SUPERSEDED 2026-08-26** by Story 17.5's fix round 2 (`DN-17-5-12`), which took the correction
+  in place rather than leaving it deferred. The reviewer's scope judgement above is recorded as
+  CORRECT ON ITS OWN TERMS — the instance genuinely sits outside AC4's `argus/**` sweep and is
+  genuinely invisible to `TC-ArgusAgent-DOCS-001-80`, and neither of those facts changed. What
+  changed is the WEIGHING: `architecture.md` was already inside Story 17.5's declared write set,
+  the correction costs one sentence, and ending an epic named *"nothing points at a closed story"*
+  with a live Story-6.2 forward reference two blocks above the enforcement rule written to end that
+  class is a worse final state than a recorded scope widening. The widening was ESCALATED under
+  Story 17.5's AC10 and recorded in the story file BEFORE the write was taken, in `DN-17-3-16`'s
+  form. §3.4 is honoured by AMENDMENT, not by rewrite: the superseded sentence stays legible in a
+  struck quotation beside a dated correction, in the same form `TC-ArgusAgent-DOCS-001-77` already
+  anchors at *"AMENDED 2026-08-18 by Story 13.5 / AC5"*, and the block's 2026-08-17 measurement is
+  untouched. ⛔ **Nothing here is a disposition and nothing here is a ledger entry.** This heading
+  carries no `- id:` and no status field; it records a review deferral and now records that the
+  deferral no longer stands. No canonical entry moved, no `_POINTS_AT_DONE_AT_LANDING` pair was
+  added or removed, `ledger_closed_ids` is 42 before and 42 after, and
+  `TC-ArgusAgent-DOCS-001-80`'s population and rule are byte-unchanged — the instance was fixed in
+  prose, never by widening a guard until a finding went away.
+- **Also corrected in that round:** `argus/audit/deep_pass.py`'s note on `DF-12-2-D` no longer
+  asserts *"It has NO target story"* as a statement about this ledger. The entry's own
+  `- target_story:` field remains byte-frozen as §3.4 evidence and still affirmatively names
+  6-2-style work, which is exactly why the guard carries it as a LIVE, REGISTERED row rather than a
+  cleared one; the corrected disposition lives in that entry's 2026-08-26 append-only note above,
+  and the module comment now says so. Comment-only, no behaviour change, and the entry itself is
+  byte-untouched.

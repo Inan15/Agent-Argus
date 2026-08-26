@@ -4,7 +4,7 @@ baseline_commit: b8eaeee
 
 # Story 17.5: Nothing points at a closed story
 
-Status: in-progress
+Status: review
 
 <!-- Contexted 2026-08-26 at HEAD `b8eaeee` (branch `docs/merge-strategy-decision`, 21 ahead of
      `origin/master`) by the create-story workflow (Opus 5). `git status --porcelain` is EMPTY at
@@ -365,7 +365,7 @@ weakening, no closure-verb-beside-an-unbacked-id violation (AC9's own mechanised
 
 Two Low-severity items, both docs-only, neither blocking:
 
-- [ ] [Review][Patch] `argus/audit/deep_pass.py:98` overclaims "It has NO target story" —
+- [x] [Review][Patch] `argus/audit/deep_pass.py:98` overclaims "It has NO target story" —
       `deferred-work.md`'s `DF-12-2-D` entry (`:3333`) is deliberately preserved byte-unedited per
       §3.4 and its literal `target_story:` field still affirmatively reads *"6-2-style
       claim-grammar work — the story that gives the deep pass a declared claim format…"*, which is
@@ -939,6 +939,87 @@ explicitly, in the ledger and here, so a later editor cannot "tidy" the sentence
 96 source files** · `python -m bandit -r argus --severity-level medium` — **exit 0** ·
 `--cov=argus --cov-fail-under=80` — **95.87 %**.
 
+#### Fix round 2 — the two review findings, 2026-08-26
+
+Review iteration 1 (Sonnet 5) returned **CONCERNS**: two Low, docs-only findings, nothing blocking,
+and the core deliverable independently re-executed and confirmed. Both are addressed in this round.
+⛔ **Neither moves a measurement, a guard population, a registry row, or a byte of §2.2's frozen
+list.** `ledger_closed_ids` is **42 before and 42 after, identical set**, and `story_closure_claims`
+over this story file is **`()`** — re-asserted by execution after every write.
+
+**Finding 1 — `argus/audit/deep_pass.py:98` overclaimed, and the reviewer is right.** The comment
+read *"It has NO target story"* as if it were a statement about the ledger. Measured: that entry's
+own `- target_story:` field at `deferred-work.md:3333` still AFFIRMATIVELY names 6-2-style work and
+is deliberately preserved byte-unedited under §3.4 — which is precisely why the guard carries the
+pair as a **live, REGISTERED** row in `_POINTS_AT_DONE_AT_LANDING` rather than a cleared one. A
+shipped comment asserting the corrected disposition as though it were the field's literal text is
+the same class of defect this story exists to end, committed inside the story that ends it.
+Reworded — module docstring prose only, `+5 / −3` — to say that the field is byte-frozen as
+evidence and that the corrected disposition lives in the ledger's 2026-08-26 append-only note **and
+not in the field**. ⛔ **No registry row moved and no analyzer output changed, because nothing about
+the ledger changed.**
+
+**Finding 2 — `architecture.md:1146`: the reviewer DEFERRED it; this round CORRECTS it in place,
+and the call is recorded rather than absorbed.**
+
+- **`DN-17-5-12` — the correction is TAKEN, and it is an AC10 ESCALATION recorded BEFORE the write
+  was made.** The sentence — *"full dataflow-grounded assertion provenance remains **Story 6.2**'s
+  scope (`DF-14-1-A`)"*, added 2026-08-17 — is a **live forward reference to a `done` story**,
+  sitting two lines above the Stale-target-story enforcement block this story added to end that
+  exact class. It is the same defect class as AC4's twelve `argus/**` sites, and AC4's remedy for a
+  LIVE pointer is an in-place correction naming the real owner. `DN-17-5-7`'s dated-append form is
+  reserved for **signed evidence** — the Epic-18 retrospective, the 2026-08-21 research,
+  `epics.md`'s prior text — and a §Enforcement rule registration is none of those: it is a living
+  registry this story already writes to. Leaving a stale Story-6.2 pointer two lines from the block
+  that exists to end them is a poor final state for the epic, and a self-inconsistency of precisely
+  Finding 1's shape.
+  - *Why it is an ESCALATION and not a quiet widening:* §2.1 declares `architecture.md` in the write
+    set for *"§Enforcement registration"*. This is a prose correction to a DIFFERENT §Enforcement
+    block, so it is outside the declared write set **as written**. Recorded here first, in
+    `DN-17-3-16`'s form, and only then taken.
+  - *Why it does not breach §3.4:* the original sentence is **NOT erased**. The correction follows
+    `architecture.md`'s own established amendment form — the one `TC-ArgusAgent-DOCS-001-77`
+    already anchors at *"AMENDED 2026-08-18 by Story 13.5 / AC5 … The floor is narrowed, never
+    removed"* — keeping the superseded text legible in a struck quotation beside a dated
+    correction. The 2026-08-17 measurement the block records is untouched.
+  - *Blast radius, measured BEFORE the write:* no `-77` anchor quotes any part of the sentence
+    (checked against the live anchor tuple, not remembered), and no module under `tests/` or
+    `scripts/` matches *"dataflow-grounded assertion provenance"* or *"Vacuity-corroboration"*.
+    One line, `+1 / −1`, CRLF-uniform, §Enforcement structure unchanged.
+  - *Rejected:* **leaving the deferral standing** — the reviewer's own option, and sound as a scope
+    judgement, but it ends the epic with the epic's named defect live in the very file that
+    registers the rule against it, at a cost of one sentence; **rewriting the block** — it is a
+    dated record of a 2026-08-17 measurement and only its live pointer is stale.
+- **The ledger deferral is RECONCILED, not orphaned.** The reviewer's 2026-08-26 *"Deferred from:
+  code review"* bullet carries **no `- id:` field and no status field** — it is a deferral note,
+  not a canonical ledger entry, so it holds no disposition to move. It receives a dated
+  **SUPERSEDED** append under the same heading naming the fix. ⛔ **`TC-ArgusAgent-DOCS-001-78`
+  stays intact: no line in this arc writes a disposition verb beside an entry the ledger does not
+  back**, which is why the word used is *superseded* and not the other one.
+- **`TC-ArgusAgent-DOCS-001-80` is untouched and NOT weakened.** It still reads only
+  `deferred-work.md`'s own `- target_story:` fields, still never calls `ledger_closed_ids`, and its
+  registry is unchanged — **no pair was added to satisfy a finding**, and the reviewer's observed
+  `architecture.md` instance is corrected in prose rather than by widening a guard's population,
+  which would be Story 12.1's anti-pattern in reverse.
+
+**Round-2 evidence, executed at `0cabdda` — LOCAL (Windows) only, no CI evidence at any sha in this
+arc.** `python -m pytest` — **1,760 passed / 0 failed** in 257.01 s (identical population to review
+iteration 1; both findings were docs-only, so no test was added, removed, renamed or weakened) ·
+`python -m mypy argus` — **Success, 96 source files** · `python -m bandit -r argus -f txt
+--severity-level medium` — **exit 0, "No issues identified"** · `python -m pytest --cov=argus
+--cov-fail-under=80` — **95.87 %** against an 80 % floor. `argus/audit/deep_pass.py` is
+**AST-EQUAL to `948d35d` once docstrings are stripped**, reproduced by execution, so the
+no-behaviour-change claim is measured rather than asserted. Byte invariants re-verified after every
+write: `deferred-work.md` **648,937 → 651,225 B, pure append `+26 / −0`, 1 CR / 0 CRLF** ·
+`architecture.md` **`+1 / −1`, CR 1,418 → 1,418, CRLF-uniform, line-count neutral** ·
+`sprint-status.yaml` **1,264 lines / 1,264 CR, exactly 2 lines changed** (this story's status value
+and `last_updated`) · `argus/audit/deep_pass.py` **CRLF-uniform, 563 → 565 lines**. §2.2's frozen
+list re-verified byte-identical to `b8eaeee`: `scripts/precision_preregistration.py` (including its
+now-false line 14, still **NOT EDITED**), `successor-vacuity-predicate-specification.md`,
+`validation-corpus/**` including `successor/successor-reach-record.json`. Every commit staged
+**explicit paths**; ⛔ `git add -A` was never used and nothing authored by the peer session was
+amended, rebased or touched.
+
 ### File List
 
 | path | change |
@@ -960,6 +1041,16 @@ explicitly, in the ledger and here, so a later editor cannot "tidy" the sentence
 | `argus/audit/ports.py` | modified (comment only) |
 | `argus/audit/__init__.py` | modified (comment only) |
 
+**Fix round 2 (2026-08-26) touched a strict SUBSET of the above and added no file:**
+`argus/audit/deep_pass.py` (module docstring only, `259f7a4`) ·
+`minions-dogfood-partition-plan.md` / `minions-dogfood-budget-plan.md` /
+`minions-dogfood-proof.md` (regenerated through their own renderers at provenance `259f7a4`,
+`0cabdda`) · `architecture.md` (`DN-17-5-12`, the §Enforcement pointer amendment) ·
+`deferred-work.md` (pure append: the dated **SUPERSEDED** reconciliation of the reviewer's
+deferral) · this story file · `sprint-status.yaml`. ⛔ **`tests/test_governance_record_integrity.py`
+was NOT touched in round 2** — no guard was edited, extended, narrowed or re-registered to make a
+finding go away.
+
 ### Change Log
 
 | date | version | change | by |
@@ -967,3 +1058,4 @@ explicitly, in the ledger and here, so a later editor cannot "tidy" the sentence
 | 2026-08-26 | 0.1.0 | Contexted at `b8eaeee`; `backlog` → `ready-for-dev`. | `bmad-create-story` (Opus 5) |
 | 2026-08-26 | 0.2.0 | Round 1 implement. Six entries RE-HOMED in their own bodies with live owners; `DF-AUD-DETECT-C` given a corrected pointer and an owner only; five already-terminal entries given disposition pointers replacing the superseded scheduling AC; Epic 17's `UNEVALUABLE` outcome recorded against six surfaces as dated appends; 12 forward references corrected across 7 `argus/**` modules with the dogfood artifacts regenerated in their own commit; `TC-ArgusAgent-DOCS-001-80` landed with a dated shrink-only 49-pair registry and registered in `architecture.md` §Enforcement. **Nothing open was disposed of.** `ready-for-dev` → `in-progress` → `review`. | `bmad-dev-story` (Opus 5) |
 | 2026-08-26 | 0.3.0 | Code review, iteration 1 (CONCERNS). Core deliverable independently re-verified by execution (AST-equivalence of all 7 `argus/**` modules, §0's re-derived counts, `ledger_closed_ids` false positives, full suite, every byte/line/CR invariant, all frozen files, both provenance shas). Two Low findings written to Review Findings: one Patch (`deep_pass.py:98` overclaims "NO target story"), one Defer (`architecture.md:1146`'s own out-of-scope Story-6.2 forward reference, appended to `deferred-work.md`). `review` → `in-progress`. | `bmad-code-review` (Sonnet 5) |
+| 2026-08-26 | 0.4.0 | Fix round 2 — **2 of 2 review findings addressed**, both Low and docs-only. Finding 1: `argus/audit/deep_pass.py`'s `DF-12-2-D` note reworded so it no longer asserts *"It has NO target story"* about a ledger field that is deliberately preserved byte-unedited and still affirmatively names 6-2-style work (`259f7a4`; docstring prose only, AST-equal ignoring docstrings; dogfood artifacts regenerated in their own commit at provenance `259f7a4` — `0cabdda`). Finding 2: `architecture.md:1146`'s live Story-6.2 forward reference **CORRECTED IN PLACE** rather than left deferred — `DN-17-5-12`, an AC10 escalation recorded before the write, §3.4 honoured by amendment with the struck text kept legible; the reviewer's ledger deferral reconciled by a dated **SUPERSEDED** append carrying no disposition verb. ⛔ **Nothing was disposed, no measurement moved, `TC-ArgusAgent-DOCS-001-80` was not touched and no registry pair was added.** `in-progress` → `review`. | `bmad-dev-story` (Opus 5) |
