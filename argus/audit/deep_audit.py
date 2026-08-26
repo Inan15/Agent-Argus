@@ -20,7 +20,10 @@ Why this module is PURE of providers
 the PORT TYPE (``LLMDispatchPort``), which is injected (constructor/parameter),
 so it is provider-agnostic and never imports ANY provider package or the
 concrete adapter (RS-1/IN-2: ArgusAgent imports nothing from a host product; the
-provider-package reference this sentence used to name no longer exists here). The full Python AST-grounding of deep claims is Story 6.2; in
+provider-package reference this sentence used to name no longer exists here). The full
+Python AST-grounding of deep claims is UNSCHEDULED — ⛔ NOT Story 6.2's, which is
+``done`` and shipped a structural grounding fact instead (``DF-12-2-D``, owner
+XAgent007, Engineering Lead); in
 V1 this module is a THIN seam: it dispatches through the injected port and folds
 the returned ``LLMRecording`` into a cache key via the closure-builder below.
 
@@ -100,7 +103,8 @@ class DeepAuditSeam:
 
     Holds the port TYPE (injected), never the concrete adapter. ``run`` is the
     minimal V1 surface: it dispatches one request and returns the recording the
-    later (6.2) AST-grounding validator will consume. The AST logic is NOT built
+    later AST-grounding validator will consume — that validator is UNSCHEDULED
+    (``DF-12-2-D``, owner XAgent007), ⛔ not Story 6.2's. The AST logic is NOT built
     here.
     """
 

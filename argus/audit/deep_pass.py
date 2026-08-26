@@ -90,10 +90,14 @@ Three things follow, and all three are load-bearing:
   not a fix — and ``tests/test_open_llm_adapter.py`` asserts ``structured_output == ()``
   for exactly that reason. Doing it honestly means a declared claim grammar, a prompt
   contract, a redacting parser, and a ``DEEP_PROMPT_TEMPLATE_VERSION`` bump (an AR5
-  cache-key closure input). That is Story 6.2's *full claim-grammar grounding*, which
-  ``deep_audit.py`` and :func:`_claim_is_ast_grounded` both already name as 6.2's.
+  cache-key closure input). That is *full claim-grammar grounding*, and it is
+  UNSCHEDULED — ⛔ NOT Story 6.2's, which is ``done`` (2026-06-29) and shipped a
+  deterministic structural grounding fact instead. ``deep_audit.py`` and
+  :func:`_claim_is_ast_grounded` name the same unscheduled work.
 
-Filed as ``DF-12-2-D`` with an owner and a target story.
+Filed as ``DF-12-2-D``, owner XAgent007 (Engineering Lead). It has NO target story:
+the destination is a scope change, and pointing it at a `done` story is the defect
+Story 17.5 corrected on 2026-08-26.
 
 NFR-S1
 ------
@@ -311,7 +315,8 @@ def _claim_is_ast_grounded(
 
     A recording with no structured output has made no claim, and a claim naming a symbol
     that is not in the file is not validated. Both degrade; neither is treated as depth.
-    Full claim-grammar grounding is Story 6.2's; this is the V1 fact, and it is a real
+    Full claim-grammar grounding is UNSCHEDULED (``DF-12-2-D``, owner XAgent007) and
+    was NOT delivered by Story 6.2; this is the V1 fact, and it is a real
     check rather than a rubber stamp.
     """
     if entry is None or not is_deep_claim_grounded(entry):

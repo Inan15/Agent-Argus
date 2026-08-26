@@ -3,7 +3,8 @@
 Drivers: ArgusAgent-FR-10 (heuristic vacuous-test detector — advisory, carrying its
 evidence counts), ArgusAgent-FR-7-subset (the Tier-A vacuous-path AST subset:
 test→SUT reachability + assertion-target provenance, test files only — the
-carved-into-Tier-A half of FR7; full multi-construct grounding is Story 6.2),
+carved-into-Tier-A half of FR7; full multi-construct grounding is UNSCHEDULED —
+⛔ not Story 6.2's, which is ``done``; owner XAgent007, ``DF-14-1-A``),
 ArgusAgent-FR-13 (locator-required findings, via the Story 1.5 ``base`` builder),
 ArgusAgent-FR-33-support / cross-cutting #6 (advisory-by-contract: a heuristic-only
 finding can NEVER move the verdict to 🔴 — only an AST-corroborated finding is
@@ -78,7 +79,8 @@ subset therefore works on NAME-level structural facts, not a resolved call graph
 - **The conservative default is the moat.** When the unresolved edge set is
   insufficient, the finding does NOT gain verdict-eligibility. A false 🔴 is the
   lethal failure; a real vacuous test left advisory is tolerable. Full
-  dataflow/scope-resolved grounding is Story 6.2.
+  dataflow/scope-resolved grounding is UNSCHEDULED — ⛔ not Story 6.2's,
+  which is ``done``; owner XAgent007 (Engineering Lead), ``DF-INV-VACUOUS-A``.
 
 Why fact (b) is not ``mock_sites >= 1`` (Story 14.1 — a CONFORMANCE fix)
 ------------------------------------------------------------------------
@@ -131,7 +133,8 @@ to end on the default zero-token path before the fix and are pinned by
 ``TC-ArgusAgent-DETECT-001-109`` / ``-110`` and ``TC-ArgusAgent-VERDICT-001-116``.
 
 The signal stays NAME-LEVEL and is a proxy, not dataflow (``DF-14-1-A``; real
-assertion provenance is Story 6.2's). It reads the source text and the 1.4 index
+assertion provenance is UNSCHEDULED — ⛔ not Story 6.2's, which is ``done`` —
+and its owner is XAgent007). It reads the source text and the 1.4 index
 and nothing else, so the scorer stays PURE (AR8), and it depends on **no count and
 no threshold** — in particular not on ``assertion_sites``.
 
@@ -864,8 +867,9 @@ class VacuousTestDetector:
         When either fact cannot be established, corroboration is NOT granted — the
         finding stays heuristic-only/advisory and never reaches the verdict (it does
         NOT fabricate corroboration; the conservative default IS the moat). Pure; the
-        provenance signal is NAME-level, not dataflow (``DF-14-1-A``; Story 6.2 owns
-        real assertion provenance).
+        provenance signal is NAME-level, not dataflow (``DF-14-1-A``; real assertion
+        provenance is UNSCHEDULED — ⛔ not Story 6.2's, which is ``done`` — and its
+        owner is XAgent007, Engineering Lead).
         """
         if not heuristically_vacuous:
             return False

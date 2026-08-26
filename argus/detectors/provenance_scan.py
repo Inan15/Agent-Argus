@@ -51,8 +51,8 @@ and Story 14.3 can widen the table across four languages without re-opening the 
 What the scan can and cannot prove (honest scope)
 --------------------------------------------------
 The Story 1.4 index gives an UNRESOLVED edge set (``DF-1-4-A``): a callee NAME and a
-1-based line, with no scope binding. Everything below is therefore NAME-level structural
-evidence, not dataflow — real assertion provenance is Story 6.2's (``DF-14-1-A``). The
+1-based line, with no scope binding. Everything below is NAME-level structural evidence,
+not dataflow. Real assertion provenance is UNSCHEDULED — owner XAgent007, ``DF-14-1-A``. The
 asymmetry that governs every judgement call here is stated in ``vacuous_test.py``'s
 docstring: **a false 🔴 is the lethal failure; a real vacuous test left advisory is
 tolerable.** So wherever the source text cannot be read confidently, the answer is

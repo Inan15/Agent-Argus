@@ -78,7 +78,9 @@ class CheckpointDriftError(LLMDispatchError):
     ``checkpoint_drift`` detection seam. 6.1 EXPOSES the captured checkpoint on
     the ``LLMRecording`` and proves two captured values derive two cache keys;
     the live mid-run abort/re-audit loop + the ``checkpoint_drift`` finding's
-    pipeline wiring are deferred to the 6.2-shared deep-audit pipeline.
+    pipeline wiring are deferred to the shared deep-audit pipeline, which is
+    UNSCHEDULED — ⛔ not Story 6.2's, which is ``done``. Owner XAgent007
+    (Engineering Lead); ``DF-12-2-D``.
     """
 
     def __init__(self, *, pinned: str, captured: str) -> None:

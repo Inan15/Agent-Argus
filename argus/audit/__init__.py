@@ -10,7 +10,8 @@ LLM substrate (architecture Decision E / cross-cutting #7):
 - ``open_llm_adapter`` — the open-source multi-provider adapter (LiteLLM + HTTPX).
 - ``minions_llm_adapter`` — the backward-compatible adapter wrapper.
 - ``deep_audit`` — the thin V1 seam that depends on the PORT TYPE, never the
-  adapter (DIP). The deep AST-grounding logic is Story 6.2.
+  adapter (DIP). The deep AST-grounding logic is UNSCHEDULED — ⛔ not Story 6.2,
+  which is ``done``. Owner XAgent007 (Engineering Lead); ``DF-12-2-D``.
 
 Drivers: ArgusAgent-AR7 (reuse-by-import, leaf modules only), ArgusAgent-NFR-D2 (zero-token
 core / FakeDispatch), ArgusAgent-AR8 (pure/impure separation), ArgusAgent-AR9 (import

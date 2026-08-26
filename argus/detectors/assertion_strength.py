@@ -61,8 +61,10 @@ name-level, in one forward pass, and which this module's resolver mirrors.
 ⛔ WHAT THE SIGNAL IS, HONESTLY
 -------------------------------
 NAME-level structural evidence over an UNRESOLVED edge set (``DF-1-4-A``), not dataflow
-(``DF-14-1-A``; real assertion provenance is Story 6.2's). Everything the resolver cannot
-read is left UNBOUND, which pushes an assertion AWAY from the weakest band, i.e. away from
+(``DF-14-1-A``; real assertion provenance is UNSCHEDULED work owned by XAgent007
+(Engineering Lead) — ⛔ NOT Story 6.2's, which is ``done`` and shipped a structural
+grounding fact, never dataflow). Everything the resolver cannot read is left UNBOUND,
+which pushes an assertion AWAY from the weakest band, i.e. away from
 an accusation. ⛔ ``S1`` does not claim to be dataflow and must not be described as such.
 
 ⛔ ADVISORY, AND NOTHING FLIPS ON IT
