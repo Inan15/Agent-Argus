@@ -17,7 +17,7 @@
   "population": 47,
   "record_kind": "ledger-verification",
   "registry_bound": 46,
-  "registry_shrink_count": 2,
+  "registry_shrink_count": 6,
   "registry_shrink_pairs": [
     {
       "entry_id": "DF-14-2-A",
@@ -26,6 +26,22 @@
     {
       "entry_id": "DF-14-2-B",
       "story": "14-3-the-assertion-vocabulary-crosses-the-languages-the-installer-ships"
+    },
+    {
+      "entry_id": "DF-8-1-A",
+      "story": "8-3-plain-english-report-stops-describing-impossible-state"
+    },
+    {
+      "entry_id": "DF-8-3-B",
+      "story": "8-4-tell-integrators-what-changed"
+    },
+    {
+      "entry_id": "DF-8-4-A",
+      "story": "9-2-ship-distribution-another-repo-can-actually-resolve"
+    },
+    {
+      "entry_id": "DF-8-5-A",
+      "story": "9-2-ship-distribution-another-repo-can-actually-resolve"
     }
   ],
   "row_count": 47,
@@ -164,7 +180,7 @@
       ]
     },
     {
-      "command": "grep -oE '1[45][0-9]{3}' minions-dogfood-partition-plan.md",
+      "command": "grep -oE '1[45][0-9]{3}' _bmad-output/design-artifacts/ArgusAgent/minions-dogfood-partition-plan.md | sort -u",
       "entry_id": "DF-11-5-A",
       "finding": "Entry recorded 14997/15000 - three lines of headroom. Now 14758: 242 lines. The named cliff ('the next story that writes more than 3 lines cannot proceed') no longer exists.",
       "outcome": "ALREADY-RESOLVED",
@@ -273,7 +289,7 @@
       ]
     },
     {
-      "command": "import VALIDATION_CORPUS, eligible_member_count, validation_floor_n",
+      "command": "python -c \"from tests.corpus._manifest import VALIDATION_CORPUS, eligible_member_count, validation_floor_n; print(len(VALIDATION_CORPUS), eligible_member_count(), validation_floor_n())\"",
       "entry_id": "DF-13-1-A",
       "finding": "Entry: 'the manifest is SPECIFIED and EMPTY; populating it is an operator act that has not been performed'. It has since been performed - N = 5 >= floor 5. DF-13-2-A's own note corroborates ('N = 5 >= 5, from Story 13.1').",
       "outcome": "ALREADY-RESOLVED",
@@ -419,11 +435,11 @@
     {
       "command": "sed -n '717,745p' argus/reports/generator.py",
       "entry_id": "DF-8-1-A",
-      "finding": "The CAUTION 'Repository is NOT ready for release' now lives ONLY in row 2 (blocking_finding_count > 0). The row-4 code comment names DF-8-1-A as the defect it closes. REGISTRY-EXIT CANDIDATE pending three-way evidence.",
+      "finding": "The CAUTION 'Repository is NOT ready for release' now lives ONLY in row 2 (blocking_finding_count > 0). The row-4 code comment names DF-8-1-A as the defect it closes. REGISTRY-EXIT CANDIDATE pending three-way evidence. ⛔ REGISTRY EXIT ADMITTED (review round 1, 2026-08-26): three-way evidence confirmed — epic-8-retro-2026-08-08.md:21 — \"2 closed inside the epic (DF-8-1-A by 8.3, DF-8-3-B by 8.4)\"; pointer names 8-3.",
       "outcome": "ALREADY-RESOLVED",
       "output": "row 4 renders WARNING 'Release readiness is NOT VOUCHED - Argus found nothing blocking, but ... This is a statement about the audit, not about the code.'",
       "registry_bound": true,
-      "registry_exit": false,
+      "registry_exit": true,
       "target_story": [
         "8-3-plain-english-report-stops-describing-impossible-state"
       ]
@@ -468,11 +484,11 @@
     {
       "command": "grep -n 'render_ship_readiness|except' argus/cli.py",
       "entry_id": "DF-8-3-B",
-      "finding": "The call is no longer outside the guard - a raise can no longer escape main() as an uncaught traceback.",
+      "finding": "The call is no longer outside the guard - a raise can no longer escape main() as an uncaught traceback. ⛔ REGISTRY EXIT ADMITTED (review round 1, 2026-08-26): three-way evidence confirmed — epic-8-retro-2026-08-08.md:21 — same line, \"DF-8-3-B by 8.4\"; pointer names 8-4.",
       "outcome": "ALREADY-RESOLVED",
       "output": "line 874 call is inside try; 876 except ShipReadinessError; 879 except ValueError",
       "registry_bound": true,
-      "registry_exit": false,
+      "registry_exit": true,
       "target_story": [
         "8-4-tell-integrators-what-changed"
       ]
@@ -480,11 +496,11 @@
     {
       "command": "grep -B2 -A8 INSUFFICIENT_COVERAGE action.yml",
       "entry_id": "DF-8-4-A",
-      "finding": "The 'else -> INSUFFICIENT_COVERAGE' swallow of exit 1 is gone.",
+      "finding": "The 'else -> INSUFFICIENT_COVERAGE' swallow of exit 1 is gone. ⛔ REGISTRY EXIT ADMITTED (review round 1, 2026-08-26): three-way evidence confirmed — epic-9-retro-2026-08-09.md:22 and :163 — \"4 closed inside the epic\" / \"all CLOSED with closing evidence\", absorbed into Story 9.2; pointer names 9-2.",
       "outcome": "ALREADY-RESOLVED",
       "output": "exit 1 -> AUDIT_FAILED, documented 'NOT a verdict ... never read as a ran-and-under-covered result'",
       "registry_bound": true,
-      "registry_exit": false,
+      "registry_exit": true,
       "target_story": [
         "9-2-ship-distribution-another-repo-can-actually-resolve"
       ]
@@ -492,11 +508,11 @@
     {
       "command": "grep -n 'DOGFOOD_ArgusAgent_VERSION' argus/dogfood/proof_run.py; grep '^version' pyproject.toml",
       "entry_id": "DF-8-5-A",
-      "finding": "Hardcoded '1.43.0' replaced by derivation from the package version, so the bundle token cannot contradict the package.",
+      "finding": "Hardcoded '1.43.0' replaced by derivation from the package version, so the bundle token cannot contradict the package. ⛔ REGISTRY EXIT ADMITTED (review round 1, 2026-08-26): three-way evidence confirmed — epic-9-retro-2026-08-09.md:22 and :163 — same; pointer names 9-2.",
       "outcome": "ALREADY-RESOLVED",
       "output": "proof_run.py:227 DOGFOOD_ArgusAgent_VERSION = _ARGUS_VERSION ; pyproject version = 0.1.0",
       "registry_bound": true,
-      "registry_exit": false,
+      "registry_exit": true,
       "target_story": [
         "9-2-ship-distribution-another-repo-can-actually-resolve"
       ]
@@ -597,6 +613,6 @@
     }
   ],
   "schema_version": 1,
-  "shrink_is_an_outcome_not_a_target": "Every ALREADY-RESOLVED entry was tested against s0.4's ONLY legitimate exit: the pair moves to _DISPOSING_STORY_POINTERS, and only with DF-1-7-B three-way evidence (story file AND retrospective AND shipped code). 18 entries are ALREADY-RESOLVED; only 2 clear that bar. No target_story field was rewritten and no target_story: NONE was introduced to manufacture a larger shrink.",
+  "shrink_is_an_outcome_not_a_target": "Every ALREADY-RESOLVED entry was tested against s0.4's ONLY legitimate exit: the pair moves to _DISPOSING_STORY_POINTERS, and only with DF-1-7-B three-way evidence (story file AND retrospective AND shipped code). 18 are ALREADY-RESOLVED; 6 clear that bar. REVIEW ROUND 1 CORRECTED THIS FROM 2 TO 6: the first pass checked five candidates individually and left the rest in an unchecked bucket, which under-shrank the registry by four. The remaining 12 stay registered because their pointer names a story that did NOT discharge them - DF-8-2-B was closed by Story 11.2 while its pointer names 8-3, DF-5-1-A by Story 5.1 while its pointer names 6-1, DF-10-3-A by Story 12.8 while its pointer names 12.9. No target_story field was rewritten and no target_story: NONE was introduced.",
   "story": "19.6"
 }

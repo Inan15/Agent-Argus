@@ -8325,3 +8325,35 @@ and UNSPENT**, the protocol §2 External adjudicator stays **UNFILLED**, no corp
 ratified, the gate stays **BLOCKED** and `protocol_cleared` stays `False`. Every entry not named
 above keeps its status.
 
+
+### Story 19.6, review round 1 — the registry shrink was FOUR PAIRS SHORT, and the reviewer was right (2026-08-26)
+
+**Append-only (§3.4).** Nothing above is edited. ⛔ **This note corrects THIS STORY's own work,
+not the ledger's.** The first pass checked five registry-exit candidates individually and left
+the remaining thirteen in an unchecked *"12 others"* bucket. Four of those thirteen clear
+`DF-1-7-B`'s three-way bar, so the registry under-shrank — a real AC3.1 violation, found by the
+review gate, confirmed here by re-reading the retrospectives rather than by argument.
+
+**Admitted to `_DISPOSING_STORY_POINTERS` (bringing the shrink from 2 to 6):**
+
+- **`DF-8-1-A`** and **`DF-8-3-B`** — `epic-8-retro-2026-08-08.md:21` states *"**2 closed inside
+  the epic** (`DF-8-1-A` by 8.3, `DF-8-3-B` by 8.4)"*, and each pointer names exactly that
+  story. Corroborated independently: `-78`'s own registry already pairs `8-3-…md` with
+  `DF-8-1-A` and `8-4-…md` with `DF-8-3-B`.
+- **`DF-8-4-A`** and **`DF-8-5-A`** — `epic-9-retro-2026-08-09.md:22` states *"**4 closed inside
+  the epic** — `DF-8-5-A`, `DF-8-5-D`, `DF-8-4-A`, `RS-4b`"* and `:163` *"all **CLOSED** with
+  closing evidence"*, absorbed into Story 9.2 by the operator's 2026-08-08 ruling. Both pointers
+  name `9-2-…`.
+
+⛔ **THE NEAR-MISSES STILL DO NOT QUALIFY, and re-checking them is what makes the six
+defensible.** All eighteen ALREADY-RESOLVED entries were re-examined this round, not just the
+four: **`DF-8-2-B`** was closed by Story **11.2** (`epic-11-retro-2026-08-12.md:34`) while its
+pointer names `8-3-…`; **`DF-5-1-A`** was *"opened and closed in the same epic (story 5.1)"*
+(`epic-5-retro-2026-06-29.md:21`) while its pointer names `6-1-…`; **`DF-10-3-A`** was fixed by
+Story **12.8** while its pointer names `12-9-…`. A pointer that names the wrong story is still
+stale, and rewriting it would be the forbidden mechanism. **Twelve entries stay registered.**
+
+⛔ **Nothing else changed.** No `target_story` was rewritten, no `target_story: NONE` introduced,
+no `-80` assertion weakened, and no entry's outcome was revised — only which of them qualify for
+the registry exit. `DF-13-5-A` stays **OPEN and UNSPENT**; the gate stays **BLOCKED**.
+

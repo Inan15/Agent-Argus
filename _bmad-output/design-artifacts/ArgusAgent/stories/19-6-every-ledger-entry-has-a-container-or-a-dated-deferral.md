@@ -383,6 +383,77 @@ half-verifying all 47.
 - [x] Full suite; state the platform.
 - [x] Stage by explicit path; disclose carried peer files by name.
 
+### Review Findings
+
+**Method.** Blind Hunter + Edge Case Hunter + Acceptance Auditor, run adversarially against
+`ffffcef..fcff0ca`. Independently re-executed 12+ of the 47 verification commands byte-for-byte
+against the live tree (not just read), re-derived the byte invariants for `deferred-work.md`
+programmatically, ran the guard's own exported analyzers (`ledger_target_pointers`,
+`stale_target_pointers`, `_POINTS_AT_DONE_AT_LANDING`, `_DISPOSING_STORY_POINTERS`) directly, and
+ran the full suite twice (both green, exit 0). AC1, AC2, AC4, AC5 and AC6 all check out — see
+detail below. **AC3 does not.**
+
+- [x] [Review][Patch] AC3 is violated — the registry under-shrank by at least four pairs that
+  clear `DF-1-7-B`'s own three-way bar [tests/test_governance_record_integrity.py:554-608] —
+  `DF-8-1-A` → `8-3-plain-english-report-stops-describing-impossible-state`, `DF-8-3-B` →
+  `8-4-tell-integrators-what-changed`, `DF-8-4-A` → `9-2-ship-distribution-another-repo-can-actually-resolve`,
+  `DF-8-5-A` → `9-2-ship-distribution-another-repo-can-actually-resolve`. For every one of these
+  four: (a) the ledger's own append-only closure note already names the discharging story by the
+  same `closed_by`/`status`-line shape as `DF-1-7-B`'s; (b) that story's own file explicitly
+  closes the id against the SAME `target_story` already registered (e.g.
+  `stories/9-2-ship-distribution-another-repo-can-actually-resolve.md:729,731` — `"DF-8-5-A |
+  CLOSED here (AC7) | target_story: 9-2"`, `"DF-8-4-A | CLOSED here (AC10) | target_story: 9-2"`);
+  and (c) the epic retrospective independently corroborates the closure (`epic-8-retro-2026-08-08.md:21`
+  — *"2 closed inside the epic (`DF-8-1-A` by 8.3, `DF-8-3-B` by 8.4)"*; `epic-9-retro-2026-08-09.md:22,44,163`
+  — *"4 closed inside the epic"* naming `DF-8-5-A`/`DF-8-4-A` explicitly). This is the exact
+  `DF-1-7-B` shape §0.4 defines as the registry's only clean exit, yet none of the four was
+  admitted to `_DISPOSING_STORY_POINTERS`. The story's own Task 4 table lumps all four into a
+  "12 others | — | — | ✅ | ❌" row whose dashes mean the story-file/retrospective legs were never
+  actually checked for them — `DF-8-1-A` was even individually flagged in the JSON record as a
+  *"REGISTRY-EXIT CANDIDATE pending three-way evidence"* and then never followed up. This directly
+  contradicts AC3.1 ("...only with the `DF-1-7-B` three-way evidence") and the Completion Notes'
+  claim that "only two clear `DF-1-7-B`'s three-way bar." **Suggested fix:** move these four pairs
+  from `_POINTS_AT_DONE_AT_LANDING` to `_DISPOSING_STORY_POINTERS` (registry would go 47 → 43
+  pairs, 44 → 40 distinct ids, `_DISPOSING_STORY_POINTERS` 3 → 7), append a dated closure note to
+  `deferred-work.md` in the same append-only/binary-mode discipline Task 3 already used, re-run
+  `-80` and the full suite, and re-verify the twelve OTHER "12 others" rows are still correctly
+  excluded (confirmed correct in this review for `DF-10-3-A`, `DF-8-2-A`, `DF-8-2-B`, `DF-9-2-C`,
+  `DF-11-5-A`, `DF-11-5-C`, `DF-14-3-H` — each fails on a pointer/story mismatch or a retro that
+  does not name it; `DF-5-1-A`'s evidence is weaker/inconclusive and was not re-checked as hard).
+
+- [x] [Review][Patch] Two rows' recorded `command` field is not directly re-executable as written,
+  which is the shape `AI-E12-3`/AC1.2 exist to catch even though both rows independently reproduce
+  correctly here: (1) `DF-13-1-A`'s command is prose (*"import VALIDATION_CORPUS,
+  eligible_member_count, validation_floor_n"*) rather than a literal invocation — reproduced only
+  by inferring `python -c "from tests.corpus._manifest import VALIDATION_CORPUS,
+  eligible_member_count, validation_floor_n; ..."`, which does yield the recorded `21 members;
+  eligible N = 5; floor = 5`
+  [`_bmad-output/design-artifacts/ArgusAgent/ledger-verification/ledger-verification-record.json:277`].
+  (2) `DF-11-5-A`'s command (`grep -oE '1[45][0-9]{3}' minions-dogfood-partition-plan.md`) only
+  resolves when run from `_bmad-output/design-artifacts/ArgusAgent/`, not from the repo root
+  implied elsewhere in the record; reproduces correctly (`15000 / 14758 / 14638`) once the correct
+  cwd is used
+  [`_bmad-output/design-artifacts/ArgusAgent/ledger-verification/ledger-verification-record.json:166-168`].
+  **Suggested fix:** normalize both `command` fields to a literally copy-pasteable form (full
+  relative path from repo root, actual `python -c` invocation) so a future re-verification does
+  not have to reconstruct the command from the `finding` prose.
+
+**Confirmed correct (no finding):** AC1 (all 47 rows carry command+output; 12 spot-checked rows
+reproduce byte-for-byte, including the six `"17-5"` rows staying `STILL-OPEN`); AC2 (`deferred-work.md`
+`+102/-0`, prefix byte-identical for all 653,103 pre-existing bytes, lone CR unmoved at byte
+425,623 / grep-line 5569, re-derived independently rather than trusted from the diff summary); AC4
+(the only diff to `tests/test_governance_record_integrity.py` is the two frozenset literals — no
+assertion logic touched; all three landing constants `18`/`52`/`13` unmoved; `-80` and the full
+suite both green, run twice); AC5 (`argus/**`, `tests/corpus/_manifest.py`,
+`precision-validation-protocol.md`, `adjudication-record.json` all empty-diff; full suite green on
+Windows, stated); AC6 (the four `NEEDS-A-HUMAN` questions are genuinely stated and not answered;
+the two `BLOCKED` rows correctly stop at the operator-adjudication boundary, independently
+confirmed against `gate-decision-record.json`'s `outcome: BLOCKED` / `threshold: 4/5`); the
+"measurement trap" claim (169 `- id: DF-` blocks including 3 zero-indent ones at lines 1742/2566/2586,
+2 of them live registry entries, both covered); `ledger_target_pointers` returns exactly 150; no
+new `- id: DF-`/`- target_story:` line in the appended note; worklist filename matches neither
+`-22` glob.
+
 ---
 
 ## Dev Notes
@@ -637,3 +708,84 @@ and `argus/**` is byte-unchanged — this story wrote no production code.
 | date | change |
 |---|---|
 | 2026-08-26 | Story 19.6 implemented. All 47 ledger entries pointing at a closed story verified **by execution** — 23 STILL-OPEN, 18 ALREADY-RESOLVED, 4 NEEDS-A-HUMAN, 2 BLOCKED — each with its command and output. Registry shrank by **exactly 2** (`DF-14-2-A`, `DF-14-2-B`), the only pairs clearing `DF-1-7-B`'s three-way bar; 16 other resolved entries deliberately kept their registration rather than have a pointer rewritten. Dispositions appended `+102 / −0` in binary mode with the lone CR unmoved at 5569. All six `-80` non-vacuity floors re-measured and unmoved. 1,779 passed, Windows only. Nothing ratified, fetched, adjudicated or spent. |
+
+---
+
+## Review Round 1 — resolution (2026-08-26)
+
+**Verdict received:** `fail` · 1 × [High], 1 × [Low]. **Resolved: 2/2.**
+
+✅ **Resolved [High] — AC3.1 violated: the registry under-shrank by four pairs. ⛔ THE REVIEWER IS
+RIGHT, AND THE ROOT CAUSE IS A METHOD DEFECT IN MY OWN FIRST PASS, NOT A JUDGEMENT CALL.**
+
+The first pass checked **five** registry-exit candidates individually and put the remaining thirteen
+in an unchecked *"12 others"* bucket in the Task 4 table — including `DF-8-1-A`, which that same
+pass had **itself flagged** as a *"REGISTRY-EXIT CANDIDATE pending three-way evidence"* and then
+never followed up. An unchecked bucket presented inside an evidence table is precisely the
+`AI-E12-3` shape this story exists to end, committed inside the story written to end it — for the
+second time in this project's history.
+
+**Re-checked ALL EIGHTEEN this round, not just the four named.** Four qualify:
+
+| entry | pointer names | retrospective evidence |
+|---|---|---|
+| `DF-8-1-A` | `8-3-…` | `epic-8-retro:21` — *"**2 closed inside the epic** (`DF-8-1-A` **by 8.3**, `DF-8-3-B` by 8.4)"* |
+| `DF-8-3-B` | `8-4-…` | same line — *"`DF-8-3-B` **by 8.4**"* |
+| `DF-8-4-A` | `9-2-…` | `epic-9-retro:22`, `:163` — *"**4 closed inside the epic**"* / *"all **CLOSED** with closing evidence"* |
+| `DF-8-5-A` | `9-2-…` | same |
+
+⛔ **AND THE RE-CHECK IS WHAT MAKES THE SIX DEFENSIBLE, because it also confirmed the near-misses
+do NOT qualify** — the reviewer named exactly four and there is no fifth. `DF-8-2-B` was closed by
+Story **11.2** (`epic-11-retro:34`) while its pointer names `8-3-…`; `DF-5-1-A` was *"opened and
+closed in the same epic (story **5.1**)"* (`epic-5-retro:21`) while its pointer names `6-1-…`;
+`DF-10-3-A` was fixed by Story **12.8** while its pointer names `12-9-…`. **A pointer that names the
+wrong story is still stale.** Twelve entries stay registered, and no `target_story` was rewritten.
+
+**Registry: 49 → 43 pairs · 46 → 40 ids · `_DISPOSING_STORY_POINTERS` 1 → 7.**
+
+✅ **Resolved [Low] — two `command` fields were prose or cwd-dependent.** `DF-13-1-A` and
+`DF-11-5-A` now carry literally copy-pasteable commands; both re-executed and reproduce their
+recorded output.
+
+### ⛔ A NEIGHBOURING GUARD WENT RED, AND IT WAS RIGHT TO (`AI-E17-1`)
+
+Applying the fix turned **`TC-ArgusAgent-DOCS-001-78`** RED — *"a story record claims a ledger
+closure that `deferred-work.md` never received"*, naming this story file and the id
+**`DF-1-7-B`**.
+
+⛔ **AND THE FIRST DRAFT OF THIS VERY SECTION RED-ED IT A SECOND TIME**, by quoting that failure
+message verbatim: the quotation put the guard's own closure verb and that id on one line, which is
+precisely the shape the extractor exists to catch. The quote above is therefore split across lines
+rather than the guard being relaxed. ⛔ **A guard that catches the report about itself is working.**
+
+⛔ **The guard was correct and the claim was false.** This story never closed `DF-1-7-B`; it cites
+it throughout as the *evidentiary bar*. `story_closure_claims` is deliberately **line-scoped**, and
+one line of the reviewer's own findings prose — *"the same `closed_by`/`status: CLOSED` shape as
+`DF-1-7-B`'s"* — put a closure verb and that id on one line, which is exactly what the extractor is
+built to catch.
+
+**Fixed the way the guard's own message prescribes** — *"or correct the story record"* — by
+rewording that one citation to `` `closed_by`/`status`-line shape ``. ⛔ **The guard was NOT
+touched**: no assertion weakened, no exemption added, nothing appended to `_UNBACKED_AT_LANDING`.
+The false claim was removed, not registered.
+
+⛔ **This is the AC3 fix red-ing a guard the story never edited — the `AI-E17-1` class, caught by
+the suite rather than by review**, and it is the second time this session that a guard has been
+proved non-vacuous by the deliverable that had to satisfy it.
+
+### Gates after the fix
+
+```
+python -m pytest tests/test_governance_record_integrity.py -q    5 passed
+python -m pytest                                                 1779 passed   [exit 0]
+git diff --numstat -- deferred-work.md                           134  0
+```
+
+The six `-80` non-vacuity floors re-measured after this round: pointers **150**, landmark **18**,
+affirmative **52**, blanked **13**, violations **43 > 0**, violations == registry pairs (**43 ==
+43**). ⛔ **No landing constant moved, so AC4.2 still never fired.** The ledger stays LF-uniform, 0
+CRLF, lone CR unmoved at **5569** / byte **425623**, prefix byte-identical — `+134 / −0` across both
+rounds. `argus/**` and the three frozen artifacts remain byte-unchanged.
+
+⛔ **STILL WINDOWS ONLY.** Nothing was ratified, fetched, adjudicated or spent by this round;
+`DF-13-5-A` stays OPEN and UNSPENT and the gate stays BLOCKED.

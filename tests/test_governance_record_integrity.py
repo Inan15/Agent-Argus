@@ -516,6 +516,24 @@ _DISPOSING_STORY_POINTERS: frozenset[tuple[str, str]] = frozenset(
         # them, so the pointer is stale for a different reason and stays registered as
         # evidence. `DF-10-3-A` is the clearest — fixed by Story 12.8 while its pointer
         # names 12.9. Rewriting a pointer to manufacture an exit is the forbidden mechanism.
+        # ── Story 19.6 review round 1, 2026-08-26. FOUR MORE, found by the reviewer and
+        # confirmed by re-reading the retrospectives rather than by argument. The first pass
+        # checked five candidates individually and left the rest in an unchecked bucket; that
+        # was the defect. Each of these four clears the same three-way bar:
+        #   DF-8-1-A / DF-8-3-B — epic-8 retro: "2 closed inside the epic (DF-8-1-A by 8.3,
+        #     DF-8-3-B by 8.4)", and each pointer names exactly that story.
+        #   DF-8-4-A / DF-8-5-A — epic-9 retro: "4 closed inside the epic ... all CLOSED with
+        #     closing evidence", absorbed into Story 9.2, which is what each pointer names.
+        # `tests/test_governance_record_integrity.py`'s own -78 registry independently pairs
+        # 8-3 with DF-8-1-A and 8-4 with DF-8-3-B.
+        #
+        # ⛔ THE NEAR-MISSES STAY REGISTERED, for the SAME reason DF-10-3-A does: DF-8-2-B was
+        # closed by Story 11.2 while its pointer names 8-3, and DF-5-1-A was closed by Story
+        # 5.1 while its pointer names 6-1. A pointer that names the wrong story is still stale.
+        ("DF-8-1-A", "8-3-plain-english-report-stops-describing-impossible-state"),
+        ("DF-8-3-B", "8-4-tell-integrators-what-changed"),
+        ("DF-8-4-A", "9-2-ship-distribution-another-repo-can-actually-resolve"),
+        ("DF-8-5-A", "9-2-ship-distribution-another-repo-can-actually-resolve"),
         ("DF-14-2-A", "14-3-the-assertion-vocabulary-crosses-the-languages-the-installer-ships"),
         ("DF-14-2-B", "14-3-the-assertion-vocabulary-crosses-the-languages-the-installer-ships"),
     }
@@ -583,7 +601,6 @@ _POINTS_AT_DONE_AT_LANDING: frozenset[tuple[str, str, str]] = frozenset(
         ("DF-5-1-A", "6-1-llm-dispatch-port-minions-orchestrator-adapter", "unverified"),
         ("DF-6-6-A", "13-2-adjudicate-every-finding-by-a-named-human", "unverified"),
         ("DF-7-2-A", "13-2-adjudicate-every-finding-by-a-named-human", "unverified"),
-        ("DF-8-1-A", "8-3-plain-english-report-stops-describing-impossible-state", "unverified"),
         (
             "DF-8-2-A",
             "8-2-critical-subsystem-gates-operator-can-actually-satisfy",
@@ -592,9 +609,6 @@ _POINTS_AT_DONE_AT_LANDING: frozenset[tuple[str, str, str]] = frozenset(
         ("DF-8-2-A", "8-3-plain-english-report-stops-describing-impossible-state", "unverified"),
         ("DF-8-2-B", "8-3-plain-english-report-stops-describing-impossible-state", "unverified"),
         ("DF-8-3-A", "12-4-every-outcome-names-its-next-action", "unverified"),
-        ("DF-8-3-B", "8-4-tell-integrators-what-changed", "unverified"),
-        ("DF-8-4-A", "9-2-ship-distribution-another-repo-can-actually-resolve", "unverified"),
-        ("DF-8-5-A", "9-2-ship-distribution-another-repo-can-actually-resolve", "unverified"),
         ("DF-9-2-C", "12-1-pipeline-stops-breaching-its-own-limit", "unverified"),
         ("DF-AUD-APAA-A", "12-3-a-re-run-returns-the-recorded-result", "unverified"),
         ("DF-AUD-APAA-C", "10-1-release-status-must-cite-evidence", "unverified"),

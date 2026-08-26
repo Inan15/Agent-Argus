@@ -2,31 +2,39 @@
 
 > ⛔ **THIS DOCUMENT CLOSES NOTHING BY ARGUMENT.** Every row below carries the command that
 > decided it and that command's output. `AI-E12-3` — *resolving entries in prose rather than
-> against evidence* — is the named defect this story exists to end, and it was committed once
-> already inside the story written to end it. Produced by Story 19.6 from
+> against evidence* — is the named defect this story exists to end. Produced by Story 19.6 from
 > `ledger-verification-record.json`.
 
 **Population:** 47 entries — 46 registry-bound plus `DF-AUD-DETECT-C`, which is **not** in the registry and whose verification therefore cannot change it.
 
 **Outcomes:** 23 STILL-OPEN · 18 ALREADY-RESOLVED · 4 NEEDS-A-HUMAN · 2 BLOCKED
 
-**Registry shrink: 2 pairs.**
+**Registry shrink: 6 pairs.**
 
-⛔ **THE SHRINK IS AN OUTCOME, NEVER A TARGET.** Every ALREADY-RESOLVED entry was tested against s0.4's ONLY legitimate exit: the pair moves to _DISPOSING_STORY_POINTERS, and only with DF-1-7-B three-way evidence (story file AND retrospective AND shipped code). 18 entries are ALREADY-RESOLVED; only 2 clear that bar. No target_story field was rewritten and no target_story: NONE was introduced to manufacture a larger shrink.
+⛔ **THE SHRINK IS AN OUTCOME, NEVER A TARGET.** Every ALREADY-RESOLVED entry was tested against s0.4's ONLY legitimate exit: the pair moves to _DISPOSING_STORY_POINTERS, and only with DF-1-7-B three-way evidence (story file AND retrospective AND shipped code). 18 are ALREADY-RESOLVED; 6 clear that bar. REVIEW ROUND 1 CORRECTED THIS FROM 2 TO 6: the first pass checked five candidates individually and left the rest in an unchecked bucket, which under-shrank the registry by four. The remaining 12 stay registered because their pointer names a story that did NOT discharge them - DF-8-2-B was closed by Story 11.2 while its pointer names 8-3, DF-5-1-A by Story 5.1 while its pointer names 6-1, DF-10-3-A by Story 12.8 while its pointer names 12.9. No target_story field was rewritten and no target_story: NONE was introduced.
 
-## The registry shrink, and why only these
+## The registry shrink, and why exactly these
 
-| entry | story | evidence |
+| entry | pointer names | three-way evidence |
 |---|---|---|
-| `DF-14-2-A` | `14-3-…` | story file names it · Epic-14 retro records *"2 closed (`DF-14-2-A`, `DF-14-2-B`)"* and *"both verified as genuinely received by the ledger"* · `importorskip` count in `tests/test_vacuous_detector.py` is **0** |
-| `DF-14-2-B` | `14-3-…` | same story file and retro · `provenance_scan.py` now uses `\A`/`\Z` and its docstring records *"Also re-anchored `\A` 2026-08-18 (Story 14.3)"* |
+| `DF-8-1-A` | `8-3-…` | epic-8 retro:21 *"2 closed inside the epic (DF-8-1-A **by 8.3**, DF-8-3-B by 8.4)"* · 8.3 story file names it · row-4 code comment names `DF-8-1-A` |
+| `DF-8-3-B` | `8-4-…` | epic-8 retro:21 same line, *"**DF-8-3-B by 8.4**"* · 8.4 story file names it · `cli.py:874-879` call now inside the guard |
+| `DF-8-4-A` | `9-2-…` | epic-9 retro:22/:163 *"4 closed inside the epic … all **CLOSED** with closing evidence"*, absorbed into 9.2 · `action.yml` maps exit 1 → `AUDIT_FAILED` |
+| `DF-8-5-A` | `9-2-…` | epic-9 retro:22/:163 same · `DOGFOOD_ArgusAgent_VERSION = _ARGUS_VERSION` |
+| `DF-14-2-A` | `14-3-…` | epic-14 retro *"2 closed … both verified as genuinely received by the ledger"* · `importorskip` = 0 |
+| `DF-14-2-B` | `14-3-…` | same retro line · `_ASSIGNMENT_RE` re-anchored `\A`/`\Z`, docstring names Story 14.3 |
 
-⛔ **Sixteen other entries are ALREADY-RESOLVED and do NOT leave the registry.** Their
-`target_story` names a story that did not discharge them, or the retrospective does not record
-the closure, so they fail `DF-1-7-B`'s three-way bar. `DF-10-3-A` is the clearest: it is
-genuinely fixed, and its own entry says the fix landed in Story **12.8** while the pointer names
-**12.9** — *"the entry names this story rather than 12.8, so it was invisible to the story that
-fixed it"*. Rewriting that pointer to manufacture an exit is the forbidden mechanism 2.
+⛔ **TWELVE other entries are ALREADY-RESOLVED and do NOT leave the registry** — their
+`target_story` names a story that did not discharge them, so the pointer is stale for a
+different reason and stays registered as evidence. The three clearest:
+
+| entry | pointer names | actually discharged by |
+|---|---|---|
+| `DF-10-3-A` | `12-9-…` | Story **12.8** — its own entry says *"invisible to the story that fixed it"* |
+| `DF-8-2-B` | `8-3-…` | Story **11.2** (epic-11 retro:34) |
+| `DF-5-1-A` | `6-1-…` | Story **5.1** (epic-5 retro:21, *"opened and closed in the same epic"*) |
+
+⛔ Rewriting any of those pointers to manufacture a larger shrink is the forbidden mechanism.
 
 ## ⛔ Questions for the operator — STATED, NOT ANSWERED
 
@@ -78,7 +86,7 @@ fixed it"*. Rewriting that pointer to manufacture an exit is the forbidden mecha
 
 ### `DF-11-5-A`
 
-- **Command:** `grep -oE '1[45][0-9]{3}' minions-dogfood-partition-plan.md`
+- **Command:** `grep -oE '1[45][0-9]{3}' _bmad-output/design-artifacts/ArgusAgent/minions-dogfood-partition-plan.md | sort -u`
 - **Output:** 14638 / 14758 against the 15000 budget
 - **Finding:** Entry recorded 14997/15000 - three lines of headroom. Now 14758: 242 lines. The named cliff ('the next story that writes more than 3 lines cannot proceed') no longer exists.
 
@@ -90,17 +98,17 @@ fixed it"*. Rewriting that pointer to manufacture an exit is the forbidden mecha
 
 ### `DF-13-1-A`
 
-- **Command:** `import VALIDATION_CORPUS, eligible_member_count, validation_floor_n`
+- **Command:** `python -c "from tests.corpus._manifest import VALIDATION_CORPUS, eligible_member_count, validation_floor_n; print(len(VALIDATION_CORPUS), eligible_member_count(), validation_floor_n())"`
 - **Output:** 21 members; eligible N = 5; floor = 5
 - **Finding:** Entry: 'the manifest is SPECIFIED and EMPTY; populating it is an operator act that has not been performed'. It has since been performed - N = 5 >= floor 5. DF-13-2-A's own note corroborates ('N = 5 >= 5, from Story 13.1').
 
-### `DF-14-2-A`
+### `DF-14-2-A`  ⛔ **registry exit**
 
 - **Command:** `grep -c importorskip tests/test_vacuous_detector.py`
 - **Output:** 0
 - **Finding:** The importorskip gate is gone, and ARGUS_REQUIRE_LANGUAGE_GRAMMARS=1 now converts skip to failure in tests/test_multilanguage_audit.py:41,65.
 
-### `DF-14-2-B`
+### `DF-14-2-B`  ⛔ **registry exit**
 
 - **Command:** `sed -n '163,168p' argus/detectors/provenance_scan.py; grep -n anchored argus/detectors/provenance_scan.py`
 - **Output:** _ASSIGNMENT_RE now uses \A ... \Z; docstring :80 corrected to 'No pattern below is anchored with ^ or $ - every one uses \A'; :171 records 'Also re-anchored \A 2026-08-18 (Story 14.3)'
@@ -118,11 +126,11 @@ fixed it"*. Rewriting that pointer to manufacture an exit is the forbidden mecha
 - **Output:** minions_core path ABSENT; argus/cache/key.py:308 prompt_template_version field present
 - **Finding:** Slot exists in RecordingProducingClosure. Ledger itself already records CLOSED 2026-06-28. APAA tree separated into argus/.
 
-### `DF-8-1-A`
+### `DF-8-1-A`  ⛔ **registry exit**
 
 - **Command:** `sed -n '717,745p' argus/reports/generator.py`
 - **Output:** row 4 renders WARNING 'Release readiness is NOT VOUCHED - Argus found nothing blocking, but ... This is a statement about the audit, not about the code.'
-- **Finding:** The CAUTION 'Repository is NOT ready for release' now lives ONLY in row 2 (blocking_finding_count > 0). The row-4 code comment names DF-8-1-A as the defect it closes. REGISTRY-EXIT CANDIDATE pending three-way evidence.
+- **Finding:** The CAUTION 'Repository is NOT ready for release' now lives ONLY in row 2 (blocking_finding_count > 0). The row-4 code comment names DF-8-1-A as the defect it closes. REGISTRY-EXIT CANDIDATE pending three-way evidence. ⛔ REGISTRY EXIT ADMITTED (review round 1, 2026-08-26): three-way evidence confirmed — epic-8-retro-2026-08-08.md:21 — "2 closed inside the epic (DF-8-1-A by 8.3, DF-8-3-B by 8.4)"; pointer names 8-3.
 
 ### `DF-8-2-A`
 
@@ -136,23 +144,23 @@ fixed it"*. Rewriting that pointer to manufacture an exit is the forbidden mecha
 - **Output:** suffixes now _spec.rb/_test.rs/... ; latest.java->False, myspec.rb->False, foo_spec.rb->True
 - **Finding:** Separator-less 'test.java'/'spec.rb' are gone. Verified BOTH directions: false positives cleared AND the true positive still fires.
 
-### `DF-8-3-B`
+### `DF-8-3-B`  ⛔ **registry exit**
 
 - **Command:** `grep -n 'render_ship_readiness|except' argus/cli.py`
 - **Output:** line 874 call is inside try; 876 except ShipReadinessError; 879 except ValueError
-- **Finding:** The call is no longer outside the guard - a raise can no longer escape main() as an uncaught traceback.
+- **Finding:** The call is no longer outside the guard - a raise can no longer escape main() as an uncaught traceback. ⛔ REGISTRY EXIT ADMITTED (review round 1, 2026-08-26): three-way evidence confirmed — epic-8-retro-2026-08-08.md:21 — same line, "DF-8-3-B by 8.4"; pointer names 8-4.
 
-### `DF-8-4-A`
+### `DF-8-4-A`  ⛔ **registry exit**
 
 - **Command:** `grep -B2 -A8 INSUFFICIENT_COVERAGE action.yml`
 - **Output:** exit 1 -> AUDIT_FAILED, documented 'NOT a verdict ... never read as a ran-and-under-covered result'
-- **Finding:** The 'else -> INSUFFICIENT_COVERAGE' swallow of exit 1 is gone.
+- **Finding:** The 'else -> INSUFFICIENT_COVERAGE' swallow of exit 1 is gone. ⛔ REGISTRY EXIT ADMITTED (review round 1, 2026-08-26): three-way evidence confirmed — epic-9-retro-2026-08-09.md:22 and :163 — "4 closed inside the epic" / "all CLOSED with closing evidence", absorbed into Story 9.2; pointer names 9-2.
 
-### `DF-8-5-A`
+### `DF-8-5-A`  ⛔ **registry exit**
 
 - **Command:** `grep -n 'DOGFOOD_ArgusAgent_VERSION' argus/dogfood/proof_run.py; grep '^version' pyproject.toml`
 - **Output:** proof_run.py:227 DOGFOOD_ArgusAgent_VERSION = _ARGUS_VERSION ; pyproject version = 0.1.0
-- **Finding:** Hardcoded '1.43.0' replaced by derivation from the package version, so the bundle token cannot contradict the package.
+- **Finding:** Hardcoded '1.43.0' replaced by derivation from the package version, so the bundle token cannot contradict the package. ⛔ REGISTRY EXIT ADMITTED (review round 1, 2026-08-26): three-way evidence confirmed — epic-9-retro-2026-08-09.md:22 and :163 — same; pointer names 9-2.
 
 ### `DF-9-2-C`
 
