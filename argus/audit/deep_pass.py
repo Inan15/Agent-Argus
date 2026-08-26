@@ -95,9 +95,11 @@ Three things follow, and all three are load-bearing:
   deterministic structural grounding fact instead. ``deep_audit.py`` and
   :func:`_claim_is_ast_grounded` name the same unscheduled work.
 
-Filed as ``DF-12-2-D``, owner XAgent007 (Engineering Lead). It has NO target story:
-the destination is a scope change, and pointing it at a `done` story is the defect
-Story 17.5 corrected on 2026-08-26.
+Filed as ``DF-12-2-D``, owner XAgent007 (Engineering Lead). That entry's own
+``target_story`` field still names 6-2-style work and is left byte-frozen as evidence
+(§3.4); its corrected disposition — NO target story, because the destination is a scope
+change — lives in the entry's 2026-08-26 append-only note in ``deferred-work.md``, not in
+the field. Pointing a live entry at a `done` story is the defect Story 17.5 corrected.
 
 NFR-S1
 ------
