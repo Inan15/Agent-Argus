@@ -4,7 +4,7 @@ baseline_commit: b8eaeee
 
 # Story 17.5: Nothing points at a closed story
 
-Status: review
+Status: done
 
 <!-- Contexted 2026-08-26 at HEAD `b8eaeee` (branch `docs/merge-strategy-decision`, 21 ahead of
      `origin/master`) by the create-story workflow (Opus 5). `git status --porcelain` is EMPTY at
@@ -460,6 +460,58 @@ One Low-severity item, docs-only, not blocking:
       gone; and the overstated `TC-ArgusAgent-DOCS-001-77` claim is struck and corrected BOTH in
       `DN-17-5-12` below and in `deferred-work.md`. `+1 / −1`, line-count neutral. See *Fix round 3*
       in the Completion Notes.
+      **VERIFIED CLOSED, code review iteration 3 (Sonnet 5), 2026-08-26.**
+
+Adversarial code review, iteration 3 (`claude-sonnet-5`), TIGHTLY FOCUSED re-review of the fix arc
+`1e7e3e6` → `cdcda02` (base `3179532`) only — the two items iteration 2 left open, plus the
+regression surface. No substantive ground re-opened.
+
+- `architecture.md:1146` form checked directly against the exemplars it claims to copy. Read
+  `:425`-`:427` (Story 10.2) and all four `AMENDED` instances inside the Gate-decision block at
+  `:1136` (13.5/AC5, 16.1/AC1, 16.2/AC3, 16.3/AC1) in full: every one reads
+  `~~struck original~~ **AMENDED <date> by <story> — STRUCK, never erased (§3.4): <replacement>**`
+  as one adjacent unit. `git diff 3179532 cdcda02 -- architecture.md` touches exactly one line
+  (`:1146`) and the new text is `… — ~~full dataflow-grounded assertion provenance remains Story
+  6.2's scope~~ **AMENDED 2026-08-26 by Story 17.5 / `DN-17-5-12` — STRUCK, never erased (§3.4):
+  it is UNSCHEDULED, owner XAgent007 (Engineering Lead) …**` — the struck original sits
+  immediately before its bolded replacement, matching the exemplars' shape exactly, and no
+  trailing decoupled sentence remains. The struck quotation is the real original sentence (verified
+  against `git show b8eaeee:…architecture.md`, byte-for-byte the same words, unbolded inside the
+  strike — the same convention the four Gate-decision exemplars use, none of which preserve nested
+  bold inside a strike either). The replacement content is TRUE: Story 6.2 is `done`
+  (`sprint-status.yaml`), the corrected destination (`DF-14-1-A`, a scope change, owner XAgent007)
+  matches AC5's own table and the `deferred-work.md` disposition it cites. File/line counts
+  independently re-derived: `architecture.md` 188,986 bytes, 1,418 lines, 1,418 CR (CRLF-uniform) —
+  exactly the `+1/−1`, line-count-neutral claim.
+- TC-77 overstatement corrected in both places, verified against the guard's actual source
+  (`tests/test_governance_record_integrity.py::test_TC_ArgusAgent_DOCS_001_77_…`, `:151`-`:205`):
+  the assertion is a flat `anchor not in architecture` substring membership check over 26 literal
+  strings — it asserts nothing about shape or adjacency, only that the strings are present. The
+  story's `DN-17-5-12` correction and the `deferred-work.md` dated append both now say exactly
+  that, and both are worded identically to what the guard's code does. `deferred-work.md`'s append
+  re-derived as a pure append: `git diff 3179532 cdcda02 -- deferred-work.md` is `+21/−0` with no
+  deletions; file re-measured at 653,103 bytes, 1 CR / 0 CRLF (lone-CR invariant held).
+- Regression surface re-derived, not trusted: `git diff --stat 3179532 cdcda02 -- tests/ argus/` is
+  EMPTY (zero files touched) — `TC-ArgusAgent-DOCS-001-80` unedited/unnarrowed, no
+  `_POINTS_AT_DONE_AT_LANDING` pair moved (re-executed: still 49 registered pairs). Independently
+  re-executed `ledger_closed_ids(deferred-work.md)` = 42 (unchanged) and
+  `story_closure_claims(story file)` = `()` (empty), both by direct import and call against the
+  live tree, not by reading the record. `scripts/precision_preregistration.py`,
+  `successor-vacuity-predicate-specification.md` and `validation-corpus/**` re-diffed against
+  `b8eaeee`: empty (byte-identical); `TC-ArgusAgent-PRECISION-001-140` unmoved (its host file is
+  untouched). `sprint-status.yaml` re-measured at 1,264 lines / 1,264 CR.
+- Independently re-ran the gates rather than trusting the record, on this reviewer's own Windows
+  environment (LOCAL, no CI evidence at any sha in this arc, branch unpushed): `python -m pytest`
+  — **1,760 passed / 0 failed**, exit 0 (all dots, no `F`/`E`/`s` in the progress stream — this
+  environment carries the optional `[languages]` grammars, so iteration 2's 26 environment-only
+  failures do not reproduce here either, consistent with the dev's own environment); `python -m
+  mypy argus` — Success, 96 source files; `python -m bandit -r argus -f txt --severity-level
+  medium` — 0 Medium / 0 High; `tests/test_governance_record_integrity.py` — 5 passed (includes
+  `-77`/`-78`/`-80`); `tests/test_dogfood_artifact_currency.py` — 4 passed (no regeneration owed,
+  confirmed).
+
+No new finding. Both items iteration 2 left open are genuinely resolved, and the regression surface
+is clean by direct execution, not by reading the dev's claims. VERDICT: pass.
 
 ---
 
@@ -1201,3 +1253,4 @@ guard was edited, extended, narrowed or re-registered.
 | 2026-08-26 | 0.4.0 | Fix round 2 — **2 of 2 review findings addressed**, both Low and docs-only. Finding 1: `argus/audit/deep_pass.py`'s `DF-12-2-D` note reworded so it no longer asserts *"It has NO target story"* about a ledger field that is deliberately preserved byte-unedited and still affirmatively names 6-2-style work (`259f7a4`; docstring prose only, AST-equal ignoring docstrings; dogfood artifacts regenerated in their own commit at provenance `259f7a4` — `0cabdda`). Finding 2: `architecture.md:1146`'s live Story-6.2 forward reference **CORRECTED IN PLACE** rather than left deferred — `DN-17-5-12`, an AC10 escalation recorded before the write, §3.4 honoured by amendment with the struck text kept legible; the reviewer's ledger deferral reconciled by a dated **SUPERSEDED** append carrying no disposition verb. ⛔ **Nothing was disposed, no measurement moved, `TC-ArgusAgent-DOCS-001-80` was not touched and no registry pair was added.** `in-progress` → `review`. | `bmad-dev-story` (Opus 5) |
 | 2026-08-26 | 0.5.0 | Code review, iteration 2 (CONCERNS) — focused re-review of `259f7a4`→`0cabdda`→`3179532`. Both round-1 findings independently re-verified fixed: `deep_pass.py` re-confirmed AST-equal to `948d35d` ignoring docstrings and its new wording checked TRUE against `deferred-work.md:3333`'s byte-frozen field and the guard's live `_POINTS_AT_DONE_AT_LANDING` row; every regression invariant re-derived by execution (`ledger_closed_ids` 42→42, `story_closure_claims` = `()`, `TC-ArgusAgent-DOCS-001-80` green and untouched, `deferred-work.md`/`sprint-status.yaml` byte/line counts, `precision_preregistration.py`/vacuity-spec/`validation-corpus/**` byte-identical to `b8eaeee`, dogfood LOC delta exactly matches the docstring's `+5/-3`). One new Low finding on `DN-17-5-12`'s architecture.md amendment: the struck original and its replacement are not kept ADJACENT as every other exemplar in this document does (`~~old~~ **new**` as one unit) — the sentence was rewritten in place with no strike marker, and the struck quotation was relocated to a trailing sentence at the end of the paragraph, decoupled from the correction; the "same form `TC-77` anchors" claim overstates the match. Content is true and evidence is not erased, so this does not block. `python -m pytest` reproduces 26 pre-existing FAILED in this sandbox (missing optional `[languages]` tree-sitter grammars / `dev` build tooling) — confirmed identical at base `948d35d` in an isolated worktree, so pre-existing and unrelated to this arc; `mypy`/`bandit` clean. `review` → `in-progress`. | `bmad-code-review` (Sonnet 5) |
 | 2026-08-26 | 0.6.0 | Fix round 3 (LAST PERMITTED) — **1 of 1 review-iteration-2 findings addressed**, Low and docs-only. `architecture.md:1146`'s `DN-17-5-12` amendment RESTRUCTURED into the adjacent `~~struck original~~ **AMENDED … STRUCK, never erased (§3.4): …**` form the file's own exemplars use (`:425`-`:427`; the four `AMENDED` instances at `:1136` — 13.5/AC5, 16.1/AC1, 16.2/AC3, 16.3/AC1), per `stories/10-1…` §C's rule to copy a committed shape rather than invent one: the struck original now sits immediately before its dated replacement at the point of change and the trailing decoupled sentence is gone (`+1 / −1`, line-count neutral 1,418, CR 1,418). The overstated *"same form `TC-ArgusAgent-DOCS-001-77` already anchors"* claim is STRUCK in the story record and corrected by a dated append in `deferred-work.md` (`+21 / −0`, 1 CR / 0 CRLF) — `-77` asserts only that the anchor STRINGS are present, never adjacency. ⛔ **`tests/**` and `argus/**` untouched: `TC-ArgusAgent-DOCS-001-80` not edited and no registry pair moved, no dogfood regeneration owed, `ledger_closed_ids` 42→42 identical, `story_closure_claims` = `()`, §2.2's frozen list byte-identical to `b8eaeee`.** Gates LOCAL (Windows), re-run over the committed tree at `1e7e3e6`: pytest **1,760 passed / 0 failed** in 246.46 s; mypy Success over 96 files; bandit 0 Medium / 0 High; coverage 95.87 %. `in-progress` → `review`. | `bmad-dev-story` (Opus 5) |
+| 2026-08-26 | 0.7.0 | Code review, iteration 3 (PASS) — tightly focused re-review of `1e7e3e6`→`cdcda02` (base `3179532`) only. Both items independently re-verified by execution rather than trusted: `architecture.md:1146`'s restructured form checked line-by-line against `:425`-`:427` and all four `:1136` `AMENDED` exemplars — matches exactly, struck text is the real original sentence (diffed against `git show b8eaeee`), replacement content is true. The TC-77 correction checked against the guard's actual source (`test_governance_record_integrity.py:151`-`:205`) — the assertion is a flat substring-membership check over 26 anchor strings and asserts nothing about shape or adjacency, exactly as the story and ledger now say. Regression surface re-derived clean by direct execution: `git diff --stat 3179532 cdcda02 -- tests/ argus/` empty; `ledger_closed_ids` = 42, `story_closure_claims` = `()`, `_POINTS_AT_DONE_AT_LANDING` still 49 pairs (re-imported and re-called, not read from the record); `deferred-work.md` `+21/−0` pure append, 653,103 B, 1 CR / 0 CRLF; `precision_preregistration.py`/vacuity-spec/`validation-corpus/**` byte-identical to `b8eaeee`; `sprint-status.yaml` 1,264 lines / 1,264 CR; `architecture.md` 188,986 B / 1,418 lines / 1,418 CR. Gates independently re-run on this reviewer's own Windows environment (LOCAL, no CI evidence): `pytest` 1,760 passed / 0 failed, exit 0 (no environment-only failures here either); `mypy argus` Success, 96 files; `bandit -r argus --severity-level medium` 0 Medium/High; `test_governance_record_integrity.py` 5 passed; `test_dogfood_artifact_currency.py` 4 passed. No new finding. `review` → `done`. | `bmad-code-review` (Sonnet 5) |
