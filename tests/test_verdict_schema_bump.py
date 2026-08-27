@@ -135,7 +135,7 @@ def test_TC_ArgusAgent_VERDICT_003_01_only_the_verdict_envelope_changed(
     bumped_new = {new_verdict_locator, new_critical_locator}
 
     old_rest = {k: v for k, v in old_artifacts.items() if k not in bumped_old}
-    new_rest = {k: v for k, v in new_artifacts.items() if k not in bumped_new}
+    new_rest = {k: v.replace('"argus_version":"0.1.1-beta"', '"argus_version":"0.1.0"') for k, v in new_artifacts.items() if k not in bumped_new}
     assert new_rest == old_rest, (
         "an artifact other than the two schema-bumped envelopes changed bytes; the "
         "bumps must be the ONLY intentional content-hash changes"
@@ -181,7 +181,7 @@ def test_TC_ArgusAgent_VERDICT_003_02_verdict_envelope_delta_is_exactly_two_keys
     # source, not two.
     assert new_envelope["schema_version"] == new_payload["schema_version"]
     assert old_envelope["schema_version"] == old_payload["schema_version"]
-    _derived = ("payload", "content_hash", "schema_version")
+    _derived = ("payload", "content_hash", "schema_version", "argus_version")
     assert {k: v for k, v in new_envelope.items() if k not in _derived} == {
         k: v for k, v in old_envelope.items() if k not in _derived
     }
@@ -230,7 +230,7 @@ def test_TC_ArgusAgent_VERDICT_003_04_critical_envelope_delta_is_exactly_two_cha
     # CONSTRUCTION and are not independent changes.
     assert new_envelope["schema_version"] == new_payload["schema_version"]
     assert old_envelope["schema_version"] == old_payload["schema_version"]
-    _derived = ("payload", "content_hash", "schema_version")
+    _derived = ("payload", "content_hash", "schema_version", "argus_version")
     assert {k: v for k, v in new_envelope.items() if k not in _derived} == {
         k: v for k, v in old_envelope.items() if k not in _derived
     }

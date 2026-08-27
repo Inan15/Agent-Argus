@@ -388,11 +388,11 @@ def run_preflight(ctx: PreflightContext, *, phase: str) -> list[Refusal]:
 # Impure helpers — used on a runner, injected in tests
 # ─────────────────────────────────────────────────────────────────────────────
 
-_VERSION_TAG = re.compile(r"^v(\d+\.\d+\.\d+)(?:-[a-zA-Z0-9.]+)?$")
+_VERSION_TAG = re.compile(r"^v(\d+\.\d+\.\d+(?:-[a-zA-Z0-9.]+)?)$")
 
 
 def normalize_tag(tag: str) -> str | None:
-    """``"v0.1.0-beta"`` -> ``"0.1.0"``; ``None`` when *tag* is not a version tag."""
+    """``"v0.1.1-beta"`` -> ``"0.1.1-beta"``; ``None`` when *tag* is not a version tag."""
     match = _VERSION_TAG.match(tag.strip())
     return match.group(1) if match else None
 
