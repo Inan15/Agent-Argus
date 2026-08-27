@@ -191,7 +191,7 @@ wheels = [
 
 [[package]]
 name = "argus-agent"
-version = "0.1.1b0"
+version = "0.1.0"
 source = { editable = "." }
 dependencies = [
     { name = "httpx" },
