@@ -8357,3 +8357,78 @@ stale, and rewriting it would be the forbidden mechanism. **Twelve entries stay 
 no `-80` assertion weakened, and no entry's outcome was revised — only which of them qualify for
 the registry exit. `DF-13-5-A` stays **OPEN and UNSPENT**; the gate stays **BLOCKED**.
 
+
+---
+
+## Linux verification of the full `audit-ci.yml` gate, across the whole matrix (2026-08-27)
+
+**Append-only (§3.4).** Nothing above is edited. ⛔ **THIS FILES NOTHING AND DISPOSES OF NOTHING.**
+It records a measurement and cites one existing entry. Per the standing rule, the ledger was
+grepped first — and it already knew.
+
+### What was run, and where
+
+The gate defined by `.github/workflows/audit-ci.yml` was reproduced **step for step** on a real
+Linux kernel, at HEAD `c60d432`:
+
+| fact | value |
+|---|---|
+| host | WSL2, Ubuntu 24.04.4 LTS, x86_64 |
+| filesystem | **ext4 — case-sensitive, POSIX permissions**. ⛔ A clone into `~`, NOT `/mnt/d`: DrvFs is case-insensitive and would mask the exact defect class being hunted |
+| history | full clone, **272 commits** — CI pins `fetch-depth: 0` because four guards ask history questions |
+| corpus | **not present and not needed** — the guards read committed records, never `D:/_bench` |
+
+| step | 3.10.21 | 3.11.16 | 3.12.3 |
+|---|---|---|---|
+| `mypy argus` (blocking) | ✅ 0 issues, 96 files | ✅ 0 issues, 96 files | ✅ 0 issues, 96 files |
+| `bandit -r argus --severity-level medium` (blocking) | ✅ 0 Med / 0 High | ✅ 0 Med / 0 High | ✅ 0 Med / 0 High (21 Low, the documented count) |
+| `vulture --min-confidence 80` (advisory) | ✅ clean | ✅ clean | ✅ clean |
+| `pytest --cov=argus --cov-fail-under=80` | ✅ **95.79%** | ✅ **95.79%** | ✅ **95.79%** |
+| `pytest` count, `ARGUS_REQUIRE_LANGUAGE_GRAMMARS=1` | **1779 passed, 0 skipped** | **1779 passed, 0 skipped** | **1779 passed, 0 skipped** |
+
+⛔ **`ARGUS_REQUIRE_LANGUAGE_GRAMMARS=1` was set on every leg**, so a grammar skip would have been
+a hard failure. None occurred: the multi-language guards genuinely executed on Linux.
+
+**Identical to the Windows count (1,779) with zero skips, on all three matrix versions.** No
+POSIX-only defect exists in this tree.
+
+### ⛔ WHAT THIS DOES **NOT** LICENSE, stated before anyone cites it
+
+**It is NOT a CI run and must never be cited as one.** There is no run id, because no run
+occurred. It is not the pinned `ubuntu-latest` runner image, carries no Actions context, and is
+one machine. `git tag -l` is still empty and PR **#9** still has **no CI result** — the GitHub
+Actions outage from 2026-08-26 15:11:58 UTC is unchanged by any of this.
+
+⛔ **Against `AI-E17-3`, which has two halves, this satisfies exactly one and not the other:**
+its half **(a)** — *cite a run id plus the sha it covers* — is **untouched and still owed**. Its
+half **(b)** — *take the OS-matrix decision* — now has evidence it did not have before: the tree
+is clean on POSIX across all three matrix Pythons. ⛔ **The entry stays OPEN and this note does
+not discharge it.** The correct phrasing for any record citing this work is *"Linux-verified
+locally on WSL Ubuntu 24.04.4"*, never *"CI green"* — the conflation `AI-E17-3` exists to
+prevent.
+
+⛔ **Stories 19.1 and 19.6 keep their `WINDOWS ONLY` statements exactly as written.** Both are in
+`review`; their records were true when made and are not rewritten (§3.4). This note is the later
+measurement, filed beside them rather than over them.
+
+### `DF-12-9-B` — INDEPENDENTLY REPRODUCED, and NOT re-filed
+
+The first Linux run reproduced that entry's environment half exactly, without knowing of it:
+four guards in `tests/test_installed_artifact.py` withheld themselves with *"`uv` is not on PATH,
+so the wheel could NOT be installed into a fresh environment"*. The entry already measured this
+against CI run `31908861401`, all three legs, and already names the cause — `audit-ci.yml`
+provisions the job with `pip` and never installs `uv`. ⛔ **Re-filing it would have been the
+duplicate-entry defect; it is cited instead.**
+
+**One datum the entry did not have, added here:** with `uv` present those four guards **run and
+pass** on all three Linux versions. So the gap is purely one of **CI provisioning**, not of the
+guards, the wheel, or the platform. That is evidence for the decision the entry's own
+`target_story` reserves to the Engineering Lead, and it is **not taken here.**
+
+### Recommendation, offered and not adopted
+
+This reproduction is repeatable in ~4 minutes per version and needs no `sudo` (`uv` is a
+userspace binary and the repository is already `uv`-managed). Whether it becomes a standing
+pre-merge step is a process decision for a retrospective action item, ⛔ **not a ledger entry, and
+no id is filed for it.**
+
