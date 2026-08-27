@@ -4,7 +4,7 @@
 
 ## Provenance
 
-- Commit descriptor (`git rev-parse HEAD` at generation): `68c679104d5ad9eefb30e7c17a0cdbbc9040a79b`
+- Commit descriptor (`git rev-parse HEAD` at generation): `639a2c4a00322cacdb5ef156b443ccd1b917ed95`
 - Enumerated population (the HONEST label — Story 12.1, closing `DF-10-4-D`): the file list in this artifact is enumerated from the git INDEX (`git ls-files`), NOT from the tree at the commit descriptor above. The two are the same tree exactly when `argus/` carries no staged-or-uncommitted change, and `TC-ArgusAgent-DOGFOOD-001-50` fails unless they agree — so this artifact cannot quietly describe one tree while citing another.
 - Source files (tracked `argus/`): **96**
 
@@ -24,9 +24,10 @@
 
 | partition_id (12ch) | files | python_files | unit_credits | clears 20% floor |
 |---|---|---|---|---|
-| `341b5d521511` | 18 | 18 | 90 | True |
-| `750a07348f39` | 38 | 38 | 190 | True |
-| `787963ef64bc` | 40 | 40 | 200 | True |
+| `06092526b306` | 33 | 33 | 165 | True |
+| `253396d1dd41` | 12 | 12 | 60 | True |
+| `4e2ed96cf740` | 30 | 30 | 150 | True |
+| `b393cc33ad36` | 21 | 21 | 105 | True |
 
 ## 3.2 halt demonstration (the ceiling halts + downgrades if breached)
 

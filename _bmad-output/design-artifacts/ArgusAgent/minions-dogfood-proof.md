@@ -10,113 +10,31 @@ The frozen `pipeline.run_audit_detailed` (REUSED — no fork) was run over the g
 
 **This is a SELF-audit — Argus auditing Argus (Story 8.5 / AC2).** The subject is this repository's own package, not an independent codebase. A self-audit is MATERIALLY WEAKER evidence than the independent-repository run it supersedes: the tool and the tree share authorship, so the run cannot demonstrate that the tool finds defects it was not written alongside. It is reportable as a reproducibility and no-source-retention demonstration; it is NEVER independent corroboration of the tool's detection ability. The independent Story-7.2 run over the Minions platform repository is preserved verbatim at `minions-dogfood-proof-story-7-2-superseded.md` and cannot be re-executed here, because that source is not in this repository. The filename `minions-dogfood-proof.md` is a retained HISTORICAL identifier (an evidence path that moves is an evidence path that gets lost); the subject is what this section names, not what the filename suggests.
 
-- Commit descriptor (`git rev-parse HEAD` at generation): `68c679104d5ad9eefb30e7c17a0cdbbc9040a79b`
+- Commit descriptor (`git rev-parse HEAD` at generation): `639a2c4a00322cacdb5ef156b443ccd1b917ed95`
 - Enumerated population (the HONEST label — Story 12.1, closing `DF-10-4-D`): the file list in this artifact is enumerated from the git INDEX (`git ls-files`), NOT from the tree at the commit descriptor above. The two are the same tree exactly when `argus/` carries no staged-or-uncommitted change, and `TC-ArgusAgent-DOGFOOD-001-50` fails unless they agree — so this artifact cannot quietly describe one tree while citing another.
 - Source files audited: **96**
 - Total physical LOC (build-cost proxy): **34535**
-- Partition units (7.1 plan, CONSUMED): **3**
-- **Verdict: `INSUFFICIENT_COVERAGE` (exit `3`)**
-- **Decision row (FR16 / DR-3), as DISCLOSED by the gate: `row_1_below_floor`**
-- Coverage-ledger deep-%: **`0/1`** (exact `Fraction`, never a float — AR4)
-- Coverage-ledger deep count / total entries: **0 / 96**
+- Partition units (7.1 plan, CONSUMED): **4**
+- **Verdict: `RELEASE_READY` (exit `0`)**
+- **Decision row (FR16 / DR-3), as DISCLOSED by the gate: `row_3_gates_met`**
+- Coverage-ledger deep-%: **`19/24`** (exact `Fraction`, never a float — AR4)
+- Coverage-ledger deep count / total entries: **76 / 96**
 - Blocking (verdict-eligible) findings: **0**
-- Total findings emitted: **39**
+- Total findings emitted: **177**
 
 ### 1a. The assessed population the row was computed from (DR-3)
 
-**No narrowing occurred.** The verdict carries no `coverage_scope`, so the gate keyed on the WHOLE coverage ledger: **0 `audited_deep` of 96 entries** (`0/1`, exact `Fraction`). No entry was held out of the assessment and no scope identifier was applied.
+**No narrowing occurred.** The verdict carries no `coverage_scope`, so the gate keyed on the WHOLE coverage ledger: **76 `audited_deep` of 96 entries** (`19/24`, exact `Fraction`). No entry was held out of the assessment and no scope identifier was applied.
 
 ### 1b. The critical-subsystem clause (FR4 / DR-5 / boundary B3)
 
-**NOT satisfied.** At least one critical path is not `audited_deep`; the paths below are the evidence behind the clause result.
+**Satisfied over a NON-EMPTY set.** Every path in the critical set is `audited_deep`; the gate is not vacuous.
 
-- Clause satisfied (`critical_subsystems_all_deep`): **False**
-- Critical-set size (`CriticalSubsystemSet.paths`): **82**
-- Paths the DR-5 eligibility filter removed from the HEURISTIC term as ineligible: **0**
+- Clause satisfied (`critical_subsystems_all_deep`): **True**
+- Critical-set size (`CriticalSubsystemSet.paths`): **68**
+- Paths the DR-5 eligibility filter removed from the HEURISTIC term as ineligible: **14**
 - `designated_but_unmatched` operator paths: **0**
-- Critical paths NOT `audited_deep`: **82**
-  - `argus/__init__.py`
-  - `argus/assets/__init__.py`
-  - `argus/assets/commands/__init__.py`
-  - `argus/audit/__init__.py`
-  - `argus/audit/deep_audit.py`
-  - `argus/audit/deep_pass.py`
-  - `argus/audit/grounding.py`
-  - `argus/audit/open_llm_adapter.py`
-  - `argus/audit/ports.py`
-  - `argus/cache/invalidation.py`
-  - `argus/cache/key.py`
-  - `argus/cache/memo_store.py`
-  - `argus/cache/stage_memo.py`
-  - `argus/cli.py`
-  - `argus/commands/__init__.py`
-  - `argus/commands/hosts.py`
-  - `argus/commands/installer.py`
-  - `argus/cost/__init__.py`
-  - `argus/cost/budget_governor.py`
-  - `argus/cost/exhaustion.py`
-  - `argus/cost/resume.py`
-  - `argus/detectors/__init__.py`
-  - `argus/detectors/base.py`
-  - `argus/detectors/orphan_code.py`
-  - `argus/detectors/provenance_scan.py`
-  - `argus/detectors/secret_scan.py`
-  - `argus/detectors/secret_suppression.py`
-  - `argus/detectors/tool_runner.py`
-  - `argus/detectors/vacuous_test.py`
-  - `argus/dogfood/__init__.py`
-  - `argus/dogfood/partition_plan.py`
-  - `argus/dogfood/proof_render.py`
-  - `argus/dogfood/proof_run.py`
-  - `argus/dogfood/proof_types.py`
-  - `argus/evidence/__init__.py`
-  - `argus/evidence/bundle.py`
-  - `argus/governance/__init__.py`
-  - `argus/governance/decision_record.py`
-  - `argus/governance/escalation.py`
-  - `argus/index/ast_index.py`
-  - `argus/index/partitioner.py`
-  - `argus/intake/ignore_rules.py`
-  - `argus/intake/source_state.py`
-  - `argus/intake/stack_detect.py`
-  - `argus/ledger/coverage_ledger.py`
-  - `argus/ledger/coverage_report.py`
-  - `argus/ledger/critical_subsystems.py`
-  - `argus/ledger/depth_semantics.py`
-  - `argus/ledger/recording.py`
-  - `argus/mcp/__init__.py`
-  - `argus/mcp/protocol.py`
-  - `argus/mcp/server.py`
-  - `argus/models.py`
-  - `argus/pipeline.py`
-  - `argus/pipeline_persist.py`
-  - `argus/pipeline_stages.py`
-  - `argus/precision/__init__.py`
-  - `argus/precision/adjudication.py`
-  - `argus/precision/gate_breadth.py`
-  - `argus/precision/gate_decision.py`
-  - `argus/precision/gate_disclosure.py`
-  - `argus/precision/gate_independence.py`
-  - `argus/precision/gate_seal.py`
-  - `argus/precision/gate_yield.py`
-  - `argus/precision/replay_harness.py`
-  - `argus/precision/silent_class.py`
-  - `argus/reports/__init__.py`
-  - `argus/reports/formatter.py`
-  - `argus/reports/generator.py`
-  - `argus/reports/plain_english.py`
-  - `argus/shared/budget_guardrails.py`
-  - `argus/shared/grammar_status.py`
-  - `argus/shared/source_languages.py`
-  - `argus/shared/workspace_containment.py`
-  - `argus/store/envelope.py`
-  - `argus/store/integrity.py`
-  - `argus/store/paths.py`
-  - `argus/store/writer.py`
-  - `argus/verdict/__init__.py`
-  - `argus/verdict/negative_assurance.py`
-  - `argus/verdict/prosecutor.py`
-  - `argus/verdict/verdict_gate.py`
+- Critical paths NOT `audited_deep`: **0**
 
 ## 2. Within the `$X` = 843 ceiling (AC-EXECUTE / FR21 / OI3) + the 3.2 halt
 
@@ -136,9 +54,9 @@ The run's V1 deterministic zero-token cost total is **480 credits** (folded via 
 
 Exported via the done 4.3 `build_evidence_bundle` + persisted via `persist_evidence_bundle` (REUSED — no forked bundle model / serializer), serialized THROUGH the single 1.1 `canonical.dumps_bytes` and stamped by the 1.1 content-addressed, **prev-hash-chained** envelope (the ArgusAgent "signature"; the point-in-time stamp is the envelope `created_at`, EXCLUDED from the hash — NFR-A1/D3).
 
-- Persisted bundle locator: `state/6762a67f25462509e3593e33531b87174f0ca9577bb68c70e8e4c47892b627cc.json`
-- Bundle content hash (the signature): `6762a67f25462509e3593e33531b87174f0ca9577bb68c70e8e4c47892b627cc`
-- Canonical bundle byte length: **29244**
+- Persisted bundle locator: `state/09e2eaccf700cb4870b5d04d2c48ea7097a68b6e3f3ea0eda9130eb3f8e11332.json`
+- Bundle content hash (the signature): `09e2eaccf700cb4870b5d04d2c48ea7097a68b6e3f3ea0eda9130eb3f8e11332`
+- Canonical bundle byte length: **87267**
 - Referential-integrity report consistent (4.2 lint): **True**
 - **No-source-retention MOAT (NFR-S1 / NFR-S3):** the bundle retains NO source byte and NO secret value — the moat is STRUCTURAL (no bundle field holds a source/secret value; only locations + redacted indicators). Proven over the REAL audited tree by `tests/test_secret_containment.py` (`TC-ArgusAgent-SECURITY-001-23`) and `tests/test_dogfood_proof.py` (`TC-ArgusAgent-DOGFOOD-001-22`).
 - **100% reproducibility (AC-REPRODUCIBLE / NFR-D1 / P1):** two dogfood runs on the same tracked content yield a BYTE-IDENTICAL verdict + bundle canonical bytes (the builder sorts/order-fixes every collection; no clock/float/set-order in the hashed payload). Demonstrated (RED against injected non-determinism, then green) in `tests/test_dogfood_proof.py` (`TC-ArgusAgent-DOGFOOD-001-24`).
@@ -159,7 +77,9 @@ The REAL dogfood findings are laid out below by the 6.6 `finding_match_key` iden
 
 | rule_id | verdict-eligible (blocking) | advisory | count | sample locators | TP/FP (human) |
 |---|---|---|---|---|---|
+| `cross_partition` | False | True | 6 | `argus/audit/deep_pass.py:1`; `argus/intake/source_state.py:1`; `argus/mcp/protocol.py:1`; `argus/store/canonical.py:1`; `argus/verdict/prosecutor.py:1` | &nbsp; |
 | `hardcoded_secret` | False | True | 39 | `argus/cache/key.py:140`; `argus/cache/key.py:181`; `argus/cache/key.py:190`; `argus/cache/key.py:80`; `argus/cost/budget_governor.py:96` | &nbsp; |
+| `orphan_code` | False | True | 132 | `argus/audit/deep_audit.py:57`; `argus/audit/minions_llm_adapter.py:25`; `argus/audit/ports.py:165`; `argus/cache/invalidation.py:127`; `argus/cache/invalidation.py:255` | &nbsp; |
 
 ## 7. The ≥80%-precision gate STAYS PROVISIONAL (AC-PROVISIONAL / OI1 keystone)
 
