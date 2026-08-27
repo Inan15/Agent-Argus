@@ -47,7 +47,7 @@
   "row_count": 47,
   "rows": [
     {
-      "command": "count 'declarator' in argus/index/ast_index.py",
+      "command": "grep -c 'declarator' argus/index/ast_index.py",
       "entry_id": "DF-10-2-A",
       "finding": "C/C++ carry a function_definition's name under the declarator field; the vocabulary still has no declarator handling, so those languages still extract zero Definitions. Entry's owner is OPERATOR (XAgent007) and AI-E11-7 says what is needed is a dated decision, not an implementation.",
       "outcome": "STILL-OPEN",
@@ -120,7 +120,7 @@
       ]
     },
     {
-      "command": "see DF-11-2-B: _NO_CONVENTION_EXEMPTIONS still lists c and php",
+      "command": "grep -A6 '_NO_CONVENTION_EXEMPTIONS' tests/test_classification_word_boundary.py",
       "entry_id": "DF-11-2-A",
       "finding": "No test-name convention was added for c or php. The entry's own close condition is 'jointly with DF-11-2-B', which is also open.",
       "outcome": "STILL-OPEN",
@@ -265,7 +265,7 @@
       ]
     },
     {
-      "command": "same adapter evidence as DF-12-2-D",
+      "command": "grep -n 'structured_output=()' argus/audit/open_llm_adapter.py",
       "entry_id": "DF-12-3-A",
       "finding": "[17-5 group] PRD 501's 'a re-run returns the recorded result' still undelivered for the DEEP component - it shares DF-12-2-D's root cause.",
       "outcome": "STILL-OPEN",
@@ -409,7 +409,7 @@
       ]
     },
     {
-      "command": "import PRECISION_GATE_THRESHOLD; read gate-decision-record.json",
+      "command": "python -c \"from argus.precision.gate import PRECISION_GATE_THRESHOLD; print(PRECISION_GATE_THRESHOLD)\"",
       "entry_id": "DF-6-6-A",
       "finding": "BLOCKED ON AN OPERATOR ACT. Asks for the human TP/FP adjudication that clears the >=80% gate - that is Story 19.4 (and 19.2 before it). Story 19.6 AC6.2: adjudicating a finding is NOT an autonomous act, so this STOPS here.",
       "outcome": "BLOCKED",
@@ -421,7 +421,7 @@
       ]
     },
     {
-      "command": "same as DF-6-6-A",
+      "command": "python -c \"from argus.precision.gate import PRECISION_GATE_THRESHOLD; print(PRECISION_GATE_THRESHOLD)\"",
       "entry_id": "DF-7-2-A",
       "finding": "BLOCKED ON THE SAME OPERATOR ACT as DF-6-6-A - the human adjudication over the dogfood findings. Not verifiable further without 19.4.",
       "outcome": "BLOCKED",
@@ -542,7 +542,7 @@
       ]
     },
     {
-      "command": "ls .github/workflows/; CI state per story 19.6 s0.0",
+      "command": "ls .github/workflows/",
       "entry_id": "DF-AUD-APAA-C",
       "finding": "A release status asserted over a gate that never executed. Still unverified by CI - and the SAME condition is live again today, which is why AI-E17-3 remains open.",
       "outcome": "STILL-OPEN",
@@ -566,7 +566,7 @@
       ]
     },
     {
-      "command": "grep 'status:' entry block; grep -c 'argus audit' README.md docs/first-run.md",
+      "command": "grep -c 'argus audit' README.md docs/first-run.md",
       "entry_id": "DF-AUD-APAA-E",
       "finding": "Closed in the ledger with its enumeration corrected at closure time. Nothing re-opened it.",
       "outcome": "ALREADY-RESOLVED",

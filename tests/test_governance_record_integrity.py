@@ -524,7 +524,7 @@ _DISPOSING_STORY_POINTERS: frozenset[tuple[str, str]] = frozenset(
         #     DF-8-3-B by 8.4)", and each pointer names exactly that story.
         #   DF-8-4-A / DF-8-5-A — epic-9 retro: "4 closed inside the epic ... all CLOSED with
         #     closing evidence", absorbed into Story 9.2, which is what each pointer names.
-        # `tests/test_governance_record_integrity.py`'s own -78 registry independently pairs
+        # `tests/test_governance_record_integrity.py`'s own -80 registry independently pairs
         # 8-3 with DF-8-1-A and 8-4 with DF-8-3-B.
         #
         # ⛔ THE NEAR-MISSES STAY REGISTERED, for the SAME reason DF-10-3-A does: DF-8-2-B was

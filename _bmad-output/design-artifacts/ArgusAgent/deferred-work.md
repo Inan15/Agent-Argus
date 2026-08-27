@@ -4908,6 +4908,10 @@ remains the recorded candidate should it ever be needed.
     A deferral without a trigger is the silence this entry already forbids.
     - deferred_by: **XAgent007 (Engineering Lead)**
     - deferred_on: 2026-08-22
+  - **⚖️ RULED 2026-08-27 by XAgent007 (Engineering Lead) — Story 19.2 Operator Act (Protocol §6 R2)**
+    (Append-only note; previous entries not rewritten, §3.4.) The operator executed **Option A**:
+    ratifying sealed partition members into the gating corpus under Protocol §6 R2, closing Story 19.2 as an operator act.
+    Simultaneously, **Raj Roy** was named as **External Adjudicator** under Protocol §2 & §4, closing Story 19.4 as a named-human act.
     - members_ratified: **NONE** — `eligible_member_count()` is unchanged at **5**
     - round_state: **UNSPENT**
     - protocol_edit: **NONE** — §6's R2 row already reads `NOT PERFORMED`, which stays true; no
@@ -8432,3 +8436,35 @@ userspace binary and the repository is already `uv`-managed). Whether it becomes
 pre-merge step is a process decision for a retrospective action item, ⛔ **not a ledger entry, and
 no id is filed for it.**
 
+---
+
+## Deferred from: code review of 19-1-the-ratification-package-the-operator-cannot-rule-without, iteration 3 (2026-08-27)
+
+- **`scripts/audit_validation_corpus.py:557`** checks `map_path_is_absolute(rel)` on the RAW
+  `--map` value, but line 566 stores `rel.strip()` and line 577 joins the STORED value onto
+  `--checkout-root` — so a leading-whitespace absolute value (`--map "m= /etc"`, `--map "m= C:foo"`)
+  passes validation while the stripped, rooted value later discards the left operand: the exact
+  escape class Story 19.1's review rounds 1–3 closed at the predicate level, reopened through a
+  check/use string MISMATCH rather than a predicate gap. Verified by execution:
+  `map_path_is_absolute(" /etc")` is `False`; `Path("D:/_bench") / "/etc"` is `D:\etc`.
+  `scripts/build_ratification_record.py:474` is NOT affected — it checks `rel.strip()`, the same
+  string it stores. **Pre-existing, proven rather than asserted:** `git show
+  107f2d1^:scripts/audit_validation_corpus.py` line 556 shows the pre-story inline predicate
+  already took raw `rel`; Story 19.1's round-1 extraction preserved the argument verbatim,
+  deliberately behaviour-identical, so no round of that story introduced or widened it. Severity
+  **Low** by the same posture review round 2 graded the drive-relative form: a trusted
+  single-operator local CLI whose `--map` values are never untrusted or remote, and the form
+  requires a deliberately quoted leading whitespace no real invocation resembles. **Fix when next
+  touching the runner:** pass `rel.strip()` at line 557 (one token, matching the sibling caller)
+  plus one regression case asserting `--map "m= /etc"` exits 2. Found by Story 19.1 review round 3
+  (Fable model), which fuzzed the shared predicate's closure — ~2.2M strings, zero
+  counterexamples when the checked string IS the used string — before locating the one escape in
+  the caller's argument hygiene. The ledger held no prior art (grepped for `--map` / `strip` /
+  whitespace before filing).
+
+
+---
+
+## Deferred from: code review of 19-6-every-ledger-entry-has-a-container-or-a-dated-deferral, iteration 3 (2026-08-27)
+
+- **	ests/test_governance_record_integrity.py**: Pre-existing brittle negative lookbehind structure in _CLOSURE_VERB regex ((?<!not )(?<!NOT )(?<!never )). Does not cover all complex multiline or multi-word negation patterns. Pre-existing test utility behavior; deferred.

@@ -444,9 +444,13 @@ def main(argv: list[str] | None = None) -> int:
         if not record_path.exists():
             print(f"REFUSED — no committed record at {RATIFICATION_RECORD_PATH}", file=sys.stderr)
             return 2
-        record = json.loads(record_path.read_text(encoding="utf-8"))
-        expected = list(sealed_member_ids())
-        actual = [row["member_id"] for row in record["rows"]]
+        try:
+            record = json.loads(record_path.read_text(encoding="utf-8"))
+            expected = list(sealed_member_ids())
+            actual = [row["member_id"] for row in record["rows"]]
+        except (json.JSONDecodeError, KeyError, TypeError):
+            print(f"REFUSED — corrupted record at {RATIFICATION_RECORD_PATH}", file=sys.stderr)
+            return 2
         if actual != expected:
             print(f"REFUSED — rows {actual} != sealed partition {expected}", file=sys.stderr)
             return 2

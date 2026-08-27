@@ -461,6 +461,9 @@ _STATUS_DOCUMENTS: tuple[str, ...] = (
     # ⚠️ It must be committed TOGETHER with this line — `-22` closes in BOTH directions, so the
     # document without this entry and this entry without the document red `master` equally.
     "sprint-change-proposal-2026-08-26.md",
+    # Registered 2026-08-27 for the Epic-19 retrospective — `AI-E12-1`'s second half on its EIGHTH
+    # consecutive retrospective. Written by the session that wrote the document.
+    "epic-19-retro-2026-08-27.md",
 )
 
 # Exactly the set the epic's AC names — "any future change proposal or retrospective".

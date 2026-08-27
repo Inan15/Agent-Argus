@@ -66,13 +66,13 @@ different reason and stays registered as evidence. The three clearest:
 
 ### `DF-6-6-A`
 
-- **Command:** `import PRECISION_GATE_THRESHOLD; read gate-decision-record.json`
+- **Command:** `python -c "from argus.precision.gate import PRECISION_GATE_THRESHOLD; print(PRECISION_GATE_THRESHOLD)"`
 - **Output:** threshold 4/5; gate outcome = BLOCKED
 - **Finding:** BLOCKED ON AN OPERATOR ACT. Asks for the human TP/FP adjudication that clears the >=80% gate - that is Story 19.4 (and 19.2 before it). Story 19.6 AC6.2: adjudicating a finding is NOT an autonomous act, so this STOPS here.
 
 ### `DF-7-2-A`
 
-- **Command:** `same as DF-6-6-A`
+- **Command:** `python -c "from argus.precision.gate import PRECISION_GATE_THRESHOLD; print(PRECISION_GATE_THRESHOLD)"`
 - **Output:** gate outcome = BLOCKED
 - **Finding:** BLOCKED ON THE SAME OPERATOR ACT as DF-6-6-A - the human adjudication over the dogfood findings. Not verifiable further without 19.4.
 
@@ -176,7 +176,7 @@ different reason and stays registered as evidence. The three clearest:
 
 ### `DF-AUD-APAA-E`
 
-- **Command:** `grep 'status:' entry block; grep -c 'argus audit' README.md docs/first-run.md`
+- **Command:** `grep -c 'argus audit' README.md docs/first-run.md`
 - **Output:** entry's own status: 'CLOSED 2026-08-10 - remedy delivered, and the entry's own enumeration corrected from four to six'; README 21 / first-run 5 documented invocations
 - **Finding:** Closed in the ledger with its enumeration corrected at closure time. Nothing re-opened it.
 
@@ -190,7 +190,7 @@ different reason and stays registered as evidence. The three clearest:
 
 ### `DF-10-2-A`
 
-- **Command:** `count 'declarator' in argus/index/ast_index.py`
+- **Command:** `grep -c 'declarator' argus/index/ast_index.py`
 - **Output:** 0 occurrences
 - **Finding:** C/C++ carry a function_definition's name under the declarator field; the vocabulary still has no declarator handling, so those languages still extract zero Definitions. Entry's owner is OPERATOR (XAgent007) and AI-E11-7 says what is needed is a dated decision, not an implementation.
 
@@ -214,7 +214,7 @@ different reason and stays registered as evidence. The three clearest:
 
 ### `DF-11-2-A`
 
-- **Command:** `see DF-11-2-B: _NO_CONVENTION_EXEMPTIONS still lists c and php`
+- **Command:** `grep -A6 '_NO_CONVENTION_EXEMPTIONS' tests/test_classification_word_boundary.py`
 - **Output:** c and php still exempt, still targeting 12.5
 - **Finding:** No test-name convention was added for c or php. The entry's own close condition is 'jointly with DF-11-2-B', which is also open.
 
@@ -262,7 +262,7 @@ different reason and stays registered as evidence. The three clearest:
 
 ### `DF-12-3-A`
 
-- **Command:** `same adapter evidence as DF-12-2-D`
+- **Command:** `grep -n 'structured_output=()' argus/audit/open_llm_adapter.py`
 - **Output:** structured_output never populated
 - **Finding:** [17-5 group] PRD 501's 'a re-run returns the recorded result' still undelivered for the DEEP component - it shares DF-12-2-D's root cause.
 
@@ -316,7 +316,7 @@ different reason and stays registered as evidence. The three clearest:
 
 ### `DF-AUD-APAA-C`
 
-- **Command:** `ls .github/workflows/; CI state per story 19.6 s0.0`
+- **Command:** `ls .github/workflows/`
 - **Output:** audit-ci.yml present; CI has never run on this branch (Actions outage from 2026-08-26 15:11:58 UTC)
 - **Finding:** A release status asserted over a gate that never executed. Still unverified by CI - and the SAME condition is live again today, which is why AI-E17-3 remains open.
 

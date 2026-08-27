@@ -387,14 +387,16 @@ class AdjudicationRow:
                     f"protocol §4's borderline ladder is a re-examination procedure."
                 )
         else:
-            if self.adjudicator is not None or self.adjudicated_on is not None:
+            if (
+                self.adjudicator is not None
+                or self.adjudicated_on is not None
+                or self.reason is not None
+            ):
                 raise ValueError(
                     f"row {self.row_id!r}: disposition {self.disposition!r} is NOT a "
-                    f"human judgement, so it must carry no adjudicator and no date; got "
-                    f"adjudicator={self.adjudicator!r}, "
-                    f"adjudicated_on={self.adjudicated_on!r}. Attributing an "
-                    f"unadjudicated row to a human is the fabrication this record exists "
-                    f"to make impossible (DN-6)."
+                    f"human judgement, so it must carry no adjudicator, no date, and no "
+                    f"reason; got adjudicator={self.adjudicator!r}, "
+                    f"adjudicated_on={self.adjudicated_on!r}, reason={self.reason!r}."
                 )
 
     @property

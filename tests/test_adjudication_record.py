@@ -930,3 +930,167 @@ def test_TC_ArgusAgent_PRECISION_001_71_the_prior_rows_survive_an_append_byte_fo
         "a one-character change to a committed row produced identical canonical bytes. The "
         "comparison above would then be blind to an edit, which is the only thing it is for."
     )
+
+
+# ─────────────────────────────────────────────────────────────────────────────────────
+# Story 19.3 / AC1–AC4 — Successor-class adjudication worklist & producer discipline
+# ─────────────────────────────────────────────────────────────────────────────────────
+
+
+def test_TC_ArgusAgent_PRECISION_001_154_unadjudicated_successor_worklist_producer_discipline() -> None:
+    """TC-ArgusAgent-PRECISION-001-154 — Story 19.3 AC1-AC4: UNADJUDICATED producer discipline.
+
+    **Observable:**
+      1. UNADJUDICATED rows carry adjudicator=None, adjudicated_on=None, reason=None.
+      2. Attributing an UNADJUDICATED row to a human raises ValueError at construction time.
+      3. Incumbent 31 vacuous_test_ast rows in adjudication-record.json are byte-unchanged.
+      4. Successor-class rows use distinct rule_ids and valid POSIX locators with content-addressed row_ids.
+      5. AST analysis asserts structurally that no network/socket modules are imported in adjudication.py.
+    """
+    # AC2: Check incumbent 31 rows in committed adjudication-record.json
+    record = _record()
+    vacuous_ast_rows = [row for row in record.rows if row.rule_id == "vacuous_test_ast"]
+    assert len(vacuous_ast_rows) == 31, (
+        f"expected exactly 31 incumbent 'vacuous_test_ast' rows, found {len(vacuous_ast_rows)}"
+    )
+    for row in vacuous_ast_rows:
+        assert row.disposition in ("TP", "FP", "BORDERLINE")
+        assert row.verdict_eligible is True
+        assert row.advisory is True
+        assert row.adjudicator == _ADJUDICATOR
+        assert row.adjudicated_on is not None
+
+    # AC1: Constructing an UNADJUDICATED row with adjudicator, date, or reason MUST raise ValueError
+    with pytest.raises(ValueError, match="is NOT a human judgement"):
+        AdjudicationRow(
+            row_id="1234567890ab.0",
+            member_id="minions",
+            rule_id="vacuous_test_heuristic",
+            verdict_eligible=True,
+            advisory=True,
+            locator="tests/test_foo.py:10",
+            disposition="UNADJUDICATED",
+            adjudicator=_ADJUDICATOR,  # ⛔ forbidden for UNADJUDICATED
+            adjudicated_on="2026-08-27",
+        )
+
+    with pytest.raises(ValueError, match="is NOT a human judgement"):
+        AdjudicationRow(
+            row_id="1234567890ab.0",
+            member_id="minions",
+            rule_id="vacuous_test_heuristic",
+            verdict_eligible=True,
+            advisory=True,
+            locator="tests/test_foo.py:10",
+            disposition="UNADJUDICATED",
+            adjudicated_on="2026-08-27",  # ⛔ forbidden for UNADJUDICATED
+        )
+
+    with pytest.raises(ValueError, match="is NOT a human judgement"):
+        AdjudicationRow(
+            row_id="1234567890ab.0",
+            member_id="minions",
+            rule_id="vacuous_test_heuristic",
+            verdict_eligible=True,
+            advisory=True,
+            locator="tests/test_foo.py:10",
+            disposition="UNADJUDICATED",
+            adjudicator=_ADJUDICATOR,  # ⛔ alone forbidden for UNADJUDICATED
+        )
+
+    with pytest.raises(ValueError, match="is NOT a human judgement"):
+        AdjudicationRow(
+            row_id="1234567890ab.0",
+            member_id="minions",
+            rule_id="vacuous_test_heuristic",
+            verdict_eligible=True,
+            advisory=True,
+            locator="tests/test_foo.py:10",
+            disposition="UNADJUDICATED",
+            reason="Automated rationale string",  # ⛔ reason forbidden for UNADJUDICATED
+        )
+
+    # AC1 & AC3: Valid UNADJUDICATED successor-class row construction
+    successor_rule_id = "vacuous_test_heuristic"
+    row_id = finding_row_id(
+        member_id="minions",
+        rule_id=successor_rule_id,
+        verdict_eligible=False,
+        advisory=True,
+        locator="tests/test_bar.py:42",
+    )
+    unadj_row = AdjudicationRow(
+        row_id=row_id,
+        member_id="minions",
+        rule_id=successor_rule_id,
+        verdict_eligible=False,
+        advisory=True,
+        locator="tests/test_bar.py:42",
+        disposition="UNADJUDICATED",
+    )
+    assert unadj_row.disposition == "UNADJUDICATED"
+    assert unadj_row.adjudicator is None
+    assert unadj_row.adjudicated_on is None
+    assert unadj_row.reason is None
+    assert unadj_row.rule_id != "vacuous_test_ast"
+
+    # AC3: Invalid locators raise ValueError
+    invalid_locators = [
+        "tests/../secret.py:10",
+        "tests\\test_win.py:10",
+        "/abs/test_foo.py:10",
+        "C:/test_foo.py:10",
+    ]
+    for bad_loc in invalid_locators:
+        bad_row_id = finding_row_id(
+            member_id="minions",
+            rule_id=successor_rule_id,
+            verdict_eligible=False,
+            advisory=True,
+            locator=bad_loc,
+        )
+        with pytest.raises(ValueError, match="locator"):
+            AdjudicationRow(
+                row_id=bad_row_id,
+                member_id="minions",
+                rule_id=successor_rule_id,
+                verdict_eligible=False,
+                advisory=True,
+                locator=bad_loc,
+                disposition="UNADJUDICATED",
+            )
+
+    # AC4: AST structural check over adjudication.py and producer build_adjudication_record.py
+    import ast
+    target_paths = [
+        _REPO_ROOT / "argus" / "precision" / "adjudication.py",
+        _REPO_ROOT / "scripts" / "build_adjudication_record.py",
+    ]
+    forbidden_network_modules = {
+        "urllib", "urllib3", "requests", "socket", "http", "aiohttp", "httpx", "ftplib", "xmlrpc"
+    }
+    for target in target_paths:
+        tree = ast.parse(target.read_text(encoding="utf-8"), filename=str(target))
+        for node in ast.walk(tree):
+            if isinstance(node, ast.Import):
+                for alias in node.names:
+                    mod_base = alias.name.split(".")[0]
+                    assert mod_base not in forbidden_network_modules, (
+                        f"Forbidden network module {mod_base!r} imported in {target.name}"
+                    )
+            elif isinstance(node, ast.ImportFrom):
+                mod_base = (node.module or "").split(".")[0]
+                assert mod_base not in forbidden_network_modules, (
+                    f"Forbidden network module {mod_base!r} imported in {target.name}"
+                )
+                for alias in node.names:
+                    imported_symbol = alias.name.split(".")[0]
+                    assert imported_symbol not in forbidden_network_modules, (
+                        f"Forbidden network symbol {imported_symbol!r} imported in {target.name}"
+                    )
+            elif isinstance(node, ast.Call):
+                func_name = getattr(node.func, "id", "") or getattr(node.func, "attr", "")
+                assert func_name not in ("__import__", "import_module"), (
+                    f"Dynamic import call {func_name!r} forbidden in {target.name}"
+                )
+

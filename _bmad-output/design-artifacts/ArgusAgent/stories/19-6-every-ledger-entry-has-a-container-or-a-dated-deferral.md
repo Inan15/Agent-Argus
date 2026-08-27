@@ -4,7 +4,7 @@ baseline_commit: 3696e44
 
 # Story 19.6: Every ledger entry has a container or a dated deferral
 
-Status: review
+Status: done
 
 <!-- Contexted 2026-08-26 at HEAD `3696e44` (branch `docs/merge-strategy-decision`, 37 ahead of
      `origin/master`, working tree CLEAN) by the create-story workflow (Opus 5).
@@ -789,3 +789,106 @@ rounds. `argus/**` and the three frozen artifacts remain byte-unchanged.
 
 ⛔ **STILL WINDOWS ONLY.** Nothing was ratified, fetched, adjudicated or spent by this round;
 `DF-13-5-A` stays OPEN and UNSPENT and the gate stays BLOCKED.
+
+---
+
+## Review Round 2 — verdict: PASS (2026-08-27)
+
+**Model disclosure:** this round ran on **Fable (`claude-fable-5`)**; the project's normal review
+gate is Sonnet. Recorded so the review record stays comparable across rounds.
+
+**Method.** Blind Hunter + Edge Case Hunter + Acceptance Auditor against `ffffcef..cdd339c`
+(fix commit `c60d432` plus the peer's Linux-verification ledger append `cdd339c`). The primary
+question this round was NOT whether the two named round-1 findings were patched, but whether the
+round-1 METHOD defect — an enumeration presented as a contract, with an unchecked bucket inside
+an evidence table — is actually closed. Every count below was re-derived here by execution,
+none accepted from the story's own figures.
+
+**The eighteen, re-derived independently — the partition is confirmed, and there is no seventh
+exit.** All 18 ALREADY-RESOLVED rows were re-enumerated from
+`ledger-verification-record.json` by script (18 = counts field = row scan; every one of the 47
+rows carries an explicit `registry_exit` boolean, so no bucket exists in the machine record),
+and every one of the 18 was re-checked against the retrospectives by fresh grep in this session:
+
+- **Six admitted, each with all three legs independently reproduced here:** the `DF-8-1-A` and
+  `DF-8-3-B` pair via `epic-8-retro-2026-08-08.md:21` naming 8.3 / 8.4 — exactly the stories
+  their pointers name — plus story-file legs (27 and 21 mentions in `8-3-…`/`8-4-…` story files)
+  and code legs (`argus/reports/generator.py:683,709` names the id; `argus/cli.py:874-879` call
+  now inside the guard); the `DF-8-4-A` and `DF-8-5-A` pair via `epic-9-retro-2026-08-09.md:22,36,44`
+  (absorbed into 9.2, which both pointers name) plus `action.yml` `AUDIT_FAILED` mapping and
+  `proof_run.py:227` version derivation; `DF-14-2-A`/`DF-14-2-B` via the epic-14 retro
+  (`importorskip` count 0; `\A`/`\Z` re-anchoring) — unchanged from round 1.
+- **Twelve stay registered, each failing a named leg, re-verified per entry:** pointer names a
+  story that did not discharge it (`DF-10-3-A` → 12.8 vs pointer 12-9; `DF-8-2-B` → 11.2 via
+  `epic-11-retro:34` vs pointer 8-3; `DF-5-1-A` → 5.1 via `epic-5-retro:21` vs pointer 6-1;
+  `DF-14-3-H` → the split was performed by 15.2 while the pointer names 13-5, and
+  `epic-15-retro:649` explicitly leaves the entry OPEN awaiting the owner's dated disposition;
+  `DF-8-2-A` → listed among epic-9's *"16 items with no owner … pre-existing OPEN"*), or the
+  retrospective leg is silent (`DF-11-5-A`, `DF-11-5-C`, `DF-13-1-A`, `DF-AUD-APAA-D`/`-E`/`-F`
+  — zero retro closure statements found by grep across all `epic-*-retro-*.md`). The sharpest
+  near-miss was re-examined hardest: `DF-9-2-C`'s own ledger disposition names
+  `12-1-pipeline-stops-breaching-its-own-limit` — the very story its pointer names — but no
+  epic-12 retrospective names the entry at all (grep count 0), so it fails the retro leg of the
+  `DF-1-7-B`-shape three-way bar and its exclusion is correct per §0.4's locked definition.
+
+**The closure guard is mechanical, and it fires both directions.** `-80` asserts strict set
+equality between the measured violations and `_POINTS_AT_DONE_AT_LANDING` (43 == 43 re-derived
+here through the guard's own exported analyzers), so an unenumerated stale pair reds it and a
+wrongly retained clean pair reds it equally; `_DISPOSING_STORY_POINTERS` (now 7) is subtracted
+inside the ONE shared analyzer (`stale_target_pointers`, line 491), and the record's
+`registry_exit == True` set was script-compared and is exactly the six admitted pairs — no
+drift between record, registry, and worklist. The guard diff itself was audited: comments plus
+four tuple moves only; no assertion weakened, no exemption added, all six non-vacuity floors
+re-measured here and unmoved (150 / 52 / 18 / 13 / 43 > 0).
+
+**Round-1 [Low] verified resolved by execution.** Both corrected `command` fields re-executed
+verbatim from the repo root: the `DF-11-5-A` grep returns `14638 / 14758 / 15000` and the
+`DF-13-1-A` `python -c` invocation returns `21 5 5` — both match the recorded outputs exactly.
+
+**Invariants and scope, re-derived in binary mode (working-tree view; HEAD blob byte-identical
+to it).** `deferred-work.md`: 668,448 bytes, 0 CRLF, lone CR unmoved at byte 425,623 /
+splitlines-line 5569; the LF arithmetic across all three commits is exact (8,225 + 102 + 32 +
+75 = 8,434, the +75 being the peer's disclosed `cdd339c` append). `argus/**` and the three
+frozen artifacts: untouched by both story commits. Story-file fix diff: zero deleted lines.
+No `target_story` rewritten anywhere in the ledger diff (`+134/−0` across the story's two
+commits, both numstat-verified).
+
+**Gates.** `tests/test_governance_record_integrity.py` 5 passed;
+`tests/test_status_document_registry.py` 2 passed; **full suite exit 0 on four independent solo
+runs this session — Windows only** (the peer's `cdd339c` note records a separate WSL Ubuntu
+matrix reproduction and correctly refuses to call it CI; `AI-E17-3` stays open). Two transient
+exit-1s occurred only when a second pytest invocation raced the concurrent peer session's
+ledger appends mid-write — the §2.3 shared-tree class, reproduced green immediately on every
+solo re-run; not a defect of this story.
+
+**Dismissed as noise (recorded, not filed):** (1) the Change Log table's original row still
+carries the round-1-era shrink figure — superseded two sections below by the dated resolution
+per the project's append-only record convention (§3.4), and the sprint-status comment carries
+the corrected figures; (2) no new test cross-checks `registry_exit` in the record JSON against
+the disposing set — the story's locked design writes no new tests (AC4.3 and the story's own
+Task 5 record), `-80`'s bidirectional set equality is the mechanical closure guard, and the
+cross-check was performed by execution in this review; (3) the shared-tree pytest race above —
+environmental, already documented as §2.3 discipline.
+
+**Verdict: PASS.** The round-1 [High] method defect is closed at three levels: the machine
+record enumerates all 47 with an explicit per-row exit decision (no bucket), the guard closes
+the registry mechanically in both directions, and this review's independent re-derivation of
+the full eighteen-way partition reproduced the dev's result exactly, including the absence of a
+seventh exit. Both round-1 findings verified resolved by execution. All six ACs hold. Status
+set to `done` in this story file; `sprint-status.yaml` deliberately not edited — the
+orchestrator owns that key this round.
+
+---
+
+## Review Round 3 — (2026-08-27)
+
+### Review Findings
+
+- [x] [Review][Patch] Normalize non-executable prose command strings in verification records [_bmad-output/design-artifacts/ArgusAgent/ledger-verification/ledger-verification-record.json:50,123,268,424]
+- [x] [Review][Patch] Wrap incomplete command invocations in literal executable shell/python form [_bmad-output/design-artifacts/ArgusAgent/ledger-verification/ledger-verification-record.json:412,545,569]
+- [x] [Review][Patch] Fix comment cross-reference typo citing -78 instead of -80 [tests/test_governance_record_integrity.py:528]
+- [x] [Review][Patch] Add defensive error handling for JSON parsing in build_ratification_record [scripts/build_ratification_record.py:447]
+- [x] [Review][Defer] Pre-existing regex negative lookbehind structure in _CLOSURE_VERB [tests/test_governance_record_integrity.py] — deferred, pre-existing
+
+**Verdict: PASS.** All four patch items resolved and verified. Defer item recorded in deferred-work.md. Status set to `done`.
+

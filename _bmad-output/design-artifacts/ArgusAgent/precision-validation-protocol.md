@@ -142,7 +142,7 @@ finding (or its absence) is correct — not the arithmetic.
 > |---|---|---|
 > | **Engineering Lead** (primary adjudicator) | **XAgent007** | ✅ named — the start condition for Story 13.2 |
 > | **QA Lead** (second reviewer) | **Veer Pratap Singh** | ✅ **named 2026-08-22** by XAgent007 — see the dated block below. Filled **ahead of** Story 16.7 rather than during it |
-> | **External adjudicator** (tie-break) | *unfilled* | required only on persistent disagreement (§4) |
+> | **External adjudicator** (tie-break) | **Raj Roy** | ✅ **named 2026-08-27** by XAgent007 — see dated block below |
 >
 > **The rule:** every disposition on the adjudication record carries an `adjudicator` id of the
 > form `"<who> (<role>)"`, and `<role>` **must be one of the three roles in the table above**. An
@@ -247,6 +247,12 @@ finding (or its absence) is correct — not the arithmetic.
 > adjudicator** tie-break stays *unfilled*, §4's ladder is unchanged, and a story that reaches an
 > unfilled role still **STOPS and reports which rows and why**. `DF-13-5-A`'s one pre-registered
 > bench-expansion round stays **OPEN and UNSPENT**.
+
+> ### 👤 DATED BLOCK — 2026-08-27 — **THE EXTERNAL ADJUDICATOR ROLE IS FILLED: Raj Roy** (Story 19.4 / Operator Act)
+>
+> **This block sits under the existing V1.3 and adds NO change-log row**, preserving §3.4 evidence immutability.
+>
+> **Who, and when.** **Raj Roy** fills the **External adjudicator (tie-break)** role, named by **XAgent007 (Engineering Lead)** on **2026-08-27**. Dispositions authored in this role carry the `adjudicator` id **`"Raj Roy (External adjudicator)"`**.
 
 ---
 

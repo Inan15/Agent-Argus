@@ -1119,3 +1119,68 @@ def test_TC_ArgusAgent_PRECISION_001_140_the_criterion_may_only_be_strengthened(
     assert not strengthening(ceiling_at_pin, ratio_at_pin - Fraction(1, 100)), (
         "a LOWERED ratio floor was accepted, so the ratio arm of the asymmetry is inert."
     )
+
+
+def test_TC_ArgusAgent_PRECISION_001_155_re_run_frozen_fold_and_let_it_decide() -> None:
+    """TC-ArgusAgent-PRECISION-001-155 — Story 19.5 AC1-AC4: re-run the frozen fold and let it decide.
+
+    **Observable.** The outcome returned by importing and executing canonical ``evaluate()`` from
+    ``scripts.precision_preregistration`` against the live record counts.
+
+    **Requirements Verified:**
+    * AC1 (One-Derivation): ``evaluate()`` is imported directly, no parallel fold is defined or re-implemented.
+    * AC2 (Honest Outcome Recording): Outcome is recorded whatever it is (``UNEVALUABLE``), with exact metric counts and Fraction values.
+    * AC3 (Zero Threshold Alteration): Threshold remains locked at ``Fraction(4, 5)`` (80%).
+    * AC4 (Automated Verification): Execution is deterministic and matches recorded artifact output.
+    """
+    from argus.store.canonical import loads
+    from precision_preregistration import (
+        CRITERION_OUTCOMES,
+        PRECISION_GATE_THRESHOLD,
+        evaluate,
+    )
+    from successor_reach_model import SUCCESSOR_RECORD_PATH
+
+    # 1. Zero Threshold Alteration check (AC3)
+    assert PRECISION_GATE_THRESHOLD == Fraction(4, 5), (
+        f"PRECISION_GATE_THRESHOLD is {PRECISION_GATE_THRESHOLD}; expected Fraction(4, 5)."
+    )
+
+    # 2. Read live recorded counts from successor-reach-record.json
+    record_path = _REPO_ROOT / SUCCESSOR_RECORD_PATH
+    assert record_path.is_file(), f"Record path {record_path} missing."
+    rec_data = loads(record_path.read_text(encoding="utf-8"))
+    recorded_crit = rec_data["criterion"]
+
+    # 3. Direct execution of canonical evaluate() (AC1 / AR7)
+    res = evaluate(
+        verdict_eligible_count=recorded_crit["verdict_eligible_count"],
+        contributing_member_count=recorded_crit["contributing_member_count"],
+        sealed_contributing_member_count=recorded_crit["sealed_contributing_member_count"],
+        true_positive_count=recorded_crit["true_positive_count"],
+        false_accusation_count=recorded_crit["false_accusation_count"],
+    )
+
+    # 4. Honest outcome matching (AC2 / AC4)
+    assert res.outcome in CRITERION_OUTCOMES, (
+        f"{res.outcome!r} is not a valid outcome in CRITERION_OUTCOMES."
+    )
+    assert res.outcome == recorded_crit["outcome"], (
+        f"Evaluated outcome {res.outcome!r} does not match recorded outcome {recorded_crit['outcome']!r}."
+    )
+    assert res.reason == recorded_crit["reason"]
+    assert res.measured_precision == recorded_crit["measured_precision"]
+    assert res.verdict_eligible_count == 85
+    assert res.contributing_member_count == 3
+    assert res.sealed_contributing_member_count == 0
+
+    # 5. Non-vacuity & Adversarial check (driven RED by mutation)
+    mutated_res = evaluate(
+        verdict_eligible_count=85,
+        contributing_member_count=3,
+        sealed_contributing_member_count=3,
+        true_positive_count=0,
+        false_accusation_count=0,
+    )
+    assert mutated_res.reason != res.reason, "Mutation of sealed_contributing_member_count must alter reason."
+

@@ -4,7 +4,7 @@ baseline_commit: 83ecc8d
 
 # Story 19.1: The ratification package the operator cannot rule without
 
-Status: review
+Status: done
 
 <!-- Contexted 2026-08-26 at HEAD `83ecc8d` (branch `docs/merge-strategy-decision`, 36 ahead of
      `origin/master`) by the create-story workflow (Opus 5).
@@ -565,6 +565,72 @@ posture. Recorded here so silence is not later read as an oversight.
 under the list's own established two-block (constants/classes, then lowercase functions)
 alphabetical convention it belongs in the second block, between `dirty_in_scope_paths` and
 `materialize_pinned_bytes`. Zero functional effect; noted for polish only.
+
+### Review Round 3 (2026-08-27) — verification of the round-2 fix, commit `ffffcef`
+
+**Verdict: `pass`.** The round-2 [Low] is independently re-verified as correctly and completely
+fixed, in the ONE shared predicate rather than as a second fork. The round-1 [Med] has not
+regressed. One pre-existing [Low] was found in the sibling caller and is **deferred, not
+patched** — it predates this story (proven from git, below) and fixing it would change an
+operator-side runner's accepted inputs, the exact scope boundary this story has now held twice.
+
+**Model note, for record comparability:** this round ran on the **Fable** model
+(`claude-fable-5`); rounds 1–2 and this project's normal review gate run on Sonnet.
+
+**The drive-relative fix, verified as a CLOSURE rather than as an enumeration:**
+
+- `map_path_is_absolute()` [scripts/pinned_corpus_snapshot.py:234] now tests posix-anchor (after
+  `\` → `/`), native absoluteness, and `PureWindowsPath(...).drive`. Every Windows path form was
+  enumerated by execution on this box (Python 3.11.15): drive-absolute (`C:\x`, `C:/x`),
+  drive-relative (`C:foo`, `C:`, `D:sub/dir`, lowercase `c:foo`), bare drive (`z:`), UNC
+  (`\\server\share\x` and `//server/share/x`), extended-length (`\\?\…`), device (`\\.\…`), and
+  root-relative (`\foo`, `/foo`) — every one REFUSED; plain relative forms and the not-a-drive
+  colon (`weird:name`) accepted.
+- ⛔ **The hand-list was NOT accepted as the contract.** The closure property was fuzzed: every
+  string of length ≤ 4 over a pathological alphabet (`C c 1 : / \ . ␣ TAB ? x U`) plus 200k
+  random 5–12-char strings — ~2.2M values — asserting that for EVERY string the predicate
+  accepts, both the `PureWindowsPath` and the `PurePosixPath` join preserve the checkout root.
+  **Zero counterexamples.** The closure is structural, not enumerated: the drive check consults
+  the SAME parser `joinpath` consults, so the predicate cannot drift from the join semantics it
+  guards. Witness: `1:foo` is not a drive to 3.11's parser — it is accepted AND joins safely,
+  consistent on both sides by construction.
+- **One shared predicate, no second fork:** both callers route through it
+  (`audit_validation_corpus.py:557`, `build_ratification_record.py:474`); no inline copy of the
+  check survives anywhere in `scripts/`.
+- **Round-1 [Med] not regressed:** the six round-1 refusal forms (incl. `/etc/passwd`) are still
+  refused, still exercised through `main()` end-to-end, still exit 2.
+
+**Gates, re-run rather than trusted (⛔ WINDOWS ONLY, stated per §2.4):**
+`pytest tests/test_ratification_record.py -q -W error` → **19 passed, zero warnings**; `mypy` on
+the three touched files → clean; full suite → **1,779 passed, 0 failed, 0 skipped, exit 0**
+(counted from the progress marks — zero `F`/`E`/`s`/`x` characters in the run output). Record md5
+`92d48a65b2ce05cd7707a3c6b7131830` — **unchanged across all three rounds**.
+`eligible_member_count()` = **5**; the three frozen artifacts are byte-unchanged vs `cbd6218`
+(`git diff --stat` empty). The `__all__` ordering is confirmed restored. Note the full-suite
+figure now includes peer 19-6 commits (`fcff0ca`, `c60d432`, `cdd339c`) that landed after
+`ffffcef` on this shared branch; the suite is green over the merged state.
+
+**The one finding — pre-existing, deferred:**
+
+- [x] [Review][Defer] `--map` validation in the sibling caller checks a DIFFERENT string than it
+  stores: leading-whitespace absolute values evade the shared predicate
+  [scripts/audit_validation_corpus.py:557] — deferred, pre-existing. Line 557 checks
+  `map_path_is_absolute(rel)` (raw), but line 566 stores `rel.strip()` and line 577 joins the
+  STORED value. `--map "m= /etc"` (quoted leading space) passes the check —
+  `map_path_is_absolute(" /etc")` is `False`, verified by execution — while the stripped
+  `"/etc"` later discards `--checkout-root` exactly as the round-1 escape did; `" C:foo"`
+  likewise evades the round-2 drive check. `build_ratification_record.py:474` is NOT affected:
+  it checks `rel.strip()`, the same string it stores, so this story's own deliverable is clean.
+  ⛔ **Pre-existence proven, not asserted:** `git show
+  107f2d1^:scripts/audit_validation_corpus.py` line 556 shows the pre-story inline check already
+  operated on raw `rel`; round 1's extraction preserved the argument verbatim, deliberately
+  behaviour-identical. Severity **Low** by the same posture round 2 graded drive-relative: a
+  trusted single-operator local CLI, and the form requires a deliberately quoted leading
+  whitespace that no real invocation resembles. **What would prove it fixed:** pass
+  `rel.strip()` at `audit_validation_corpus.py:557` (one token, matching the sibling caller)
+  plus one regression case asserting `--map "m= /etc"` exits 2. Filed in `deferred-work.md`
+  under this round's heading; the ledger held no prior art (grepped for `--map` / `strip` /
+  whitespace before filing).
 
 ---
 
