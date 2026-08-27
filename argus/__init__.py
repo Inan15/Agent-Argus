@@ -79,7 +79,7 @@ id, never invent one.
 # ArgusAgent's own version constant — the single source for the envelope `argus_version`
 # field (story 1.1, ArgusAgent-FR-25). Never hardcode this literal at call sites and
 # never derive it from env/clock (it must be byte-stable across hosts, NFR-P1).
-__version__ = "0.1.1-beta"
+__version__ = "0.1.0"
 
 # Explicit, discoverable maturity marker. `beta` states that the public
 # Python API is in beta release; the CLI wire contract (exit codes
