@@ -838,8 +838,8 @@ def test_TC_ArgusAgent_DOCS_001_10_front_door_version_surface_is_unchanged() -> 
     """
     import argus
 
-    assert argus.__version__ == "0.1.0"
-    assert argus.__status__ == "experimental"
+    assert argus.__version__ == "0.1.1-beta"
+    assert argus.__status__ == "beta"
     assert argus.__all__ == ["__version__", "__status__"]
 
 
