@@ -485,9 +485,17 @@ ArgusAgent/
 
 ---
 
-## 🙏 Acknowledgements & Thanks
+## 🙏 Acknowledgements & Credits
 
-Special thanks and acknowledgement to the **[BMAD Method](https://github.com/bmad-code-org/BMAD-METHOD)** team ([bmad-code-org/BMAD-METHOD](https://github.com/bmad-code-org/BMAD-METHOD)) for their breakthrough framework and methodology in agile AI-driven software development.
+ArgusAgent is built on the shoulders of giants in the open-source software community:
+
+- **[BMAD Method](https://github.com/bmad-code-org/BMAD-METHOD)** ([bmad-code-org/BMAD-METHOD](https://github.com/bmad-code-org/BMAD-METHOD)): Special thanks to the BMAD Method team for their breakthrough framework and methodology in agile AI-driven software development.
+- **[Tree-sitter](https://tree-sitter.github.io/tree-sitter/)**: Concrete syntax tree parsing engine underpinning Argus's multi-language AST inspection and grounding.
+- **[Pydantic](https://docs.pydantic.dev/)**: Data validation and schema management using Python type annotations.
+- **[HTTPX](https://www.python-httpx.org/) & [AnyIO](https://anyio.readthedocs.io/)**: Asynchronous HTTP client runtime and concurrency primitives.
+- **[Radon](https://radon.readthedocs.io/)**: Code metrics engine calculating cyclomatic complexity and maintainability index.
+- **[Rich](https://rich.readthedocs.io/) & [Pygments](https://pygments.org/)**: Terminal rendering, syntax highlighting, and CLI formatting.
+- **Python Open Source Ecosystem**: Gratitude to PyPA, Pytest, and the broader open-source community.
 
 ---
 
