@@ -1,5 +1,5 @@
 name: "ArgusAgent Code Audit & Release Gate"
-description: "Agent-first deterministic code audit & release gate. Argus's finding precision has not been independently validated."
+description: "Code audit & release gate. Argus's finding precision has not been independently validated."
 author: "ArgusAgent Team"
 branding:
   icon: "shield"
