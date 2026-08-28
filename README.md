@@ -485,6 +485,12 @@ ArgusAgent/
 
 ---
 
+## 🙏 Acknowledgements & Thanks
+
+Special thanks and acknowledgement to the **[BMAD Method](https://github.com/bmad-code-org/BMAD-METHOD)** team ([bmad-code-org/BMAD-METHOD](https://github.com/bmad-code-org/BMAD-METHOD)) for their breakthrough framework and methodology in agile AI-driven software development.
+
+---
+
 ## 🛡️ License
 
 MIT License. See [LICENSE](LICENSE) for details.
