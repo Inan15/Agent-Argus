@@ -1087,13 +1087,37 @@ def provenance_evidence(
     discarded = sum(1 for site in sites if site.discarded)
     consumed = len(sites) - discarded
 
+    # Extract identifiers passed as arguments to candidate SUT calls
+    sut_arg_names: set[str] = set()
+    for site in sites:
+        statement_start = statement_starts.get(site.line, site.line)
+        statement_end = extents.get(statement_start, site.line)
+        code = _blank_strings(_statement_code(source_lines, statement_start, statement_end))
+        for stmt in code.split(";"):
+            paren_open = stmt.find("(")
+            if paren_open >= 0:
+                paren_close = stmt.rfind(")")
+                args_text = stmt[paren_open + 1 : paren_close if paren_close > paren_open else len(stmt)]
+                for name in _CHAIN_ROOT_RE.findall(args_text):
+                    if name not in {"None", "True", "False", "self", "cls"}:
+                        sut_arg_names.add(name)
+
+    side_effect_consumed = False
     mock_referencing = 0
     for line_no in assertion_statement_lines(
         source_lines, span_edges, start, end, assertion_callees
     ):
         statement_end = extents.get(line_no, line_no)
         statement = _blank_strings(_statement_code(source_lines, line_no, statement_end))
-        if any(name in mock_names for name in _CHAIN_ROOT_RE.findall(statement)):
+        statement_roots = set(_CHAIN_ROOT_RE.findall(statement))
+        if sut_arg_names and bool(statement_roots & sut_arg_names):
+            side_effect_consumed = True
+            continue
+        if any(name in mock_names for name in statement_roots):
             mock_referencing += 1
+
+    if side_effect_consumed and discarded > 0:
+        discarded = max(0, discarded - 1)
+        consumed += 1
 
     return ProvenanceEvidence(discarded, consumed, mock_referencing)
