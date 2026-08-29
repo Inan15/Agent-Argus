@@ -39,11 +39,3 @@ verdict to blocking. That is a design decision rather than an omission, and it i
 the reason this demo is trustworthy: a wrong 🔴 is the failure that gets a tool
 removed from a pipeline, so only an AST-corroborated finding is allowed to block
 a release. The demo shows the one class that earns it.
-
----
-
-*Why this lives in `examples/` and not `argusdemo/`.* `argusdemo/` is git-ignored by an explicit
-operator instruction dated 2026-08-19, which `.gitignore` flags in its own words as *"a judgement
-call worth being able to reverse in one line"*. A demo that is never version-controlled cannot be
-run by anyone who has not got the author's working tree, which defeats the purpose of having one —
-so this demo was placed on an uncontested path rather than reversing that decision unasked.
