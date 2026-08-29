@@ -121,13 +121,28 @@ jobs:
           grep -q "verdict=" audit.txt || { echo "::error::no verdict emitted"; exit 1; }
           grep -qi "precision" audit.txt || { echo "::error::instrument notice absent"; exit 1; }
 
+      # 🔧 ADDED 2026-08-29. The package name was the literal `argus-agent-0.1.0-beta-*`
+      # in four places. It did not track `pyproject.toml`, so after the version moved to
+      # 1.0.0 this workflow built the 1.0.0 tree and named every artifact `0.1.0-beta` —
+      # a binary that misreports its own version, from the workflow that produces the
+      # front-door download. Derived here so the two cannot disagree again.
+      - name: Derive the packaged version
+        id: ver
+        shell: bash
+        run: |
+          VERSION="$(python -c "import re,pathlib; print(re.search(r'^version\s*=\s*\"([^\"]+)\"', pathlib.Path('pyproject.toml').read_text(encoding='utf-8'), re.M).group(1))")"
+          if [ -z "$VERSION" ]; then echo "::error::could not read version from pyproject.toml"; exit 1; fi
+          echo "version=$VERSION" >> "$GITHUB_OUTPUT"
+          echo "Packaged version: $VERSION"
+
       - name: Assemble the package
         shell: bash
         env:
           BINARY: ${{ matrix.binary }}
           LABEL: ${{ matrix.label }}
+          VERSION: ${{ steps.ver.outputs.version }}
         run: |
-          NAME="argus-agent-0.1.0-beta-$LABEL"
+          NAME="argus-agent-$VERSION-$LABEL"
           mkdir -p "$NAME"
           cp "dist/$BINARY" "$NAME/"
           cp packaging/QUICKSTART.md packaging/FEEDBACK.md packaging/LICENSE.txt "$NAME/"
@@ -147,8 +162,8 @@ jobs:
 
       - uses: actions/upload-artifact@v4
         with:
-          name: argus-agent-0.1.0-beta-${{ matrix.label }}
-          path: argus-agent-0.1.0-beta-${{ matrix.label }}.zip
+          name: argus-agent-${{ steps.ver.outputs.version }}-${{ matrix.label }}
+          path: argus-agent-${{ steps.ver.outputs.version }}-${{ matrix.label }}.zip
           if-no-files-found: error
 
       # Publishing is OPT-IN and needs BOTH a tag and a token. Absent either, the workflow
@@ -164,7 +179,7 @@ jobs:
           GH_TOKEN: ${{ secrets.RELEASES_REPO_TOKEN }}
           RELEASE_TAG: ${{ inputs.release_tag }}
           RELEASES_REPO: ${{ inputs.releases_repo }}
-          ASSET: argus-agent-0.1.0-beta-${{ matrix.label }}.zip
+          ASSET: argus-agent-${{ steps.ver.outputs.version }}-${{ matrix.label }}.zip
         run: |
           if [ -z "${GH_TOKEN}" ]; then
             echo "::warning::RELEASES_REPO_TOKEN is not configured — built and verified, not published."
