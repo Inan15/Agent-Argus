@@ -386,14 +386,17 @@ def released_sha_of_checkout(repo_root: Path) -> str:
 # drift the way `README.md` and `CHANGELOG.md` drifted while both admitted they had never
 # looked. Measured 2026-08-15, read-only.
 REPOSITORY_VISIBILITY_MEASUREMENT = (
-    "Repository visibility, MEASURED 2026-08-15 by "
-    f"`gh repo view {_REPOSITORY} --json visibility,isPrivate` -> `PRIVATE` / "
-    "`isPrivate: true`. What that costs a consumer, stated plainly: while it stays private "
-    "the pinned install cannot resolve for anybody — tag or no tag — without a read "
-    "credential carried in the URL (`git+https://<credential>@github.com/...`), and a GitHub "
-    "Release on a private repository is not publicly resolvable either. Making the "
-    "repository public is an outward-facing operator act that has not been taken. This is a "
-    "dated measurement, not a standing claim: re-run the command above before relying on it."
+    "Repository visibility, MEASURED 2026-08-29 by "
+    f"`gh repo view {_REPOSITORY} --json visibility,isPrivate` -> `PUBLIC` / "
+    "`isPrivate: false`. What that buys a consumer, stated plainly: the pinned install "
+    "resolves for anybody with no credential, and the GitHub Release and its attached "
+    "packages are publicly downloadable. This SUPERSEDES the 2026-08-15 measurement, which "
+    "read `PRIVATE` / `isPrivate: true` and said the pinned install "
+    "cannot resolve for anybody — tag or no tag — without a read credential carried in the URL "
+    "(`git+https://<credential>@github.com/...`) — accurate on its date, never re-run for "
+    "fourteen days, and false for an unknown part of them. That is the whole hazard of this "
+    "sentence: it is a dated measurement, not a standing claim, and re-running the command "
+    "above before relying on it is the only thing that keeps it true."
 )
 
 

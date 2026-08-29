@@ -38,33 +38,36 @@
 
 ### Install as a dependency (no clone required)
 
-`argus-agent` is **not on PyPI or any other package index**, and this repository has
-published no release yet. What it does have is a release workflow
-(`.github/workflows/release.yml`) — **committed, and never executed** — that builds an
-sdist and a wheel for a `v*.*.*` tag and attaches both to a GitHub Release. The dependency
-string a consumer will use is therefore a tag-pinned VCS reference:
+> **Superseded, kept on the record (§3.4).** Until 2026-08-29 this section read:
+> ~~"`argus-agent` is not on PyPI or any other package index, and this repository has published no
+> release yet. What it does have is a release workflow — **committed, and never executed** … ⚠️ This
+> command does not resolve today. Tag `v0.1.0` has **not been created or pushed** — `git tag -l` is
+> empty at this commit … Unresolvable until `v0.1.0` exists."~~
+> 🔴 **CORRECTED 2026-08-29.** `v0.1.0` was never created; the first tag this project pushed was
+> **`v1.0.0`**, on 2026-08-28, and it carries a published Release with built artifacts. The caveats
+> above stayed literally true about a version that never existed while the version that did exist
+> went unnamed — and `git tag -l` reads a *local* clone, which is empty in any checkout that has not
+> run `git fetch --tags`, so the evidence they cited could not have detected the change. The release
+> workflow has since executed and **refused** (see CHANGELOG 1.0.0); "never executed" is retired.
+
+`argus-agent` is **not on PyPI or any other package index** — that part is unchanged, and the VCS
+pin below is the whole resolution story:
 
 ```bash
-# INTERIM — resolve straight from this repository at a tag.
-pip install "argus-agent @ git+https://github.com/Inan15/Agent-Argus.git@v0.1.0"
+pip install "argus-agent @ git+https://github.com/Inan15/Agent-Argus.git@v1.0.0"
 ```
 
-> ⚠️ **This command does not resolve today.** Tag `v0.1.0` has **not been created or
-> pushed** — `git tag -l` is empty at this commit — so `pip` cannot find the ref and the
-> install fails. It begins working once an operator performs the prepared-but-not-executed
-> steps recorded in the story record (create and push the tag; the workflow does the rest).
-> Nobody has run this command against a real tag: treat it as the documented shape, not as
-> an exercised capability.
-
-In a `pyproject.toml` — same caveat, the tag must exist before this resolves:
+In a `pyproject.toml`:
 
 ```toml
 dependencies = [
-    "argus-agent @ git+https://github.com/Inan15/Agent-Argus.git@v0.1.0",
+    "argus-agent @ git+https://github.com/Inan15/Agent-Argus.git@v1.0.0",
 ]
 ```
 
-> ⚠️ Unresolvable until `v0.1.0` exists, for the same reason as above.
+**Prefer a standalone binary?** The [v1.0.0 Release](https://github.com/Inan15/Agent-Argus/releases/tag/v1.0.0)
+attaches Linux x64, macOS arm64 and Windows x64 packages; `install.sh` (Unix) and `install.ps1`
+(Windows) at the repository root fetch and place them, no Python toolchain required.
 
 **Authentication.** No credential is required **if and only if**
 `github.com/Inan15/Agent-Argus` is a public repository.
@@ -78,14 +81,16 @@ dependencies = [
 This is the single source of that fact; `TC-ArgusAgent-DOCS-001-71` asserts it appears
 verbatim here, in `CHANGELOG.md` and in `docs/first-run.md`, so the three cannot drift apart:
 
-Repository visibility, MEASURED 2026-08-15 by `gh repo view Inan15/Agent-Argus --json
-visibility,isPrivate` -> `PRIVATE` / `isPrivate: true`. What that costs a consumer, stated
-plainly: while it stays private the pinned install cannot resolve for anybody — tag or no
-tag — without a read credential carried in the URL
-(`git+https://<credential>@github.com/...`), and a GitHub Release on a private repository is
-not publicly resolvable either. Making the repository public is an outward-facing operator
-act that has not been taken. This is a dated measurement, not a standing claim: re-run the
-command above before relying on it.
+Repository visibility, MEASURED 2026-08-29 by `gh repo view Inan15/Agent-Argus --json
+visibility,isPrivate` -> `PUBLIC` / `isPrivate: false`. What that buys a consumer, stated
+plainly: the pinned install resolves for anybody with no credential, and the GitHub Release and
+its attached packages are publicly downloadable. This SUPERSEDES the 2026-08-15 measurement,
+which read `PRIVATE` / `isPrivate: true` and said the pinned install cannot resolve for anybody
+— tag or no tag — without a read credential carried in the URL
+(`git+https://<credential>@github.com/...`) — accurate on its date, never re-run for fourteen
+days, and false for an unknown part of them. That is the whole hazard of this sentence: it is a
+dated measurement, not a standing claim, and re-running the command above before relying on it
+is the only thing that keeps it true.
 
 **This pin is INTERIM.** It resolves a git ref rather than an immutable index artifact,
 which means it depends on the repository staying reachable and the tag staying put (the
@@ -130,14 +135,16 @@ necessary, not sufficient, and is recorded as LOCAL (architecture.md §H).
 TypeScript, Go, Rust, Java, C, C++, Ruby and PHP. All ten tree-sitter grammars are ordinary
 dependencies of the distribution, so the plain install command is the whole story:
 
+> **Superseded, kept on the record (§3.4).** A caveat below this command previously read:
+> ~~"⚠️ Same interim caveat as above — the tag does not exist yet, so the first command does not
+> resolve today. The clone form works now."~~ Corrected 2026-08-29: the pin named `v0.1.0`, which was
+> never created, and `v1.0.0` has existed since 2026-08-28. Both forms work.
+
 ```bash
-pip install "argus-agent @ git+https://github.com/Inan15/Agent-Argus.git@v0.1.0"
+pip install "argus-agent @ git+https://github.com/Inan15/Agent-Argus.git@v1.0.0"
 # or, from a clone:
 pip install -e .
 ```
-
-> ⚠️ Same interim caveat as above — the tag does not exist yet, so the first command does not resolve
-> today. The clone form works now.
 
 > **Superseded, kept on the record.** This section previously read:
 > ~~The default install grounds **Python only**. Nine further tree-sitter grammars ship in an

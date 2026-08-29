@@ -394,12 +394,23 @@ def test_TC_ArgusAgent_DOCS_001_71_the_visibility_measurement_is_dated_and_singl
 
     # The sentence says what AC4 requires it to say: what was measured, on what date, by what
     # command, and what it costs a consumer.
+    #
+    # UPDATED 2026-08-29. The SHAPE pinned here is unchanged — date, command, result, consumer
+    # consequence, re-check warning. Two entries moved because the measured world moved: the
+    # result is now `PUBLIC`, taken on a new date. Two are RETAINED deliberately — `PRIVATE`
+    # and `cannot resolve for anybody` must still appear, because the sentence now carries its
+    # own superseded measurement (§3.4), and dropping the requirement would let a later edit
+    # quietly erase the record that the answer had changed. That record is the point: the
+    # 2026-08-15 measurement was correct on its date, was never re-run for fourteen days, and
+    # nothing in this repository required it to be.
     for required, why in (
-        ("2026-08-15", "the date the measurement was taken"),
+        ("2026-08-29", "the date the current measurement was taken"),
         ("gh repo view", "the command that took it"),
-        ("PRIVATE", "the measured result"),
-        ("cannot resolve for anybody", "what it costs a consumer"),
-        ("tag or no tag", "that the tag is not the blocker"),
+        ("PUBLIC", "the measured result"),
+        ("PRIVATE", "the superseded result, retained rather than deleted (§3.4)"),
+        ("resolves for anybody", "what it buys a consumer"),
+        ("cannot resolve for anybody", "what the superseded state cost one"),
+        ("tag or no tag", "that the tag was never the blocker"),
         ("dated measurement, not a standing claim", "that it must be re-checked"),
     ):
         assert required in statement, (

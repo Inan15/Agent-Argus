@@ -29,6 +29,7 @@ over an injected context, which is the reason the context is injected at all.
 
 from __future__ import annotations
 
+import re
 import sys
 from pathlib import Path
 
@@ -40,6 +41,27 @@ sys.path.insert(0, str(_REPO_ROOT / "scripts"))
 import release_preflight as rp  # noqa: E402
 
 _WORKFLOW = _REPO_ROOT / ".github" / "workflows" / "release.yml"
+
+
+def _matching_tag() -> str:
+    """The tag that AGREES with this tree's packaged version, derived rather than typed.
+
+    🔧 **ADDED 2026-08-29.** ``-29``'s rehearsal copies the real ``pyproject.toml`` into a
+    throwaway fixture and then rehearsed against a hardcoded ``"v0.1.0"``. Those two facts
+    were the same fact for four epics and stopped being so the moment the version moved to
+    ``1.0.0`` — at which point E5 (*tag does not match the pyproject version*) fired on the
+    step whose whole job is to show a CLEAN fixture clearing, and the rehearsal reported
+    *"a clean fixture at the matching version was refused"* while being handed a mismatched
+    one. The literal is derived from the packaged version so the two cannot desynchronise
+    again. ``v9.9.9`` stays hardcoded where a DELIBERATE mismatch is the subject.
+    """
+    text = (_REPO_ROOT / "pyproject.toml").read_text(encoding="utf-8")
+    match = re.search(r"^version\s*=\s*\"([^\"]+)\"", text, flags=re.MULTILINE)
+    assert match, "pyproject.toml states no `version = ` for the argus-agent distribution"
+    return f"v{match.group(1)}"
+
+
+_MATCHING_TAG = _matching_tag()
 
 
 def _ctx(**overrides: object) -> rp.PreflightContext:
@@ -212,7 +234,20 @@ def test_TC_ArgusAgent_RELEASE_001_10_the_workflow_claims_no_publication_and_no_
     ):
         assert overclaim not in lowered, f"the release workflow over-claims: {overclaim!r}"
     # And it states its own unproven status rather than implying a publication happened.
-    assert "has never executed" in lowered
+    #
+    # UPDATED 2026-08-29 — the required phrase moved because the fact moved, and the assertion
+    # is STRICTER than the one it replaces, not looser. It read `"has never executed"`, which
+    # was falsified on 2026-08-28 when four runs fired on tag `v1.0.0` (33180657062,
+    # 33184222319, 33184399896, 33185012952) and all four failed. "Never executed" and "never
+    # succeeded" are different claims, and only the second is still true — so the workflow now
+    # says the second, and this pins that. Retiring the phrase without replacing it would have
+    # dropped the AC's whole point: the workflow must not imply a publication happened, and it
+    # has more reason to say so now that it has run and produced nothing.
+    assert "has never succeeded" in lowered
+    assert "has executed" in lowered, (
+        "the workflow no longer states that it has executed, while runs exist for its tag — "
+        "an unproven status is only honest if it also admits the attempts"
+    )
 
 
 # ─────────────────────────────────────────────────────────────────────────────
@@ -865,7 +900,10 @@ def _rehearsal_repo(tmp_path: Path) -> Path:
     git("config", "user.name", "ArgusAgent Rehearsal")
     git("add", "-A")
     git("commit", "-m", "rehearsal fixture")
-    git("tag", "v0.1.0")
+    # The fixture's tag must AGREE with the `pyproject.toml` copied above, or E5 refuses the
+    # very step that exists to show a clean fixture clearing. Derived for the same reason the
+    # rehearsal's tag argument is — see `_matching_tag`. (Hardcoded `v0.1.0` until 2026-08-29.)
+    git("tag", _MATCHING_TAG)
     return repo
 
 
@@ -890,20 +928,25 @@ def test_TC_ArgusAgent_RELEASE_001_29_every_enumerated_edge_case_is_rehearsed(
     """
     from tests.test_built_distribution import _distribution
 
+    # Captured BEFORE anything runs, so the AC8/AC9 fence at the end of this test measures
+    # what the rehearsal changed rather than what the repository happens to contain. See the
+    # correction note beside that assertion.
+    _TAGS_BEFORE_REHEARSAL = rp._git(_REPO_ROOT, "tag", "-l")
+
     dist = _distribution()
     repo = _rehearsal_repo(tmp_path)
     covered: set[str] = set()
 
     # ── phase 1: validate-tag. Refuses a crafted value before anything else runs. ──
-    assert rp.main(["--phase", "validate-tag", "--tag", "v0.1.0"]) == 0
+    assert rp.main(["--phase", "validate-tag", "--tag", _MATCHING_TAG]) == 0
     assert "expected v<major>.<minor>.<patch> shape" in capsys.readouterr().out
-    assert rp.main(["--phase", "validate-tag", "--tag", 'v0.1.0"; id #']) == 1
+    assert rp.main(["--phase", "validate-tag", "--tag", f'{_MATCHING_TAG}"; id #']) == 1
     assert "RELEASE REFUSED" in capsys.readouterr().out
 
     # ── phase 2: pre-build over the clean fixture, with the release list ASKED and empty ──
     monkeypatch.setattr(rp, "_published_release_tags", lambda root: ())
     code, outcomes, _ = _rehearse(
-        capsys, ["--phase", "pre-build", "--tag", "v0.1.0", "--repo-root", str(repo)]
+        capsys, ["--phase", "pre-build", "--tag", _MATCHING_TAG, "--repo-root", str(repo)]
     )
     covered |= set(outcomes)
     assert code == 0, "a clean fixture at the matching version was refused"
@@ -915,7 +958,7 @@ def test_TC_ArgusAgent_RELEASE_001_29_every_enumerated_edge_case_is_rehearsed(
         encoding="utf-8",
     )
     code, outcomes, out = _rehearse(
-        capsys, ["--phase", "pre-build", "--tag", "v0.1.0", "--repo-root", str(repo)]
+        capsys, ["--phase", "pre-build", "--tag", _MATCHING_TAG, "--repo-root", str(repo)]
     )
     assert code == 1 and outcomes["E1"] == "REFUSE", outcomes
     assert "RELEASE REFUSED" in out and "pyproject.toml" in out
@@ -929,7 +972,7 @@ def test_TC_ArgusAgent_RELEASE_001_29_every_enumerated_edge_case_is_rehearsed(
     code, outcomes, out = _rehearse(
         capsys,
         [
-            "--phase", "pre-build", "--tag", "v0.1.0",
+            "--phase", "pre-build", "--tag", _MATCHING_TAG,
             "--repo-root", str(repo), "--creating-tag",
         ],
     )
@@ -941,15 +984,15 @@ def test_TC_ArgusAgent_RELEASE_001_29_every_enumerated_edge_case_is_rehearsed(
     )
 
     # ── E4's THREE outcomes, all of them, and UNKNOWN is never a clearance ──
-    monkeypatch.setattr(rp, "_published_release_tags", lambda root: ("v0.1.0",))
+    monkeypatch.setattr(rp, "_published_release_tags", lambda root: (_MATCHING_TAG,))
     code, outcomes, out = _rehearse(
-        capsys, ["--phase", "pre-build", "--tag", "v0.1.0", "--repo-root", str(repo)]
+        capsys, ["--phase", "pre-build", "--tag", _MATCHING_TAG, "--repo-root", str(repo)]
     )
     assert code == 1 and outcomes["E4"] == "REFUSE" and "a release already exists" in out
 
     monkeypatch.setattr(rp, "_published_release_tags", lambda root: None)
     code, outcomes, out = _rehearse(
-        capsys, ["--phase", "pre-build", "--tag", "v0.1.0", "--repo-root", str(repo)]
+        capsys, ["--phase", "pre-build", "--tag", _MATCHING_TAG, "--repo-root", str(repo)]
     )
     assert outcomes["E4"] == "UNKNOWN", outcomes
     assert code == 0, "an unobservable E4 must not fail the run; it must not clear it either"
@@ -976,7 +1019,7 @@ def test_TC_ArgusAgent_RELEASE_001_29_every_enumerated_edge_case_is_rehearsed(
     code, outcomes, out = _rehearse(
         capsys,
         [
-            "--phase", "post-build", "--tag", "v0.1.0",
+            "--phase", "post-build", "--tag", _MATCHING_TAG,
             "--repo-root", str(repo), "--dist-dir", str(dist.wheel.parent),
         ],
     )
@@ -989,7 +1032,7 @@ def test_TC_ArgusAgent_RELEASE_001_29_every_enumerated_edge_case_is_rehearsed(
     code, outcomes, out = _rehearse(
         capsys,
         [
-            "--phase", "post-build", "--tag", "v0.1.0",
+            "--phase", "post-build", "--tag", _MATCHING_TAG,
             "--repo-root", str(repo), "--dist-dir", str(empty),
         ],
     )
@@ -1004,8 +1047,19 @@ def test_TC_ArgusAgent_RELEASE_001_29_every_enumerated_edge_case_is_rehearsed(
     # ...and NOTHING was published. The rehearsal never creates a tag in this repository,
     # never pushes and never calls `gh release create`; the only tag it touches lives in a
     # throwaway fixture under tmp_path.
-    assert rp._git(_REPO_ROOT, "tag", "-l") == "", (
-        "a tag exists in THIS repository. The rehearsal must publish nothing (AC8/AC9)."
+    #
+    # 🔧 **CORRECTED 2026-08-29.** This asserted ``rp._git(_REPO_ROOT, "tag", "-l") == ""`` —
+    # that the repository has NO tags at all. That is not the property AC8/AC9 asks for; it
+    # was merely true at the time, and it became permanently false when ``v1.0.0`` was pushed
+    # on 2026-08-28, turning a safety fence into a fixed failure the moment the project did
+    # the thing it was built for. The property is *the rehearsal created nothing*, so it is
+    # now measured as an INVARIANT ACROSS the rehearsal rather than as an absolute. Same
+    # defect class as ``test_built_distribution._released_versions``, corrected in the same
+    # change: a local ``git tag -l`` reading stood in for a fact it does not determine.
+    assert rp._git(_REPO_ROOT, "tag", "-l") == _TAGS_BEFORE_REHEARSAL, (
+        "the tag list of THIS repository changed across the rehearsal — it must publish "
+        f"nothing (AC8/AC9). Before: {_TAGS_BEFORE_REHEARSAL!r}. "
+        f"After: {rp._git(_REPO_ROOT, 'tag', '-l')!r}."
     )
 
 

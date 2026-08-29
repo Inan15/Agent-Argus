@@ -22,31 +22,43 @@ do next is in the output you are already holding).
 
 ## 1. Install
 
+> **Superseded, kept on the record (§3.4).** This step previously read:
+> ~~"⚠️ **This command does not resolve today.** Tag `v0.1.0` has not been created or pushed
+> (`git tag -l` is empty at this commit), so `pip` cannot find the ref and the install fails. It is
+> the documented shape, not an exercised capability."~~
+> 🔴 **CORRECTED 2026-08-29.** `v0.1.0` was never created. The first tag pushed was **`v1.0.0`**, on
+> 2026-08-28. The command below resolves.
+
 ```bash
-pip install "argus-agent @ git+https://github.com/Inan15/Agent-Argus.git@v0.1.0"
+pip install "argus-agent @ git+https://github.com/Inan15/Agent-Argus.git@v1.0.0"
 ```
 
 `argus-agent` is not on a package index. The command above resolves it straight from this
 repository at a tag.
 
-> ⚠️ **This command does not resolve today.** Tag `v0.1.0` has not been created or pushed
-> (`git tag -l` is empty at this commit), so `pip` cannot find the ref and the install
-> fails. It is the documented shape, not an exercised capability. `README.md` carries the
-> full caveat.
+**No Python toolchain?** The [v1.0.0 Release](https://github.com/Inan15/Agent-Argus/releases/tag/v1.0.0)
+attaches standalone Linux x64, macOS arm64 and Windows x64 packages; `install.sh` and `install.ps1`
+at the repository root fetch and place them.
 
-**And it would not resolve even with the tag**, which this page used to leave to `README.md`
-and now states where you meet the command (Story 12.9 / AC4):
+**And what it costs you to resolve it**, which this page used to leave to `README.md` and now
+states where you meet the command (Story 12.9 / AC4). ~~This paragraph previously introduced the
+measurement as *"And it would not resolve even with the tag"*~~ — corrected 2026-08-29, because the
+measurement below no longer says that:
 
-Repository visibility, MEASURED 2026-08-15 by `gh repo view Inan15/Agent-Argus --json
-visibility,isPrivate` -> `PRIVATE` / `isPrivate: true`. What that costs a consumer, stated
-plainly: while it stays private the pinned install cannot resolve for anybody — tag or no
-tag — without a read credential carried in the URL
-(`git+https://<credential>@github.com/...`), and a GitHub Release on a private repository is
-not publicly resolvable either. Making the repository public is an outward-facing operator
-act that has not been taken. This is a dated measurement, not a standing claim: re-run the
-command above before relying on it.
+Repository visibility, MEASURED 2026-08-29 by `gh repo view Inan15/Agent-Argus --json
+visibility,isPrivate` -> `PUBLIC` / `isPrivate: false`. What that buys a consumer, stated
+plainly: the pinned install resolves for anybody with no credential, and the GitHub Release and
+its attached packages are publicly downloadable. This SUPERSEDES the 2026-08-15 measurement,
+which read `PRIVATE` / `isPrivate: true` and said the pinned install cannot resolve for anybody
+— tag or no tag — without a read credential carried in the URL
+(`git+https://<credential>@github.com/...`) — accurate on its date, never re-run for fourteen
+days, and false for an unknown part of them. That is the whole hazard of this sentence: it is a
+dated measurement, not a standing claim, and re-running the command above before relying on it
+is the only thing that keeps it true.
 
-Until then, the form that works today is a clone plus `pip install -e .`.
+~~Until then, the form that works today is a clone plus `pip install -e .`.~~ Corrected 2026-08-29:
+there is no "until then" left — the pinned install above resolves. A clone plus `pip install -e .`
+remains the right choice if you intend to modify Argus rather than consume it.
 
 Every supported language grammar is in the default install. If a grammar is missing or will
 not load, the run says so on stderr and names the package that would fix it — a lower

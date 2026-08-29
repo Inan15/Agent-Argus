@@ -1,9 +1,29 @@
 # ArgusAgent release workflow — Story 9.2 / AC2, AC5 (epics IN-0, boundary B10).
 #
-# STATUS, STATED PLAINLY: this workflow is COMMITTED AND HAS NEVER EXECUTED. It was added
-# on the `fix/honest-verdict-reporting` branch and no tag exists in this repository
-# (`git tag -l` was empty when it was written), so there is no Actions run id and no
-# release URL to cite. Nothing in this repository — README, CHANGELOG, story record or
+# STATUS, STATED PLAINLY — UPDATED 2026-08-29:
+# this workflow has executed, and it has never succeeded.
+# Four runs, every one on tag `v1.0.0`, every one `failure`, all under twenty
+# seconds: 33180657062, 33184222319, 33184399896, 33185012952 (2026-08-28). They failed in
+# the preflight, correctly, on two enumerated edge cases:
+#   [E5] tag 'v1.0.0' declares version '1.0.0' but pyproject.toml states '0.1.0'
+#   [E4] a release already exists for tag 'v1.0.0'
+# Two consequences worth stating rather than leaving to be inferred. First: the v1.0.0
+# Release on this repository was NOT produced by this workflow — its artifacts reached the
+# release page by another route, and the gated path has still never completed. Second: E5 is
+# fixed in this change (`pyproject.toml` and `argus.__version__` both now state `1.0.0`),
+# while E4 stands until an operator removes the existing release — and it is SUPPOSED to
+# stand. Refusing to overwrite artifacts a consumer may already have resolved is the guard
+# doing its job, not an obstacle to route around.
+#
+# ~~Superseded, kept on the record (§3.4): "this workflow is COMMITTED AND HAS NEVER
+# EXECUTED. It was added on the `fix/honest-verdict-reporting` branch and no tag exists in
+# this repository (`git tag -l` was empty when it was written), so there is no Actions run id
+# and no release URL to cite."~~ True when written; falsified by the tag push. Note what the
+# struck sentence leaned on — `git tag -l`, a LOCAL read, empty in any clone that has not
+# fetched tags. That is the same weak oracle that let `TC-ArgusAgent-DOCS-001-55` pass on
+# developer machines while CI went red on every push for six days.
+#
+# Nothing in this repository — README, CHANGELOG, story record or
 # workflow output — may state or imply that a release has been published until a URL or
 # an Actions run id can be cited as evidence (Story 9.2 / D2 / D13). The build itself was
 # proven LOCALLY instead; the sdist/wheel filenames and their full file listings are

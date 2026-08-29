@@ -56,6 +56,7 @@ import sys
 import tarfile
 import tempfile
 import zipfile
+from collections.abc import Callable
 from concurrent.futures import ThreadPoolExecutor
 from dataclasses import dataclass
 from pathlib import Path
@@ -600,23 +601,90 @@ _CAVEAT_MARKERS: tuple[str, ...] = (
 # committed caveats sit 1–4 lines below their pin's closing fence.
 _CAVEAT_WINDOW = 12
 
+# Ceiling on either tag query. `git ls-remote` touches the network, and a guard that can
+# hang is a guard that gets deleted. On timeout the query returns `None` — *could not ask* —
+# which is the honest reading and never `()`.
+_TAG_QUERY_TIMEOUT_S = 20
 
-def _released_versions() -> tuple[str, ...] | None:
-    """Tags of the form ``vN.N.N``. ``None`` means *could not ask*, never *there are none*."""
+
+def _git_tags(argv: list[str], extract: Callable[[str], str]) -> tuple[str, ...] | None:
+    """Run one git tag-listing command. ``None`` means *could not ask*, never *there are none*."""
     try:
         done = subprocess.run(
-            ["git", "tag", "--list", "v*"],
+            argv,
             cwd=str(_REPO_ROOT),
             capture_output=True,
             text=True,
+            timeout=_TAG_QUERY_TIMEOUT_S,
         )
-    except OSError:  # pragma: no cover - git absent
+    except (OSError, subprocess.SubprocessError):  # pragma: no cover - git absent/unreachable
         return None
-    if done.returncode != 0:  # pragma: no cover - not a work tree
+    if done.returncode != 0:  # pragma: no cover - not a work tree, or no such remote
         return None
     return tuple(
-        tag for tag in done.stdout.split() if re.fullmatch(r"v\d+\.\d+\.\d+", tag)
+        tag
+        for tag in (extract(token) for token in done.stdout.split())
+        if re.fullmatch(r"v\d+\.\d+\.\d+", tag)
     )
+
+
+def _released_versions() -> tuple[str, ...] | None:
+    """Released tags of the form ``vN.N.N``. ``None`` means *could not ask*, never *none exist*.
+
+    🔧 **CORRECTED 2026-08-29 — the oracle was measuring the wrong world, and this guard
+    certified a stale release surface because of it.** As written this function asked
+    ``git tag --list v*`` and nothing else, i.e. the LOCAL clone's tag list, and returned
+    ``()`` when it was empty. ``()`` is then read by ``-55`` as *no release exists*, which
+    licenses every "this pin does not resolve" caveat on every registered surface.
+
+    MEASURED at this commit: ``v1.0.0`` exists on ``origin`` (``git ls-remote --tags origin``
+    → ``refs/tags/v1.0.0`` at ``5bd9396``) and carries a published GitHub Release with
+    attached artifacts, while ``git tag --list`` in this work tree prints **nothing** — a
+    clone that has not run ``git fetch --tags`` has no local tags.
+
+    ⚠️ **Say what this did and did NOT cause, because the first draft of this note got it
+    wrong and the distinction is the whole lesson.** ``-55`` DID fire — in CI. Run
+    33187708761 (``audit-ci.yml``, ``master``, 2026-08-28) failed with exactly these
+    violations, and every push since the tag has been red for the same reason. What this
+    oracle broke is the LOCAL reading: on a developer machine the same guard passes green,
+    so local and CI disagreed about whether the tree was honest, and the release went out
+    while CI was red. A guard that a developer can watch pass and a runner watch fail is a
+    guard that gets explained away. The stale surfaces are what an unactioned red CI looks
+    like; this function is why nobody saw it before pushing.
+
+    The rule in ``tag_state_violations`` was never wrong and is UNCHANGED; it is pure and
+    takes the tag list as a parameter. Only its input was lying.
+
+    **An empty LOCAL list is not evidence about the published world**, so it can no longer
+    stand in for one. The corrected contract:
+
+    * a tag seen in **either** place is decisive — a release exists (union);
+    * the remote unreachable **and** no local tag → ``None`` (*could not ask*), never ``()``,
+      because those two states are indistinguishable from here and guessing picks the
+      falsehood-shipping one;
+    * both queries failing → ``None``.
+
+    ``None`` makes ``-55`` skip with an ``Unevaluable`` rather than pass, which is the
+    file's existing discipline (E2) and the only safe reading of "I don't know".
+    """
+    local = _git_tags(["git", "tag", "--list", "v*"], lambda token: token)
+    remote = _git_tags(
+        ["git", "ls-remote", "--tags", "--refs", "origin", "v*"],
+        # `git ls-remote` prints "<sha>\trefs/tags/<tag>"; --refs drops the ^{} peels, and
+        # split() hands us both columns, so the sha tokens fall out on the regex above.
+        lambda token: token.rpartition("refs/tags/")[2],
+    )
+
+    if local is None and remote is None:  # pragma: no cover - git absent entirely
+        return None
+    found = tuple(sorted(set(local or ()) | set(remote or ())))
+    if found:
+        return found
+    if remote is None:
+        # Local says nothing and the remote could not be consulted. This is EXACTLY the
+        # state that shipped v1.0.0's stale caveats; it is unknown, not empty.
+        return None
+    return ()
 
 
 # How the tag state was established, stated ON the surface that leans on it. A caveat that
@@ -802,30 +870,91 @@ def test_TC_ArgusAgent_DOCS_001_55b_the_tag_state_rule_bites_in_both_directions(
             f"and {rel} carries a pin it could not see."
         )
 
-    # Direction 2 — the tag EXISTS. Every caveat now on disk is the falsehood, and the
-    # workflow's "HAS NEVER EXECUTED" header is one too. The transition must be reported for
-    # EVERY pin-carrying surface, not just the first.
-    released = tag_state_violations(texts, ("v0.1.0",))
-    assert released.violations, (
-        "with `v0.1.0` present, not one of the caveats on disk was reported as a falsehood. "
-        "The tag that makes the documented install command true makes every 'does not "
-        "resolve' sentence false, and a guard that misses that ships the lie."
-    )
-    flagged = {violation.split(":")[0].split(" ")[0] for violation in released.violations}
+    # Direction 2 — the tag EXISTS and a caveat is still attached to a pin.
+    #
+    # 🔧 **REWRITTEN 2026-08-29, and the reason is the whole point of the rewrite.** This
+    # direction used to read the LIVE corpus and assert that `tag_state_violations(texts,
+    # ("v0.1.0",))` reported every surface — which only held while the caveats were still on
+    # disk. The moment the guard did its job and those caveats were corrected, the control
+    # went RED for the *right* outcome: a positive control that requires the defect to remain
+    # in the repository is a control that punishes the fix. Direction 1 already avoided this
+    # by mutating copies; Direction 2 now does the same in reverse. It INJECTS a caveat into
+    # a copy of each surface and asserts the rule catches it, so the control keeps proving the
+    # rule bites without the repository having to keep publishing a falsehood to satisfy it.
     for rel in ("README.md", "CHANGELOG.md", "docs/first-run.md"):
-        assert any(rel in violation for violation in released.violations), (
-            f"{rel} carries a pin with a caveat and was NOT reported when the tag exists; "
-            f"reported surfaces were {sorted(flagged)}"
+        assert rel in texts, f"{rel} is not a registered release surface any more"
+        injected = dict(texts)
+        lines = injected[rel].splitlines()
+        pin_indices = [i for i, line in enumerate(lines) if _VERSION_PIN.search(line)]
+        assert pin_indices, (
+            f"{rel} shows no tag-pinned VCS install command, so this direction would pass "
+            "over nothing. Either the documented install route was deleted rather than "
+            "corrected, or the pin pattern stopped matching it."
         )
-    assert any(_NEVER_EXECUTED_SURFACE in v for v in released.violations), (
-        f"{_NEVER_EXECUTED_SURFACE} still claims it has never executed while a tag exists, "
-        "and the rule did not say so. AC6.2 requires that header to be corrected in the same "
-        "change that falsifies it."
+        # Attach the caveat to the pin's own line — inside the window by construction, so the
+        # control does not silently depend on _CAVEAT_WINDOW's exact value.
+        lines[pin_indices[0]] += "  <!-- does not resolve -->"
+        injected[rel] = "\n".join(lines)
+
+        report = tag_state_violations(injected, ("v1.0.0",))
+        assert any(rel in violation for violation in report.violations), (
+            f"a caveat re-attached to {rel}'s pin was NOT reported while ['v1.0.0'] exists. "
+            "The tag that makes the documented install command resolve makes every 'does not "
+            "resolve' sentence false, and a guard that misses that ships the lie."
+        )
+
+    # And the corrected corpus is clean under the REAL tag state — the assertion `-55` makes
+    # against the live world, restated here so both directions are visible in one place.
+    assert not tag_state_violations(texts, ("v1.0.0",)).violations, (
+        "the committed surfaces still carry a caveat or a stale workflow claim under the "
+        f"real tag state: {tag_state_violations(texts, ('v1.0.0',)).violations}"
+    )
+    # AC6.2's half of the rule, exercised the same way as the pins above: re-introduce the
+    # stale header into a COPY and require the rule to catch it. (Until 2026-08-29 this read
+    # the live corpus via a `released` binding, for the same reason Direction 2 did, and it
+    # became unsatisfiable the moment the header was corrected.)
+    with_stale_header = dict(texts)
+    with_stale_header[_NEVER_EXECUTED_SURFACE] = (
+        texts.get(_NEVER_EXECUTED_SURFACE, "") + f"\n# {_NEVER_EXECUTED_CLAIM}\n"
+    )
+    assert any(
+        _NEVER_EXECUTED_SURFACE in v
+        for v in tag_state_violations(with_stale_header, ("v1.0.0",)).violations
+    ), (
+        f"{_NEVER_EXECUTED_SURFACE} re-claiming {_NEVER_EXECUTED_CLAIM!r} while a tag exists "
+        "was NOT reported. AC6.2 requires that header to be corrected in the same change "
+        "that falsifies it, which needs the rule to see it."
     )
 
     # And the honest states are NOT flagged, in both directions — otherwise this rule could
     # never be satisfied and would be deleted by the third person to hit it.
-    assert not tag_state_violations(texts, ()).violations
+    #
+    # 🔧 **CORRECTED 2026-08-29.** The first of these read
+    # ``assert not tag_state_violations(texts, ()).violations`` — the committed corpus is
+    # honest *for the no-tag world*. That was true for as long as the repository had no tag,
+    # and it inverted the day one existed: the corrected surfaces carry uncaveated pins, which
+    # is exactly what the no-tag branch is supposed to object to. Asserting the live corpus
+    # against a hypothetical world only works while the two agree, so the honest-state checks
+    # now run against SYNTHETIC corpora and the live corpus is checked against the REAL tag
+    # state (above, and by ``-55``).
+    caveated = {
+        rel: re.sub(
+            r"(git\+https://github\.com/[^\s\"']+@v\d+\.\d+\.\d+)",
+            r"\1  <!-- does not resolve -->",
+            text,
+        )
+        + f"\n{_TAG_STATE_EVIDENCE}\n"
+        for rel, text in texts.items()
+    }
+    caveated[_NEVER_EXECUTED_SURFACE] = (
+        texts.get(_NEVER_EXECUTED_SURFACE, "") + f"\n# {_NEVER_EXECUTED_CLAIM}\n"
+    )
+    assert not tag_state_violations(caveated, ()).violations, (
+        "with NO tag, every pin caveated and the tag-state evidence stated, the rule still "
+        "objects — so the pre-release state it demands is unreachable: "
+        f"{tag_state_violations(caveated, ()).violations}"
+    )
+
     no_caveats = {
         rel: re.sub(
             r"does not resolve|unresolvable|tag does not exist",
@@ -835,10 +964,10 @@ def test_TC_ArgusAgent_DOCS_001_55b_the_tag_state_rule_bites_in_both_directions(
         ).replace(_NEVER_EXECUTED_CLAIM, "has now executed")
         for rel, text in texts.items()
     }
-    assert not tag_state_violations(no_caveats, ("v0.1.0",)).violations, (
+    assert not tag_state_violations(no_caveats, ("v1.0.0",)).violations, (
         "with the tag present and every caveat removed the rule still objects, so the "
         "post-release state it demands is unreachable: "
-        f"{tag_state_violations(no_caveats, ('v0.1.0',)).violations}"
+        f"{tag_state_violations(no_caveats, ('v1.0.0',)).violations}"
     )
 
 

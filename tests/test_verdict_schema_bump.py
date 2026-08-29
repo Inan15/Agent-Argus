@@ -36,6 +36,7 @@ is readable rather than a wall of noise.
 from __future__ import annotations
 
 import json
+import re
 import sys
 from pathlib import Path
 
@@ -136,9 +137,33 @@ def test_TC_ArgusAgent_VERDICT_003_01_only_the_verdict_envelope_changed(
 
     old_rest = {k: v for k, v in old_artifacts.items() if k not in bumped_old}
     new_rest = {k: v for k, v in new_artifacts.items() if k not in bumped_new}
-    assert new_rest == old_rest, (
-        "an artifact other than the two schema-bumped envelopes changed bytes; the "
-        "bumps must be the ONLY intentional content-hash changes"
+
+    # The property is CONTENT-HASH stability, and the artifact key IS the content hash — so
+    # assert that first and directly. This is what the byte comparison below was reaching for.
+    assert set(new_rest) == set(old_rest), (
+        "an artifact other than the two schema-bumped envelopes changed its content-addressed "
+        "name; the bumps must be the ONLY intentional content-hash changes"
+    )
+
+    # 🔧 **CORRECTED 2026-08-29.** The comparison below was over raw envelope BYTES, which
+    # includes `argus_version` — an envelope field carrying the package's release number. When
+    # the tree moved 0.1.0 -> 1.0.0 to match the published `v1.0.0` tag, every stored artifact
+    # differed from every rebuilt one and this failed, while reporting *"an artifact changed
+    # bytes"* about a change that moved no content hash and no filename. NFR-D3 is explicit
+    # that `content_hash` covers the PAYLOAD only, so a version-bearing envelope field cannot
+    # move it — and the keys asserted equal above prove it did not. The version is normalised
+    # out so this stays a test about the schema delta; `TC-ArgusAgent-DOCS-001-14` holds the
+    # version's own agreement, and the evidence bundle — the one artifact that carries the
+    # version INSIDE the hashed payload (DF-8-5-A) — is not in this corpus.
+    def _without_version(artifacts: dict[str, str]) -> dict[str, str]:
+        return {
+            key: re.sub(r'"argus_version":"[^"]*"', '"argus_version":"<pinned>"', text)
+            for key, text in artifacts.items()
+        }
+
+    assert _without_version(new_rest) == _without_version(old_rest), (
+        "an artifact other than the two schema-bumped envelopes changed bytes, in a field "
+        "other than `argus_version`; the bumps must be the ONLY intentional content changes"
     )
     # Both bumped envelopes DID move (that is the point of the bumps).
     assert new_verdict_locator != old_verdict_locator
@@ -181,7 +206,18 @@ def test_TC_ArgusAgent_VERDICT_003_02_verdict_envelope_delta_is_exactly_two_keys
     # source, not two.
     assert new_envelope["schema_version"] == new_payload["schema_version"]
     assert old_envelope["schema_version"] == old_payload["schema_version"]
-    _derived = ("payload", "content_hash", "schema_version")
+    # `argus_version` joined this list on 2026-08-29, and the reason is a test-design fix
+    # rather than an accommodation. This assertion's subject is the SCHEMA delta between a
+    # stored v1 envelope and a freshly-built one; `argus_version` is an envelope field
+    # carrying the package's release number, so it necessarily differs whenever the fixture
+    # was recorded under a different release — it moved 0.1.0 -> 1.0.0 with the v1.0.0
+    # version correction and broke three tests that are not about versions at all. Pinning it
+    # here guaranteed a failure at every future bump while adding nothing: it is not part of
+    # the schema change under test, and NFR-D3 keeps it out of `content_hash` (which covers
+    # the payload only), so excluding it cannot hide a hash or filename movement. The
+    # agreement between `pyproject.toml` and `argus.__version__` is held where it belongs, by
+    # `TC-ArgusAgent-DOCS-001-14`.
+    _derived = ("payload", "content_hash", "schema_version", "argus_version")
     assert {k: v for k, v in new_envelope.items() if k not in _derived} == {
         k: v for k, v in old_envelope.items() if k not in _derived
     }
@@ -230,7 +266,18 @@ def test_TC_ArgusAgent_VERDICT_003_04_critical_envelope_delta_is_exactly_two_cha
     # CONSTRUCTION and are not independent changes.
     assert new_envelope["schema_version"] == new_payload["schema_version"]
     assert old_envelope["schema_version"] == old_payload["schema_version"]
-    _derived = ("payload", "content_hash", "schema_version")
+    # `argus_version` joined this list on 2026-08-29, and the reason is a test-design fix
+    # rather than an accommodation. This assertion's subject is the SCHEMA delta between a
+    # stored v1 envelope and a freshly-built one; `argus_version` is an envelope field
+    # carrying the package's release number, so it necessarily differs whenever the fixture
+    # was recorded under a different release — it moved 0.1.0 -> 1.0.0 with the v1.0.0
+    # version correction and broke three tests that are not about versions at all. Pinning it
+    # here guaranteed a failure at every future bump while adding nothing: it is not part of
+    # the schema change under test, and NFR-D3 keeps it out of `content_hash` (which covers
+    # the payload only), so excluding it cannot hide a hash or filename movement. The
+    # agreement between `pyproject.toml` and `argus.__version__` is held where it belongs, by
+    # `TC-ArgusAgent-DOCS-001-14`.
+    _derived = ("payload", "content_hash", "schema_version", "argus_version")
     assert {k: v for k, v in new_envelope.items() if k not in _derived} == {
         k: v for k, v in old_envelope.items() if k not in _derived
     }

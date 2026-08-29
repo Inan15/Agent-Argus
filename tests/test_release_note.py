@@ -832,13 +832,32 @@ def test_TC_ArgusAgent_DOCS_001_10_front_door_version_surface_is_unchanged() -> 
     ``bundle_to_canonical_payload`` also carries the version INSIDE the hashed payload —
     which is exactly why DF-8-5-A's literal was able to move a published signature.
 
-    ``0.1.0`` is asserted here as a DELIBERATE pin: Story 9.2 ships ``0.1.0`` un-bumped
+    ~~``0.1.0`` is asserted here as a DELIBERATE pin: Story 9.2 ships ``0.1.0`` un-bumped
     (D1), so this assertion was left untouched by the release rather than edited to
-    accommodate one.
+    accommodate one.~~
+
+    🔧 **AMENDED 2026-08-29 — the pin moves to ``1.0.0``, and the reason is a refusal, not
+    a preference.** The original is struck rather than deleted (§3.4): D1 was correct for
+    9.2, and the record of why this literal sat at ``0.1.0`` for four epics is what makes
+    the move auditable. What falsified it: ``v1.0.0`` was tagged and published on
+    2026-08-28, and ``release.yml`` then REFUSED that tag four consecutive times —
+
+        [E5] tag 'v1.0.0' declares version '1.0.0' but pyproject.toml states '0.1.0'.
+             The resolvable name and the artifact metadata must state the same version.
+
+    (runs 33180657062, 33184222319, 33184399896, 33185012952). The preflight was right and
+    the tree was wrong: a distribution that resolves as ``v1.0.0`` while reporting ``0.1.0``
+    in its own metadata states two versions of itself — DF-8-5-A's defect class on a
+    different pair of surfaces. The bump makes the tree agree with what shipped.
+
+    **``__status__`` deliberately does NOT move.** A major-version number and the FR34
+    disclosure tier are independent facts: the >=80% precision gate is still uncleared, so
+    the instrument is still provisional and still says so. Bumping a version to retire a
+    disclosure would be the goalpost move FR34 exists to prevent.
     """
     import argus
 
-    assert argus.__version__ == "0.1.0"
+    assert argus.__version__ == "1.0.0"
     assert argus.__status__ == "beta"
     assert argus.__all__ == ["__version__", "__status__"]
 

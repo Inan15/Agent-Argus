@@ -5,20 +5,43 @@ are recorded here. Format follows [Keep a Changelog](https://keepachangelog.com/
 versioning intent is [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
 > **Honesty preamble — read this before you read a version number.**
-> `argus-agent` is **still not published to any package index**, and no PyPI publication was attempted.
-> What changed with `0.1.0` is that a **release workflow now exists** (`.github/workflows/release.yml`):
-> on a `v*.*.*` tag it builds an sdist and a wheel and attaches both to a GitHub Release. The
-> distribution **will be resolvable by the VCS pin below — and by nothing else — once that tag is
-> created and pushed**:
+>
+> **Superseded, kept on the record (§3.4).** Until 2026-08-29 this preamble read:
+>
+> > ~~`argus-agent` is **still not published to any package index**, and no PyPI publication was
+> > attempted. What changed with `0.1.0` is that a **release workflow now exists**
+> > (`.github/workflows/release.yml`): on a `v*.*.*` tag it builds an sdist and a wheel and attaches
+> > both to a GitHub Release. The distribution **will be resolvable by the VCS pin below — and by
+> > nothing else — once that tag is created and pushed**. ⚠️ **That command does not resolve today.**
+> > Tag `v0.1.0` has **not been created or pushed** (`git tag -l` is empty at this commit), so `pip`
+> > cannot find the ref. The capability is *prepared*, not *exercised* — nobody has run this install
+> > against a real tag. Creating and pushing the tag is an operator step this repository deliberately
+> > did not take.~~
+>
+> 🔴 **CORRECTED 2026-08-29.** Every sentence above was accurate when written and each one is now
+> false in a different way, which is why the block is struck whole rather than patched. What is true,
+> **measured 2026-08-29**:
+>
+> * **The repository is PUBLIC** (`gh repo view Inan15/Agent-Argus --json visibility` → `PUBLIC`).
+>   The preamble's predecessor said `PRIVATE`, measured 2026-08-15; that measurement was correct on
+>   its date and was never re-run.
+> * **A release exists.** Tag `v1.0.0` was pushed 2026-08-28 at `5bd9396`
+>   (`git ls-remote --tags origin`), with a published GitHub Release carrying built artifacts.
+> * **`v0.1.0` was never created.** Every install line in this repository pointed at a tag that does
+>   not exist, while the tag that does exist was named nowhere. The caveats stayed *literally* true
+>   and became *collectively* false — which is precisely how a guard keyed to the anticipated
+>   version number can watch the wrong one.
+> * **Still true, and unchanged:** `argus-agent` is on **no package index**, and no PyPI publication
+>   has been attempted. The VCS pin below is the whole resolution story.
+>
+> The corrected dependency string — this one resolves:
 >
 > ```
-> pip install "argus-agent @ git+https://github.com/Inan15/Agent-Argus.git@v0.1.0"
+> pip install "argus-agent @ git+https://github.com/Inan15/Agent-Argus.git@v1.0.0"
 > ```
 >
-> ⚠️ **That command does not resolve today.** Tag `v0.1.0` has **not been created or pushed**
-> (`git tag -l` is empty at this commit), so `pip` cannot find the ref. The capability is *prepared*,
-> not *exercised* — nobody has run this install against a real tag. Creating and pushing the tag is
-> an operator step this repository deliberately did not take.
+> Prefer a standalone binary to a Python install? The Release page attaches Linux, macOS and Windows
+> packages; `install.sh` / `install.ps1` at the repository root fetch and place them.
 >
 > **What is proven and what is not, stated separately.**
 >
@@ -133,6 +156,35 @@ local `pytest`/`mypy`/`bandit` run is necessary, not sufficient, and is recorded
 ---
 
 ## Unreleased
+
+_Nothing yet. The next consumer-visible change lands here._
+
+---
+
+## 1.0.0 — 2026-08-29
+
+> **This heading was `## Unreleased` until 2026-08-29, and the relabel is the correction, not a
+> reorganisation.** Everything below this line shipped: tag `v1.0.0` points at `5bd9396` and was
+> pushed on 2026-08-28, and GitHub Releases carrying built artifacts exist on both
+> `Inan15/Agent-Argus` and `XAgents-ai/argus-agent-releases`. Calling shipped work *unreleased* is
+> the same defect class this release is correcting elsewhere in this file, so it is fixed in the
+> same change that found it rather than left for a later one.
+
+**What v1.0.0 actually is, stated before the feature list.** It is the `0.1.0` tree plus the changes
+recorded below, released under the **FR34 Disclosed Tier**: the >=80% finding-precision gate is
+**still not cleared**, `argus.__status__` remains `"beta"`, and every user-facing surface still
+carries the provisional notice. **A major version number here records a stable consumer contract, not
+a cleared precision gate.** Nothing about the disclosure obligation changed with this number, and a
+reader who takes `1.0.0` as evidence of validated precision has been misled — which is why this
+paragraph is above the changes rather than below them.
+
+**How it was released, including what refused.** The tag was pushed before `pyproject.toml` was
+bumped, so `release.yml` **refused it four consecutive times** (runs 33180657062, 33184222319,
+33184399896, 33185012952) on `[E5] tag 'v1.0.0' declares version '1.0.0' but pyproject.toml states
+'0.1.0'`, and later also on `[E4] a release already exists for tag 'v1.0.0'`. The preflight was
+correct both times. The published artifacts therefore did **not** reach the release page through the
+gated path; the version disagreement is fixed in this release, and the record of the refusal is kept
+here rather than tidied away.
 
 ### Changed — a mistyped invocation is refused, and no longer publishes a verdict
 
@@ -756,21 +808,34 @@ is unchanged by this release.
 
 ### Resolving `argus-agent`
 
+> 🔴 **CORRECTED 2026-08-29 — read this before the table.** The row below recorded, on 2026-08-08,
+> that the pin *did not resolve yet* because tag `v0.1.0` had not been created. **`v0.1.0` was never
+> created at all.** The first tag this project ever pushed was `v1.0.0`, on 2026-08-28. So this row
+> described a resolution route that never came into being, and the caveat outlived the release it was
+> waiting for. The row is amended in place rather than struck, because striking it would leave the
+> dead pin as the most prominent text in the 0.1.0 section; the sentence it replaced is quoted here
+> in full instead: ~~"⚠️ **does not resolve yet: tag `v0.1.0` has not been created or pushed**
+> (`git tag -l` is empty at this commit). Prepared, not exercised."~~ For the route that does work,
+> see the 1.0.0 section above.
+
 | | |
 |---|---|
-| **Dependency string** | `argus-agent @ git+https://github.com/Inan15/Agent-Argus.git@v0.1.0` — ⚠️ **does not resolve yet: tag `v0.1.0` has not been created or pushed** (`git tag -l` is empty at this commit). Prepared, not exercised. |
+| **Dependency string** | `argus-agent @ git+https://github.com/Inan15/Agent-Argus.git@v1.0.0` — the pin recorded here in 2026-08-08 named `v0.1.0`, a tag that was never created; see the correction directly above. |
 | **Index** | none — `argus-agent` is on no package index |
 | **Authentication** | **none required if and only if the repository is public.** ~~⚠️ Visibility was NOT measured when this line was written; open the URL signed out to check. If it is private, the consuming CI needs a read token and must carry it in the URL.~~ 🔴 **CORRECTED 2026-08-15 (Story 12.9 / AC4)** — struck, not deleted (§3.4). It has been measured, and the correction is the paragraph directly below this table. |
 | **Status** | **INTERIM.** A git ref is not an immutable index artifact: it depends on the repository staying reachable and the tag staying put. |
 | **Exit condition** | When `argus-agent` is claimed on PyPI **and** a PyPI Trusted Publisher (OIDC) is configured for this repository, the publish step is added directly to `.github/workflows/release.yml` — trusted publishing cannot be used from inside a *reusable* workflow — with `permissions: id-token: write` and **no stored token**, and the pin above is replaced by a plain index install of the distribution name. **RE-AFFIRMED 2026-08-15 (Story 12.9 / DN-1):** the index channel still does not ship and no publish was attempted; this condition is restated with a date so *"interim"* keeps a named end rather than becoming permanent by silence. |
 
-Repository visibility, MEASURED 2026-08-15 by `gh repo view Inan15/Agent-Argus --json
-visibility,isPrivate` -> `PRIVATE` / `isPrivate: true`. What that costs a consumer, stated plainly:
-while it stays private the pinned install cannot resolve for anybody — tag or no tag — without a read
-credential carried in the URL (`git+https://<credential>@github.com/...`), and a GitHub Release on a
-private repository is not publicly resolvable either. Making the repository public is an outward-facing
-operator act that has not been taken. This is a dated measurement, not a standing claim: re-run the
-command above before relying on it.
+Repository visibility, MEASURED 2026-08-29 by `gh repo view Inan15/Agent-Argus --json
+visibility,isPrivate` -> `PUBLIC` / `isPrivate: false`. What that buys a consumer, stated
+plainly: the pinned install resolves for anybody with no credential, and the GitHub Release and
+its attached packages are publicly downloadable. This SUPERSEDES the 2026-08-15 measurement,
+which read `PRIVATE` / `isPrivate: true` and said the pinned install cannot resolve for anybody
+— tag or no tag — without a read credential carried in the URL
+(`git+https://<credential>@github.com/...`) — accurate on its date, never re-run for fourteen
+days, and false for an unknown part of them. That is the whole hazard of this sentence: it is a
+dated measurement, not a standing claim, and re-running the command above before relying on it
+is the only thing that keeps it true.
 
 PyPI publication is deliberately **not** attempted here: a released name+version on an index can never
 be replaced, which makes it an operator decision taken with credentials in hand, not a change a release
