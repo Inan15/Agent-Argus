@@ -4,7 +4,7 @@
 
 ## Provenance
 
-- Commit descriptor (`git rev-parse HEAD` at generation): `1fc44da1703aad9efa1f565fe3bfb7885b3378de`
+- Commit descriptor (`git rev-parse HEAD` at generation): `8c05a107aee2b2354f1078855a2a32329931e3cd`
 - Enumerated population (the HONEST label — Story 12.1, closing `DF-10-4-D`): the file list in this artifact is enumerated from the git INDEX (`git ls-files`), NOT from the tree at the commit descriptor above. The two are the same tree exactly when `argus/` carries no staged-or-uncommitted change, and `TC-ArgusAgent-DOGFOOD-001-50` fails unless they agree — so this artifact cannot quietly describe one tree while citing another.
 - Source files (tracked `argus/`): **96**
 
