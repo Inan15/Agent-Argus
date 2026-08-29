@@ -1,18 +1,22 @@
 # Standalone binary builds — Windows, macOS and Linux.
 #
 # STATUS, STATED PLAINLY: this workflow builds and smoke-tests standalone executables. It
-# does NOT create a tag, does NOT create a GitHub Release in THIS repository, and does not
-# touch `release.yml`'s tag-triggered path. It is manually dispatched.
+# does NOT create a tag and does NOT create a GitHub Release; it attaches packages to a
+# release that already exists, and never touches `release.yml`'s tag-triggered path.
 #
 # WHY IT EXISTS: PyInstaller cannot cross-compile. A macOS binary needs a macOS runner and a
 # Linux binary needs a Linux one, so the only way to ship all three from one place is a
 # matrix. The 2026-08-17 Windows beta was built on a developer machine, which is exactly the
 # single-platform limitation this removes.
 #
-# WHERE THE ARTIFACTS GO: each job uploads a workflow artifact. If `release_tag` is supplied
-# AND the `RELEASES_REPO_TOKEN` secret is configured, the packages are additionally attached
-# to that tag in the public distribution repository. Without the secret the workflow still
-# builds and still smoke-tests — it simply does not publish, which is the safe default.
+# WHERE THE ARTIFACTS GO: each job uploads a workflow artifact. If `release_tag` is supplied,
+# the packages are additionally attached to that tag in `releases_repo`.
+#
+# 🔧 CHANGED 2026-08-29. Publishing into THIS repository needs no secret: the built-in
+# `github.token` carries the `contents: write` declared below. `RELEASES_REPO_TOKEN` is now
+# OPTIONAL and needed only to publish into a DIFFERENT repository, which `github.token`
+# cannot reach. Previously the secret was mandatory for any publish, so an unset secret
+# meant a green run that shipped nothing — see the guard in `Attach to the public release`.
 
 name: Build standalone binaries
 
@@ -20,16 +24,18 @@ on:
   workflow_dispatch:
     inputs:
       release_tag:
-        description: "Tag in the public releases repo to attach the packages to (e.g. v0.1.0-beta). Leave empty to build artifacts only."
+        description: "Tag of an existing release to attach the packages to (e.g. v1.0.0). Leave empty to build artifacts only."
         required: false
         default: ""
       releases_repo:
-        description: "Public distribution repository."
+        description: "Repository holding that release. Defaults to this one; anything else needs RELEASES_REPO_TOKEN."
         required: false
-        default: "XAgents-ai/argus-agent-releases"
+        default: "Inan15/Agent-Argus"
 
+# `contents: write` so `github.token` can attach assets to a release in this repository.
+# Nothing else is granted, and no job creates or moves a tag.
 permissions:
-  contents: read
+  contents: write
 
 jobs:
   build:
@@ -176,13 +182,16 @@ jobs:
         # substitutes them into the script text — the `DF-9-2-D` defect, where an
         # interpolated value is code rather than data. Same containment as `release.yml`.
         env:
-          GH_TOKEN: ${{ secrets.RELEASES_REPO_TOKEN }}
+          GH_TOKEN: ${{ secrets.RELEASES_REPO_TOKEN || github.token }}
           RELEASE_TAG: ${{ inputs.release_tag }}
           RELEASES_REPO: ${{ inputs.releases_repo }}
           ASSET: argus-agent-${{ steps.ver.outputs.version }}-${{ matrix.label }}.zip
         run: |
+          # Unreachable in normal Actions runs since `github.token` always exists. It fails
+          # LOUDLY rather than warning: a publish that silently does not happen is
+          # indistinguishable from one that did, which is the defect this replaced.
           if [ -z "${GH_TOKEN}" ]; then
-            echo "::warning::RELEASES_REPO_TOKEN is not configured — built and verified, not published."
-            exit 0
+            echo "::error::no token available — built and verified, but NOT published."
+            exit 1
           fi
           gh release upload "$RELEASE_TAG" "$ASSET" --repo "$RELEASES_REPO" --clobber
