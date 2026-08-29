@@ -12,6 +12,17 @@ pip install "argus-agent @ git+https://github.com/Inan15/Agent-Argus.git@v1.0.0"
 argus audit .
 ```
 
+**See it in 90 seconds** — `python examples/demo.py` builds a repository whose test suite is green
+under `pytest`, watches Argus block the release (`exit 2`) because the test asserts a value it
+invented rather than the one the code returned, then fixes the test and watches it clear (`exit 0`).
+Hermetic, no network, and nothing in it is pre-recorded. See [examples/](examples/).
+
+**Which findings can block, stated plainly.** Only an **AST-corroborated** finding is allowed to move
+a verdict to blocking. Orphan code, hardcoded secrets and tool-runner findings are **advisory by
+contract** — they are reported and they never fail your build on their own. That is deliberate: a
+wrong 🔴 is the failure that gets a tool deleted from a pipeline, so Argus would rather tell you
+about something than block you over a guess.
+
 No API key. No account. **No network call at all** on the default path, and zero LLM tokens — the
 verdict is a pure function of what was measured, so the same commit gives the same answer on any
 machine, in any order, on any host.
