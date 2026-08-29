@@ -11,11 +11,11 @@ Report privately through GitHub:
 
 This keeps the report visible only to you and the maintainers until a fix exists.
 
-> **Maintainer note.** Private vulnerability reporting must be switched on for this repository
-> (Settings → Code security and analysis → Private vulnerability reporting). If the button above is
-> not present, that setting has not been enabled yet, and this document is describing an intention
-> rather than a working channel — please open an issue saying only *"security contact needed"*, with
-> no detail, and a maintainer will arrange a private channel.
+*Private vulnerability reporting is enabled on this repository — verified 2026-08-29 by
+`gh api repos/Inan15/Agent-Argus/private-vulnerability-reporting` → `{"enabled": true}`.
+That is a dated measurement of a setting an owner can change, not a standing guarantee: if
+the button is not there when you look, open an issue saying only "security contact needed",
+with no detail, and a maintainer will arrange a private channel.*
 
 ### What to expect
 
