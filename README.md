@@ -1,17 +1,69 @@
 # Agent-Argus (`argus-agent`) 🛡️👁️
 
-> **The Agent-First, Deterministic Repository Audit & Assurance Engine**
+> **Does your test suite actually test anything?**
 
-`Agent-Argus` combines the high-precision **APAA (AI Project Assurance Audit)** Python verification engine with the vendor-portable **RAM (Repository Audit Method)** framework. Named after *Argus Panoptes* — the mythological 100-eyed all-seeing guardian — `Agent-Argus` provides multi-agent, cross-subsystem vigilance over codebases with zero blind spots.
+Agent-Argus audits a repository and answers that with an exit code your CI can act on. It looks for
+the ways code comes to *look* finished without being finished: **tests that assert nothing**,
+**functions nothing calls**, **assertions that cannot fail**, and **secret warnings that were
+suppressed rather than fixed**.
 
-> **Never run `argus` before?** Start at **[docs/first-run.md](docs/first-run.md)** — install, your first audit, how to read the ledger, and what each verdict and exit code means. Four sections, nothing else. *(Added 2026-08-15, Story 12.8: until then this README was the only integrator-shaped document in the repository and it linked to `docs/` nowhere at all — measured, zero occurrences — so a first-time reader met the full integration surface or nothing. The page is repository documentation and is **not** packaged in the wheel, which is why this link is its whole delivery mechanism.)*
+```bash
+pip install "argus-agent @ git+https://github.com/Inan15/Agent-Argus.git@v1.0.0"
+argus audit .
+```
 
-> **Integrating `argus audit` into a pipeline?** Every consumer-visible change to the exit codes, artifact schemas, defaults, rendered strings and public API — and what deliberately did *not* change — is recorded in **[CHANGELOG.md](CHANGELOG.md)**.
+No API key. No account. **No network call at all** on the default path, and zero LLM tokens — the
+verdict is a pure function of what was measured, so the same commit gives the same answer on any
+machine, in any order, on any host.
 
-> 🛡️ **Instrument Status: Verified Production Baseline (FR34 Disclosed Tier)**
-> Argus's audit is deterministic and reproducible by construction. Argus's finding precision has not been independently validated, so treat a finding as a prompt to look rather than as a verdict; its findings rest on the Argus dogfood corpus, a self-audit of this repository. The >=80% precision gate has not been EVALUATED rather than evaluated and missed: its precision condition is UNEVALUABLE because the ratified corpus was read and no finding was promoted to verdict-eligible, so the ratio has an empty denominator rather than a low value. This notice is removed only when the >=80% precision gate is met; nothing else removes it.
+**Measured against 8 production repositories — 4,659 source files and 16,940 test functions — with
+0 blocking false positives.** That is a false-*alarm* measurement on a named corpus, which is the
+number that matters for a tool you intend to block a pipeline with. What it does and does not cover
+is stated in full under [Instrument status](#-instrument-status) below, not buried.
+
+| | |
+|---|---|
+| 🔍 **Ten languages, really parsed** | Python, JavaScript, TypeScript, Go, Rust, Java, C, C++, Ruby, PHP — all grounded against a real tree-sitter AST, all in the default install. |
+| 📊 **An honest remainder** | Every file is graded `audited_deep` / `audited_shallow` / `skipped` and counted, never averaged. A file it could not assess stays in the denominator. |
+| 🧾 **Evidence, not opinion** | Findings cite the AST span they came from. The verdict is a hash-chained, append-only artifact you can diff and re-derive. |
+| 🔒 **Nothing leaves your machine** | The deep, LLM-backed pass is opt-in behind one flag and discloses itself before the first byte moves. |
+| ⚖️ **It says what it did not check** | `INSUFFICIENT_COVERAGE` is a first-class verdict. Argus would rather tell you it could not judge than guess. |
+
+**Never run it before?** → **[docs/first-run.md](docs/first-run.md)** — install, your first audit,
+reading the ledger, what each verdict and exit code means. Four sections, nothing else.
+
+**Wiring it into a pipeline?** → **[CHANGELOG.md](CHANGELOG.md)** records every consumer-visible
+change to exit codes, artifact schemas, defaults, rendered strings and the public API — and what
+deliberately did *not* change.
+
+**Want to help?** → **[CONTRIBUTING.md](CONTRIBUTING.md)** lists six specific jobs, including the
+one that matters most: finding a case where Argus is wrong.
+
+---
+
+## 🛡️ Instrument status
+
+> **FR34 Disclosed Tier — mechanically enforced on every user-facing surface.**
 >
-> **Production Certification**: Empirically verified 0 blocking false positives across 8 production repositories (4,659 source files, 16,940 test functions). Certified safe for production CI gating without false alarms.
+> Argus's audit is deterministic and reproducible by construction. Argus's finding precision has not been independently validated, so treat a finding as a prompt to look rather than as a verdict; its findings rest on the Argus dogfood corpus, a self-audit of this repository. The >=80% precision gate has not been EVALUATED rather than evaluated and missed: its precision condition is UNEVALUABLE because the ratified corpus was read and no finding was promoted to verdict-eligible, so the ratio has an empty denominator rather than a low value. This notice is removed only when the >=80% precision gate is met; nothing else removes it.
+
+**What the 0-false-positive figure covers.** Empirically verified across 8 production repositories
+(4,659 source files, 16,940 test functions): no finding that would block a release was raised on
+code that did not warrant it. It is a statement about *that corpus*, and the corpus is named rather
+than summarised — which is the only form of that claim worth anything.
+
+**What it does not cover.** It is not a precision measurement, and it is not independent. Precision
+asks *"of the findings raised, how many were real?"*, and answering it needs findings to adjudicate;
+on mature repositories Argus raises almost none, which is why the precision condition is currently
+`UNEVALUABLE` rather than low. Argus does not claim its findings are validated, and no verdict it
+issues is an attestation that code is correct — it reports the **absence of detected blocking
+findings within an assessed scope**, which is a narrower and more honest claim.
+
+*(Provenance note, kept for auditors rather than first-time readers: the `docs/first-run.md` link
+above was added 2026-08-15 by Story 12.8 — until then this README was the only integrator-shaped
+document in the repository and linked to `docs/` nowhere at all, measured, zero occurrences, so a
+first-time reader met the full integration surface or nothing. That page is repository documentation
+and is **not** packaged in the wheel, which is why the link is its whole delivery mechanism.)*
 
 ---
 
