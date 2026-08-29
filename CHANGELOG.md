@@ -92,14 +92,21 @@ versioning intent is [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 > file and `README.md` carry exactly that value, and the same function renders it into the GitHub
 > Release note, so the three cannot disagree.
 
-~~CI evidence: NOT ESTABLISHED. No executed gate covers the commit being released — the most recent
-`audit-ci.yml` run is run 31341363300, which covers sha 00c8d1b, 34 commits behind the commit being
-released and therefore evidences a different tree; a run id quoted without the sha it covers is a
-half-truth, so it is named here as SUPERSEDED rather than cited. Observed 2026-08-15 through the GitHub
-API. The human step that would establish one, and the only one: push `master` to `origin` and let
-`audit-ci.yml` run to success on the released commit, then re-derive this sentence from that run. A
-local `pytest`/`mypy`/`bandit` run is necessary, not sufficient, and is recorded as LOCAL
-(architecture.md §H).~~
+~~CI evidence: run 33235322979 (ac1265e6ffabe0a6cb3b7633dc3107bd3556b274, 3/3 legs green) on
+`audit-ci.yml` covers the commit being released. Observed 2026-08-29 through the GitHub API.
+SCOPE of that run, because a green run is evidence for what it EXECUTED and this one did not
+execute everything it carries. Each leg reported `1777 passed, 4 skipped`. The run recorded the
+following as NOT EVALUATED rather than as passing, so the citation above does not reach them:
+(1) `tests/test_installed_artifact.py` (`TC-ArgusAgent-RELEASE-001-25`..`-28`) — the
+fresh-environment installed-artifact proof: every `[project.scripts]` console script, `argus
+--help`, a fixture audit run to a real verdict, and an MCP JSON-RPC exchange over stdio through
+the installed `argus-mcp` shim. All four SKIPPED on all three legs, each reporting the named E6
+outcome *NOT EVALUATED — uv is not on PATH, so the wheel could NOT be installed into a fresh
+environment and nothing about the INSTALLED distribution was checked*. So the front-door claim
+of this release is held by LOCAL runs only, and this citation does not cover it. Provisioning
+`uv` on the CI runner is a tooling decision that has not been taken; it is filed OPEN and
+unscheduled as `DF-12-9-B`, owned by the Engineering Lead. Reading the citation as covering
+these would be the same class of overstatement as quoting a run id without the sha it covers.~~
 
 🔴 **SUPERSEDED 2026-08-16 — struck, not deleted (§3.4 evidence immutability).** The human step that
 sentence named was taken: `master` was pushed to `origin`, `audit-ci.yml` executed on the released
@@ -136,14 +143,21 @@ the derivation is right for whichever branch the observed facts imply and that t
 that value; it does not require the facts to be one particular way, because a guard that can only
 pass in a single instant is the mirror image of one that can never fail.
 
-CI evidence: NOT ESTABLISHED. No executed gate covers the commit being released — the most recent
-`audit-ci.yml` run is run 31908861401, which covers sha cea92689b14f730ff529caeabd74c1f33f84821b and
-therefore evidences a different tree; a run id quoted without the sha it covers is a half-truth, so
-it is named here as SUPERSEDED rather than cited. Observed 2026-08-16 through the GitHub API. The
-human step that would establish one, and the only one: push `master` to `origin` and let
-`audit-ci.yml` run to success on the released commit, then re-derive this sentence from that run. A
-local `pytest`/`mypy`/`bandit` run is necessary, not sufficient, and is recorded as LOCAL
-(architecture.md §H).
+CI evidence: run 33235322979 (ac1265e6ffabe0a6cb3b7633dc3107bd3556b274, 3/3 legs green) on
+`audit-ci.yml` covers the commit being released. Observed 2026-08-29 through the GitHub API.
+SCOPE of that run, because a green run is evidence for what it EXECUTED and this one did not
+execute everything it carries. Each leg reported `1777 passed, 4 skipped`. The run recorded the
+following as NOT EVALUATED rather than as passing, so the citation above does not reach them:
+(1) `tests/test_installed_artifact.py` (`TC-ArgusAgent-RELEASE-001-25`..`-28`) — the
+fresh-environment installed-artifact proof: every `[project.scripts]` console script, `argus
+--help`, a fixture audit run to a real verdict, and an MCP JSON-RPC exchange over stdio through
+the installed `argus-mcp` shim. All four SKIPPED on all three legs, each reporting the named E6
+outcome *NOT EVALUATED — uv is not on PATH, so the wheel could NOT be installed into a fresh
+environment and nothing about the INSTALLED distribution was checked*. So the front-door claim
+of this release is held by LOCAL runs only, and this citation does not cover it. Provisioning
+`uv` on the CI runner is a tooling decision that has not been taken; it is filed OPEN and
+unscheduled as `DF-12-9-B`, owned by the Engineering Lead. Reading the citation as covering
+these would be the same class of overstatement as quoting a run id without the sha it covers.
 >
 > **The VCS pin is INTERIM.** Its exit condition is named in
 > [Resolving `argus-agent`](#resolving-argus-agent) below, so "interim" has an end rather than becoming

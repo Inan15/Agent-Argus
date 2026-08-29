@@ -225,15 +225,39 @@ _OBSERVATION_2026_08_15 = GateObservation(
 # invite the mirror-image error of the one this module exists to stop: attaching a run to a
 # tree it does not cover, in the direction that flatters nobody but still misleads.
 # ─────────────────────────────────────────────────────────────────────────────
+# ─────────────────────────────────────────────────────────────────────────────
+# 🔧 **RE-OBSERVED 2026-08-29.** The constant below held the 2026-08-16 observation
+# (run 31908861401, sha cea9268) for thirteen days, during which `master` moved four times
+# and `audit-ci.yml` ran on every push. `derive_release_status` is pure and was never wrong;
+# its INPUT was a hand-recorded observation that nothing required anyone to re-take, so the
+# v1.0.0 release note published *"CI evidence: NOT ESTABLISHED — no executed gate covers the
+# commit being released"* at a moment when a green gate covering that exact commit existed.
+#
+# That is the THIRD instance in this change of one defect: a fact recorded once, by hand,
+# with no mechanism to notice the world moving underneath it — after `_released_versions`
+# reading a local tag list and `RELEASE_001_29` asserting the repository has no tags. Filed
+# rather than merely fixed: the standing gap is that this observation has no freshness guard,
+# and re-taking it stays a manual step until one exists.
+#
+# Re-taken by `gh run view 33235322979 --json headSha,conclusion,jobs` and `--log`:
+#   run 33235322979  `ArgusAgent Repository Audit & Assurance CI` (audit-ci.yml)
+#                    push on `master`, head sha ac1265e6ffabe0a6cb3b7633dc3107bd3556b274
+#                    conclusion success, 3/3 legs (3.10, 3.11, 3.12) green
+#                    1777 passed, 4 skipped
+# The `unexercised` disclosure below was RE-CHECKED against this run's logs rather than
+# carried forward on faith: all four `test_installed_artifact.py` guards still SKIP on every
+# leg with the same E6 outcome, so the citation still does not cover the fresh-environment
+# installed-artifact proof, and DF-12-9-B is still open.
+# ─────────────────────────────────────────────────────────────────────────────
 RECORDED_GATE_OBSERVATION = GateObservation(
-    run_id="31908861401",
-    run_sha="cea92689b14f730ff529caeabd74c1f33f84821b",
+    run_id="33235322979",
+    run_sha="ac1265e6ffabe0a6cb3b7633dc3107bd3556b274",
     conclusion="success",
     legs="3/3",
     workflow=_GATE_WORKFLOW,
-    measured_on="2026-08-16",
+    measured_on="2026-08-29",
     behind_by=0,
-    outcomes="1539 passed, 4 skipped",
+    outcomes="1777 passed, 4 skipped",
     unexercised=(
         "`tests/test_installed_artifact.py` (`TC-ArgusAgent-RELEASE-001-25`..`-28`) — the "
         "fresh-environment installed-artifact proof: every `[project.scripts]` console "
