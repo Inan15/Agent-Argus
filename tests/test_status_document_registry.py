@@ -464,6 +464,10 @@ _STATUS_DOCUMENTS: tuple[str, ...] = (
     # Registered 2026-08-27 for the Epic-19 retrospective — `AI-E12-1`'s second half on its EIGHTH
     # consecutive retrospective. Written by the session that wrote the document.
     "epic-19-retro-2026-08-27.md",
+    "sprint-change-proposal-2026-08-28.md",
+    # Registered 2026-08-29 for the Epic-20 retrospective — `AI-E12-1`'s second half on its NINTH
+    # consecutive retrospective. Written by the session that wrote the document.
+    "epic-20-retro-2026-08-29.md",
     # Registered 2026-08-29 by the Correct Course session that authored it — `AI-E12-1`'s second
     # half again: registration as part of the authoring step rather than a later cleanup.
     # WHAT THE DOCUMENT ASSERTS, so the registration is judged against its contents. It records

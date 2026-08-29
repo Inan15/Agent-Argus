@@ -59,6 +59,7 @@ _ARTIFACT_DIR = _REPO_ROOT / "_bmad-output" / "design-artifacts" / "ArgusAgent"
 # too — so a future edit can neither quietly drop the exit-code contract nor bolt on an
 # unreviewed claim section.
 _NOTE_SECTIONS: tuple[str, ...] = (
+    "### Added — Post-V1 E2E Integration & Verification Suite (`tests/test_post_v1_integration.py`)",
     # `## Unreleased` — added 2026-08-15 by Story 12.8 (AC3 + AC8). A PURE INSERTION: no existing
     # section moved relative to any other, and nothing was demoted.
     # Placed FIRST, and the placement is the DECISION this registry's comment above demands rather

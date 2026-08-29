@@ -3896,8 +3896,36 @@ anti-pattern).
 > invariant. And `5459` was carried forward from `AI-E17-10` after the ledger had grown — the
 > lone CR sits at **5569** today, at byte offset **425,623**.
 >
-> ⛔ **RE-MEASURE IT AGAIN AT TASK 0.** This number moves every time the ledger is appended to,
-> which is exactly why `AI-E17-10` asks for the measurement and not for the literal. The two
-> line-number views **agree at 5569** and disagree only on the file TOTAL — `grep -n` reports
-> 8,225, `splitlines()` reports 8,226, because `splitlines()` counts the lone CR as a break.
 **Then** every edit is made in binary mode and both byte invariants are re-measured before and after.
+
+---
+
+## Epic 20: Post-V1 Capabilities — Remediation, IDE Diagnostics & Multi-Language Expansion
+
+> **Goal**: Expand ArgusAgent capabilities into real-time IDE diagnostics, automated code remediation proposals, and multi-language AST analysis (TypeScript, Go, Java).  
+> **Source Signal**: [sprint-change-proposal-2026-08-28.md](sprint-change-proposal-2026-08-28.md) (approved 2026-08-28)
+
+### Story 20.1: Multi-Language AST Parsers (`argus.parsers.extended`)
+- **Goal**: Implement Tree-sitter AST parser adapters for TypeScript/JavaScript, Go, and Java conforming to `BaseASTParser`.
+- **Acceptance Criteria**:
+  - `TSParser`, `GoParser`, and `JavaParser` pass standard parser test matrix.
+  - Partial syntax errors emit error recovery nodes without process panic.
+
+### Story 20.2: Defect Remediation Engine (`argus.remediation`)
+- **Goal**: Build automated remediation engine generating unified diff patches for detected vacuous test and assertion defects.
+- **Acceptance Criteria**:
+  - Emits valid `.patch` files matching target source lines.
+  - Verification dry-run confirms test contract semantics remain intact.
+
+### Story 20.3: LSP Diagnostic Adapter (`argus.adapters.lsp`)
+- **Goal**: Implement LSP JSON-RPC adapter streaming findings to IDE code editors (VS Code / Antigravity).
+- **Acceptance Criteria**:
+  - Emits LSP `textDocument/publishDiagnostics` notifications over stdio/socket.
+  - Inline severity mapping matches Argus finding severity grades.
+
+### Story 20.4: Post-V1 Integration & Verification Suite
+- **Goal**: E2E integration test suite validating multi-language parsing, remediation diff generation, and LSP output.
+- **Acceptance Criteria**:
+  - 100% green test execution across Windows & Linux environments.
+  - Full regression suite verifying Epics 1–19 core guarantees remain unbroken.
+

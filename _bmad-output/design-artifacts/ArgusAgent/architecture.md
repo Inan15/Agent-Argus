@@ -872,6 +872,26 @@ non-deterministic LLM substrate.
 *(Section reviewed end-to-end 2026-08-10b. All three entries are now closed or assigned; none is
 left as a bare OPEN marker with no owner.)*
 
+### J. Post-V1 Architectural Extensions (FR38–FR40) *(added 2026-08-29 by Story 20.1–20.4 / AI-E20-3)*
+
+⛔ **REACHABILITY, stated before the component specs so this section cannot be read as shipped capability (added 2026-08-29, AI-E20-3).** This section certifies **module PLACEMENT ONLY**. Measured 2026-08-29: `argus.remediation`, `argus.adapters.lsp` and `argus.parsers` have **no importer anywhere else in `argus/`**, no reference from `argus/cli.py`, and no console-script entry point beyond `argus.cli:main` and the FR35 MCP alias — so **no operator, integrator or editor can reach any of J1, J2 or J3.** All three are disposed `library-seam` in `E-PRD/prd.md` (FR38/FR39/FR40) and filed as `DF-20-1-A`/`-2-A`/`-3-A`. `tests/test_post_v1_integration.py` reaches them by direct import, so it pins library behaviour and must not be cited as evidence of reachability. Proven, not asserted: `tests/test_v1_commitment_closure.py` (`TC-ArgusAgent-DOCS-001-34`) refutes any of these three being called `wired` against the static import graph.
+
+**J1. Extended Multi-Language AST Parsers (`argus.parsers.extended`)** — ⛔ **these add NO grounding and NO extraction: multi-language AST grounding is delivered in V1** by `argus/shared/source_languages.py`, and TS/JS, Go and Java definitions are already extracted by `argus/index/ast_index.py::_DEF_KIND_BY_NODE` — **both modules byte-unchanged by Epic 20.** This module is an unreachable duplicate of the production indexer and does **not** close `DF-10-2-A` (C, C++, Ruby, Rust), which stays OPEN. See FR40.
+- **Architecture & Interface**: `BaseASTParser` abstract base class defined in `argus.parsers.base` with frozen PURE data models (`ParseResult`, `ParserErrorNode`, `ASTNodeSummary`).
+- **Tree-sitter Parser Adapters**: TypeScript/TSX/JavaScript (`TSParser`), Go (`GoParser`), and Java (`JavaParser`) implementations wrapping tree-sitter core (`>= 0.25.0, < 0.26`).
+- **Fault-Tolerant Parsing**: Syntax errors are captured as recovery nodes (`ERROR` or `MISSING` tree-sitter AST nodes) in `ParseResult.error_nodes` without process panics or uncaught exceptions, allowing partial AST generation even on malformed inputs.
+- **Canary Alignment**: Strict behavioral alignment with `argus.shared.grammar_status` canary checks.
+
+**J2. Automated Defect Remediation Engine (`argus.remediation`)**
+- **Data Models**: PURE Pydantic models (`RemediationPatch`, `RemediationResult`) with relative POSIX workspace path containment (NFR-S1).
+- **Patch Generator**: `RemediationEngine` transforms vacuous assertions (e.g. `assert True`, `assert 1 == 1`, empty test function bodies) into concrete, non-vacuous assertions and test calls, outputting valid unified diff format (`.patch`) strings via `difflib.unified_diff`.
+- **Dry-Run & Containment**: `verify_patch_dry_run` performs in-memory AST syntax validation before disk modification; `apply_patch` safely applies patches within workspace containment.
+
+**J3. LSP Diagnostic Adapter (`argus.adapters.lsp`)**
+- **Protocol Models**: Frozen PURE Pydantic models (`LSPDiagnostic`, `PublishDiagnosticsParams`, `JSONRPCNotification`, `LSPRange`, `LSPPosition`) complying with JSON-RPC 2.0 and LSP specifications.
+- **Diagnostic Mapping**: `LSPDiagnosticAdapter` maps Argus 1-based inclusive line spans into 0-based LSP range positions and inline severity levels (`ERROR` for non-advisory blocking findings, `WARNING` for depth-supported advisory, `INFORMATION`/`HINT` for shallow heuristics).
+- **Transport**: `LSPDiagnosticServer` / `LSPStreamer` streams header-framed JSON-RPC 2.0 payloads (`Content-Length: ...`) over `stdio` and socket connections for IDE editors (VS Code / Antigravity).
+
 ## Implementation Patterns & Consistency Rules
 
 **Critical conflict points identified: 12** — areas where two AI agents could implement compatibly-looking
@@ -1348,6 +1368,10 @@ tests/security/
   non-Python tree-sitter grammars are promoted to `[project.dependencies]`, so the default install grounds
   all 10 supported source languages out of the box, and a grammar nonetheless missing at run time states
   its package and its `pip install` remedy at the point the file is downgraded (§L669-693).
+- **Post-V1 additions (2026-08-28/29, Epics 20.1–20.4) — module placement & delivery:**
+  **FR38** → Defect Remediation proposals via `argus/remediation/**` (`RemediationEngine`, `RemediationPatch`, `RemediationResult`), dry-run in-memory syntax validation, and POSIX path containment (NFR-S1) ·
+  **FR39** → IDE & LSP Diagnostic Surface via `argus/adapters/lsp/**` (`LSPDiagnosticAdapter`, `LSPDiagnosticServer`, `LSPDiagnostic`, `JSONRPCNotification`) streaming header-framed JSON-RPC 2.0 diagnostics over stdio and socket transports ·
+  **FR40** → Extended Multi-Language AST Parsers via `argus/parsers/extended.py` (`BaseASTParser` ABC in `argus/parsers/base.py`, `TSParser`, `GoParser`, `JavaParser`) with fault-tolerant AST recovery nodes (`ERROR`/`MISSING`) — ⛔ **placement only, and no new capability, because multi-language AST grounding is delivered in V1** (`argus/shared/source_languages.py` + `argus/index/ast_index.py`, both byte-unchanged by Epic 20), so this is a duplicate parser API reachable from nothing. **All three FRs above are disposed `library-seam`** — see the reachability banner opening §J.
 
 ### Implementation Readiness Validation ✅
 - Decisions complete with verified versions; patterns enforceable (committed gates: import-isolation,
