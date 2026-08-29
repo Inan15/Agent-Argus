@@ -8468,3 +8468,49 @@ no id is filed for it.**
 ## Deferred from: code review of 19-6-every-ledger-entry-has-a-container-or-a-dated-deferral, iteration 3 (2026-08-27)
 
 - **	ests/test_governance_record_integrity.py**: Pre-existing brittle negative lookbehind structure in _CLOSURE_VERB regex ((?<!not )(?<!NOT )(?<!never )). Does not cover all complex multiline or multi-word negation patterns. Pre-existing test utility behavior; deferred.
+
+---
+
+## Deferred from: PRD amendment 2026-08-28 — Epic 20's three capabilities admitted and disposed in one act (2026-08-29)
+
+**Prior art: none.** Grepped for `DF-20-`, `FR38`, `FR39`, `FR40`, `remediation`, `lsp` and
+`parser` before filing; the ledger's only adjacent entry is `DF-10-2-A`, which is a DIFFERENT
+gap (see `DF-20-1-A` below) and stays open.
+
+- **DF-20-1-A** — **FR40 duplicates the production indexer and reaches no call site.**
+  `argus/parsers/extended.py` ships `TSParser`, `GoParser` and `JavaParser`, but TypeScript,
+  JavaScript, Go and Java were ALREADY grounded in V1 (`argus/shared/source_languages.py`,
+  grammars already pinned in `pyproject.toml`) and ALREADY definition-extracted by
+  `argus/index/ast_index.py::_DEF_KIND_BY_NODE`, which carries `function_declaration`,
+  `method_declaration`, `class_declaration` and `type_declaration`. **Both modules are
+  byte-unchanged by Epic 20** — `source_languages.py` last touched `c5db6f3` (2026-08-13) — so
+  FR40 adds neither language coverage nor extraction to the audit path. ⛔ **It does NOT close
+  `DF-10-2-A`**, which names C, C++, Ruby and Rust: those four still extract no definitions and
+  no file in them moved any closer to `audited_deep`. `DF-10-2-A` remains **OPEN**. Disposed
+  `library-seam` in `E-PRD/prd.md` FR40 and in `tests/test_v1_commitment_closure.py`. Owner
+  **XAgent007 (Governance Owner)**; `target_story: NONE — unscheduled`. **Two exits, neither
+  taken here:** wire it to a surface needing an API the indexer does not expose, or remove it.
+
+- **DF-20-2-A** — **FR38 (remediation) is built and unreachable.** `argus/remediation/`
+  (`base.py` / `engine.py` / `models.py`) is typed and test-proven by
+  `tests/test_remediation_engine.py` and `tests/test_defect_remediation.py`, has **no importer
+  elsewhere in `argus/`**, and **no `argus` CLI subcommand proposes a patch** — the same fence
+  FR29 has sat behind since 2026-08-11. Delivering it needs a CLI surface. Owner **XAgent007
+  (Governance Owner)**; `target_story: NONE — unscheduled`.
+
+- **DF-20-3-A** — **FR39 (LSP diagnostics) is built and unreachable.** `argus/adapters/lsp/`
+  is pinned by `tests/test_lsp_adapter.py`, and there is **no console-script entry point for an
+  LSP server**: `[project.scripts]` is `argus` / `argus-agent` / `repo-audit` → `argus.cli:main`
+  plus the FR35 MCP alias, and nothing else. ✅ **Checked, and NOT a violation:**
+  `argus/adapters/lsp/server.py` imports `socket` but never binds, listens or accepts — it writes
+  to a CALLER-supplied stream (`isinstance(stream, socket.socket)`), so FR35's *"no network
+  listener is opened and no port is bound"* constraint and the `argus.* ⊬ fastapi`
+  import-isolation gate (ADR #20) both still hold. Recorded because the transport is now
+  caller-chosen, which puts whatever opens a socket outside APAA and outside the contract. Owner
+  **XAgent007 (Governance Owner)**; `target_story: NONE — unscheduled`.
+
+- **Note on `tests/test_post_v1_integration.py`.** Story 20.4 describes it as an E2E integration
+  suite; measured, it reaches all three packages **by direct import**, so what it pins is
+  library-level behaviour, not an invocable path. That is not a defect in the tests — it is the
+  only thing they COULD pin while the three seams have no surface — but the suite must not be
+  cited as evidence that FR38, FR39 or FR40 is reachable.

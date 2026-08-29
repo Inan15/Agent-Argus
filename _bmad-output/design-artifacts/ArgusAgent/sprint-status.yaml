@@ -1,6 +1,7 @@
 # generated: 2026-06-18
-# last_updated: 2026-08-27
+# last_updated: 2026-08-29
 # project: ArgusAgent (formerly APAA — AI Project Assurance Audit)
+
 # project_key: NOKEY
 # tracking_system: file-system
 # story_location: _bmad-output/design-artifacts/ArgusAgent/stories
@@ -536,6 +537,15 @@ development_status:
   19-5-re-run-the-frozen-fold-and-let-it-decide: done  # review round 1 (2026-08-27) verdict PASS - review -> done. Clean review — all layers passed (Blind Hunter, Edge Case Hunter, Acceptance Auditor). Fold evaluated (UNEVALUABLE), TC-ArgusAgent-PRECISION-001-155 added to tests/test_precision_preregistration.py.
   19-6-every-ledger-entry-has-a-container-or-a-dated-deferral: done  # review round 3 (2026-08-27) verdict PASS - review -> done. Round 3 review (Blind Hunter + Edge Case Hunter + Acceptance Auditor) verified all ACs. 4 patch findings (prose command normalization, incomplete command wrapping, test comment typo, build_ratification_record exception safety) resolved. 1 pre-existing regex lookbehind item deferred to deferred-work.md. All tests passing (1779 passed, exit 0, Windows only).
   epic-19-retrospective: done  # 2026-08-27: ready-for-dev -> done. Retrospective completed and registered in tests/test_status_document_registry.py (epic-19-retro-2026-08-27.md).
+
+  # Epic 20: Post-V1 Capabilities — Remediation, IDE Diagnostics & Multi-Language Expansion
+  epic-20: done  # 2026-08-29: in-progress -> done. All 4 stories (20.1..20.4) completed and verified.
+  20-1-multi-language-ast-parsers: done
+
+  20-2-defect-remediation-engine: done  # review round 2 (2026-08-29) verdict PASS - review -> done. Verified all 4 review findings (2 Medium, 2 Low) resolved cleanly. All remediation, engine, distribution and registry tests passing (43 passed, mypy clean over 103 modules).
+  20-3-lsp-diagnostic-adapter: done  # code-review (2026-08-29): review -> done. VERDICT PASS: Implemented argus.adapters.lsp package (models, adapter, server) with standard Content-Length JSON-RPC 2.0 framing and robust stdio/socket transport streaming. 12/12 adapter unit tests passing, 108 source files mypy clean.
+  20-4-post-v1-integration-verification: done  # code-review (2026-08-29): review -> done. VERDICT PASS: Implemented tests/test_post_v1_integration.py with 14 E2E integration tests. Verified multi-language AST parsing, defect remediation patch generation/verification/containment, and LSP diagnostic server JSON-RPC streaming. All 1,845 tests pass, mypy argus/ clean.
+  epic-20-retrospective: done  # 2026-08-29: optional -> done. Retrospective completed and registered in tests/test_status_document_registry.py (epic-20-retro-2026-08-29.md).
 action_items:
   - epic: 10
     id: "AI-E10-1"
@@ -1400,3 +1410,25 @@ action_items:
     destination: "(R) DoD: the roll-up records a per-id Covers: verdict read from deferred-work.md on disk BEFORE epic-N is set done; an epic whose Covers: list is unmet carries a dated correction in epics.md in the section 3.4 amendment form"
     priority: "high"
     status: open
+  - epic: 20
+    id: "AI-E20-1"
+    action: "Synchronize package module counts in tests/test_built_distribution.py whenever adding new packages/modules."
+    owner: "Amelia (Developer)"
+    destination: "tests/test_built_distribution.py"
+    priority: "high"
+    status: done
+  - epic: 20
+    id: "AI-E20-2"
+    action: "Enforce variable scope ordering checks in AST patch transformers to prevent NameError reference before declaration."
+    owner: "Charlie (Senior Dev)"
+    destination: "argus/remediation/engine.py"
+    priority: "high"
+    status: done
+  - epic: 20
+    id: "AI-E20-3"
+    action: "Update system architecture documentation to incorporate Post-V1 multi-language, remediation, and LSP diagnostic interfaces."
+    owner: "Alice (Product Owner)"
+    destination: "architecture.md / E-PRD/addendum.md"
+    priority: "medium"
+    status: done  # 2026-08-29 completed by AI-E20-3 doc update
+
