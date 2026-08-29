@@ -487,6 +487,46 @@ _STATUS_DOCUMENTS: tuple[str, ...] = (
     # ⚠️ It must be committed TOGETHER with this line — `-22` closes in BOTH directions, so the
     # document without this entry and this entry without the document red `master` equally.
     "sprint-change-proposal-2026-08-29.md",
+    # Registered 2026-08-29 by the Correct Course session that authored it — `AI-E12-1`'s second
+    # half again: registration as part of the authoring step rather than a later cleanup. This is
+    # the SECOND proposal of 2026-08-29 (hence the `b` suffix, per the `2026-08-10b` /
+    # `2026-08-17b` precedent); it supersedes nothing and leaves the PRECISION proposal of the
+    # same date untouched.
+    # WHAT THE DOCUMENT ASSERTS, so the registration is judged against its contents. It records
+    # that Epic 20's reach gap is ALREADY fully disposed — FR38/FR39/FR40 amended `library-seam`
+    # 2026-08-28, `DF-20-1-A`/`-2-A`/`-3-A` filed — and that the LIVE defect is upstream of it:
+    # the anti-drift rule (architecture.md §Enforcement, forward-only from Epic 17) has been
+    # breached by EVERY epic it has ever bound — 17 at 80%, 18 at 75%, 19 at 100%, 20 at 100%
+    # against a 20% budget — `scripts/check_meta_drift.py` printed all four, and NOT ONE recorded
+    # a response. Epic 20 carried no `**Capability delivered:**` field at all, so nothing forced
+    # the honest entry at seed time. It proposes FIVE changes, ALL of them PROPOSED ONLY and none
+    # applied in this commit: (A) a dated in-place §3.4 correction to Epic 20's seed; (B) three
+    # new §Enforcement rules discharging `AI-E17-10`, `AI-E17-11` and the cause; (C) three
+    # `bmad-dev-loop/SKILL.md` changes registering two CD-2 consumption points, the roll-up
+    # `Covers:` re-derivation (`AI-E17-13`) and a docs-only fix-round counter (`AI-E17-9`);
+    # (D) `DF-DRIFT-UNREAD-A`; (E) a new corrective Epic 21.
+    # ⛔ It clears, softens, promotes, schedules and re-scopes NOTHING: no `argus/` byte changes,
+    # no FR or NFR is amended/added/removed, `PRECISION_GATE_THRESHOLD` stays `4/5`,
+    # `VALIDATION_SET_FLOOR_N` stays 5, `INSTRUMENT_STATUS` stays `NOT_INDEPENDENTLY_VALIDATED`,
+    # `protocol_cleared` stays `False`, no finding's `verdict_eligible` moves, `DF-13-5-A`'s ONE
+    # round stays UNSPENT, FR38/FR39/FR40 stay `library-seam` with `target_story: NONE —
+    # unscheduled`, `DF-10-2-A` stays OPEN, `AI-E17-12` stays `record-only`, and Epic 20 is NOT
+    # reopened — no story status under it changes.
+    # ⛔ It explicitly DECLINES to make any advisory mechanism blocking: `check_meta_drift.py`
+    # stays ADVISORY and still exits 0 on a clean parse, because a blocking prose-parser reddens
+    # legitimate work (`TC-ArgusAgent-DOCS-001-78`, three times in one day). The gate it DOES add
+    # halts only on a mechanically-absent seed field, never on a prose judgement.
+    # ⚠️ It states two things against its own interest rather than smoothing them over: the
+    # `**Covers:**` line it adds to Epic 20 is RETROACTIVE and will flip that epic to
+    # product-traced in the next report (the pre-correction reporter output is frozen verbatim at
+    # the seed so the flip stays auditable — a row may never be added to silence a finding); and
+    # Epic 21 is ITSELF 100% process-derived, permitted only as the named corrective epic
+    # §Enforcement provides for, with an honest `Capability delivered: Nothing`.
+    # ⚠️ It must be committed TOGETHER with this line — `-22` closes in BOTH directions, so the
+    # document without this entry and this entry without the document red `master` equally.
+    # Verified RED before this line (`unregistered: ['sprint-change-proposal-2026-08-29b.md']`)
+    # and GREEN after, on the live tree.
+    "sprint-change-proposal-2026-08-29b.md",
 )
 
 # Exactly the set the epic's AC names — "any future change proposal or retrospective".
