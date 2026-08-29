@@ -1,8 +1,8 @@
-# ArgusAgent (`argus-agent`) 🛡️👁️
+# Agent-Argus (`argus-agent`) 🛡️👁️
 
 > **The Agent-First, Deterministic Repository Audit & Assurance Engine**
 
-`ArgusAgent` combines the high-precision **APAA (AI Project Assurance Audit)** Python verification engine with the vendor-portable **RAM (Repository Audit Method)** framework. Named after *Argus Panoptes* — the mythological 100-eyed all-seeing guardian — `ArgusAgent` provides multi-agent, cross-subsystem vigilance over codebases with zero blind spots.
+`Agent-Argus` combines the high-precision **APAA (AI Project Assurance Audit)** Python verification engine with the vendor-portable **RAM (Repository Audit Method)** framework. Named after *Argus Panoptes* — the mythological 100-eyed all-seeing guardian — `Agent-Argus` provides multi-agent, cross-subsystem vigilance over codebases with zero blind spots.
 
 > **Never run `argus` before?** Start at **[docs/first-run.md](docs/first-run.md)** — install, your first audit, how to read the ledger, and what each verdict and exit code means. Four sections, nothing else. *(Added 2026-08-15, Story 12.8: until then this README was the only integrator-shaped document in the repository and it linked to `docs/` nowhere at all — measured, zero occurrences — so a first-time reader met the full integration surface or nothing. The page is repository documentation and is **not** packaged in the wheel, which is why this link is its whole delivery mechanism.)*
 
@@ -490,7 +490,7 @@ ArgusAgent/
 
 ## 🙏 Acknowledgements & Credits
 
-ArgusAgent is built on the shoulders of giants in the open-source software community:
+Agent-Argus is built on the shoulders of giants in the open-source software community:
 
 - **[BMAD Method](https://github.com/bmad-code-org/BMAD-METHOD)** ([bmad-code-org/BMAD-METHOD](https://github.com/bmad-code-org/BMAD-METHOD)): Special thanks to the BMAD Method team for their breakthrough framework and methodology in agile AI-driven software development.
 - **[Tree-sitter](https://tree-sitter.github.io/tree-sitter/)**: Concrete syntax tree parsing engine underpinning Argus's multi-language AST inspection and grounding.

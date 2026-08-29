@@ -5,10 +5,10 @@ build-backend = "flit_core.buildapi"
 [project]
 name = "argus-agent"
 version = "1.0.0"
-description = "ArgusAgent: Agent-First Deterministic Repository Assurance & Audit Engine. Argus's finding precision has not been independently validated."
+description = "Agent-Argus: Agent-First Deterministic Repository Assurance & Audit Engine. Argus's finding precision has not been independently validated."
 readme = "README.md"
 authors = [
-    { name = "Minions & Argus Agent Team" }
+    { name = "Agent-Argus maintainers" }
 ]
 license = { file = "LICENSE" }
 requires-python = ">=3.10"
