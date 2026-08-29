@@ -546,6 +546,12 @@ development_status:
   20-3-lsp-diagnostic-adapter: done  # code-review (2026-08-29): review -> done. VERDICT PASS: Implemented argus.adapters.lsp package (models, adapter, server) with standard Content-Length JSON-RPC 2.0 framing and robust stdio/socket transport streaming. 12/12 adapter unit tests passing, 108 source files mypy clean.
   20-4-post-v1-integration-verification: done  # code-review (2026-08-29): review -> done. VERDICT PASS: Implemented tests/test_post_v1_integration.py with 14 E2E integration tests. Verified multi-language AST parsing, defect remediation patch generation/verification/containment, and LSP diagnostic server JSON-RPC streaming. All 1,845 tests pass, mypy argus/ clean.
   epic-20-retrospective: done  # 2026-08-29: optional -> done. Retrospective completed and registered in tests/test_status_document_registry.py (epic-20-retro-2026-08-29.md).
+  epic-21: backlog  # 2026-08-29: named corrective epic per sprint-change-proposal-2026-08-29b.md
+  21-1-cd2-consumption-points-and-rollup-covers-verdict: backlog
+  21-2-staging-protocol-and-premise-remeasurement-phase: backlog
+  21-3-fix-round-budget-by-finding-class: backlog
+  21-4-correct-epic-20-seed-in-place: backlog
+  epic-21-retrospective: optional
 action_items:
   - epic: 10
     id: "AI-E10-1"
@@ -1381,21 +1387,21 @@ action_items:
     owner: "dev-loop orchestrator (the loop rule)"
     destination: "(R) DoD: the fix-round budget rule distinguishes docs-only findings from executable ones and cites 17.5's three rounds as its evidence"
     priority: "medium"
-    status: open
+    status: in-progress  # 2026-08-29: targeted by Epic 21 (21.3) per sprint-change-proposal-2026-08-29b.md
   - epic: 17
     id: "AI-E17-10"
     action: "CARRIED - AI-E18-3 and AI-E16-4 arm (iii), THIRD raise. WRITE THE SHARED-TREE STAGING PROTOCOL DOWN. The practice is now PROVEN rather than proposed: 5 of 5 Epic-17 stories staged BY EXPLICIT PATH and never git add -A; carried peer files were disclosed by name in the commit message (DN-17-2-11 carried 17.1's two close-out files with a disclosure block because sprint-status.yaml cannot be split; DN-17-4-19 disclosed the same for 17.3's staged close-out), and reviewers verified those disclosures independently with git show --stat and git diff on the named files, finding nothing rode along. ZERO collisions across 33 commits, against THREE collisions inside Story 16.7 alone. It works, it was used every time, and it is written nowhere. Include the byte-invariant half: deferred-work.md carries a LONE CR at line 5459 and sprint-status.yaml is CRLF-uniform, and every Epic-17 round re-measured both before and after its write - which is also why section 0 line citations must state whether they are grep -n or splitlines(), because the lone CR makes the two disagree."
     owner: "dev-loop orchestrator (the protocol) + Architect (the section Enforcement registration)"
     destination: "(R) DoD: the protocol is in architecture.md section Enforcement - explicit-path staging, carried files disclosed by name, byte invariants re-measured before and after - and one story cites it rather than re-deriving it"
     priority: "high"
-    status: open
+    status: in-progress  # 2026-08-29: targeted by Epic 21 (21.2) per sprint-change-proposal-2026-08-29b.md
   - epic: 17
     id: "AI-E17-11"
     action: "CARRIED - AI-E18-8, THIRD raise. REGISTER THE SECTION 0 / TASK 0 TWO-PASS AS A NAMED PHASE WITH A VERDICT FORM. Practised in 5 of 5 Epic-17 stories - every one carries a 'PREMISES MEASURED BY EXECUTION at HEAD <sha>' section and a Task 0 that re-runs it before a line is written - and it found real drift in 4 of 5. 17.1, 17.2 and 17.3 reproduced every row. 17.4's Task 0 moved TWO rows and reported them loudly. 17.5's re-derivation disagreed with its own SM's contexting on three figures and found TWO ledger ids the SM missed (DF-8-3-B, DF-14-3-H), a correction the reviewer then reproduced independently: AFFIRMATIVE/LANDMARK 52/18 against the SM's 47/23, and 28 blocks / 26 ids against 24/23, where the epic's own assumption going in was 'six'. THE VERDICT FORM SHOULD INCLUDE 'a row moved' AS A FIRST-CLASS OUTCOME that is REPORTED, NOT ABSORBED - which is exactly what 17.4 and 17.5 did by instinct and what nothing requires. Note the standing evidence for why this matters: DF-16-5-A's own body predicted DF-14-3-H going stale in terms, and it went stale anyway, because nothing was watching."
     owner: "Scrum Master (the phase) + Architect (registration) + dev-loop orchestrator (the rule)"
     destination: "(R) DoD: the two-pass is a named phase with a stated verdict form including 'a row moved'; a story reaching ready-for-dev either carries a re-measurement result or records why not"
     priority: "high"
-    status: open
+    status: in-progress  # 2026-08-29: targeted by Epic 21 (21.2) per sprint-change-proposal-2026-08-29b.md
   - epic: 17
     id: "AI-E17-12"
     action: "RECORD ONLY, no owner, on purpose: Epic 17's review record is not a quality trend in either direction. Five stories, 11 dev rounds, 9 review iterations, 5 written findings (1 Medium, 4 Low), 2 clean iteration-1 passes - against Epic 18's 4 stories / 5 iterations / 1 finding and Epic 16's 7 stories / 10 iterations / 9 findings. READ IT WITH FOUR CAVEATS OR DO NOT READ IT AT ALL. (1) THE SURFACES ARE NOT COMPARABLE: 17.2 shipped ZERO argus/ bytes by design and 17.1 and 17.4 shipped none either, so the epic's 846 argus/ insertions are almost entirely Story 17.3's one new module - a much smaller surface for a reviewer to find a High in than Epic 16's +4,501 lines across 13 modules. (2) THE EPIC'S MOST CONSEQUENTIAL EVENT WAS NOT A REVIEW FINDING: 17.4's HALT was found BY EXECUTION before any reviewer saw the arc, and 17.4's review then passed clean at iteration 1 - so the story with the epic's biggest problem contributes a zero to the finding count. (3) 17.5's THREE iterations were all Low and docs-only, so iteration count there measures prose form, not defect density. (4) FOUR OF THE FIVE FINDINGS WERE FOUND BY RE-DERIVATION - a constructed adversarial document, an own two-block fixture, a re-execution of the story's own analyzers - which is a property of how these particular review rounds were run and may not survive a cheaper one."
@@ -1409,7 +1415,7 @@ action_items:
     owner: "dev-loop orchestrator (the epic roll-up step)"
     destination: "(R) DoD: the roll-up records a per-id Covers: verdict read from deferred-work.md on disk BEFORE epic-N is set done; an epic whose Covers: list is unmet carries a dated correction in epics.md in the section 3.4 amendment form"
     priority: "high"
-    status: open
+    status: in-progress  # 2026-08-29: targeted by Epic 21 (21.1) per sprint-change-proposal-2026-08-29b.md
   - epic: 20
     id: "AI-E20-1"
     action: "Synchronize package module counts in tests/test_built_distribution.py whenever adding new packages/modules."

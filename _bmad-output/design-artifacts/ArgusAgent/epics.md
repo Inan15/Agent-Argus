@@ -3929,3 +3929,57 @@ anti-pattern).
   - 100% green test execution across Windows & Linux environments.
   - Full regression suite verifying Epics 1–19 core guarantees remain unbroken.
 
+
+## Epic 21: Give The Advisory Signal A Reader — write down what is already proven · *Argus repo*
+
+> **Goal**: close the CAUSE behind Epic 20's reach gap — an advisory mechanism that fired
+> correctly on four consecutive epics and was read by no one — and write down three practices
+> that are PROVEN in execution and recorded nowhere.
+> **Source Signal**: [sprint-change-proposal-2026-08-29b.md](sprint-change-proposal-2026-08-29b.md) (approved 2026-08-29)
+
+**Capability delivered:** **NOTHING A USER CAN REACH — and that is declared, not discovered.** ⛔
+This is a **named corrective epic**, the escape hatch §Enforcement itself provides for work over
+the process-derived budget. `Nothing` is entered under the dated operator ruling of **2026-08-29**
+(`sprint-change-proposal-2026-08-29b.md`), as §Enforcement requires.
+
+**Covers:** `DF-DRIFT-UNREAD-A` (21.1) · `AI-E17-13` (21.1) · `AI-E17-10` (21.2) · `AI-E17-11`
+(21.2) · `AI-E17-9` (21.3) — **no FR/NFR driver, stated plainly rather than manufactured.**
+
+> ⚠️ **THIS EPIC IS 100% PROCESS-DERIVED AND SAYS SO BEFORE THE REPORTER DOES.** stories=4,
+> product-traced=0, process-traced=4 — the same shape as Epic 20. It is permitted **only**
+> because §Enforcement schedules over-budget work as a named corrective epic, and because the
+> ruling above is dated and cited. ⛔ **It sets no precedent for a delivery epic.** The next
+> non-corrective epic is held to 20%.
+>
+> **It also touches zero `argus/` bytes.** Every change lands in planning artifacts and the
+> dev-loop skill. Nothing shipped, no contract, no schema, no verdict surface.
+
+### Story 21.1: Register the two §CD-2 consumption points and the roll-up `Covers:` verdict
+- **Goal**: give the advisory report a named reader at a named moment, and stop an epic closing on a falsified charter.
+- **Acceptance Criteria**:
+  - `bmad-dev-loop` §3 gains an **epic ENTRY** gate: the seed's `**Capability delivered:**` and `**Covers:**` fields must be present (or `Nothing` + dated ruling) → else **HALT**; and a `META-DRIFT:` verdict is recorded in the epic's first story.
+  - `bmad-dev-loop` §3 roll-up **re-derives every `Covers:` id against its on-disk status** and records a per-id verdict before `epic-<id> = done`; an unmet list forces a dated §3.4 correction in `epics.md`.
+  - ⛔ The entry gate HALTs on **missing fields only**; the `check_meta_drift.py` read **never** HALTs and **never** becomes blocking — asserted by a test that the advisory path exits 0 on a clean parse.
+  - `DF-DRIFT-UNREAD-A` is filed with its prior-art grep recorded.
+
+### Story 21.2: Write down the shared-tree staging protocol and the premise re-measurement phase
+- **Goal**: discharge two action items now on their THIRD raise, both proven in 5 of 5 Epic-17 stories.
+- **Acceptance Criteria**:
+  - `architecture.md` §Enforcement carries **Shared-tree staging enforcement** — explicit-path staging, carried files disclosed by name, byte invariants re-measured before and after — including the working-tree/blob split and the `grep -n` vs `splitlines()` divergence after `deferred-work.md` line 5573.
+  - `architecture.md` §Enforcement carries **Premise re-measurement enforcement** as a **named phase with a three-outcome verdict form**, `A ROW MOVED` being first-class and REPORTED.
+  - One story cites each rule rather than re-deriving it.
+  - ⚠️ Sequenced against the in-progress `AI-E10-5`, which edits the same section: both land, or 10-5 is explicitly left untouched and re-measured.
+
+### Story 21.3: Split the fix-round budget by finding class
+- **Goal**: stop docs-only prose rounds consuming the margin a genuine defect needs.
+- **Acceptance Criteria**:
+  - `bmad-dev-loop` §4 counts `exec_iteration` and `docs_iteration` separately, each capped at 3.
+  - A round is DOCS-ONLY iff every file it names is non-executable; a **mixed round counts as EXECUTABLE**.
+  - Story 17.5's three Low docs-only rounds are cited as the evidence.
+
+### Story 21.4: Correct Epic 20's seed in place and close the loop
+- **Goal**: bring the non-conformant seed into the §3.4 form without reopening a closed epic.
+- **Acceptance Criteria**:
+  - Epic 20's seed carries `**Capability delivered:**` (`Nothing` + dated ruling) and `**Covers:**`, with the **pre-correction reporter output frozen verbatim**.
+  - Epic 20 is **not** reopened and no story status changes.
+  - `AI-E17-9`, `-10`, `-11`, `-13` are closed against their delivered destinations.
