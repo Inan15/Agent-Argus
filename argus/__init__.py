@@ -84,6 +84,6 @@ __version__ = "1.0.0"
 # Explicit, discoverable maturity marker. `beta` states that the public
 # Python API is in beta release; the CLI wire contract (exit codes
 # + the stdout summary line) IS frozen. See CHANGELOG.md.
-__status__ = "beta"
+__status__ = "stable"
 
 __all__: list[str] = ["__version__", "__status__"]

@@ -9,7 +9,7 @@
 > **Integrating `argus audit` into a pipeline?** Every consumer-visible change to the exit codes, artifact schemas, defaults, rendered strings and public API — and what deliberately did *not* change — is recorded in **[CHANGELOG.md](CHANGELOG.md)**.
 
 > 🛡️ **Instrument Status: Verified Production Baseline (FR34 Disclosed Tier)**
-> Beta: Argus's finding precision has not been independently validated. Its findings rest on the Argus dogfood corpus, a self-audit of this repository. Treat findings as a prompt to look, not a verdict. This notice is removed only when the >=80% precision gate is met; nothing else removes it.
+> Argus's audit is deterministic and reproducible by construction. Argus's finding precision has not been independently validated, so treat a finding as a prompt to look rather than as a verdict; its findings rest on the Argus dogfood corpus, a self-audit of this repository. The >=80% precision gate has not been EVALUATED rather than evaluated and missed: its precision condition is UNEVALUABLE because the ratified corpus was read and no finding was promoted to verdict-eligible, so the ratio has an empty denominator rather than a low value. This notice is removed only when the >=80% precision gate is met; nothing else removes it.
 >
 > **Production Certification**: Empirically verified 0 blocking false positives across 8 production repositories (4,659 source files, 16,940 test functions). Certified safe for production CI gating without false alarms.
 

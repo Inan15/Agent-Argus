@@ -850,15 +850,35 @@ def test_TC_ArgusAgent_DOCS_001_10_front_door_version_surface_is_unchanged() -> 
     in its own metadata states two versions of itself — DF-8-5-A's defect class on a
     different pair of surfaces. The bump makes the tree agree with what shipped.
 
-    **``__status__`` deliberately does NOT move.** A major-version number and the FR34
+    ~~**``__status__`` deliberately does NOT move.** A major-version number and the FR34
     disclosure tier are independent facts: the >=80% precision gate is still uncleared, so
     the instrument is still provisional and still says so. Bumping a version to retire a
-    disclosure would be the goalpost move FR34 exists to prevent.
+    disclosure would be the goalpost move FR34 exists to prevent.~~
+
+    🔧 **AMENDED 2026-08-29 (`sprint-change-proposal-2026-08-29.md`, approved as amended).**
+    ``__status__`` moves ``"beta"`` → ``"stable"``, and the struck paragraph's REASONING is
+    retained in full because it is still correct — it was answering a different question.
+    Its point stands: a version number must never retire a disclosure. What it got wrong is
+    the inference that ``__status__`` therefore had to track the PRECISION axis. It does not.
+    ``__status__`` describes the CONSUMER CONTRACT — exit codes, the stdout summary line,
+    artifact schemas — which is frozen and shipped at v1.0.0. Precision validation is a
+    separate axis with its own vocabulary (``InstrumentStatus``), its own guard and its own
+    surface (the FR34 disclosure), and that disclosure is UNCHANGED in force: it still fires
+    on every enumerated surface and is still removed only by the >=80% gate.
+
+    Measured consequence of the old value: a 1.0.0 release announced itself as *"beta"*, so a
+    reader had to guess whether the API was unstable or the precision unvalidated. Only the
+    second was true and the label said neither — the ``DF-9-2-B`` false-subject class, on the
+    front door.
+
+    ⛔ Nothing here clears, softens, schedules or re-scopes the gate. ``INSTRUMENT_STATUS`` is
+    byte-unchanged, still ``NOT_INDEPENDENTLY_VALIDATED``, and still guarded against
+    ``protocol_cleared=True``.
     """
     import argus
 
     assert argus.__version__ == "1.0.0"
-    assert argus.__status__ == "beta"
+    assert argus.__status__ == "stable"
     assert argus.__all__ == ["__version__", "__status__"]
 
 

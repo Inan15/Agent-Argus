@@ -464,6 +464,25 @@ _STATUS_DOCUMENTS: tuple[str, ...] = (
     # Registered 2026-08-27 for the Epic-19 retrospective — `AI-E12-1`'s second half on its EIGHTH
     # consecutive retrospective. Written by the session that wrote the document.
     "epic-19-retro-2026-08-27.md",
+    # Registered 2026-08-29 by the Correct Course session that authored it — `AI-E12-1`'s second
+    # half again: registration as part of the authoring step rather than a later cleanup.
+    # WHAT THE DOCUMENT ASSERTS, so the registration is judged against its contents. It records
+    # that §5's PRECISION condition is `UNEVALUABLE` — the ratified corpus was read and Epic 14's
+    # corrected detector promoted 0 of 4,284 findings to verdict-eligible, so the ratio has an
+    # EMPTY denominator rather than a low value — and it proposes TWO changes. (A) The FR34
+    # disclosure must publish the gate's recorded OUTCOME and its precision condition's VERDICT,
+    # not the threshold alone; APPLIED in the same commit. (B) A new epic making the gate
+    # EVALUABLE by ADDING pre-registered, sealed members; PROPOSED ONLY, not applied.
+    # ⛔ It clears, softens, schedules and re-scopes NOTHING: `PRECISION_GATE_THRESHOLD` stays
+    # `4/5`, `VALIDATION_SET_FLOOR_N` stays 5, all SEVEN §5 conditions stay in their order with
+    # their verdicts, `INSTRUMENT_STATUS` stays `NOT_INDEPENDENTLY_VALIDATED`, `protocol_cleared`
+    # stays `False`, no member is ratified, dropped, re-weighted or narrowed, no row moves off
+    # `UNADJUDICATED`, and `DF-13-5-A`'s ONE round stays UNSPENT. Its §6 records AMENDED with the
+    # approval ATTRIBUTED in-session rather than signed — a distinction the document states about
+    # itself rather than smoothing over.
+    # ⚠️ It must be committed TOGETHER with this line — `-22` closes in BOTH directions, so the
+    # document without this entry and this entry without the document red `master` equally.
+    "sprint-change-proposal-2026-08-29.md",
 )
 
 # Exactly the set the epic's AC names — "any future change proposal or retrospective".

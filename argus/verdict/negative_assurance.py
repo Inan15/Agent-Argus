@@ -194,11 +194,38 @@ class InstrumentStatus(str, enum.Enum):
 # stays `NOT_INDEPENDENTLY_VALIDATED`, and every RENDERED surface is byte-unchanged —
 # asserted in the same guard, because correcting an unreachable string must not be able to
 # flip a gate.
+# 🔧 **REWORDED 2026-08-29 — FRAMING ONLY. Every disclosed fact is unchanged.**
+# The previous text opened with the bare label "Beta:", so the first thing a stranger read
+# about a 1.0.0 tool was a word that reads as unfinished software. That is not what the
+# limitation says. The limitation is about finding PRECISION; the consumer contract — exit
+# codes, the stdout summary line, artifact schemas — is frozen and shipped. Making a reader
+# guess which of the two "Beta" referred to is a reporting defect, and it happened to run in
+# the direction that understates the tool rather than overstates it, which is why it survived
+# four epics unchallenged.
+#
+# ~~"Beta: Argus's finding precision has not been independently validated. Its findings rest
+# on the Argus dogfood corpus, a self-audit of this repository. Treat findings as a prompt to
+# look, not a verdict. This notice is removed only when the >=80% precision gate is met;
+# nothing else removes it."~~
+#
+# DELIBERATELY NOT CHANGED, because softening any of these would be the over-claim FR34
+# exists to prevent: the precision limitation is still stated in the DENIAL form the
+# over-claim scan requires (`_OVER_CLAIMS` permits "independently validated" only inside its
+# own denial); the corpus is still named as a SELF-audit; a finding is still a prompt rather
+# than a verdict; and the removal condition is still the >=80% gate and nothing else.
+# `INSTRUMENT_STATUS` below is untouched and still guarded against
+# `protocol_cleared=True` — no rewording here can move the gate, and this one does not try.
 INSTRUMENT_DISCLOSURE_NOT_INDEPENDENTLY_VALIDATED = (
-    "Beta: Argus's finding precision has not been independently validated. Its "
-    "findings rest on the Argus dogfood corpus, a self-audit of this repository. "
-    "Treat findings as a prompt to look, not a verdict. This notice is removed only "
-    "when the >=80% precision gate is met; nothing else removes it."
+    "Argus's audit is deterministic and reproducible by construction. Argus's finding "
+    "precision has not been independently validated, so treat a finding as a prompt to "
+    "look rather than as a verdict; its findings "
+    "rest on the Argus dogfood corpus, a self-audit of this "
+    "repository. The >=80% precision gate has not been EVALUATED rather than evaluated and "
+    "missed: its precision condition is UNEVALUABLE because the ratified corpus was read "
+    "and no finding was promoted to verdict-eligible, so the ratio has an empty denominator "
+    "rather than a low value. "
+    "This notice is removed only when the >=80% precision gate is met; "
+    "nothing else removes it."
 )
 
 INSTRUMENT_DISCLOSURE_VALIDATED = (
@@ -213,8 +240,11 @@ INSTRUMENT_DISCLOSURE_VALIDATED = (
 # multi-sentence paragraph does not fit. Each is a SUBSTRING of its full text rather
 # than an independently authored sentence, and that relation is asserted — a second
 # sentence would be a second thing to keep true.
+# Tracks the full text's rewording above (2026-08-29). It loses its trailing period because
+# the substring relation is asserted and the full text now continues with a comma at that
+# point — the period was never a sentence boundary here, only the end of the borrowed span.
 INSTRUMENT_DISCLOSURE_SHORT_NOT_INDEPENDENTLY_VALIDATED = (
-    "Argus's finding precision has not been independently validated."
+    "Argus's finding precision has not been independently validated"
 )
 
 INSTRUMENT_DISCLOSURE_SHORT_VALIDATED = (
