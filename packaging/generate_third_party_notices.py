@@ -29,21 +29,21 @@ _BUILD_ONLY = {
     "pip": "build tool",
 }
 
-_HEADER = """ArgusAgent — THIRD-PARTY NOTICES
+_HEADER = """Agent-Argus — THIRD-PARTY NOTICES
 ============================================================
 
 This product bundles the third-party components listed below. Each remains licensed
-under its own terms, which are unaffected by the ArgusAgent Beta Evaluation Licence.
+under its own terms, which are unaffected by Agent-Argus's own MIT licence.
 """
 
 _FOOTER = """------------------------------------------------------------
 Each component above is used under its own licence, which is unchanged by the
-ArgusAgent Beta Evaluation Licence. Licence names are taken from each package's
+Agent-Argus MIT licence. Licence names are taken from each package's
 published metadata.
 
 If you need the full licence text for any component, or believe an attribution here
 is incomplete or wrong, please open an issue and we will correct it:
-https://github.com/XAgents-ai/argus-agent-releases/issues
+https://github.com/Inan15/Agent-Argus/issues
 """
 
 

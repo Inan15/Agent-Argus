@@ -1,4 +1,4 @@
-name: ArgusAgent Repository Audit & Assurance CI
+name: Agent-Argus Repository Audit & Assurance CI
 
 on:
   push:

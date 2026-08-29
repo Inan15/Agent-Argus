@@ -1,5 +1,5 @@
 #!/usr/bin/env bash
-# ArgusAgent Uninstaller Script
+# Agent-Argus Uninstaller Script
 #
 # Story 12.7 / FR35 — this now removes the placed command assets BEFORE removing the tool
 # that knows how to find them. Until 2026-08-15 it ran `pip uninstall` only, so every file
@@ -10,11 +10,11 @@
 
 set -e
 
-echo "Removing the placed ArgusAgent assistant commands..."
+echo "Removing the placed Agent-Argus assistant commands..."
 # Ordered deliberately: `--remove` needs the installed CLI, so it runs FIRST. A failure here
 # must not stop the package removal, so it is tolerated and reported.
 argus install-commands --remove || echo "  (no placed commands were removed; continuing)"
 
-echo "Uninstalling ArgusAgent (argus-agent)..."
+echo "Uninstalling Agent-Argus (argus-agent)..."
 pip uninstall -y argus-agent 2>/dev/null || true
-echo "ArgusAgent uninstalled successfully."
+echo "Agent-Argus uninstalled successfully."

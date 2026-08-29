@@ -151,7 +151,14 @@ jobs:
           NAME="argus-agent-$VERSION-$LABEL"
           mkdir -p "$NAME"
           cp "dist/$BINARY" "$NAME/"
-          cp packaging/QUICKSTART.md packaging/FEEDBACK.md packaging/LICENSE.txt "$NAME/"
+          cp packaging/QUICKSTART.md packaging/FEEDBACK.md "$NAME/"
+          # 🔧 CHANGED 2026-08-29. The package used to ship `packaging/LICENSE.txt`, a
+          # proprietary "Beta Evaluation Licence" opening "This is NOT open-source software"
+          # — inside binaries built from a repository whose root LICENSE is MIT. A second
+          # copy of a licence is a licence that drifts, and this one drifted into
+          # contradicting the first. There is now ONE licence file; the package carries a
+          # copy of it, renamed only for the .txt convention consumers expect.
+          cp LICENSE "$NAME/LICENSE.txt"
           python packaging/generate_third_party_notices.py > "$NAME/THIRD-PARTY-NOTICES.txt"
           cd "$NAME"
           if command -v sha256sum > /dev/null; then

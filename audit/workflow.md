@@ -1,6 +1,6 @@
-# ArgusAgent Audit Workflow Engine Specification
+# Agent-Argus Audit Workflow Engine Specification
 
-The ArgusAgent workflow follows a strict 12-phase audit pipeline.
+The Agent-Argus workflow follows a strict 12-phase audit pipeline.
 
 ```
 00-Orientation ──> 01-Bootstrap ──> 02-Intelligence ──> 03-Planning ──> 04-Mapping

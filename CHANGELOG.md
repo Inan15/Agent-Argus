@@ -1,6 +1,6 @@
 # Changelog
 
-All notable consumer-visible changes to **ArgusAgent** (distribution `argus-agent`, package `argus/`)
+All notable consumer-visible changes to **Agent-Argus** (distribution `argus-agent`, package `argus/`)
 are recorded here. Format follows [Keep a Changelog](https://keepachangelog.com/en/1.1.0/) loosely;
 versioning intent is [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 

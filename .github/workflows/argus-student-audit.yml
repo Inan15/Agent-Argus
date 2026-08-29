@@ -1,4 +1,4 @@
-name: ArgusAgent Student Code Audit & Security Shield 🛡️
+name: Agent-Argus Student Code Audit & Security Shield 🛡️
 
 # This workflow runs automatic code assurance, vacuous test detection, and secret scanning
 # for student projects, coursework assignments, and group capstones.
@@ -31,10 +31,10 @@ jobs:
           python-version: "3.11"
           cache: "pip"
 
-      - name: ⚡ Install ArgusAgent & AST Grammars
+      - name: ⚡ Install Agent-Argus & AST Grammars
         run: |
           python -m pip install --upgrade pip
-          # Install ArgusAgent with multi-language AST parsers (Python, JS, TS, Rust, Go, C/C++)
+          # Install Agent-Argus with multi-language AST parsers (Python, JS, TS, Rust, Go, C/C++)
           pip install .[languages]
 
       - name: 🔍 Run Argus Deterministic Audit
@@ -62,8 +62,8 @@ jobs:
                   summary_text = f.read()[:3000]
           
           with open('pr_summary.md', 'w', encoding='utf-8') as out:
-              out.write('## 🛡️ ArgusAgent Code Quality & Assurance Report\n\n')
-              out.write('Hello! ArgusAgent has audited your commit (**' + '${{ github.sha }}'[:7] + '**).\n\n')
+              out.write('## 🛡️ Agent-Argus Code Quality & Assurance Report\n\n')
+              out.write('Hello! Agent-Argus has audited your commit (**' + '${{ github.sha }}'[:7] + '**).\n\n')
               if summary_text:
                   out.write(summary_text)
               else:

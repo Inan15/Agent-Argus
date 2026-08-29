@@ -1,4 +1,4 @@
-# ArgusAgent Repository Memory Specification
+# Agent-Argus Repository Memory Specification
 
 Repository Memory maintains persistent facts across audit phases to eliminate redundant rediscovery.
 

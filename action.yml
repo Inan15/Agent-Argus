@@ -78,7 +78,7 @@ runs:
     # the defect; it is bound anyway (Story 11.3 / DN-3) so that the published artifact carries the
     # stronger claim — ZERO interpolations inside any `run:` body, with no exemption registered
     # against the file a consumer executes.
-    - name: ⚡ Install ArgusAgent
+    - name: ⚡ Install Agent-Argus
       shell: bash
       env:
         ACTION_PATH: ${{ github.action_path }}

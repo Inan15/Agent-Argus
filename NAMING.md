@@ -54,8 +54,15 @@ If those two ever diverge, the source of truth wins.
 
 ## Copyright holder
 
-Files carrying a copyright line — `LICENSE`, `packaging/LICENSE.txt` — name the **Agent-Argus
-maintainers**. Update them together or not at all.
+Exactly one file carries a copyright line — `LICENSE`, naming the **Agent-Argus maintainers**.
+
+There used to be a second, `packaging/LICENSE.txt`, and this section used to say *"update them
+together or not at all."* It was not followed. The shipped copy was a proprietary "Beta Evaluation
+Licence" whose first paragraph read *"This is NOT open-source software"*, and it went out inside
+every v1.0.0 binary while the root `LICENSE` said MIT. Deleted 2026-08-29; the release package now
+copies `LICENSE` itself, renamed to `LICENSE.txt` only for the convention consumers expect.
+
+**Do not reintroduce a second copy.** An instruction to keep two files in step is not a mechanism.
 
 ## If you are adding a new surface
 

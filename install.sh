@@ -1,5 +1,5 @@
 #!/usr/bin/env bash
-# ArgusAgent Installer Script for Unix / macOS
+# Agent-Argus Installer Script for Unix / macOS
 #
 # Story 12.7 / FR35 — THIS SCRIPT NO LONGER PLACES ANY FILE ITSELF. It installs the
 # distribution and then delegates to `argus install-commands`, which is the ONE placement
@@ -16,7 +16,7 @@
 set -e
 
 echo "===================================================="
-echo "      ArgusAgent (argus-agent) Installer"
+echo "      Agent-Argus (argus-agent) Installer"
 echo "===================================================="
 echo ""
 
@@ -26,7 +26,7 @@ if ! command -v python3 &> /dev/null; then
     exit 1
 fi
 
-echo "[1/4] Installing ArgusAgent package..."
+echo "[1/4] Installing Agent-Argus package..."
 pip install -e .
 
 echo "[2/4] Verifying the CLI..."

@@ -1,8 +1,8 @@
-# ArgusAgent Evidence Model & Confidence Engine Specification
+# Agent-Argus Evidence Model & Confidence Engine Specification
 
 ## Evidence Model
 
-Every finding emitted by ArgusAgent carries a verifiable evidence descriptor:
+Every finding emitted by Agent-Argus carries a verifiable evidence descriptor:
 - `finding_id`: Content-derived sha256 hash of location and rule id.
 - `rule_id`: E.g., `vacuous_test_ast`, `hardcoded_secret`, `orphan_code`.
 - `locators`: List of AST spans (file, start line, end line, symbol name).

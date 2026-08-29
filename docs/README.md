@@ -1,6 +1,6 @@
 # docs/
 
-Project-knowledge root for ArgusAgent. Resolved from `modules.bmm.project_knowledge`
+Project-knowledge root for Agent-Argus. Resolved from `modules.bmm.project_knowledge`
 in `_bmad/config.toml`.
 
 BMad skills read from and write to this directory:

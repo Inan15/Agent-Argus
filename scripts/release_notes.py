@@ -248,6 +248,16 @@ _OBSERVATION_2026_08_15 = GateObservation(
 # carried forward on faith: all four `test_installed_artifact.py` guards still SKIP on every
 # leg with the same E6 outcome, so the citation still does not cover the fresh-environment
 # installed-artifact proof, and DF-12-9-B is still open.
+#
+# 🔧 **NOTE ADDED 2026-08-29** (naming sweep). Both citations above quote the workflow's
+# display name as `ArgusAgent Repository Audit & Assurance CI` — which is what `audit-ci.yml`
+# was called when runs 31908861401 and 33235322979 executed. The workflow has since been
+# renamed to `Agent-Argus Repository Audit & Assurance CI`, per `NAMING.md`.
+#
+# The quoted strings are LEFT EXACTLY AS THEY WERE, deliberately. A citation names what the
+# run was actually called; rewriting it to the current spelling would make this record
+# disagree with the run page it points a reader at, which is the same class of defect as
+# quoting a run id without its sha. Citations taken after this date use the new name.
 # ─────────────────────────────────────────────────────────────────────────────
 RECORDED_GATE_OBSERVATION = GateObservation(
     run_id="33235322979",

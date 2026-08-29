@@ -1,4 +1,4 @@
-# ArgusAgent Installer Script for Windows PowerShell
+# Agent-Argus Installer Script for Windows PowerShell
 #
 # Story 12.7 / FR35 — THIS SCRIPT NO LONGER PLACES ANY FILE ITSELF. It installs the
 # distribution and then delegates to `argus install-commands`, which is the ONE placement
@@ -14,7 +14,7 @@
 $ErrorActionPreference = "Stop"
 
 Write-Host "====================================================" -ForegroundColor Cyan
-Write-Host "      ArgusAgent (argus-agent) Installer" -ForegroundColor Cyan
+Write-Host "      Agent-Argus (argus-agent) Installer" -ForegroundColor Cyan
 Write-Host "====================================================" -ForegroundColor Cyan
 Write-Host ""
 
@@ -28,7 +28,7 @@ try {
 }
 
 # 2. Install Package
-Write-Host "[2/4] Installing ArgusAgent package locally..." -ForegroundColor Yellow
+Write-Host "[2/4] Installing Agent-Argus package locally..." -ForegroundColor Yellow
 pip install -e .
 
 # 3. Verify CLI
@@ -43,6 +43,6 @@ argus install-commands
 
 Write-Host ""
 Write-Host "====================================================" -ForegroundColor Green
-Write-Host " ArgusAgent installation complete!" -ForegroundColor Green
+Write-Host " Agent-Argus installation complete!" -ForegroundColor Green
 Write-Host " Run 'argus audit .' or use the /argus-audit commands in a supported AI assistant." -ForegroundColor Green
 Write-Host "====================================================" -ForegroundColor Green

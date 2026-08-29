@@ -1,9 +1,9 @@
 ---
 name: argus-agent-audit
-description: ArgusAgent Repository Assurance Audit skill. Performs evidence-backed, AST-grounded repository audits across architecture, security, performance, requirements, and testing.
+description: Agent-Argus Repository Assurance Audit skill. Performs evidence-backed, AST-grounded repository audits across architecture, security, performance, requirements, and testing.
 ---
 
-# ArgusAgent Audit Skill
+# Agent-Argus Audit Skill
 
 Use this skill when the user asks to audit a repository, evaluate release-readiness, check code quality, analyze architecture, scan for security leaks, or generate evidence-backed audit reports.
 

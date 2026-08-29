@@ -1,11 +1,21 @@
 # Reporting a wrong finding
 
-**This is the most valuable thing you can do with this beta.**
+**This is the most valuable thing you can do with Agent-Argus.**
 
-ArgusAgent's own accuracy has not been independently validated. On 2026-08-17 we ran the first
-human adjudication of its blocking findings across five real repositories, and **none of the 31
-findings held up as a true positive**. That is why the instrument-status notice is still on every
-run, and why your disagreement is data rather than noise.
+Agent-Argus's own accuracy has not been independently validated, and the ≥80% precision gate that
+would lift that notice is **unevaluable rather than unmet** — run over the ratified corpus, the
+corrected detector promoted no finding to verdict-eligible, so the precision ratio has an empty
+denominator instead of a low value. That is why the instrument-status notice is on every run, and
+why your disagreement is data rather than noise.
+
+> 🔴 **Corrected 2026-08-29.** This page used to say: *"On 2026-08-17 we ran the first human
+> adjudication of its blocking findings across five real repositories, and ~~none of the 31
+> findings held up as a true positive~~."* Two things were wrong with that. It implied a measured
+> precision of 0/31 when the corrected detector yields **no verdict-eligible findings at all** —
+> a different and much weaker statement. And it presented the 31 judgements as an independent
+> result when every one of them was authored by the tool's own author, which derives as
+> `NOT_INDEPENDENT`. Struck, not deleted: the record that the claim was made is what makes the
+> correction checkable.
 
 A tool that fails your build on good code is worse than no tool. Tell us when it does.
 
@@ -38,17 +48,18 @@ worse than an honest "unclear."
   reverse.
 - **`INSUFFICIENT_COVERAGE` you cannot explain** — Argus refusing to grade code it should have
   been able to read.
-- **Anything in the docs that is wrong or missing.** The quickstart is new.
+- **Anything in the docs that is wrong or missing.** Two errors in this package were found that
+  way and are struck above and in `QUICKSTART.md`; there are certainly others.
 
 ---
 
 ## What happens to your report
 
 False positives you report become candidates for the validation corpus — the labelled set the
-precision gate is measured over. Our current corpus is narrow: 31 findings drawn from two
-repositories and a single rule class, one of which is the repository Argus was developed inside.
-Findings from code we have never seen are worth far more than anything we can generate
-ourselves.
+precision gate is measured over. The current corpus is narrow, and adjudication of it is not
+independent: every live judgement was authored by the tool's own author. **Findings from code we
+have never seen are worth far more than anything we can generate ourselves**, and adjudication by
+someone outside the team is worth strictly more than adjudication by us.
 
 If a report changes the measured precision, that shows up in the instrument-status notice, which
 is derived rather than hand-written.
@@ -57,7 +68,7 @@ is derived rather than hand-written.
 
 ## Where to send it
 
-**Open an issue:** https://github.com/XAgents-ai/argus-agent-releases/issues
+**Open an issue:** https://github.com/Inan15/Agent-Argus/issues
 
 Use the four fields above — rule id, locator, your call, and one or two sentences of why.
 A title like `FP: vacuous_test_ast at tests/test_client.py:32` is ideal.

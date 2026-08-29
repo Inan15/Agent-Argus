@@ -1,4 +1,4 @@
-# ArgusAgent Audit Principles
+# Agent-Argus Audit Principles
 
 1. **Evidence-Driven, Never Hallucinated**: Every defect claimed must cite exact AST spans or verified zero-token tool outputs.
 2. **False-Accusation Moat**: Heuristic findings are advisory-by-contract. No red verdict ($\color{red}{\text{NOT READY}}$) without AST grounding and Prosecutor verification.

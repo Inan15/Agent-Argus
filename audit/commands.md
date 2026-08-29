@@ -1,4 +1,4 @@
-# ArgusAgent Slash Commands Reference
+# Agent-Argus Slash Commands Reference
 
 **These are the commands that ship.** The set below is not maintained by hand: it is the
 `argus/assets/commands/` tree, which `argus install-commands` places into your assistant's
