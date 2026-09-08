@@ -8514,3 +8514,45 @@ gap (see `DF-20-1-A` below) and stays open.
   library-level behaviour, not an invocable path. That is not a defect in the tests — it is the
   only thing they COULD pin while the three seams have no surface — but the suite must not be
   cited as evidence that FR38, FR39 or FR40 is reachable.
+
+## Deferred from: story 21-1-cd2-consumption-points-and-rollup-covers-verdict (2026-09-08)
+
+**Prior art, grepped before filing.** `git log --follow -- scripts/check_meta_drift.py` and a
+repo-wide grep for `DF-DRIFT-UNREAD` and `check_meta_drift` before this entry: the script exists
+and has fired correctly across Epics 17, 18, 19 and 20 — four consecutive epics, every one over
+the §RD-1 process-derived budget, every one printed by the advisory reader on every run — and its
+report was read by no one before Epic 21 named the gap in `sprint-change-proposal-2026-08-29b.md`.
+Story 17.5 is the one place in this history an epic's `**Covers:**` list was actually checked
+against what was delivered: it found Epic 17's header claimed six ledger entries as covered
+(`DF-INV-VACUOUS-A`, `DF-14-1-A`, `DF-16-7-A`, `DF-16-7-B`, `DF-12-2-D`, `DF-12-3-A`) and NONE of
+the six was delivered, and hand-corrected the header in place under §3.4 — only because that story
+happened to be chartered to look. `AI-E17-13` (`sprint-status.yaml` `action_items:`) records the
+same finding in the house form: *"NEW, mechanical, and it belongs to the ROLL-UP rather than to
+any story... Nothing in the loop re-derives an epic's Covers: list at roll-up, so an epic whose
+charter is falsified by its own execution can close with the falsification standing."*
+
+- **DF-DRIFT-UNREAD-A** — **A correctly-firing advisory signal had no reader.**
+  `check_meta_drift.py`'s §RD-1/§CD-2 report has fired on every epic since the forward-only cutoff
+  (`CUTOFF_EPIC = 17`) — Epic 17 at 80% process-derived, Epic 18 at 75%, Epic 19 at 100%, Epic 20
+  at 100%, all against a 20% budget, Epic 20 also carrying no `**Capability delivered:**` field at
+  all — and nothing in the `bmad-dev-loop` orchestrator loop ever read it: no step in the loop
+  calls the script, no step gates on its output, and (Story 17.5 excepted, by hand) no story before
+  this one checked an epic's `**Covers:**` claim against what was actually delivered at roll-up.
+  The signal was not silent; it was unread. Story 21.1 gives it two named readers in
+  `.claude/skills/bmad-dev-loop/SKILL.md` §3: an epic ENTRY gate (HALTs only on a missing
+  `**Capability delivered:**`/`**Covers:**` field; records a `META-DRIFT:` verdict) and a roll-up
+  `Covers:` re-derivation before `epic-<id> = done` — that story's Task 1 and Task 2.
+  ⚠️ **Filed 2026-09-08 by Cadmus (XAgents-Assistant, wq-039) with Tasks 1 and 2 of 21.1 NOT YET
+  LANDED**: this agent's Edit and Write access to `.claude/skills/bmad-dev-loop/SKILL.md` is
+  permission-denied in this working environment (confirmed with both tools, independently), so
+  the entry gate and roll-up re-derivation described above are not yet in the installed skill as
+  of this filing. *"Nothing in the loop re-derives an epic's `Covers:` list at roll-up"* remains
+  true of the loop itself until Tasks 1 and 2 land — this entry documents the gap Story 21.1 is
+  chartered to close, not that it is closed. Story 21.1's Tasks 3 (this ledger entry's sibling
+  regression test, `tests/test_check_meta_drift.py`) and 4 (this entry) are done.
+  - id: DF-DRIFT-UNREAD-A
+  - origin_story: 21-1-cd2-consumption-points-and-rollup-covers-verdict
+  - owner: dev-loop orchestrator (the epic ENTRY gate and the roll-up step, `bmad-dev-loop/SKILL.md` §3)
+  - target_story: 21-1-cd2-consumption-points-and-rollup-covers-verdict
+  - category: process
+  - severity: 🟡

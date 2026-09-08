@@ -547,7 +547,7 @@ development_status:
   20-4-post-v1-integration-verification: done  # code-review (2026-08-29): review -> done. VERDICT PASS: Implemented tests/test_post_v1_integration.py with 14 E2E integration tests. Verified multi-language AST parsing, defect remediation patch generation/verification/containment, and LSP diagnostic server JSON-RPC streaming. All 1,845 tests pass, mypy argus/ clean.
   epic-20-retrospective: done  # 2026-08-29: optional -> done. Retrospective completed and registered in tests/test_status_document_registry.py (epic-20-retro-2026-08-29.md).
   epic-21: backlog  # 2026-08-29: named corrective epic per sprint-change-proposal-2026-08-29b.md
-  21-1-cd2-consumption-points-and-rollup-covers-verdict: ready-for-dev  # 2026-09-07: backlog -> ready-for-dev. Story file created by Eunomia (wq-039); no code, no dev, no review run — per SKILL.md §3 this is the create-story transition only.
+  21-1-cd2-consumption-points-and-rollup-covers-verdict: in-progress  # 2026-09-08: ready-for-dev -> in-progress. Cadmus (XAgents-Assistant, wq-039) reviewed the story on its own merits (ACs verbatim-matched against epics.md, Dev Notes line refs checked against scripts/check_meta_drift.py, deferred-work.md schema confirmed CC-3 not the action_items shape) and judged it genuinely ready; per bmad-dev-story SKILL.md step 4, marking in-progress before implementation.
   21-2-staging-protocol-and-premise-remeasurement-phase: backlog
   21-3-fix-round-budget-by-finding-class: backlog
   21-4-correct-epic-20-seed-in-place: backlog

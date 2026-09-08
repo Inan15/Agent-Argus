@@ -4,7 +4,7 @@ baseline_commit: fd56de3f8e63a6ab0784a5a727fb1afbdfea3262
 
 # Story 21.1: Register the Two §CD-2 Consumption Points and the Roll-Up `Covers:` Verdict
 
-Status: ready-for-dev
+Status: in-progress
 
 <!-- Contexted 2026-09-07 at HEAD `fd56de3f8e63a6ab0784a5a727fb1afbdfea3262` (branch
      `story/21-1-cd2-consumption-points-and-rollup-covers-verdict`, cut from `dev`) by Eunomia
@@ -50,6 +50,7 @@ story does not restate them in different words:
 ## Tasks / Subtasks
 
 - [ ] Task 1: Add the epic ENTRY gate to `.claude/skills/bmad-dev-loop/SKILL.md` §3 (AC: #1)
+      — **BLOCKED, not done. See Dev Agent Record.**
   - [ ] State the gate as a precondition on the state-machine table or its surrounding prose:
         before a `backlog` epic's first story may route to `bmad-sm`, `epics.md`'s seed for
         that epic must carry a non-empty `**Capability delivered:**` and `**Covers:**` (or
@@ -63,7 +64,7 @@ story does not restate them in different words:
         to the roll-up (AC #2), not the entry.
 
 - [ ] Task 2: Add the roll-up `Covers:` re-derivation to `.claude/skills/bmad-dev-loop/SKILL.md`
-      §3 (AC: #2)
+      §3 (AC: #2) — **BLOCKED, not done. See Dev Agent Record.**
   - [ ] Before the orchestrator writes `epic-<id> = done` (§3's existing "Then set `epic-<id> =
         done` yourself" step), require it to read the epic's `**Covers:**` line from `epics.md`,
         resolve each id against its current on-disk status (a sprint-status story key, a
@@ -75,34 +76,51 @@ story does not restate them in different words:
   - [ ] Cite AI-E17-13 and Story 17.5's hand correction as the evidence this rule generalizes
         from (both already in `deferred-work.md` / `epics.md` — no new research needed).
 
-- [ ] Task 3: Prove the advisory path never blocks (AC: #3)
-  - [ ] Add or extend a test asserting `python scripts/check_meta_drift.py` exits `0` on a clean
+- [x] Task 3: Prove the advisory path never blocks (AC: #3)
+  - [x] Add or extend a test asserting `python scripts/check_meta_drift.py` exits `0` on a clean
         parse of the current `epics.md` (a "cannot read its inputs" nonzero exit is the only
         legitimate nonzero case, per the module's own docstring at
-        `scripts/check_meta_drift.py:1-12`).
-  - [ ] Cover the encoding regression named in the Epic 21 seed commit (`fd56de3`): a
+        `scripts/check_meta_drift.py:1-12`). Done as
+        `test_advisory_path_exits_zero_on_a_clean_parse_of_the_real_repo` (and the `--json`
+        sibling), run against a real subprocess with `PYTHONUTF8`/`PYTHONIOENCODING` explicitly
+        stripped so the assertion cannot pass merely because this workspace's own tooling forces
+        UTF-8 (`windows-environment.md` requires `PYTHONUTF8=1` for every `uv run`).
+  - [x] Cover the encoding regression named in the Epic 21 seed commit (`fd56de3`): a
         `**Capability delivered:**` value beginning with a non-cp1252-encodable character (the
         seed used `⛔`, U+26D4) must not crash `report_epics`'s `print(f"      capability:
-        {cap[:64]}")` (`scripts/check_meta_drift.py:150`) on a default Windows console; either
-        the print path degrades gracefully or the test pins `PYTHONIOENCODING=utf-8` and says
-        why in a comment.
-  - [ ] Confirm this test lands as a **new** assertion, not a relaxation of any existing one —
-        the entry gate (Task 1) is allowed to HALT; the advisory reader itself is not.
+        {cap[:64]}")` (`scripts/check_meta_drift.py:150` at baseline) on a default Windows
+        console. Chose the **durable fix** the seed commit itself named as the right one
+        ("the DURABLE fix belongs in the script (encode defensively)"): added
+        `_console_safe()` to `scripts/check_meta_drift.py` and routed `cap[:64]` through it
+        before the print. Reproduced the original crash first (bare `uv run python -c
+        "print('⛔ ...')"` with no `PYTHONUTF8`/`PYTHONIOENCODING` set → real
+        `UnicodeEncodeError`, exit 1, on this machine's default `cp1252` stdout), then proved the
+        fix with a strict-`cp1252` `sys.stdout` stand-in
+        (`test_console_safe_survives_a_leading_non_cp1252_glyph`), then proved non-vacuity by
+        temporarily reverting the one-line wiring and confirming exactly the two regression
+        tests fail with the real `UnicodeEncodeError`, then restored it and confirmed green again.
+  - [x] Confirm this test lands as a **new** assertion, not a relaxation of any existing one —
+        no test file for `check_meta_drift.py` existed before this story (confirmed absent at
+        this story's baseline commit); nothing pre-existing was touched or weakened.
 
-- [ ] Task 4: File `DF-DRIFT-UNREAD-A` (AC: #4)
-  - [ ] Add an entry to `_bmad-output/design-artifacts/ArgusAgent/deferred-work.md` in that
-        file's existing entry form (epic, id, action, owner, destination, priority, status) —
-        follow the shape already used for `AI-E17-*` entries in `sprint-status.yaml`'s
-        `action_items:` block, or `deferred-work.md`'s own entries if its schema differs; check
-        the file's current schema before writing, do not assume it matches
-        `sprint-status.yaml`'s.
-  - [ ] Record the prior-art grep in the entry body: `check_meta_drift.py` (the advisory
-        mechanism) existed and fired correctly across Epics 17, 18, 19 and 20 — four
-        consecutive epics — and its report was read by no one before Epic 21 named the gap.
-        Cite the specific evidence (AI-E17-13, Story 17.5) that shows the signal fired and was
-        not acted on.
-  - [ ] Name a destination and owner consistent with the other `dev-loop orchestrator`-owned
-        entries already in the `action_items:` block (e.g. AI-E17-13's own row).
+- [x] Task 4: File `DF-DRIFT-UNREAD-A` (AC: #4)
+  - [x] Add an entry to `_bmad-output/design-artifacts/ArgusAgent/deferred-work.md`. Checked the
+        file's current schema before writing (per this task's own instruction): it is CC-3
+        (id · origin_story · owner · target_story|sunset_date · category · severity), NOT
+        `sprint-status.yaml`'s `action_items:` shape (epic, id, action, owner, destination,
+        priority, status) — the two are genuinely different, confirmed by reading both. Filed as
+        a new dated `## Deferred from:` section (pure append, `deferred-work.md`'s own
+        convention), with explicit CC-3 fields plus prose matching the file's most recent entry
+        style.
+  - [x] Recorded the prior-art grep in the entry body: `check_meta_drift.py` existed and fired
+        correctly across Epics 17, 18, 19 and 20 — four consecutive epics — and its report was
+        read by no one before Epic 21 named the gap. Cited `AI-E17-13` and Story 17.5's hand
+        correction as the evidence the signal fired and was not acted on.
+  - [x] Named the destination and owner consistent with `AI-E17-13`'s own row: `dev-loop
+        orchestrator (the epic ENTRY gate and the roll-up step, bmad-dev-loop/SKILL.md §3)`. The
+        entry also states plainly, per this repo's own "no bookkeeping lie" convention
+        (`AI-E17-12`'s precedent), that Tasks 1 and 2 are **not yet landed** — see Dev Agent
+        Record.
 
 ---
 
@@ -175,12 +193,137 @@ should be written so Story 21.4 can point at it rather than re-deriving its own.
 
 ### Agent Model Used
 
-Not yet started.
+Claude Sonnet 5 (Cadmus, XAgents-Assistant, work order wq-039), 2026-09-08.
 
 ### Debug Log References
 
+**HALT on Task 1 and Task 2 — a real, confirmed tooling/permission blocker, not a story defect.**
+
+Before implementing, this story was judged on its own merits per wq-039's instruction: the four
+Acceptance Criteria were checked verbatim against `epics.md` §"Story 21.1" (line 3957) and matched
+exactly; every Dev Notes line reference was checked against the live files (`scripts/check_meta_
+drift.py`'s `report_epics`/`cap[:64]` print, `deferred-work.md`'s actual current schema, the
+`AI-E17-13` action_items row) and all held; the story's own hedge on Task 4 ("check the file's
+current schema before writing, do not assume it matches sprint-status.yaml's") was independently
+confirmed necessary — the two schemas really do differ. No contradiction or gap was found in the
+story content itself. Judgment: **genuinely ready for dev.**
+
+Implementation then hit a real environment blocker on Task 1: both the `Edit` and the `Write`
+tool were **permission-denied** on `.claude/skills/bmad-dev-loop/SKILL.md` — confirmed twice with
+`Edit` and once with `Write`, all three attempts returning an explicit tool-permission denial (not
+a file-not-found, not a git error, not a story-content problem). `Edit` and `Write` both succeeded
+without issue on every other file this story touches (`sprint-status.yaml`,
+`scripts/check_meta_drift.py`, `deferred-work.md`, this story file — all in the same repository,
+same session, same agent), which isolates the denial to this specific path rather than to the
+repository or the tool generally. No deny rule for this path was found in
+`.claude/settings.local.json` (the only settings file in this repo) or in the caller's
+`.claude/settings.json`, so this reads as harness-level protection of `.claude/skills/**` rather
+than a project-configured rule — plausibly deliberate, since skill files are themselves executable
+instructions and a repo-local dev agent silently rewriting the orchestrator's own state-machine
+prose is exactly the kind of self-modification a harness would want to gate. Per this agent's own
+operating rule ("you should not attempt to work around this denial... if you believe this
+capability is essential to complete the request, STOP and explain"), no further routing around it
+(e.g. a raw shell write) was attempted after the second confirmation.
+
+**Consequence for Task 1 and Task 2**: both require edits inside
+`.claude/skills/bmad-dev-loop/SKILL.md` §3 (the epic ENTRY gate and the roll-up `Covers:`
+re-derivation) and neither could be made. The exact prose this agent intended to add is preserved
+below so the next dev agent (or the owner, editing directly) does not have to re-derive it:
+
+> **Epic ENTRY gate (checked once, before a `backlog` epic's first story routes to `bmad-sm`).**
+> Read that epic's seed block in the epics artifact (`epics.md` in this project): its
+> `**Capability delivered:**` and `**Covers:**` fields must both be present — or, when the epic
+> delivers nothing a user can reach, `**Capability delivered:** Nothing` (or `NONE`) plus a dated
+> operator ruling cited in the same seed block. If either field is missing outright → **HALT**,
+> naming the epic and the missing field; do not spawn `bmad-sm`. When the gate passes, require
+> that the epic's first story records a `META-DRIFT:` verdict line: the project's advisory
+> meta-work drift reader's output for that epic (this project's is `scripts/check_meta_drift.py`;
+> discover the equivalent the same way §1 discovers workflow commands if a project configures a
+> different one), read at the same HEAD the story is contexted at. This gate HALTs on **missing
+> fields only** — it is never a judgment call on whether the stated capability or coverage is
+> *correct*; that question belongs to the roll-up re-derivation, not the entry. The advisory
+> reader itself never HALTs and never becomes blocking here or anywhere else in this loop — it is
+> read, not enforced. *(Insert immediately before "For the current target story key, read its
+> status and route:" in §3, keeping the file generic/portable per its own §0 promise — hence the
+> parenthetical about discovering an equivalent reader rather than hardcoding the path.)*
+>
+> **Roll-up addition, inside the existing "Epic-level:" paragraph, as a new step 2 (renumbering
+> the existing step 2 "Then set `epic-<id> = done`..." to step 3):** *"Roll-up `Covers:`
+> re-derivation (before writing `done`). Read the epic's `**Covers:**` line from `epics.md` and
+> resolve each id it names against its current on-disk status — a `sprint-status.yaml` story key,
+> a `deferred-work.md` entry, or another destination the id itself names. Record a per-id verdict
+> (met / unmet) as part of this step. If any id is unmet, do not write `epic-<id> = done` silently:
+> the unmet list forces a dated §3.4 correction in `epics.md` first (the same form Story 17.5 used
+> by hand for `AI-E17-13`), and only then does the epic close."*
+
+**What was done instead, and why it stands on its own.** Task 3 and Task 4 do not touch
+`.claude/skills/**` and are genuinely independent of Task 1/2 (Task 3 is a test against
+`scripts/check_meta_drift.py`'s existing, already-shipped advisory behaviour; Task 4 is a ledger
+filing). Both were completed and verified in full rather than left undone alongside 1 and 2 —
+per wq-039's own framing, a blocked task is "a real finding, not a failure," and finishing the
+unblocked, independent work is not the same as building around the blocker. Task 3 additionally
+found and fixed a **real, reproduced regression**: with `PYTHONUTF8`/`PYTHONIOENCODING` unset (the
+default in a bare child process on this machine — confirmed: `sys.stdout.encoding` is `cp1252`),
+`report_epics`'s `print(f"      capability: {cap[:64]}")` crashes with `UnicodeEncodeError` when
+the capability text contains a non-cp1252-encodable character within the first 64 characters —
+reproduced directly (`print('⛔ ...')` under a bare `uv run python -c`) before writing any
+fix, exactly matching the Epic 21 seed commit's (`fd56de3`) own account of the original break. Per
+that commit's own stated preference ("the DURABLE fix belongs in the script (encode
+defensively)"), the durable fix was chosen over the test-only "pin PYTHONIOENCODING and say why"
+alternative the Dev Notes also permitted: added `_console_safe()` and routed `cap[:64]` through it.
+Non-vacuity of the new regression tests was verified by temporarily reverting the one-line wiring,
+confirming exactly the two tests that should fail did (with the real `UnicodeEncodeError`, not a
+mocked one), then restoring the fix and confirming all six tests pass again.
+
+Also fixed as a prerequisite, unrelated to story content: `ArgusAgent/.venv` was a Linux-origin
+`uv` environment (`pyvenv.cfg` named a WSL Python), unusable on native Windows and the reason `uv
+run` failed with a permission error trying to remove its `lib64` symlink. Removed and re-synced
+(`uv sync --extra dev`) to a native Windows venv before any test could run. Not part of this
+story's scope; noted so a future session does not re-diagnose it.
+
+`sprint-status.yaml`'s `21-1-...` key was moved `ready-for-dev` → `in-progress` per
+`bmad-dev-story` SKILL.md step 4 before work began, and is left at `in-progress` (not `review`):
+per that workflow's own step 9 ("if any task is incomplete → HALT — complete remaining tasks
+before marking ready for review"), 2 of 4 tasks are not done, so this story does not qualify for
+`review`. `epic-21`'s own status (still `backlog`) was left untouched — that transition belongs to
+the SM phase per SKILL.md §3 ("the SM marks `epic-<id>` → `in-progress` on the epic's first
+story"), not to this dev round, and is noted here rather than silently corrected.
+
 ### Completion Notes List
 
+- Story judged genuinely ready for dev on its own merits (ACs and Dev Notes verified against
+  live files); not a rubber stamp.
+- Task 1, Task 2: **BLOCKED** — `.claude/skills/bmad-dev-loop/SKILL.md` is permission-denied to
+  both `Edit` and `Write` for this agent in this environment. Intended prose preserved above.
+- Task 3: **DONE.** `tests/test_check_meta_drift.py` (6 tests, all passing); found and durably
+  fixed the real §CD-2 encoding regression named in the Epic 21 seed commit
+  (`scripts/check_meta_drift.py`'s new `_console_safe()`); non-vacuity of the regression tests
+  verified by reverting and restoring the fix.
+- Task 4: **DONE.** `DF-DRIFT-UNREAD-A` filed in `deferred-work.md` (pure append, `CR` byte
+  invariant unchanged: 1 before and after; `LF` 8516 → 8558), CC-3 fields, prior-art grep
+  recorded, honest note that Tasks 1–2 are not yet landed.
+- Full regression suite run twice (before and after all changes): `pytest -q` exit `0` both
+  times, only the one pre-existing, unrelated skip (`tests/test_naming_consistency.py:151`,
+  "got empty parameter set"). `mypy scripts/check_meta_drift.py tests/test_check_meta_drift.py`
+  clean. `bandit -r` on both touched files: 0 Medium/High.
+- Story left at `in-progress`, not `review` — 2 of 4 tasks incomplete, correctly, per the
+  workflow's own Definition of Done.
+- Nothing in `argus/` touched (confirmed by `git diff --stat`); the story's own "Zero `argus/`
+  bytes are touched by this story" constraint holds.
+
 ### File List
+
+- `_bmad-output/design-artifacts/ArgusAgent/sprint-status.yaml` [MODIFY] — `21-1-...` key
+  `ready-for-dev` → `in-progress`.
+- `scripts/check_meta_drift.py` [MODIFY] — added `_console_safe()`; routed the
+  `**Capability delivered:**` print through it (§CD-2 encoding regression, durable fix).
+- `tests/test_check_meta_drift.py` [NEW] — 6 tests for AC #3 (no prior test file for this
+  module existed).
+- `_bmad-output/design-artifacts/ArgusAgent/deferred-work.md` [MODIFY] — pure append,
+  `DF-DRIFT-UNREAD-A` (AC #4).
+- `_bmad-output/design-artifacts/ArgusAgent/stories/21-1-cd2-consumption-points-and-rollup-covers-verdict.md`
+  [MODIFY] — this file: Status, Tasks/Subtasks, Dev Agent Record.
+- **NOT modified, blocked**: `.claude/skills/bmad-dev-loop/SKILL.md` (Task 1, Task 2 — see Debug
+  Log References).
 
 ### Review Findings

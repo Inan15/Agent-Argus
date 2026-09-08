@@ -74,6 +74,24 @@ def _read(path: Path) -> str:
     return path.read_text(encoding="utf-8", errors="replace")
 
 
+def _console_safe(s: str) -> str:
+    """Return *s* re-encoded so it can never crash a ``print`` to the current
+    stdout. §CD-2 regression (Epic 21 seed commit ``fd56de3``): a
+    ``**Capability delivered:**`` value beginning with a non-cp1252-encodable
+    character (``⛔``, U+26D4) crashed this module's ``report_epics``
+    print on a default Windows console — ``UnicodeEncodeError`` -> exit 1,
+    while ``PYTHONIOENCODING=utf-8`` exited 0. Per the module docstring, a
+    non-zero exit from this script means it could not READ its inputs, never
+    that a finding was made; that crash was a FALSE "cannot read" signal, the
+    exact false-failure class the advisory disposition exists to avoid. Every
+    string built from ``epics.md`` prose that reaches a ``print`` call is
+    routed through this function so no future prose byte can turn a clean
+    parse into a non-zero exit, regardless of where in the string it falls.
+    """
+    enc = getattr(sys.stdout, "encoding", None) or "utf-8"
+    return s.encode(enc, errors="backslashreplace").decode(enc, errors="replace")
+
+
 def _git(*args: str) -> str:
     return subprocess.run(
         ["git", "-C", str(REPO), *args], capture_output=True
@@ -147,7 +165,7 @@ def report_epics(rows: list[dict]) -> None:
             print(f'    {"  " if ok else "!!"}capability = "Nothing"'
                   f'{" (ruling cited)" if ok else " — NO RULING CITED"}')
         else:
-            print(f"      capability: {cap[:64]}")
+            print(f"      capability: {_console_safe(cap[:64])}")
     n_classified = sum(1 for r in rows if not r["pre_rule"])
     if not n_classified:
         print(f"      no epic at or above the cutoff ({CUTOFF_EPIC}) yet — nothing to")
