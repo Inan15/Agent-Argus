@@ -1,5 +1,5 @@
 # generated: 2026-06-18
-# last_updated: 2026-08-29
+# last_updated: 2026-09-08
 # project: ArgusAgent (formerly APAA — AI Project Assurance Audit)
 
 # project_key: NOKEY
@@ -547,7 +547,7 @@ development_status:
   20-4-post-v1-integration-verification: done  # code-review (2026-08-29): review -> done. VERDICT PASS: Implemented tests/test_post_v1_integration.py with 14 E2E integration tests. Verified multi-language AST parsing, defect remediation patch generation/verification/containment, and LSP diagnostic server JSON-RPC streaming. All 1,845 tests pass, mypy argus/ clean.
   epic-20-retrospective: done  # 2026-08-29: optional -> done. Retrospective completed and registered in tests/test_status_document_registry.py (epic-20-retro-2026-08-29.md).
   epic-21: backlog  # 2026-08-29: named corrective epic per sprint-change-proposal-2026-08-29b.md
-  21-1-cd2-consumption-points-and-rollup-covers-verdict: in-progress  # 2026-09-08: ready-for-dev -> in-progress. Cadmus (XAgents-Assistant, wq-039) reviewed the story on its own merits (ACs verbatim-matched against epics.md, Dev Notes line refs checked against scripts/check_meta_drift.py, deferred-work.md schema confirmed CC-3 not the action_items shape) and judged it genuinely ready; per bmad-dev-story SKILL.md step 4, marking in-progress before implementation.
+  21-1-cd2-consumption-points-and-rollup-covers-verdict: review  # 2026-09-08: ready-for-dev -> in-progress (Cadmus, wq-039, per bmad-dev-story SKILL.md step 4). Tasks 1-2 then BLOCKED: .claude/skills/bmad-dev-loop/SKILL.md is Edit/Write-denied at the harness level for every agent (confirmed independently three times). The owner applied Cadmus's preserved prose (epic ENTRY gate + roll-up Covers: re-derivation) to the live SKILL.md by hand through Iris; Neo caught one manual-paste gap (a dropped, renumbered step) and the owner fixed it. Cadmus (wq-083) re-verified the final live text matches, in order, unaltered elsewhere at the edit site; all 4 tasks now complete per SKILL.md step 9 -> in-progress -> review. Not yet independently re-reviewed; Aeacus to give the SKILL.md's final state one adversarial look before this closes for real.
   21-2-staging-protocol-and-premise-remeasurement-phase: backlog
   21-3-fix-round-budget-by-finding-class: backlog
   21-4-correct-epic-20-seed-in-place: backlog

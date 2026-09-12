@@ -4,7 +4,7 @@ baseline_commit: fd56de3f8e63a6ab0784a5a727fb1afbdfea3262
 
 # Story 21.1: Register the Two §CD-2 Consumption Points and the Roll-Up `Covers:` Verdict
 
-Status: in-progress
+Status: review
 
 <!-- Contexted 2026-09-07 at HEAD `fd56de3f8e63a6ab0784a5a727fb1afbdfea3262` (branch
      `story/21-1-cd2-consumption-points-and-rollup-covers-verdict`, cut from `dev`) by Eunomia
@@ -49,31 +49,31 @@ story does not restate them in different words:
 
 ## Tasks / Subtasks
 
-- [ ] Task 1: Add the epic ENTRY gate to `.claude/skills/bmad-dev-loop/SKILL.md` §3 (AC: #1)
-      — **BLOCKED, not done. See Dev Agent Record.**
-  - [ ] State the gate as a precondition on the state-machine table or its surrounding prose:
+- [x] Task 1: Add the epic ENTRY gate to `.claude/skills/bmad-dev-loop/SKILL.md` §3 (AC: #1)
+      — **DONE. Owner applied the preserved text by hand 2026-09-08. See Dev Agent Record.**
+  - [x] State the gate as a precondition on the state-machine table or its surrounding prose:
         before a `backlog` epic's first story may route to `bmad-sm`, `epics.md`'s seed for
         that epic must carry a non-empty `**Capability delivered:**` and `**Covers:**` (or
         `Capability delivered: Nothing` plus a dated ruling citation, per the Epic 21 and
         Epic 20 precedent) — else **HALT**.
-  - [ ] Require that the epic's first story records a `META-DRIFT:` verdict line (the
+  - [x] Require that the epic's first story records a `META-DRIFT:` verdict line (the
         `check_meta_drift.py` read for that epic, taken at the same HEAD the story was
         contexted at).
-  - [ ] Keep the gate worded as **HALT on missing fields only** — it must not become a judgment
+  - [x] Keep the gate worded as **HALT on missing fields only** — it must not become a judgment
         call on whether the capability or coverage stated is *correct*; that question belongs
         to the roll-up (AC #2), not the entry.
 
-- [ ] Task 2: Add the roll-up `Covers:` re-derivation to `.claude/skills/bmad-dev-loop/SKILL.md`
-      §3 (AC: #2) — **BLOCKED, not done. See Dev Agent Record.**
-  - [ ] Before the orchestrator writes `epic-<id> = done` (§3's existing "Then set `epic-<id> =
+- [x] Task 2: Add the roll-up `Covers:` re-derivation to `.claude/skills/bmad-dev-loop/SKILL.md`
+      §3 (AC: #2) — **DONE. Owner applied the preserved text by hand 2026-09-08. See Dev Agent Record.**
+  - [x] Before the orchestrator writes `epic-<id> = done` (§3's existing "Then set `epic-<id> =
         done` yourself" step), require it to read the epic's `**Covers:**` line from `epics.md`,
         resolve each id against its current on-disk status (a sprint-status story key, a
         `deferred-work.md` entry, or another named destination), and record a per-id verdict
         (met / unmet) before writing `done`.
-  - [ ] State the unmet-list consequence: any id not delivered forces a dated §3.4 correction in
+  - [x] State the unmet-list consequence: any id not delivered forces a dated §3.4 correction in
         `epics.md` (the same form Story 17.5 used by hand for AI-E17-13) rather than a silent
         `done`.
-  - [ ] Cite AI-E17-13 and Story 17.5's hand correction as the evidence this rule generalizes
+  - [x] Cite AI-E17-13 and Story 17.5's hand correction as the evidence this rule generalizes
         from (both already in `deferred-work.md` / `epics.md` — no new research needed).
 
 - [x] Task 3: Prove the advisory path never blocks (AC: #3)
@@ -275,6 +275,27 @@ Non-vacuity of the new regression tests was verified by temporarily reverting th
 confirming exactly the two tests that should fail did (with the real `UnicodeEncodeError`, not a
 mocked one), then restoring the fix and confirming all six tests pass again.
 
+**Update, 2026-09-08 (Cadmus, XAgents-Assistant, wq-083) — Task 1 and Task 2 now DONE.** The
+`.claude/skills/**` Edit/Write denial above is harness-level, confirmed independently a second and
+third time the same night (Aeacus, then Neo's own primary session), not specific to this agent or
+this dispatch — no workaround exists from any agent context. The owner applied the two preserved
+prose blocks above directly to the live file by hand through Iris. Neo caught one real gap in the
+owner's first manual paste: the original file's own step 2 ("Then set `epic-<id> = done`... yourself
+...") had been dropped outright instead of renumbering to step 3, per the preserved instruction
+above; the owner fixed it with a third small paste. Cadmus re-read the live file for this update and
+confirms all three pieces are present, correctly ordered, and match: the Epic ENTRY gate (line 62)
+is the preserved text verbatim, inserted immediately before "For the current target story key, read
+its status and route:" as specified; the roll-up re-derivation (line 77, item 2 of the "Epic-level:"
+list) is the preserved text verbatim, including the word "first" in "...correction in `epics.md`
+first (the same form Story 17.5 used by hand for `AI-E17-13`)..."; and item 3 (line 78, "Then set
+`epic-<id> = done` yourself (write to sprint-status, preserving comments) and advance to the next
+epic.") is the file's own original step 2 prose, genuinely just renumbered, not rewritten or altered
+— it reads coherently as the list's closing step and its wording matches what the Debug Log
+References above already described as the pre-existing text. Tasks 1 and 2 are complete. No further
+action needed on `.claude/skills/bmad-dev-loop/SKILL.md` from any agent; per this workspace's
+Windows-environment rule, that path stays Edit/Write-denied at the harness level for every agent and
+any future change to it must go through the owner the same way.
+
 Also fixed as a prerequisite, unrelated to story content: `ArgusAgent/.venv` was a Linux-origin
 `uv` environment (`pyvenv.cfg` named a WSL Python), unusable on native Windows and the reason `uv
 run` failed with a permission error trying to remove its `lib64` symlink. Removed and re-synced
@@ -282,19 +303,24 @@ run` failed with a permission error trying to remove its `lib64` symlink. Remove
 story's scope; noted so a future session does not re-diagnose it.
 
 `sprint-status.yaml`'s `21-1-...` key was moved `ready-for-dev` → `in-progress` per
-`bmad-dev-story` SKILL.md step 4 before work began, and is left at `in-progress` (not `review`):
-per that workflow's own step 9 ("if any task is incomplete → HALT — complete remaining tasks
-before marking ready for review"), 2 of 4 tasks are not done, so this story does not qualify for
-`review`. `epic-21`'s own status (still `backlog`) was left untouched — that transition belongs to
-the SM phase per SKILL.md §3 ("the SM marks `epic-<id>` → `in-progress` on the epic's first
-story"), not to this dev round, and is noted here rather than silently corrected.
+`bmad-dev-story` SKILL.md step 4 before work began. As of this 2026-09-08 update (Cadmus, wq-083),
+all four tasks are now complete (Tasks 1 and 2 landed via the owner's manual paste, see above), so
+per `bmad-dev-story` SKILL.md step 9 ("if any task is incomplete → HALT — complete remaining tasks
+before marking ready for review"; now satisfied since nothing is incomplete), the story's Status is
+set to `review` in both this file and `sprint-status.yaml`. `epic-21`'s own status (still `backlog`)
+is left untouched — that transition belongs to the SM phase per SKILL.md §3 ("the SM marks
+`epic-<id>` → `in-progress` on the epic's first story"), not to this round, same as originally
+noted.
 
 ### Completion Notes List
 
 - Story judged genuinely ready for dev on its own merits (ACs and Dev Notes verified against
   live files); not a rubber stamp.
-- Task 1, Task 2: **BLOCKED** — `.claude/skills/bmad-dev-loop/SKILL.md` is permission-denied to
-  both `Edit` and `Write` for this agent in this environment. Intended prose preserved above.
+- Task 1, Task 2: **DONE** (2026-09-08 update). `.claude/skills/bmad-dev-loop/SKILL.md` is
+  Edit/Write-denied at the harness level for every agent (confirmed independently three times).
+  The owner applied the preserved prose by hand; Neo caught and the owner fixed one manual-paste
+  gap (a dropped renumbered step); Cadmus re-verified the final live text matches, in order, and
+  is unaltered elsewhere at the edit site.
 - Task 3: **DONE.** `tests/test_check_meta_drift.py` (6 tests, all passing); found and durably
   fixed the real §CD-2 encoding regression named in the Epic 21 seed commit
   (`scripts/check_meta_drift.py`'s new `_console_safe()`); non-vacuity of the regression tests
@@ -306,8 +332,10 @@ story"), not to this dev round, and is noted here rather than silently corrected
   times, only the one pre-existing, unrelated skip (`tests/test_naming_consistency.py:151`,
   "got empty parameter set"). `mypy scripts/check_meta_drift.py tests/test_check_meta_drift.py`
   clean. `bandit -r` on both touched files: 0 Medium/High.
-- Story left at `in-progress`, not `review` — 2 of 4 tasks incomplete, correctly, per the
-  workflow's own Definition of Done.
+- Story moved to `review` (2026-09-08 update) — all 4 tasks now complete, per the workflow's own
+  Definition of Done (SKILL.md step 9). Not yet re-screened by an independent reviewer: the story
+  itself flags that `.claude/skills/bmad-dev-loop/SKILL.md`'s final state (three manual pastes in
+  one evening) should get one more adversarial look before this closes for real.
 - Nothing in `argus/` touched (confirmed by `git diff --stat`); the story's own "Zero `argus/`
   bytes are touched by this story" constraint holds.
 
@@ -323,7 +351,9 @@ story"), not to this dev round, and is noted here rather than silently corrected
   `DF-DRIFT-UNREAD-A` (AC #4).
 - `_bmad-output/design-artifacts/ArgusAgent/stories/21-1-cd2-consumption-points-and-rollup-covers-verdict.md`
   [MODIFY] — this file: Status, Tasks/Subtasks, Dev Agent Record.
-- **NOT modified, blocked**: `.claude/skills/bmad-dev-loop/SKILL.md` (Task 1, Task 2 — see Debug
-  Log References).
+- `.claude/skills/bmad-dev-loop/SKILL.md` [MODIFY, by the owner, not by any agent] — Epic ENTRY
+  gate and roll-up `Covers:` re-derivation added (Task 1, Task 2), 2026-09-08. See Dev Agent
+  Record for the harness-level denial that required this, and the manual-paste gap Neo caught and
+  the owner fixed.
 
 ### Review Findings
