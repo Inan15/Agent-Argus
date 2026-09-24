@@ -73,6 +73,7 @@ from argus.cost.budget_governor import (
     budget_config_from_budget,
 )
 from argus.cost.exhaustion import CostUnit, HaltProjection, project_halt_point
+from argus.detectors.bandit_scan import BanditScanDetector
 from argus.detectors.orphan_code import OrphanCodeDetector
 from argus.detectors.secret_scan import SecretScanDetector
 from argus.detectors.tool_runner import ToolRunnerDetector
@@ -249,10 +250,12 @@ def _detect_per_file(
     detector = VacuousTestDetector()
     secret_detector = SecretScanDetector()
     breadth_detector = ToolRunnerDetector()
+    bandit_detector = BanditScanDetector()
     entries: list[CoverageLedgerEntry] = []
     findings: list[Recording] = []
     candidates: list[CriticalCandidate] = []
     breadth_targets: list[tuple[str, str]] = []
+    bandit_targets: list[str] = []
 
     enabled_passes = request.enabled_passes
 
@@ -301,6 +304,13 @@ def _detect_per_file(
                 ignore_patterns=ignore_patterns,
             )
             findings.extend(secret_result.findings)
+            # Stage 1 (wq-620 / company/argus-finding-shape-ruling-2026-09-22.md
+            # Part 1): non-test Python source only — the scope decision locked in
+            # BanditScanDetector's own module docstring. `is_test` is already
+            # resolved above by the content-aware classification, so this cannot
+            # disagree with the grading branch below about what counts as a test.
+            if is_python and not is_test:
+                bandit_targets.append(rel)
 
         # ``is_test`` was resolved above from the CONTENT-aware classification, so a
         # production module whose subject is testing is not mistaken for a test suite
@@ -324,6 +334,13 @@ def _detect_per_file(
     )
     entries.extend(breadth_result.entries)
     findings.extend(breadth_result.findings)
+
+    # Findings-only, on the SecretScanDetector pattern (Stage 1, wq-620): ONLY
+    # `.findings` is folded, deliberately never `.entries` — BanditScanDetector
+    # never returns a non-empty one, so the coverage ledger cannot move because of
+    # this call, whether or not bandit finds anything.
+    bandit_result = bandit_detector.run(repo_root=repo_root, targets=bandit_targets)
+    findings.extend(bandit_result.findings)
 
     return entries, findings, candidates
 
