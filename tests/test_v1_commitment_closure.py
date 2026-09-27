@@ -215,6 +215,18 @@ class _Delivery:
     # Name ONLY modules that exist for THAT FR — a shared module going reachable proves
     # nothing, and naming one would manufacture a false accusation.
     seam_modules: tuple[str, ...] = ()
+    # Epic 20 / 2026-08-28 — attribution moved OFF the module-level constants and ONTO the entry.
+    # The constants encoded an assumption that held for exactly one sweep: that every seam is
+    # DISCOVERED AFTER its FR already exists, so every seam amendment belongs to Story 10.5. The
+    # defaults below preserve that for all 10.5 entries byte-for-byte; a later act names itself.
+    disposed_on: str = _DISPOSITION_DATE
+    disposed_by: str = _DISPOSITION_STORY
+    # True when the FR was ADMITTED to the contract and DISPOSED in the same act — the case the
+    # guard could not express. There is no superseded sentence to strike, because the FR never
+    # claimed anything else; demanding a strike would force a prior claim to be INVENTED, which
+    # is the exact dishonesty `-35` exists to catch. Such an entry pays a different price: its
+    # FR text must carry the disposition INLINE, so it can never read as delivered.
+    same_act: bool = False
 
 
 # ─────────────────────────────────────────────────────────────────────────────
@@ -597,6 +609,37 @@ _REVERSE_REGISTRY: tuple[_Delivery, ...] = (
     _Delivery("FR37", "not-built", "", "",
               "Specified for V1.5 and owned by Story 12.4 (every terminal outcome names its next "
               "action). ⛔ Not amended by Story 10.5."),
+    # ── Epic 20 / Post-V1, admitted to the capability contract 2026-08-28 and disposed
+    # `library-seam` in the SAME act. Measured 2026-08-29: none of the three packages has an
+    # importer elsewhere in `argus/`, none is named by `argus/cli.py`, and `[project.scripts]`
+    # gained no entry point. `-34` proves the unreachability rather than trusting it.
+    _Delivery("FR38", "library-seam", "argus/remediation/engine.py", "class RemediationEngine:",
+              "Admitted and disposed in one act on 2026-08-28, owner XAgent007 (Governance "
+              "Owner), target_story NONE — unscheduled. Built, typed and test-proven by "
+              "`tests/test_remediation_engine.py` and `tests/test_defect_remediation.py`, and "
+              "reachable from NOTHING: no `argus` CLI subcommand proposes a patch, which is "
+              "the FR29 fence exactly. The patch is a PROPOSAL and carries no `verdict_eligible` "
+              "weight, so no verdict moved when it landed.",
+              disposed_on="2026-08-28", disposed_by="Story 20.2", same_act=True),
+    _Delivery("FR39", "library-seam", "argus/adapters/lsp/server.py", "class LSPDiagnosticServer:",
+              "Admitted and disposed in one act on 2026-08-28, owner XAgent007 (Governance "
+              "Owner), target_story NONE — unscheduled. There is no console-script entry point "
+              "for an LSP server: `[project.scripts]` is `argus`/`argus-agent`/`repo-audit` "
+              "→ `argus.cli:main` plus the FR35 MCP alias, and nothing else. `server.py` imports "
+              "`socket` but never binds, listens or accepts — it writes to a CALLER-supplied "
+              "stream — so FR35's 'no port is bound' constraint and the fastapi import-isolation "
+              "gate both still hold.",
+              disposed_on="2026-08-28", disposed_by="Story 20.3", same_act=True),
+    _Delivery("FR40", "library-seam", "argus/parsers/extended.py", "class TSParser(BaseASTParser):",
+              "Admitted and disposed in one act on 2026-08-28, owner XAgent007 (Governance "
+              "Owner), target_story NONE — unscheduled. ⛔ The WEAKEST of the three, and the PRD "
+              "says so: TypeScript, JavaScript, Go and Java were ALREADY grounded in V1 "
+              "(`argus/shared/source_languages.py`) and ALREADY definition-extracted by "
+              "`argus/index/ast_index.py::_DEF_KIND_BY_NODE` — both byte-unchanged by Epic 20 — "
+              "so this adds a parallel parser API that duplicates the production indexer and "
+              "reaches no call site. It does NOT close `DF-10-2-A`, which names C, C++, Ruby and "
+              "Rust; those four are untouched and the entry stays OPEN.",
+              disposed_on="2026-08-28", disposed_by="Story 20.1", same_act=True),
 )
 
 
@@ -1229,6 +1272,33 @@ def test_a_wired_disposition_is_proven_against_the_import_closure() -> None:
     )
 
 
+def spans_ok(spans: "list[str] | tuple[str, ...]") -> bool:
+    """A strike counts only if it removes a whole superseded sentence — 60 chars is the floor."""
+    return bool(spans) and max(len(span) for span in spans) >= 60
+
+
+def amendment_dates_naming(document: str, fr: str) -> tuple[str, ...]:
+    """Dates of every PRD frontmatter `amendments:` entry whose `sections:` names *fr*.
+
+    ⚠️ ADDED 2026-08-29. `_Delivery.same_act` buys an FR an EXEMPTION from the strike
+    requirement, and until now it was a bare boolean an author set by hand: the registry
+    asserted "admitted and disposed in one act" and nothing measured whether that was true.
+    A self-certifying exemption from an honesty guard is the one thing this file exists to
+    refuse, so the claim is now derived from the PRD's own amendment record instead.
+    """
+    front = document.split("---")[1] if document.startswith("---") else document
+    dates: list[str] = []
+    current = ""
+    for line in front.splitlines():
+        stripped = line.strip()
+        if stripped.startswith("- date:"):
+            current = stripped.split("- date:", 1)[1].strip()
+        elif stripped.startswith("sections:") and current:
+            if f"'{fr}'" in stripped or f'"{fr}"' in stripped:
+                dates.append(current)
+    return tuple(dates)
+
+
 def test_every_library_seam_is_amended_in_the_prd_and_filed_in_the_ledger() -> None:
     """TC-ArgusAgent-DOCS-001-35 — a seam the FR text still reads as delivered is the defect."""
     fr_text = functional_requirement_text(_read(_PRD))
@@ -1237,19 +1307,49 @@ def test_every_library_seam_is_amended_in_the_prd_and_filed_in_the_ledger() -> N
         if entry.disposition != "library-seam":
             continue
         line = fr_text.get(entry.fr, "")
-        spans = struck_spans(line)
-        # A real FR amendment strikes the whole superseded sentence, not a word. The measured
-        # amendments on this tree strike 100+ characters each; 60 is the floor below which the
-        # "strike" is decoration rather than a correction.
-        assert spans and max(len(span) for span in spans) >= 60, (
-            f"{entry.fr} is disposed 'library-seam' — built, test-proven, and reachable from no "
-            "production call site — but its PRD text is unamended, so the binding contract still "
-            "reads as if an operator can invoke it. Amend it struck-not-deleted (§3.4 evidence "
-            "immutability), dated and attributed, following the FR7 (10.2) and FR30 (10.3) "
-            "precedent: FRxx is the binding contract, so it is corrected to what the code does."
-        )
-        assert _DISPOSITION_DATE in line and _DISPOSITION_STORY in line, (
-            f"{entry.fr}'s amendment carries no {_DISPOSITION_DATE} / {_DISPOSITION_STORY} "
+        if entry.same_act:
+            # ADMITTED AND DISPOSED IN ONE ACT (Epic 20, 2026-08-28). No sentence was superseded,
+            # so there is nothing to strike and a strike would have to be MANUFACTURED. The price
+            # is paid in the other currency this guard actually cares about: the FR text must
+            # carry its own disposition, so the contract can never read as if it were delivered.
+            assert "library-seam" in line, (
+                f"{entry.fr} was admitted and disposed in one act, so it carries no struck "
+                "sentence — but its FR text does not name the disposition either, which leaves "
+                "the binding contract reading as if an operator can invoke it. State "
+                "'disposed `library-seam`' in the FR text itself; do NOT invent a struck "
+                "sentence to satisfy the strike branch, which would fabricate a prior claim."
+            )
+            # ...and the exemption is MEASURED, not asserted. `same_act` is only true if the
+            # PRD names this FR in exactly one amendment and that amendment is the disposing
+            # one. An FR named by an EARLIER amendment was admitted before it was disposed —
+            # which means a sentence WAS superseded, the strike branch applies, and this
+            # exemption is being used to skip a correction that is owed.
+            naming = amendment_dates_naming(_read(_PRD), entry.fr)
+            assert naming, (
+                f"{entry.fr} claims `same_act` but no PRD frontmatter amendment names it in its "
+                "`sections:` list. The claim that admission and disposition happened in one act "
+                "is unfalsifiable as written — record the act in `amendments:` or drop the flag."
+            )
+            assert set(naming) == {entry.disposed_on}, (
+                f"{entry.fr} claims `same_act` — admitted and disposed in ONE act on "
+                f"{entry.disposed_on} — but the PRD names it in amendment(s) dated "
+                f"{sorted(set(naming))}. An FR admitted earlier than it was disposed HAS a "
+                "superseded claim, so it owes a struck sentence and may not take this branch."
+            )
+        else:
+            # A real FR amendment strikes the whole superseded sentence, not a word. The measured
+            # amendments on this tree strike 100+ characters each; 60 is the floor below which the
+            # "strike" is decoration rather than a correction.
+            assert spans_ok(struck_spans(line)), (
+                f"{entry.fr} is disposed 'library-seam' — built, test-proven, and reachable from "
+                "no production call site — but its PRD text is unamended, so the binding contract "
+                "still reads as if an operator can invoke it. Amend it struck-not-deleted (§3.4 "
+                "evidence immutability), dated and attributed, following the FR7 (10.2) and FR30 "
+                "(10.3) precedent: FRxx is the binding contract, so it is corrected to what the "
+                "code does."
+            )
+        assert entry.disposed_on in line and entry.disposed_by in line, (
+            f"{entry.fr}'s amendment carries no {entry.disposed_on} / {entry.disposed_by} "
             "attribution. An undated correction cannot be distinguished from the original claim."
         )
         assert entry.fr in ledger, (

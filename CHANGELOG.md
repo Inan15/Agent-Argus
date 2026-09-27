@@ -157,7 +157,11 @@ necessary, not sufficient, and is recorded as LOCAL (architecture.md §H).
 
 ## Unreleased
 
-_Nothing yet. The next consumer-visible change lands here._
+### Added — Post-V1 E2E Integration & Verification Suite (`tests/test_post_v1_integration.py`)
+
+Comprehensive end-to-end integration and verification suite (`tests/test_post_v1_integration.py`) validating Post-V1 capabilities across multi-language AST parsers (`TSParser`, `GoParser`, `JavaParser`), defect remediation engine (`RemediationEngine`, `verify_patch_dry_run`, `apply_patch` workspace path containment), and LSP diagnostic streaming (`LSPDiagnosticAdapter`, `LSPDiagnosticServer` over stdio and socket transports with standard JSON-RPC 2.0 Content-Length framing).
+
+**Reachability, stated so this entry is not read as a shipped feature (added 2026-08-29):** the suite reaches all three packages **by direct import**. None of them is wired to a surface — no `argus` CLI subcommand proposes a patch, and no console script starts an LSP server. What this suite validates is library behaviour, not anything an operator or an editor can invoke. All three are disposed `library-seam` in the PRD (FR38/FR39/FR40).
 
 ---
 
@@ -883,7 +887,7 @@ to block, and flipping the default here would pre-empt a policy decision that be
 ### Packaging: what the distribution contains
 
 `[tool.flit.module] name = "argus"` packages the `argus` Python package and nothing else. Measured on the
-built artifacts: the wheel holds 96 modules plus the packaged command assets and metadata; the sdist adds
+built artifacts: the wheel holds 108 modules plus the packaged command assets and metadata; the sdist adds
 `pyproject.toml`, `README.md`, `LICENSE` and `PKG-INFO`. The RAM workflow directories (`audit/`,
 `phases/`, `templates/`) and the installer scripts are **repository-only** — see README.md for the full
 capability split. *(Amended 2026-08-15 by Story 12.7: the module figure moved with the tree, ~~`adapters/`~~
@@ -892,9 +896,12 @@ zero data assets — `flit_core` ships every file under `argus/`, so the command
 with no build-backend change and reach the sdist because they are tracked.)*
 
 Measured on the built wheel with this repository removed from `sys.path`, one clean subprocess per module:
-**96 of the 96 shipped modules import.** None fail. (The figure read 73 of 73 when `0.1.0` was
+**108 of the 108 shipped modules import.** None fail. (The figure read 73 of 73 when `0.1.0` was
 written; it is DERIVED from the freshly built artifact by `TC-ArgusAgent-DOCS-001-54` — *the artifact
-is the fact* — and moved to 95 on 2026-08-23 when Story 16.7 added
+is the fact* — and moved to 108 on 2026-08-29 when Epic 20 added `argus/parsers` (3 modules,
+Story 20.1), `argus/remediation` (4, Story 20.2) and `argus/adapters/lsp` (5, Story 20.3) — none of
+which is reachable from any entry point, so the figure grew while the operator surface did not. It
+moved to 95 on 2026-08-23 when Story 16.7 added
 `argus/precision/silent_class.py`: the V2 SILENT predicate and the record that publishes the class
 it derives as a question for a named human, promoting nothing and gating nothing. It moved to 94
 earlier the same day when Story 16.5 added

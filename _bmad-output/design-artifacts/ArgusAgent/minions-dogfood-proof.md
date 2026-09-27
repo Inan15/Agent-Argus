@@ -10,21 +10,21 @@ The frozen `pipeline.run_audit_detailed` (REUSED — no fork) was run over the g
 
 **This is a SELF-audit — Argus auditing Argus (Story 8.5 / AC2).** The subject is this repository's own package, not an independent codebase. A self-audit is MATERIALLY WEAKER evidence than the independent-repository run it supersedes: the tool and the tree share authorship, so the run cannot demonstrate that the tool finds defects it was not written alongside. It is reportable as a reproducibility and no-source-retention demonstration; it is NEVER independent corroboration of the tool's detection ability. The independent Story-7.2 run over the Minions platform repository is preserved verbatim at `minions-dogfood-proof-story-7-2-superseded.md` and cannot be re-executed here, because that source is not in this repository. The filename `minions-dogfood-proof.md` is a retained HISTORICAL identifier (an evidence path that moves is an evidence path that gets lost); the subject is what this section names, not what the filename suggests.
 
-- Commit descriptor (`git rev-parse HEAD` at generation): `91c51248b0aa3566d3c303164d939bf83509e60d`
+- Commit descriptor (`git rev-parse HEAD` at generation): `f5eaf9337447bc66d27c8443a8e855daecb71227`
 - Enumerated population (the HONEST label — Story 12.1, closing `DF-10-4-D`): the file list in this artifact is enumerated from the git INDEX (`git ls-files`), NOT from the tree at the commit descriptor above. The two are the same tree exactly when `argus/` carries no staged-or-uncommitted change, and `TC-ArgusAgent-DOGFOOD-001-50` fails unless they agree — so this artifact cannot quietly describe one tree while citing another.
-- Source files audited: **96**
-- Total physical LOC (build-cost proxy): **34589**
+- Source files audited: **108**
+- Total physical LOC (build-cost proxy): **35885**
 - Partition units (7.1 plan, CONSUMED): **4**
 - **Verdict: `RELEASE_READY` (exit `0`)**
 - **Decision row (FR16 / DR-3), as DISCLOSED by the gate: `row_3_gates_met`**
-- Coverage-ledger deep-%: **`19/24`** (exact `Fraction`, never a float — AR4)
-- Coverage-ledger deep count / total entries: **76 / 96**
+- Coverage-ledger deep-%: **`83/108`** (exact `Fraction`, never a float — AR4)
+- Coverage-ledger deep count / total entries: **83 / 108**
 - Blocking (verdict-eligible) findings: **0**
-- Total findings emitted: **177**
+- Total findings emitted: **196**
 
 ### 1a. The assessed population the row was computed from (DR-3)
 
-**No narrowing occurred.** The verdict carries no `coverage_scope`, so the gate keyed on the WHOLE coverage ledger: **76 `audited_deep` of 96 entries** (`19/24`, exact `Fraction`). No entry was held out of the assessment and no scope identifier was applied.
+**No narrowing occurred.** The verdict carries no `coverage_scope`, so the gate keyed on the WHOLE coverage ledger: **83 `audited_deep` of 108 entries** (`83/108`, exact `Fraction`). No entry was held out of the assessment and no scope identifier was applied.
 
 ### 1b. The critical-subsystem clause (FR4 / DR-5 / boundary B3)
 
@@ -38,25 +38,25 @@ The frozen `pipeline.run_audit_detailed` (REUSED — no fork) was run over the g
 
 ## 2. Within the `$X` = 843 ceiling (AC-EXECUTE / FR21 / OI3) + the 3.2 halt
 
-The run's V1 deterministic zero-token cost total is **480 credits** (folded via the 3.1 `account_spend` — no fork).
+The run's V1 deterministic zero-token cost total is **540 credits** (folded via the 3.1 `account_spend` — no fork).
 
 **The ceiling honesty pair (Story 8.5 / AC1).** Two different numbers are in play and this artifact states both rather than letting them be confused:
 
 - **Frozen historical execution parameter** `$X` = `DOGFOOD_BUDGET_CEILING` = **843** credits — the ceiling this run was actually EXECUTED under. It is a pinned constant recording a past sizing, NOT a live measurement.
-- **Live 7.1 sizing** — the `sized_ceiling` derived from the CURRENT tree by the same `build_full_repo_plan` call this generator already makes (REUSED — no second accountant): **600** credits. This is the number `minions-dogfood-budget-plan.md` publishes.
-- Fits under the frozen `$X` = 843: **True** · Fits under the live 7.1 sizing = 600: **True**
+- **Live 7.1 sizing** — the `sized_ceiling` derived from the CURRENT tree by the same `build_full_repo_plan` call this generator already makes (REUSED — no second accountant): **675** credits. This is the number `minions-dogfood-budget-plan.md` publishes.
+- Fits under the frozen `$X` = 843: **True** · Fits under the live 7.1 sizing = 675: **True**
 
 - Under `BudgetConfig(ceiling_credits=843)` the run FITS (`ceiling_reached is False`): **True**
 - Under a ceiling ONE credit below the total the run BREACHES (the >=-is-a-breach REUSE — the 3.2 halt->skip->downgrade->report path fires): **True**
-- NFR-C1 baseline ratio (audit-cost / build-cost proxy): `480/34589` (`Fraction`/marker — never a float)
+- NFR-C1 baseline ratio (audit-cost / build-cost proxy): `108/7177` (`Fraction`/marker — never a float)
 
 ## 3. The SIGNED, source-free evidence bundle (AC-BUNDLE / FR29 / NFR-A1 / NFR-S1)
 
 Exported via the done 4.3 `build_evidence_bundle` + persisted via `persist_evidence_bundle` (REUSED — no forked bundle model / serializer), serialized THROUGH the single 1.1 `canonical.dumps_bytes` and stamped by the 1.1 content-addressed, **prev-hash-chained** envelope (the ArgusAgent "signature"; the point-in-time stamp is the envelope `created_at`, EXCLUDED from the hash — NFR-A1/D3).
 
-- Persisted bundle locator: `state/c9ab805498edfee49eed94faa948a6bb2434bb648b0faa22e885824a4a8e28ea.json`
-- Bundle content hash (the signature): `c9ab805498edfee49eed94faa948a6bb2434bb648b0faa22e885824a4a8e28ea`
-- Canonical bundle byte length: **87267**
+- Persisted bundle locator: `state/81dd784d8c1ce69de49f55ca61a5b258f10fbab3b3e1de338d774150da0b20af.json`
+- Bundle content hash (the signature): `81dd784d8c1ce69de49f55ca61a5b258f10fbab3b3e1de338d774150da0b20af`
+- Canonical bundle byte length: **96290**
 - Referential-integrity report consistent (4.2 lint): **True**
 - **No-source-retention MOAT (NFR-S1 / NFR-S3):** the bundle retains NO source byte and NO secret value — the moat is STRUCTURAL (no bundle field holds a source/secret value; only locations + redacted indicators). Proven over the REAL audited tree by `tests/test_secret_containment.py` (`TC-ArgusAgent-SECURITY-001-23`) and `tests/test_dogfood_proof.py` (`TC-ArgusAgent-DOGFOOD-001-22`).
 - **100% reproducibility (AC-REPRODUCIBLE / NFR-D1 / P1):** two dogfood runs on the same tracked content yield a BYTE-IDENTICAL verdict + bundle canonical bytes (the builder sorts/order-fixes every collection; no clock/float/set-order in the hashed payload). Demonstrated (RED against injected non-determinism, then green) in `tests/test_dogfood_proof.py` (`TC-ArgusAgent-DOGFOOD-001-24`).
@@ -77,9 +77,9 @@ The REAL dogfood findings are laid out below by the 6.6 `finding_match_key` iden
 
 | rule_id | verdict-eligible (blocking) | advisory | count | sample locators | TP/FP (human) |
 |---|---|---|---|---|---|
-| `cross_partition` | False | True | 6 | `argus/audit/deep_pass.py:1`; `argus/intake/source_state.py:1`; `argus/mcp/protocol.py:1`; `argus/store/canonical.py:1`; `argus/verdict/prosecutor.py:1` | &nbsp; |
-| `hardcoded_secret` | False | True | 39 | `argus/cache/key.py:140`; `argus/cache/key.py:181`; `argus/cache/key.py:190`; `argus/cache/key.py:80`; `argus/cost/budget_governor.py:96` | &nbsp; |
-| `orphan_code` | False | True | 132 | `argus/audit/deep_audit.py:57`; `argus/audit/minions_llm_adapter.py:25`; `argus/audit/ports.py:165`; `argus/cache/invalidation.py:127`; `argus/cache/invalidation.py:255` | &nbsp; |
+| `cross_partition` | False | True | 6 | `argus/adapters/lsp/adapter.py:1`; `argus/adapters/lsp/server.py:1`; `argus/index/partitioner.py:1`; `argus/mcp/protocol.py:1`; `argus/reports/generator.py:1` | &nbsp; |
+| `hardcoded_secret` | False | True | 44 | `argus/cache/key.py:140`; `argus/cache/key.py:181`; `argus/cache/key.py:190`; `argus/cache/key.py:80`; `argus/cost/budget_governor.py:96` | &nbsp; |
+| `orphan_code` | False | True | 146 | `argus/adapters/lsp/adapter.py:108`; `argus/adapters/lsp/adapter.py:71`; `argus/adapters/lsp/models.py:33`; `argus/adapters/lsp/models.py:60`; `argus/adapters/lsp/models.py:69` | &nbsp; |
 
 ## 7. The ≥80%-precision gate STAYS PROVISIONAL (AC-PROVISIONAL / OI1 keystone)
 

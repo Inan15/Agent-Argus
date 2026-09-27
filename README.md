@@ -255,8 +255,10 @@ graded, but has no definition for the depth gate to stand on. Pinned language-by
 
 ### What the distribution contains, and what needs the git repository
 
-MEASURED from the built wheel (`argus_agent-0.1.0-py3-none-any.whl`, 104 entries) and sdist
-(`argus_agent-0.1.0.tar.gz`, 103 files), not inferred: `[tool.flit.module] name = "argus"`
+MEASURED from the built wheel (`argus_agent-1.0.0-py3-none-any.whl`, 116 entries) and sdist
+(`argus_agent-1.0.0.tar.gz`, 115 files), not inferred — ~~`argus_agent-0.1.0-…`, 104 entries /
+103 files~~ struck, not deleted (§3.4): the filenames moved with the 1.0.0 bump and the counts
+with Epic 20: `[tool.flit.module] name = "argus"`
 packages **the `argus` Python package and nothing else** — which, since Story 12.7, includes
 the command assets under `argus/assets/commands/`: `flit_core` walks the whole `argus/`
 directory and ships every file in it, so a `.md` there reaches the wheel with **no**
@@ -284,7 +286,11 @@ to contradict each other (see the struck sentence under [Slash Commands](#-slash
 
 > **Measured limitation, stated rather than discovered later — and now measured away.** On a
 > freshly built wheel, with this repository removed from `sys.path` and one clean subprocess
-> per module, **96 of the 96 shipped modules import**. None fail. (96, not 95, since
+> per module, **108 of the 108 shipped modules import**. None fail. (108, not 96, since
+> 2026-08-29: Epic 20 added twelve modules across three packages — `argus/parsers` (3,
+> Story 20.1), `argus/remediation` (4, Story 20.2) and `argus/adapters/lsp` (5, Story 20.3).
+> They IMPORT, which is all this sentence measures; none of the three is reachable from any
+> entry point, so nothing an operator can invoke moved. 96, not 95, since
 > 2026-08-25: Story 17.3 added `argus/detectors/assertion_strength.py`, which GRADES what
 > each assertion in a flagged test span constrains and lands the successor vacuity
 > predicate `S1` as code. It is ADVISORY and promotes nothing: no finding becomes

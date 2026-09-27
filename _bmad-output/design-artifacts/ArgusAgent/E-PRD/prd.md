@@ -80,7 +80,8 @@ documentCounts:
   brainstorming: 1
   projectDocs: 2
 workflowType: 'prd'
-updated: 2026-08-03
+updated: 2026-08-29
+status: final
 amendments:
   - date: 2026-08-03
     scope: 'FR16 + FR4 (contract change) — verdict decision table reordered so findings are evaluated before coverage; INSUFFICIENT_COVERAGE widened to cover a zero-findings unmet gate; critical-set eligibility predicate added'
@@ -122,6 +123,27 @@ amendments:
     signal: _bmad-output/design-artifacts/ArgusAgent/sprint-change-proposal-2026-08-17.md
     approvedBy: XAgent007
     sections: ['Business Success']
+  - date: 2026-08-28
+    scope: >-
+      Epic 20 (Post-V1 Capabilities) enters the capability contract. FR38 (defect-remediation
+      proposals), FR39 (LSP/IDE diagnostic surface) and FR40 (extended-language parsers) are
+      PROMOTED from addendum.md A2 into the PRD body and topically placed, on the FR34-FR37
+      precedent: the 2026-08-28 proposal routed them to the addendum, which carries downstream
+      depth and not the binding capability contract, so prd.md did not know Epic 20 had happened.
+      ALL THREE ARE DISPOSED library-seam on the FR23/FR24/FR26/FR29 precedent -- measured
+      2026-08-29: zero importers of argus.remediation, argus.adapters or argus.parsers anywhere
+      else in argus/, no argus/cli.py reference, and no console-script entry point beyond
+      argus.cli:main and the FR35 MCP alias, so no operator or integrator can reach any of them.
+      FR40's drafted text is additionally CORRECTED struck-not-deleted: TypeScript, JavaScript,
+      Go and Java were already grounded in V1 (argus/shared/source_languages.py) AND already
+      definition-extracted by argus/index/ast_index.py::_DEF_KIND_BY_NODE -- both byte-unchanged
+      by Epic 20 -- so FR40 adds neither language coverage nor extraction to the audit path, and
+      does NOT address the DF-10-2-A shortfall it resembles. No code ships, no schema version
+      moves, and argus/** is byte-unchanged. The >=80% precision gate is UNCHANGED and this
+      amendment does not clear it.
+    signal: _bmad-output/design-artifacts/ArgusAgent/sprint-change-proposal-2026-08-28.md
+    approvedBy: XAgent007
+    sections: ['Functional Requirements (capability contract)', 'Product Scope (Post-V1)', 'FR38', 'FR39', 'FR40']
 ---
 
 # Product Requirements Document - APAA (AI Project Assurance Audit)
@@ -240,10 +262,24 @@ V1.5 adds **no new assurance capability.** The verdict, the ledger, the detector
 
 **Unchanged by V1.5:** V2 growth features, V3 cost intelligence, and V4 assurance-platform / hosted-runner scope are exactly as recorded. V1.5 borrows nothing from them.
 
+### Post-V1 — Delivered as Library Seams *(added 2026-08-28)*
+
+Epic 20 adds three capabilities beyond the V1/V1.5 line: remediation proposals (FR38), an LSP diagnostic surface (FR39), and extended-language parsers (FR40).
+
+**None of the three is reachable.** Measured 2026-08-29: `argus.remediation`, `argus.adapters.lsp` and `argus.parsers` have **no importer anywhere else in `argus/`**, no reference from `argus/cli.py`, and no console-script entry point beyond `argus.cli:main` and the FR35 MCP alias. `tests/test_post_v1_integration.py` imports the three packages directly, so what it pins is library-level behaviour — not a path an operator can invoke. This is the `library-seam` disposition of 2026-08-11 (Story 10.5; FR23/FR24/FR26/FR29), recorded here at the destination for the reason that story gave: an FR whose text names an operator, where no operator can reach the capability, must not read as shipped.
+
+**Post-V1 adds no assurance authority.** The verdict, the ledger, the gates and the determinism spine are exactly as V1 delivered them. No finding's `verdict_eligible` moves, no schema version moves, and `argus/shared/source_languages.py` and `argus/index/ast_index.py` are both byte-unchanged. **The ≥80% attested-externalization gate is untouched and remains NOT CLEARED** — nothing in Epic 20 measures precision.
+
+**Why they were built, stated rather than left silent.** FR38 and FR39 are **the seed of the V2 *developer-surface* item** recorded below — remediation and editor diagnostics are the two halves of putting a finding in front of the developer who can act on it, and Epic 20 built the mechanisms before the surface that would carry them. That is the forward home this investment has. ⛔ **FR40 is NOT part of that seed and is not rooted anywhere:** it duplicates extraction `argus/index/ast_index.py` already performs, so it seeds nothing, and its two exits stay exactly as FR40 states them — wire it to an API the indexer does not expose, or remove it.
+
+**Unchanged by Post-V1:** V3 cost intelligence and V4 assurance-platform scope are exactly as recorded. Post-V1 borrows nothing from them, and strikes nothing from them.
+
 ### Growth Features (V2)
 Bidirectional traceability (orphan code + silent req gaps) · Production-Readiness-Review checklist · standards mapping (CWE/ASVS/ISO 25010/SLSA) · ~~**multi-language** AST grounding ·~~ **mutation-grade** vacuous-test detection · **seam / interface auditor** (+ honest V1 limitation: *no cross-partition seam analysis in V1*) · **holdout-cartridge rotation** + promote-a-miss · **multi-perspective adversarial panel** (Blind Hunter / Edge-Case Hunter / Acceptance Auditor — V1's single-auditor + lightweight Prosecutor is the deliberate cheap version) · **host-capability manifest** (`adapter_portability`, enables the parallel speedup) · **governance hardening** (proof-of-read / paste-back on high-stakes gates — anti-rubber-stamp, risk H1; matters at externalization scale, not for V1's single senior operator) · **consume the Minions Cost-Optimization layer (d)** for scaled audits (*APAA does not build L1–L4 — it calls them*).
 
 > *(Amended 2026-08-10, Story 10.2 / AC1.2 — `DF-AUD-APAA-D`.)* **multi-language AST grounding is struck from this V2 list because it is delivered in V1**, by `sprint-change-proposal-2026-07-28.md`, which shipped the capability with no story and no specification amendment. Struck, not deleted (§3.4 evidence immutability). The set delivered in V1 is not restated here as a hand-typed list — it is `argus/shared/source_languages.py`, pinned by `tests/test_multilanguage_audit.py`. **Every other item on this line is untouched and remains V2.** A delivered capability left on the growth roadmap double-counts the work; `tests/test_spec_claim_scope.py` now fails if one reappears.
+
+> *(Added 2026-08-28, Epic 20 — a **new V2 item**, recorded here at the destination.)* **Developer surface — remediation proposals + editor diagnostics.** The two mechanisms already exist in the package as FR38 and FR39 and are reachable from nothing; what is V2 is **the surface that would carry them** to a developer. Recorded at the destination for the reason Story 10.5 gave in the note below: an item whose mechanism landed before its home must be discoverable from the roadmap, or the roadmap under-counts what has already been paid for. ⚠️ This does **not** move FR38 or FR39 out of the capability contract, and does **not** upgrade either disposition — both remain `library-seam` until an entry point exists.
 
 > *(Amended 2026-08-11, Story 10.5 / AC1.3 — a **recorded merge**, not a new bullet.)* The *standards mapping (CWE/ASVS/ISO 25010/SLSA)* item above is unchanged in wording and **already existed**; what changed is that **a V1 commitment was reclassified into this V2 item** on 2026-08-11 — the `standards_refs[]` field plus CWE-required-on-every-security-category-finding, with its `^CWE-\d+$` format validation, struck from §Product Scope V1 Core **and** from §Compliance & Regulatory. It is recorded **here, at the destination**, for a reason that is the exact inverse of Story 10.2's: 10.2 found a *delivered* capability still sitting on the growth roadmap, which **double-counts** the work; an *undelivered* V1 item absorbed silently into an existing V2 item would **under-count** it, and would leave no trace that anything had ever been promised for V1. Reclassification must be discoverable from the destination and must never read as *"it was always V2"*.
 
@@ -413,7 +449,7 @@ APAA ships as a **headless Claude Code Skill** (Cline sequential fallback) that 
 | Deferred | OS package managers (Winget / Chocolatey / Homebrew / Snap) | **Deferred** — each adds an independent packaging and update contract with no current owner |
 | **V4** | Hosted repo-URL runner | Unchanged |
 
-**"No IDE plugin" is retained in substance and restated precisely:** APAA ships no editor extension, no language server, and no rendered surface. The command assets are *configuration files* that teach an assistant to invoke the CLI; the MCP server is a *local stdio process*. Neither renders anything, and both are bounded by the four constraints in §Project Classification.
+**"No IDE plugin" is retained in substance and restated precisely:** APAA ships no editor extension, no language server, and no rendered surface. The command assets are *configuration files* that teach an assistant to invoke the CLI; the MCP server is a *local stdio process*. Neither renders anything, and both are bounded by the four constraints in §Project Classification. **Still true as a distribution claim, and cross-referenced 2026-08-28 so this section survives being read alone:** Epic 20 added an **`LSPDiagnosticServer` class inside the package** (FR39, §Post-V1) — nothing an editor can load, install or launch, because it is reachable from no entry point. What APAA *ships* is unchanged; what the package *contains* is not.
 
 ### Technical Architecture Considerations
 - **Filesystem-as-contract substrate.** All state lives under `.apaa/` (`state/ · assignments/ · findings/ · decisions/`); stateless auditor agents coordinate **only through files** — making runs resumable, portable, and host-agnostic.
@@ -491,6 +527,8 @@ Phases V2–V4 are defined in **§Product Scope** (Growth Features / Vision) and
 ## Functional Requirements
 
 > **Capability contract (V1).** This is binding: a capability not listed here will not exist in V1 unless explicitly added. Items marked **[Tier B]** are the validation-grade additions over the demo-grade core (per §Project Scoping); everything else is non-negotiable core. Capabilities beyond V1 live in §Product Scope (V2–V4) and are out of this contract.
+>
+> *(Amended 2026-08-28.)* **Three Post-V1 capabilities — FR38, FR39, FR40 — are admitted to this contract** rather than left to §Product Scope, because each is already built. They are marked **[Post-V1]**, and all three are disposed `library-seam`. They are admitted so the contract records **what exists and that none of it is reachable** — never as a claim that V1 grew. The V1 sentence above is unchanged and still binds every unmarked item.
 
 ### Repository Intake & Partitioning
 - **FR1:** An operator can submit a repository at a pinned commit for audit through a headless invocation.
@@ -508,6 +546,11 @@ Phases V2–V4 are defined in **§Product Scope** (Growth Features / Vision) and
   - **What "grounded" buys, stated at the boundary rather than implied.** A language is grounded when its tree-sitter grammar is installed and the file parses: the file becomes `ast_eligible` and its claims can be checked against a real AST. Pinned language-by-language by `tests/test_multilanguage_audit.py` (`TC-ArgusAgent-INTAKE-003-07`..`-09`), which fails if a language in the source-of-truth map has no grounding fixture — so language #11 cannot be added unpinned.
   - **Enumerable ≠ deeply auditable**, the boundary `argus/shared/source_languages.py:27-32` already draws. A file whose grammar is absent is still read and graded; it simply cannot reach `audited_deep`. It degrades to `ast_eligible=False` with a named reason token — never a silent drop, never a false deep claim (AR10).
   - **Measured shortfall, filed not omitted (`DF-10-2-A`):** C, C++, Ruby and Rust ground but currently extract **no definitions**, because the definition-node vocabulary was written against Python's. A file in those four therefore parses but has no function or class for the depth gate to stand on. Recorded here so this contract is not read as promising more than `TC-ArgusAgent-INTAKE-003-09` measures.
+- **FR40:** ~~APAA can extend its AST parser coverage to include TypeScript/JavaScript, Go and Java alongside existing Python, C/C++, Ruby and Rust support.~~ **[Post-V1]** **Admitted to the contract on 2026-08-28 and disposed `library-seam` in the same act — and the struck text is additionally FALSE ABOUT ITS OWN BASELINE.** *(Added 2026-08-28, Epic 20 / Story 20.1.)*
+  - **The baseline it claims to extend already contained all four.** TypeScript, JavaScript, Go and Java are in `argus/shared/source_languages.py` (`.ts .tsx .mts .cts .js .jsx .mjs .cjs .go .java`), their tree-sitter grammars are already pinned dependencies, and **that module is byte-unchanged by Epic 20** — last touched `c5db6f3`, 2026-08-13. FR7's 2026-08-10 amendment had already recorded multi-language grounding as V1-delivered. Struck, not deleted (§3.4).
+  - **Nor is definition extraction new.** `argus/index/ast_index.py::_DEF_KIND_BY_NODE` already maps `function_declaration`, `method_declaration`, `class_declaration` and `type_declaration` — the TS/JS, Java and Go vocabulary — and **that module is byte-unchanged by Epic 20** as well. This is precisely why `DF-10-2-A` names only C, C++, Ruby and Rust.
+  - **It does not close `DF-10-2-A`.** `argus/parsers/extended.py` ships `TSParser`, `GoParser` and `JavaParser` — three languages that already worked. The four that ground but extract nothing are untouched, so no file in C, C++, Ruby or Rust moved any closer to `audited_deep`. **`DF-10-2-A` remains open.**
+  - **What FR40 therefore commits is narrow, and is stated narrowly:** a standalone parser API that duplicates extraction the production indexer already performs, with **no call site reachable from `argus/cli.py`**. Owner **XAgent007 (Governance Owner)**; `target_story: NONE — unscheduled`. Either it is wired to a surface needing an API the indexer does not expose, or it is removed — both are open decisions, and neither is claimed here.
 - **FR36:** An operator can enable an **LLM-backed deep-audit pass** that produces grounded claims beyond the zero-token path. **[Tier B]** *(Added 2026-08-10b.)*
   - **Off by default, always.** The default run is zero-token, offline, requires no key or account, and transmits nothing. Enabling requires explicit operator action per invocation.
   - **Egress is disclosed before it occurs:** the invocation states what will be transmitted and to which provider, before the first byte leaves.
@@ -529,6 +572,10 @@ Phases V2–V4 are defined in **§Product Scope** (Growth Features / Vision) and
 - **FR12:** APAA can detect orphan / dead code (no referencing requirement or caller). **[Tier B]**
 - **FR13:** APAA can attach at least one verifiable locator to every finding, or reject the finding.
 - **FR14:** APAA can convert a tool failure or unestablishable-traceability condition into a finding rather than a crash.
+- **FR38:** APAA can propose a **remediation patch, in unified-diff form**, for a detected defect class, without altering test-contract semantics. **[Post-V1]** **Disposed `library-seam` in the same act that admitted it** — see §Product Scope (Post-V1). *(Added 2026-08-28, Epic 20 / Story 20.2.)*
+  - **Proposal, never application.** The patch is decision-support for a human, consistent with the governing *decision-support, not decision-maker* language guard. Nothing here authorises APAA to write to the audited repository.
+  - **A proposal is not a finding and cannot move a verdict.** Remediation output carries no `verdict_eligible` weight and does not enter the coverage ledger. FR16's decision table is untouched.
+  - **No operator can reach it.** `argus.remediation` (`base.py` / `engine.py` / `models.py`) is built and pinned by `tests/test_remediation_engine.py` and `tests/test_defect_remediation.py`, has **no importer elsewhere in `argus/`**, and **no `argus` CLI subcommand proposes a patch**. Owner **XAgent007 (Governance Owner)**; `target_story: NONE — unscheduled`; delivering it needs a CLI surface — the same fence FR29 sits behind.
 
 ### Release-Readiness Verdict
 > **Verdict vocabulary (canonical).** The negative-assurance ladder runs `RELEASE_READY` → … → `NOT_READY_FOR_RELEASE`; **`BLOCKED` is the demo shorthand for a blocking (`NOT_READY`) outcome** — the two names denote one concept, and it asserts exactly one thing: **APAA found something**. **`INSUFFICIENT_COVERAGE`** is a distinct *not-assessed* state — "I did not examine enough to vouch" — and is **not** a blocking verdict. It is reached two ways: coverage below the 20% floor, **or** an unmet coverage / critical-subsystem gate with **zero blocking findings** (amended 2026-08-03). The two states are never interchangeable: a verdict that asserts a defect APAA did not find is a false accusation, the failure mode cross-cutting concern #6 exists to prevent. Downstream artifacts use this vocabulary.
@@ -585,6 +632,10 @@ Phases V2–V4 are defined in **§Product Scope** (Growth Features / Vision) and
   - **Bounded by the §Project Classification constraints:** stdio only — no network listener is opened and no port is bound; no HTTP stack, preserving the `argus.* ⊬ fastapi` import-isolation gate and ADR #20; no credentials accepted or stored.
   - **No new authority.** It invokes the same pure `AuditRequest → AuditVerdict` path as the CLI, under the same work-manifest permission boundary (NFR-S4). Any capability reachable through this surface is reachable through the CLI, and the converse is not required.
   - **Verdict parity is asserted, not assumed:** the same repository at the same commit produces the same verdict through either surface, pinned by test.
+- **FR39:** An editor or IDE can consume APAA findings as **LSP diagnostics**, streamed as JSON-RPC 2.0 notifications carrying per-finding severity and locator. **[Post-V1]** **Disposed `library-seam` in the same act that admitted it** — see §Product Scope (Post-V1). *(Added 2026-08-28, Epic 20 / Story 20.3.)*
+  - **Bounded by the same §Project Classification constraints as FR35, and measured against them.** `argus/adapters/lsp/server.py` imports `socket` but **never binds, listens or accepts** — it writes to a stream the *caller* supplies, selecting framing by `isinstance(stream, socket.socket)`. So *"no network listener is opened and no port is bound"* continues to hold, and the `argus.* ⊬ fastapi` import-isolation gate (ADR #20) is untouched. **Recorded because the constraint now sits closer to its edge than it did:** the transport is caller-chosen, so whatever opens a socket is outside APAA and outside this contract.
+  - **No new authority and no new verdict path.** A diagnostic is a projection of a finding APAA already produced. Severity mapping must not reclassify, upgrade or soften a finding — FR37's rule, applied to a second surface.
+  - **No integrator can reach it.** There is **no console-script entry point for an LSP server**: `[project.scripts]` exposes `argus` / `argus-agent` / `repo-audit` → `argus.cli:main` plus the FR35 MCP alias, and nothing else. `tests/test_lsp_adapter.py` and `tests/test_post_v1_integration.py` drive the adapter by direct import. Owner **XAgent007 (Governance Owner)**; `target_story: NONE — unscheduled`.
 
 ## Non-Functional Requirements
 

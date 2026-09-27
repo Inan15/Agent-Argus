@@ -8468,3 +8468,91 @@ no id is filed for it.**
 ## Deferred from: code review of 19-6-every-ledger-entry-has-a-container-or-a-dated-deferral, iteration 3 (2026-08-27)
 
 - **	ests/test_governance_record_integrity.py**: Pre-existing brittle negative lookbehind structure in _CLOSURE_VERB regex ((?<!not )(?<!NOT )(?<!never )). Does not cover all complex multiline or multi-word negation patterns. Pre-existing test utility behavior; deferred.
+
+---
+
+## Deferred from: PRD amendment 2026-08-28 — Epic 20's three capabilities admitted and disposed in one act (2026-08-29)
+
+**Prior art: none.** Grepped for `DF-20-`, `FR38`, `FR39`, `FR40`, `remediation`, `lsp` and
+`parser` before filing; the ledger's only adjacent entry is `DF-10-2-A`, which is a DIFFERENT
+gap (see `DF-20-1-A` below) and stays open.
+
+- **DF-20-1-A** — **FR40 duplicates the production indexer and reaches no call site.**
+  `argus/parsers/extended.py` ships `TSParser`, `GoParser` and `JavaParser`, but TypeScript,
+  JavaScript, Go and Java were ALREADY grounded in V1 (`argus/shared/source_languages.py`,
+  grammars already pinned in `pyproject.toml`) and ALREADY definition-extracted by
+  `argus/index/ast_index.py::_DEF_KIND_BY_NODE`, which carries `function_declaration`,
+  `method_declaration`, `class_declaration` and `type_declaration`. **Both modules are
+  byte-unchanged by Epic 20** — `source_languages.py` last touched `c5db6f3` (2026-08-13) — so
+  FR40 adds neither language coverage nor extraction to the audit path. ⛔ **It does NOT close
+  `DF-10-2-A`**, which names C, C++, Ruby and Rust: those four still extract no definitions and
+  no file in them moved any closer to `audited_deep`. `DF-10-2-A` remains **OPEN**. Disposed
+  `library-seam` in `E-PRD/prd.md` FR40 and in `tests/test_v1_commitment_closure.py`. Owner
+  **XAgent007 (Governance Owner)**; `target_story: NONE — unscheduled`. **Two exits, neither
+  taken here:** wire it to a surface needing an API the indexer does not expose, or remove it.
+
+- **DF-20-2-A** — **FR38 (remediation) is built and unreachable.** `argus/remediation/`
+  (`base.py` / `engine.py` / `models.py`) is typed and test-proven by
+  `tests/test_remediation_engine.py` and `tests/test_defect_remediation.py`, has **no importer
+  elsewhere in `argus/`**, and **no `argus` CLI subcommand proposes a patch** — the same fence
+  FR29 has sat behind since 2026-08-11. Delivering it needs a CLI surface. Owner **XAgent007
+  (Governance Owner)**; `target_story: NONE — unscheduled`.
+
+- **DF-20-3-A** — **FR39 (LSP diagnostics) is built and unreachable.** `argus/adapters/lsp/`
+  is pinned by `tests/test_lsp_adapter.py`, and there is **no console-script entry point for an
+  LSP server**: `[project.scripts]` is `argus` / `argus-agent` / `repo-audit` → `argus.cli:main`
+  plus the FR35 MCP alias, and nothing else. ✅ **Checked, and NOT a violation:**
+  `argus/adapters/lsp/server.py` imports `socket` but never binds, listens or accepts — it writes
+  to a CALLER-supplied stream (`isinstance(stream, socket.socket)`), so FR35's *"no network
+  listener is opened and no port is bound"* constraint and the `argus.* ⊬ fastapi`
+  import-isolation gate (ADR #20) both still hold. Recorded because the transport is now
+  caller-chosen, which puts whatever opens a socket outside APAA and outside the contract. Owner
+  **XAgent007 (Governance Owner)**; `target_story: NONE — unscheduled`.
+
+- **Note on `tests/test_post_v1_integration.py`.** Story 20.4 describes it as an E2E integration
+  suite; measured, it reaches all three packages **by direct import**, so what it pins is
+  library-level behaviour, not an invocable path. That is not a defect in the tests — it is the
+  only thing they COULD pin while the three seams have no surface — but the suite must not be
+  cited as evidence that FR38, FR39 or FR40 is reachable.
+
+## Deferred from: story 21-1-cd2-consumption-points-and-rollup-covers-verdict (2026-09-08)
+
+**Prior art, grepped before filing.** `git log --follow -- scripts/check_meta_drift.py` and a
+repo-wide grep for `DF-DRIFT-UNREAD` and `check_meta_drift` before this entry: the script exists
+and has fired correctly across Epics 17, 18, 19 and 20 — four consecutive epics, every one over
+the §RD-1 process-derived budget, every one printed by the advisory reader on every run — and its
+report was read by no one before Epic 21 named the gap in `sprint-change-proposal-2026-08-29b.md`.
+Story 17.5 is the one place in this history an epic's `**Covers:**` list was actually checked
+against what was delivered: it found Epic 17's header claimed six ledger entries as covered
+(`DF-INV-VACUOUS-A`, `DF-14-1-A`, `DF-16-7-A`, `DF-16-7-B`, `DF-12-2-D`, `DF-12-3-A`) and NONE of
+the six was delivered, and hand-corrected the header in place under §3.4 — only because that story
+happened to be chartered to look. `AI-E17-13` (`sprint-status.yaml` `action_items:`) records the
+same finding in the house form: *"NEW, mechanical, and it belongs to the ROLL-UP rather than to
+any story... Nothing in the loop re-derives an epic's Covers: list at roll-up, so an epic whose
+charter is falsified by its own execution can close with the falsification standing."*
+
+- **DF-DRIFT-UNREAD-A** — **A correctly-firing advisory signal had no reader.**
+  `check_meta_drift.py`'s §RD-1/§CD-2 report has fired on every epic since the forward-only cutoff
+  (`CUTOFF_EPIC = 17`) — Epic 17 at 80% process-derived, Epic 18 at 75%, Epic 19 at 100%, Epic 20
+  at 100%, all against a 20% budget, Epic 20 also carrying no `**Capability delivered:**` field at
+  all — and nothing in the `bmad-dev-loop` orchestrator loop ever read it: no step in the loop
+  calls the script, no step gates on its output, and (Story 17.5 excepted, by hand) no story before
+  this one checked an epic's `**Covers:**` claim against what was actually delivered at roll-up.
+  The signal was not silent; it was unread. Story 21.1 gives it two named readers in
+  `.claude/skills/bmad-dev-loop/SKILL.md` §3: an epic ENTRY gate (HALTs only on a missing
+  `**Capability delivered:**`/`**Covers:**` field; records a `META-DRIFT:` verdict) and a roll-up
+  `Covers:` re-derivation before `epic-<id> = done` — that story's Task 1 and Task 2.
+  ⚠️ **Filed 2026-09-08 by Cadmus (XAgents-Assistant, wq-039) with Tasks 1 and 2 of 21.1 NOT YET
+  LANDED**: this agent's Edit and Write access to `.claude/skills/bmad-dev-loop/SKILL.md` is
+  permission-denied in this working environment (confirmed with both tools, independently), so
+  the entry gate and roll-up re-derivation described above are not yet in the installed skill as
+  of this filing. *"Nothing in the loop re-derives an epic's `Covers:` list at roll-up"* remains
+  true of the loop itself until Tasks 1 and 2 land — this entry documents the gap Story 21.1 is
+  chartered to close, not that it is closed. Story 21.1's Tasks 3 (this ledger entry's sibling
+  regression test, `tests/test_check_meta_drift.py`) and 4 (this entry) are done.
+  - id: DF-DRIFT-UNREAD-A
+  - origin_story: 21-1-cd2-consumption-points-and-rollup-covers-verdict
+  - owner: dev-loop orchestrator (the epic ENTRY gate and the roll-up step, `bmad-dev-loop/SKILL.md` §3)
+  - target_story: 21-1-cd2-consumption-points-and-rollup-covers-verdict
+  - category: process
+  - severity: 🟡

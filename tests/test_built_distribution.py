@@ -512,7 +512,12 @@ _FIGURE_CLAIMS: tuple[tuple[str, str], ...] = (
     (r"\*\*\d+ of the (?P<value>\d+) shipped modules import", "shipped_modules"),
     (r"the wheel holds (?P<value>\d+) modules", "shipped_modules"),
     (r"py3-none-any\.whl`, (?P<value>\d+) entries", "wheel_entries"),
-    (r"argus_agent-0\.1\.0\.tar\.gz`, (?P<value>\d+) files", "sdist_members"),
+    # ⚠️ DE-VERSIONED 2026-08-29. This pattern pinned the literal `0.1.0`, so the 1.0.0 bump
+    # made it match nothing — and the failure it produces is "a published measurement was
+    # DELETED", which is the opposite of what happened and would have sent the next reader
+    # hunting for a deletion that never occurred. The figure is what this guard holds; the
+    # version in the filename is not, and hard-coding it made the guard rot on every bump.
+    (r"argus_agent-\d+\.\d+\.\d+\.tar\.gz`, (?P<value>\d+) files", "sdist_members"),
 )
 
 # The guard that actually holds the distribution claim, named in the documents so a reader

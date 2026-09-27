@@ -44,6 +44,7 @@ __all__ = [
     "CoverageDepth",
     "CoverageLedgerEntry",
     "CoverageLedger",
+    "CoverageLedgerError",
     "grade_entry",
 ]
 
@@ -97,6 +98,15 @@ class CoverageLedgerEntry(BaseModel):
     )
 
 
+class CoverageLedgerError(ValueError):
+    """Typed failure for a malformed :class:`CoverageLedger` build (AR10).
+
+    A ``ValueError`` subclass mirroring ``CoverageReportError`` / ``DepthSemanticsError``
+    / ``CriticalSubsystemError`` elsewhere in ``argus/ledger`` — never a bare
+    ``AssertionError`` or silent acceptance.
+    """
+
+
 class CoverageLedger(BaseModel):
     """Aggregate per-file coverage ledger for one audit unit (frozen — FR5/M2).
 
@@ -130,8 +140,22 @@ class CoverageLedger(BaseModel):
 
         Sorting by ``file_path`` makes equality and serialization
         insertion-order-independent (AC3 / AR4). Pure — no I/O, no clock.
+
+        Raises :class:`CoverageLedgerError` if two entries share the same
+        ``file_path`` — the per-file ledger admits exactly one row per file
+        (no-double-count, mirroring the ``ToolRunnerDetector`` discipline);
+        a repeat is never silently deduped, since a silent dedupe would let a
+        future second coverage-producing detector ship with a wrong FR6/FR16
+        deep-% denominator, whichever entry happened to "win."
         """
         ordered = tuple(sorted(entries, key=lambda e: e.file_path))
+        seen: set[str] = set()
+        for entry in ordered:
+            if entry.file_path in seen:
+                raise CoverageLedgerError(
+                    f"duplicate file_path in CoverageLedger.build(): {entry.file_path!r}"
+                )
+            seen.add(entry.file_path)
         return cls(schema_version=schema_version, partition_id=partition_id, entries=ordered)
 
     def counts_by_depth(self) -> dict[CoverageDepth, int]:
