@@ -71,6 +71,7 @@ from _cartridge import stage_cartridge  # noqa: E402
 from argus.index import ast_index  # noqa: E402
 from argus.index.ast_index import build_ast_index  # noqa: E402
 from argus.models import AuditRequest  # noqa: E402
+from argus import pipeline_stages  # noqa: E402
 from argus.pipeline import run_audit  # noqa: E402
 from argus.reports import generator as report_generator  # noqa: E402
 from argus.shared.grammar_status import (  # noqa: E402
@@ -179,7 +180,7 @@ def _wipe_memo_cache(repo: Path) -> None:
 
 
 def _audit(repo: Path) -> object:
-    """Audit *repo* with every pass EXCEPT ``orphan``.
+    """Audit *repo* with every pass EXCEPT ``orphan``, the wq-1084 assertion families held out.
 
     wq-1083 note: the cartridge's ``apply_discount`` is mentioned nowhere, in a module the
     test imports, so since wq-1083 it is a BLOCKING ``orphan_code`` finding. That finding
@@ -187,17 +188,26 @@ def _audit(repo: Path) -> object:
     keep the pre-fix leg red — voiding the demonstration below for a reason unrelated to
     grammar drift. The subject here is the vacuous finding's eligibility, so the orphan pass
     is deselected rather than the fixture or the assertions being changed.
+
+    wq-1084 note: the planted vacuous test is ALSO a family-A ``assertion_on_mock_only``
+    fact. That rule reads the test with the stdlib ``ast``, not the call-node vocabulary, so
+    under the drift it survives the loss of ``vacuous_test_ast`` and would keep the pre-fix
+    leg red — voiding the demonstration below for a reason unrelated to grammar drift. The
+    family runs inside the ``vacuous`` pass, which this test cannot deselect without losing
+    its subject, so the family step alone is stubbed out for every leg.
     """
     _wipe_memo_cache(repo)
-    return run_audit(
-        AuditRequest(
-            repo_path=str(repo),
-            commit="HEAD",
-            budget=200,
-            materiality_bar="default",
-            enabled_passes=("coverage", "vacuous", "security", "prosecutor"),
+    with pytest.MonkeyPatch.context() as patch:
+        patch.setattr(pipeline_stages, "_assertion_family_findings", lambda *_args: [])
+        return run_audit(
+            AuditRequest(
+                repo_path=str(repo),
+                commit="HEAD",
+                budget=200,
+                materiality_bar="default",
+                enabled_passes=("coverage", "vacuous", "security", "prosecutor"),
+            )
         )
-    )
 
 
 def _drift_extraction_vocabulary(patch: pytest.MonkeyPatch) -> None:

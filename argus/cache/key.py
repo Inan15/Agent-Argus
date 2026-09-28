@@ -186,6 +186,8 @@ class DetectorDescriptor(BaseModel):
 #   detectors/structural_blocking.py::RULE_CANNOT_FAIL = "vacuous_test_cannot_fail"
 #   detectors/orphan_code.py::RULE_ORPHAN_CODE = "orphan_code" (wq-1083: its findings can
 #     now block, so a memoized advisory-only result must not be served across that change)
+#   detectors/ineffective_assertion.py::RULE_ASSERTION_* (wq-1084, family A: four facts)
+#   detectors/tautological_assertion.py::RULE_TAUTOLOGICAL_ASSERTION (wq-1084, family B)
 FROZEN_DETECTOR_SET: tuple[DetectorDescriptor, ...] = (
     DetectorDescriptor(rule_id="hardcoded_secret", code_identity="secret_scan.v2"),
     DetectorDescriptor(rule_id="tool_failure", code_identity="tool_runner.v1"),
@@ -194,6 +196,11 @@ FROZEN_DETECTOR_SET: tuple[DetectorDescriptor, ...] = (
     DetectorDescriptor(rule_id="vacuous_test_ast", code_identity="vacuous_test.ast.v1"),
     DetectorDescriptor(rule_id="vacuous_test_cannot_fail", code_identity="vacuous_test.cannot_fail.v1"),
     DetectorDescriptor(rule_id="orphan_code", code_identity="orphan_code.v2"),
+    DetectorDescriptor(rule_id="assertion_swallowed", code_identity="ineffective_assertion.v1"),
+    DetectorDescriptor(rule_id="assertion_after_return", code_identity="ineffective_assertion.v1"),
+    DetectorDescriptor(rule_id="assertion_on_mock_only", code_identity="ineffective_assertion.v1"),
+    DetectorDescriptor(rule_id="assertion_absent", code_identity="ineffective_assertion.v1"),
+    DetectorDescriptor(rule_id="tautological_assertion", code_identity="tautological_assertion.v1"),
 )
 
 

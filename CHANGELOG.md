@@ -887,7 +887,7 @@ to block, and flipping the default here would pre-empt a policy decision that be
 ### Packaging: what the distribution contains
 
 `[tool.flit.module] name = "argus"` packages the `argus` Python package and nothing else. Measured on the
-built artifacts: the wheel holds 108 modules plus the packaged command assets and metadata; the sdist adds
+built artifacts: the wheel holds 113 modules plus the packaged command assets and metadata; the sdist adds
 `pyproject.toml`, `README.md`, `LICENSE` and `PKG-INFO`. The RAM workflow directories (`audit/`,
 `phases/`, `templates/`) and the installer scripts are **repository-only** — see README.md for the full
 capability split. *(Amended 2026-08-15 by Story 12.7: the module figure moved with the tree, ~~`adapters/`~~
@@ -896,9 +896,13 @@ zero data assets — `flit_core` ships every file under `argus/`, so the command
 with no build-backend change and reach the sdist because they are tracked.)*
 
 Measured on the built wheel with this repository removed from `sys.path`, one clean subprocess per module:
-**108 of the 108 shipped modules import.** None fail. (The figure read 73 of 73 when `0.1.0` was
+**113 of the 113 shipped modules import.** None fail. (The figure read 73 of 73 when `0.1.0` was
 written; it is DERIVED from the freshly built artifact by `TC-ArgusAgent-DOCS-001-54` — *the artifact
-is the fact* — and moved to 108 on 2026-08-29 when Epic 20 added `argus/parsers` (3 modules,
+is the fact* — and moved to 113 on 2026-09-29, when wq-1119 combined two parallel branches:
+wq-1083 added `argus/detectors/structural_blocking.py`, and on 2026-09-28 wq-620 had added
+`argus/detectors/bandit_scan.py` and wq-1084 added `argus/detectors/assertion_ast.py`, `ineffective_assertion.py` and
+`tautological_assertion.py`, the seeded-defect family A and B detectors. It moved to 108 on
+2026-08-29 when Epic 20 added `argus/parsers` (3 modules,
 Story 20.1), `argus/remediation` (4, Story 20.2) and `argus/adapters/lsp` (5, Story 20.3) — none of
 which is reachable from any entry point, so the figure grew while the operator surface did not. It
 moved to 95 on 2026-08-23 when Story 16.7 added

@@ -220,6 +220,7 @@ from argus.pipeline_persist import (
 # test that monkeypatches `argus.pipeline._detect_per_file` still intercepts the real call —
 # the orchestrators below look the name up in THIS module's namespace at call time.
 from argus.pipeline_stages import (
+    _assertion_family_findings,
     _assessment_scope_paths,
     _build_cost_ledger,
     _build_cost_units,
@@ -235,6 +236,7 @@ from argus.pipeline_stages import (
     _orphan_reference_sources,
     _project_halt,
     _read_source,
+    _RepoSources,
     _skipped_remainder_entries,
     _unit_cost,
 )

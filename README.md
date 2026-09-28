@@ -255,8 +255,12 @@ graded, but has no definition for the depth gate to stand on. Pinned language-by
 
 ### What the distribution contains, and what needs the git repository
 
-MEASURED from the built wheel (`argus_agent-1.0.0-py3-none-any.whl`, 116 entries) and sdist
-(`argus_agent-1.0.0.tar.gz`, 115 files), not inferred — ~~`argus_agent-0.1.0-…`, 104 entries /
+MEASURED from the built wheel (`argus_agent-1.0.0-py3-none-any.whl`, 121 entries) and sdist
+(`argus_agent-1.0.0.tar.gz`, 120 files), not inferred — ~~120 entries / 119 files~~ struck,
+not deleted (§3.4): the counts moved on 2026-09-29 when wq-1119 combined wq-1083's
+`structural_blocking.py` with wq-1084's branch — ~~116 entries / 115 files~~ struck,
+not deleted (§3.4): the counts moved with wq-620's `bandit_scan.py` and wq-1084's three
+family A and B detector modules — ~~`argus_agent-0.1.0-…`, 104 entries /
 103 files~~ struck, not deleted (§3.4): the filenames moved with the 1.0.0 bump and the counts
 with Epic 20: `[tool.flit.module] name = "argus"`
 packages **the `argus` Python package and nothing else** — which, since Story 12.7, includes
@@ -286,8 +290,13 @@ to contradict each other (see the struck sentence under [Slash Commands](#-slash
 
 > **Measured limitation, stated rather than discovered later — and now measured away.** On a
 > freshly built wheel, with this repository removed from `sys.path` and one clean subprocess
-> per module, **108 of the 108 shipped modules import**. None fail. (108, not 96, since
-> 2026-08-29: Epic 20 added twelve modules across three packages — `argus/parsers` (3,
+> per module, **113 of the 113 shipped modules import**. None fail. (113, not 108, since
+> 2026-09-29: wq-620 added `argus/detectors/bandit_scan.py`, wq-1083 added
+> `argus/detectors/structural_blocking.py`, and wq-1084 added the three
+> modules of the seeded-defect family A and B detectors — `assertion_ast`,
+> `ineffective_assertion` and `tautological_assertion`, all under `argus/detectors/`; wq-1119
+> combined the two branches on 2026-09-29. 108, not
+> 96, since 2026-08-29: Epic 20 added twelve modules across three packages — `argus/parsers` (3,
 > Story 20.1), `argus/remediation` (4, Story 20.2) and `argus/adapters/lsp` (5, Story 20.3).
 > They IMPORT, which is all this sentence measures; none of the three is reachable from any
 > entry point, so nothing an operator can invoke moved. 96, not 95, since

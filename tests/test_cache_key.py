@@ -109,9 +109,19 @@ def test_golden_key_pinned() -> None:
     ``vacuous_test_cannot_fail`` and ``orphan_code`` ("orphan_code.v2") — because both rules
     can now emit a BLOCKING finding. The same lever: without the move a memoized re-audit
     would be served the pre-change, advisory-only detect-stage result.
+
+    Regenerated a THIRD time 2026-09-28 by wq-1084, which added five descriptors (the family-A
+    ``assertion_*`` rules and family-B ``tautological_assertion``) because the detect stage now
+    emits BLOCKING findings it did not emit before. Same lever, same reason: without the move a
+    memoized re-audit of a repository with a tautological test would be served the pre-wq-1084
+    advisory-only result.
+
+    The two THIRD regenerations above were made on parallel branches, each over ae5ea25; neither
+    value survives. Regenerated a FOURTH time 2026-09-29 by wq-1119, which combined them: the set
+    now carries wq-1083's two descriptors followed by wq-1084's five, and this is that set's key.
     """
     golden = derive_cache_key(_baseline())
-    assert golden == "1ab37ce58d4e3a0bcfdc43174e69981a9a1c0691fa4c549c42e3aa1c7e6283bf"
+    assert golden == "f71607ba015f573964f48b9d2053223610377cbdafbd9e8614ca40f073495dc5"
 
 
 # ── AC2: the bidirectional CI canary — each input perturbation moves the key ──

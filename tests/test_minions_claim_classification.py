@@ -105,6 +105,20 @@ _TRUE_HISTORICAL_SITES: dict[str, tuple[tuple[str, str], ...]] = {
             "KEEP — past tense, describes the Story-3.1 arrangement.",
         ),
     ),
+    # wq-1084 (2026-09-28): both occurrences name WHERE a measurement was taken — the real
+    # repository whose false blocks justify an exit of the family detectors.
+    "argus/detectors/assertion_ast.py": (
+        (
+            "measured on Minions at ``dcd90233``",
+            "KEEP — measurement provenance for the one fixture-data block the collection exit removes.",
+        ),
+    ),
+    "argus/detectors/ineffective_assertion.py": (
+        (
+            "9 legitimate Minions tests",
+            "KEEP — measurement provenance (wq-1083) for the callee-purity bar on the absent rule.",
+        ),
+    ),
     "argus/dogfood/proof_render.py": (
         (
             "The independent Story-7.2 run over the Minions",
