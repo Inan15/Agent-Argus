@@ -118,6 +118,18 @@ _TRUE_HISTORICAL_SITES: dict[str, tuple[tuple[str, str], ...]] = {
             "by AC1.5 and in unit 2, so a rewrite would spend budget to make it worse.",
         ),
     ),
+    # wq-1083 (2026-09-28): both occurrences name WHERE a measurement was taken — the real
+    # repository whose finding counts justify each exit of the blocking rules.
+    "argus/detectors/structural_blocking.py": (
+        (
+            "over Minions at ``dcd90233``",
+            "KEEP — measurement provenance: the repository and sha the 645/1,064 counts came from.",
+        ),
+        (
+            "on Minions it blocked **11**",
+            "KEEP — measurement provenance for the 9 false blocks that narrowed the vacuous rule.",
+        ),
+    ),
     "argus/evidence/__init__.py": (
         (
             "SEPARATE from the Minions",
