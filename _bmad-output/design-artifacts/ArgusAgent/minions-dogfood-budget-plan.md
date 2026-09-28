@@ -4,9 +4,9 @@
 
 ## Provenance
 
-- Commit descriptor (`git rev-parse HEAD` at generation): `f5eaf9337447bc66d27c8443a8e855daecb71227`
+- Commit descriptor (`git rev-parse HEAD` at generation): `b19f96a3a00b2ecb101c1670b0c5e405dd664425`
 - Enumerated population (the HONEST label — Story 12.1, closing `DF-10-4-D`): the file list in this artifact is enumerated from the git INDEX (`git ls-files`), NOT from the tree at the commit descriptor above. The two are the same tree exactly when `argus/` carries no staged-or-uncommitted change, and `TC-ArgusAgent-DOGFOOD-001-50` fails unless they agree — so this artifact cannot quietly describe one tree while citing another.
-- Source files (tracked `argus/`): **108**
+- Source files (tracked `argus/`): **110**
 
 **Subject honesty (Story 8.5 / AC2).** The tree planned above is **this repository's own package** — Argus planning over Argus. It is a SELF-scoped plan, materially weaker evidence than a plan derived over an independent repository, and it is reportable only as such — never as independent corroboration. The `minions-dogfood-` filename prefix is a retained HISTORICAL identifier (an evidence path that moves is an evidence path that gets lost); the subject is whatever this section names, not what the filename suggests. The independent Story-7.2 run this generator once described is preserved verbatim at `minions-dogfood-proof-story-7-2-superseded.md`.
 
@@ -14,24 +14,24 @@
 
 `$X` is sized EMPIRICALLY to cover the full-repo partition plan, folding the V1 deterministic zero-token contributions (`files_indexed` + `python_files` + `detector_passes` — the SAME recipe `pipeline._build_cost_ledger` uses, REUSED via the 3.1 `account_spend` accountant, no fork) across ALL units into a running `int`-credit total, then applying a 5/4 headroom.
 
-- **V1 deterministic total: 540 credits**
-- **Headroom (5/4): +135 credits**
-- **Sized ceiling `$X`: 675 credits** (int — never a float, AR4)
-- Build-cost proxy (total physical LOC): 35885
-- **NFR-C1 baseline ratio (audit-cost / build-cost proxy): `108/7177`** (Fraction/marker — never a float)
+- **V1 deterministic total: 550 credits**
+- **Headroom (5/4): +137 credits**
+- **Sized ceiling `$X`: 687 credits** (int — never a float, AR4)
+- Build-cost proxy (total physical LOC): 36685
+- **NFR-C1 baseline ratio (audit-cost / build-cost proxy): `10/667`** (Fraction/marker — never a float)
 
 ## Per-unit contribution basis
 
 | partition_id (12ch) | files | python_files | unit_credits | clears 20% floor |
 |---|---|---|---|---|
-| `15f338369f52` | 32 | 32 | 160 | True |
 | `44fb053c6992` | 15 | 15 | 75 | True |
-| `74bad5a7f580` | 35 | 35 | 175 | True |
+| `8c6a6fc8669c` | 36 | 36 | 180 | True |
 | `b0effb32c0ae` | 26 | 26 | 130 | True |
+| `d65e35e3408b` | 33 | 33 | 165 | True |
 
 ## 3.2 halt demonstration (the ceiling halts + downgrades if breached)
 
-- Under `BudgetConfig(ceiling_credits=675)` the run FITS (`ceiling_reached is False`): **True**
+- Under `BudgetConfig(ceiling_credits=687)` the run FITS (`ceiling_reached is False`): **True**
 - Under a ceiling ONE credit below the total the run BREACHES (`ceiling_reached is True`, the ≥-is-a-breach REUSE): **True** — the 3.2 halt→skip→downgrade→report path fires.
 
 ## OI3 invariant preserved
