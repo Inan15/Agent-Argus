@@ -179,9 +179,24 @@ def _wipe_memo_cache(repo: Path) -> None:
 
 
 def _audit(repo: Path) -> object:
+    """Audit *repo* with every pass EXCEPT ``orphan``.
+
+    wq-1083 note: the cartridge's ``apply_discount`` is mentioned nowhere, in a module the
+    test imports, so since wq-1083 it is a BLOCKING ``orphan_code`` finding. That finding
+    reads the source text, not the call-node vocabulary, so it survives the drift and would
+    keep the pre-fix leg red — voiding the demonstration below for a reason unrelated to
+    grammar drift. The subject here is the vacuous finding's eligibility, so the orphan pass
+    is deselected rather than the fixture or the assertions being changed.
+    """
     _wipe_memo_cache(repo)
     return run_audit(
-        AuditRequest(repo_path=str(repo), commit="HEAD", budget=200, materiality_bar="default")
+        AuditRequest(
+            repo_path=str(repo),
+            commit="HEAD",
+            budget=200,
+            materiality_bar="default",
+            enabled_passes=("coverage", "vacuous", "security", "prosecutor"),
+        )
     )
 
 

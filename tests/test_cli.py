@@ -57,9 +57,11 @@ def test_cli_summary_line_does_not_carry_the_decision_row(tmp_path: Path, capsys
         line for line in capsys.readouterr().out.splitlines() if line.startswith("verdict=")
     ]
     assert len(summary) == 1, "exactly one machine summary line"
-    # The frozen shape, including the scope suffix the default run narrows with.
+    # The frozen shape, including the scope suffix the default run narrows with. The count
+    # is 2 since wq-1083: the cartridge's `apply_discount`, mentioned nowhere in a module the
+    # test imports, blocks as `orphan_code` beside the vacuous finding (was 1).
     assert summary[0] == (
-        "verdict=NOT_READY_FOR_RELEASE deep_ratio=1/2 blocking_findings=1 "
+        "verdict=NOT_READY_FOR_RELEASE deep_ratio=1/2 blocking_findings=2 "
         "assessed_deep_ratio=1 scope=application held_out=1"
     )
     assert "decision_row" not in summary[0]

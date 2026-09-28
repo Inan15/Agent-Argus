@@ -345,7 +345,37 @@ def _detect_per_file(
     return entries, findings, candidates
 
 
+# Packaging files that name entry points (``[project.scripts]``, ``console_scripts``) and
+# are never ingested as source. Their text joins the orphan pass's reference universe so a
+# console-script target is never blocked as unreferenced (wq-1083).
+_ENTRY_POINT_MANIFESTS = ("pyproject.toml", "setup.cfg", "setup.py")
+
+
+def _orphan_reference_sources(repo_root: Path, index: AstIndex) -> dict[str, str] | None:
+    """Every indexed file's text + the entry-point manifests — the orphan reference universe.
+
+    The WHOLE index, not the assessed slice: a reference from a file the budget did not
+    reach is still a reference. ``None`` when any indexed file cannot be read, because a
+    universe with a hole in it could make a referenced def look unreferenced — the orphan
+    pass then stays advisory-only, which is the direction a missing input must fail in.
+    """
+    sources: dict[str, str] = {}
+    try:
+        for entry in index.entries:
+            sources[entry.file_path] = _read_source(repo_root, entry.file_path)
+    except OSError:
+        return None
+    for name in _ENTRY_POINT_MANIFESTS:
+        if name not in sources and (repo_root / name).is_file():
+            try:
+                sources[name] = _read_source(repo_root, name)
+            except OSError:
+                return None
+    return sources
+
+
 def _orphan_findings(
+    repo_root: Path,
     index: AstIndex,
     assessed_entries: tuple[AstIndexEntry, ...],
     request: AuditRequest,
@@ -354,7 +384,8 @@ def _orphan_findings(
 
     ``request`` is REQUIRED for the reason recorded on :func:`_detect_per_file`:
     both production call sites previously omitted it, so the ``orphan`` pass ran
-    unconditionally even when the operator had deselected it.
+    unconditionally even when the operator had deselected it. ``repo_root`` supplies
+    the reference universe the wq-1083 blocking fact is read against.
     """
     if "orphan" not in request.enabled_passes:
         return []
@@ -362,7 +393,8 @@ def _orphan_findings(
         scoped = index
     else:
         scoped = index.model_copy(update={"entries": assessed_entries})
-    return list(OrphanCodeDetector().run(index=scoped).findings)
+    sources = _orphan_reference_sources(repo_root, index)
+    return list(OrphanCodeDetector().run(index=scoped, sources=sources).findings)
 
 
 

@@ -232,6 +232,7 @@ from argus.pipeline_stages import (
     _grade_non_test_source,
     _is_python,
     _orphan_findings,
+    _orphan_reference_sources,
     _project_halt,
     _read_source,
     _skipped_remainder_entries,
@@ -675,7 +676,8 @@ def run_audit_detailed(
             staged, found, cands = _detect_per_file(repo_root, assessed_entries, request)
             return RecordedStageResult(
                 entries=tuple(staged),
-                findings=tuple(found) + tuple(_orphan_findings(index, assessed_entries, request)),
+                findings=tuple(found)
+                + tuple(_orphan_findings(repo_root, index, assessed_entries, request)),
                 candidates=tuple(cands),
             )
 
@@ -1026,7 +1028,7 @@ def resume_audit_detailed(
         # `assessed_resume_entries` is the SAME population the critical-candidate set
         # above was derived over — resolved once, so the two cannot disagree.
         merged_findings = _merge_findings(
-            merged_findings, _orphan_findings(index, assessed_resume_entries, request)
+            merged_findings, _orphan_findings(repo_root, index, assessed_resume_entries, request)
         )
         # The resumed halt report is RE-PROJECTED over the FULL current index at the
         # RAISED ceiling — the EXACT SAME call an uninterrupted run(raised_budget)

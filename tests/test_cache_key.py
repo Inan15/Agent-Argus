@@ -104,9 +104,14 @@ def test_golden_key_pinned() -> None:
     252 tracked files). That is the AR6 invalidation lever working exactly as DN-DETECTORSET
     documents it, so this move is the intended consequence and not a silent regeneration: without
     it a memoized re-audit would be served the PRE-FIX detect-stage result.
+
+    Regenerated a THIRD time 2026-09-28 by wq-1083, which added two descriptors —
+    ``vacuous_test_cannot_fail`` and ``orphan_code`` ("orphan_code.v2") — because both rules
+    can now emit a BLOCKING finding. The same lever: without the move a memoized re-audit
+    would be served the pre-change, advisory-only detect-stage result.
     """
     golden = derive_cache_key(_baseline())
-    assert golden == "78239f689c6dd3c92e3268d0787d3e96293c607f66fc0b710e9d76b19cb92850"
+    assert golden == "1ab37ce58d4e3a0bcfdc43174e69981a9a1c0691fa4c549c42e3aa1c7e6283bf"
 
 
 # ── AC2: the bidirectional CI canary — each input perturbation moves the key ──

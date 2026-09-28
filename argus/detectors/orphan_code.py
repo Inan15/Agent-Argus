@@ -74,7 +74,7 @@ Test area: ArgusAgent-ORPHAN (``TC-ArgusAgent-ORPHAN-001-NN`` — index from ``-
 from __future__ import annotations
 
 from collections import Counter
-from typing import TYPE_CHECKING
+from typing import TYPE_CHECKING, Mapping
 
 from argus.detectors.base import (
     DegradedCondition,
@@ -82,7 +82,10 @@ from argus.detectors.base import (
     FindingDraft,
     build_recording,
 )
+from argus.detectors.structural_blocking import reference_universe, unreferenced_top_level
+from argus.detectors.vacuous_test import is_test_file
 from argus.index.ast_index import AstIndex, AstIndexEntry, Definition
+from argus.ledger.coverage_ledger import CoverageDepth
 from argus.ledger.recording import Recording
 
 __all__ = [
@@ -190,6 +193,7 @@ class OrphanCodeDetector:
         *,
         index: AstIndex,
         coverage_envelope_slice: str | None = None,
+        sources: Mapping[str, str] | None = None,
     ) -> DetectorResult:
         """Flag conservatively-unreachable defs as advisory orphan findings (FR12).
 
@@ -202,6 +206,12 @@ class OrphanCodeDetector:
         (locator from the def's file + line span + ``ast_span`` — FR13). Produces NO
         coverage ``entries`` (finding-only — a no-orphan repo is byte-identical to
         pre-6.3). Findings are SORTED (file_path, start_line, name — AR11).
+
+        wq-1083: when *sources* (repo-relative path → text, supplied by the impure
+        pipeline) is given, an orphan that ALSO satisfies
+        ``structural_blocking.unreferenced_top_level`` — its name occurs nowhere outside
+        its own span and imports — is emitted at ``depth_supported=TOOL_SCANNED_ONLY`` and
+        so blocks. Without *sources* every finding stays advisory, exactly as before.
 
         Raises:
             OrphanCodeError: only on a structurally malformed argument (a non-
@@ -250,6 +260,13 @@ class OrphanCodeDetector:
                 definition_name_counts[name] += 1
 
         # ── Second pass: classify each named def (whole-index facts are now fixed) ──
+        universe = None
+        if sources is not None:
+            entry_by_path = {e.file_path: e for e in entries if isinstance(e, AstIndexEntry)}
+            test_paths = frozenset(
+                path for path in sources if is_test_file(path, ast_entry=entry_by_path.get(path))
+            )
+            universe = reference_universe(sources, test_paths=test_paths)
         findings: list[Recording] = []
         for entry in entries:
             if not isinstance(entry, AstIndexEntry) or not entry.ast_eligible:
@@ -257,6 +274,13 @@ class OrphanCodeDetector:
             for definition in entry.definitions:
                 if not self._is_orphan(definition, referenced_names, definition_name_counts):
                     continue
+                unreferenced = universe is not None and unreferenced_top_level(
+                    file_path=entry.file_path,
+                    source=sources.get(entry.file_path) if sources is not None else None,
+                    definition=definition,
+                    universe=universe,
+                    is_test=is_test_file(entry.file_path, ast_entry=entry),
+                )
                 draft = FindingDraft(
                     file_path=entry.file_path,
                     start_line=definition.start_line,
@@ -269,8 +293,12 @@ class OrphanCodeDetector:
                 # FR13 locator-or-reject: a malformed span would raise inside
                 # build_recording; a Definition's span is index-validated (>=1,
                 # end>=start), so the locator is always buildable here.
+                # TOOL_SCANNED_ONLY, not AUDITED_SHALLOW: the evidence is a whole-repository
+                # token scan, not a per-span AST fact, and the lower rank keeps a vacuous-test
+                # finding FIRST in the FR33 order (the demo's headline line).
+                depth = CoverageDepth.TOOL_SCANNED_ONLY if unreferenced else None
                 findings.append(
-                    build_recording(draft, depth_supported=None, claim_present=False)
+                    build_recording(draft, depth_supported=depth, claim_present=False)
                 )
 
         findings.sort(key=lambda f: (f.locators[0].file_path, f.locators[0].start_line, f.rule_id, f.recording_id))
