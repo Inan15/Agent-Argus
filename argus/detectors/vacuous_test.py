@@ -180,6 +180,7 @@ from argus.detectors.base import (
     FindingDraft,
     build_recording,
 )
+from argus.detectors.assertion_ast import parse_module, uncollected_test_methods
 from argus.detectors.assertion_strength import grade_span_assertions, s1_corroborated
 from argus.detectors.provenance_scan import (
     body_statement_count,
@@ -696,6 +697,16 @@ class VacuousTestDetector:
         # `source.splitlines()`, which splits on eleven things where `ast_entry` counts one.
         source_lines = index_aligned_lines(source)
         test_defs = [d for d in ast_entry.definitions if _is_test_function(d)]
+        # wq-1134: a `test*` method of a class no runner collects from (neither `Test*` nor a
+        # `TestCase` subclass) never runs — it is a fake's method, not a test. Unparseable
+        # source keeps every definition: this exit only ever removes an accusation.
+        module = parse_module(source)
+        if module is not None:
+            uncollected = uncollected_test_methods(module)
+            test_defs = [
+                d for d in test_defs
+                if not any(m.name == d.name and d.start_line <= m.lineno <= d.end_line for m in uncollected)
+            ]
         if not test_defs:
             return DetectorResult(
                 degraded=(DegradedCondition(file_path=file_path, reason="no_test_functions"),)

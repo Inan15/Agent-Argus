@@ -52,10 +52,20 @@ _HARNESS_SHAPES = {
     "a3": 'from src.cart import subtotal\n\n\ndef test_subtotal():\n    subtotal([(10, 2), (5, 1)])\n    assert "ok"\n',
     "b1": "from src.cart import subtotal\n\n\ndef test_subtotal():\n    subtotal([(10, 2), (5, 1)])\n    assert True\n",
     "b2": "from src.cart import subtotal\n\n\ndef test_subtotal():\n    subtotal([(10, 2), (5, 1)])\n    assert 1 == 1\n",
-    "b3": "from src.cart import subtotal\n\n\ndef test_subtotal():\n    x = subtotal([(10, 2), (5, 1)])\n    assert x == x\n",
     "b4": "from src.cart import subtotal\n\n\ndef test_subtotal():\n    subtotal([(10, 2), (5, 1)])\n    assert isinstance(5, int)\n",
     "b5": "from src.cart import subtotal\n\n\ndef test_subtotal():\n    subtotal([(10, 2), (5, 1)])\n    expected = 25\n    assert expected == 25\n",
 }
+
+
+# wq-1134: harness case b3 (`x = subtotal(...); assert x == x`) is deliberately NOT here. A reflexive
+# assert on a name bound from a call is the not-NaN idiom (wq-1128 probe q1), so the rule stands down;
+# the measured cost is one of the 20 seeded cases (18 -> 17 of 20).
+
+
+def test_reflexive_assert_on_call_bound_name_is_the_not_nan_idiom(tmp_path: Path) -> None:
+    """TC-ArgusAgent-DETECT-001-195 — harness ``b3`` shape: computed value, ``assert x == x`` can fail on NaN."""
+    source = "from src.cart import subtotal\n\n\ndef test_subtotal():\n    x = subtotal([(10, 2)])\n    assert x == x\n"
+    assert _flagged(tmp_path, source) == []
 
 
 @pytest.mark.parametrize("case", sorted(_HARNESS_SHAPES))

@@ -32,11 +32,11 @@ Four facts, one rule id each, at most ONE finding per test (checked in this orde
    labelled placeholder), or (b) the test takes no fixture, is undecorated, and every statement
    is a call whose result is thrown away, to a function imported from the repository whose
    source shows it CANNOT signal failure: no ``raise``, no ``assert``, no ``yield``, no
-   ``try``/``with``, no store to an attribute or item, at least one ``return`` and every
+   ``try``/``with``, no store to an attribute or item, no item read (``d[k]``), at least one ``return`` and every
    ``return`` carries a value, and every call it makes is to a pure builtin, a pure method of a
    builtin value, or another function of its own module meeting the same bar. Its arguments are
-   all literals. A builtin that rejects a well-typed value (``int("x")``, ``max([])``) is NOT
-   pure: a callee that validates its input that way can fail, and a test feeding it a valid
+   all literals. A builtin that rejects a well-typed value (``int("x")``, ``max([])``, ``ord("ab")``) is NOT
+   pure (wq-1134 adds ``ord``): a callee that validates its input that way can fail, and a test feeding it a valid
    literal is a "should not raise" test (wq-1127).
 
    **Why (b) and not "asserts nothing".** Measured on wq-1083: "zero assertion sites" blocked
@@ -117,10 +117,12 @@ _STDLIB = frozenset(sys.stdlib_module_names)
 # content, ``max``/``min`` on an empty iterable, ``divmod``/``pow`` on a zero, ``format`` on a
 # spec. A callee that runs its input through one of them validates it, and a test that feeds it
 # a valid literal and discards the result is a "should not raise" test, not an absent assertion.
+# ``ord`` joins them (wq-1134: it raises TypeError unless given a length-1 string), as does any
+# item read ``d[k]`` (KeyError/IndexError) — see ``_is_pure``.
 _PURE_BUILTINS = frozenset(
     {
         "abs", "all", "any", "bin", "bool", "callable", "dict", "enumerate", "filter", "frozenset",
-        "hex", "isinstance", "len", "list", "map", "oct", "ord", "repr", "reversed", "round", "set",
+        "hex", "isinstance", "len", "list", "map", "oct", "repr", "reversed", "round", "set",
         "sorted", "str", "sum", "tuple", "zip",
     }
 )
@@ -496,6 +498,8 @@ def _is_pure(fn: ast.FunctionDef, module: ast.Module, depth: int, seen: frozense
     for node in nodes:
         if isinstance(node, (ast.Attribute, ast.Subscript)) and isinstance(node.ctx, (ast.Store, ast.Del)):
             return False
+        if isinstance(node, ast.Subscript) and not isinstance(node.slice, ast.Slice):
+            return False  # an item read raises KeyError/IndexError on input: a validating callee
         if not isinstance(node, ast.Call):
             continue
         func = node.func

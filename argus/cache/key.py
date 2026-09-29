@@ -194,19 +194,23 @@ class DetectorDescriptor(BaseModel):
 # wq-1127 bumped ineffective_assertion v1 -> v2 and tautological_assertion v1 -> v2: both
 # family detectors gained the runner-may-skip exit (wq-1091 probes p2, p3), and family A's
 # assertion_absent (b) no longer counts an input-validating builtin as pure.
+# wq-1134 bumped vacuous_test.cannot_fail v2 -> v3 (a method of a class no runner collects from
+# is not a test), ineffective_assertion v2 -> v3 (same collection rule; an item read and ``ord``
+# are validating, not pure) and tautological_assertion v2 -> v3 (same collection rule; a
+# reflexive assert on a name bound from a call is the not-NaN idiom).
 FROZEN_DETECTOR_SET: tuple[DetectorDescriptor, ...] = (
     DetectorDescriptor(rule_id="hardcoded_secret", code_identity="secret_scan.v2"),
     DetectorDescriptor(rule_id="tool_failure", code_identity="tool_runner.v1"),
     DetectorDescriptor(rule_id="traceability_not_establishable", code_identity="tool_runner.v1"),
     DetectorDescriptor(rule_id="vacuous_test_heuristic", code_identity="vacuous_test.heuristic.v1"),
     DetectorDescriptor(rule_id="vacuous_test_ast", code_identity="vacuous_test.ast.v1"),
-    DetectorDescriptor(rule_id="vacuous_test_cannot_fail", code_identity="vacuous_test.cannot_fail.v2"),
+    DetectorDescriptor(rule_id="vacuous_test_cannot_fail", code_identity="vacuous_test.cannot_fail.v3"),
     DetectorDescriptor(rule_id="orphan_code", code_identity="orphan_code.v3"),
-    DetectorDescriptor(rule_id="assertion_swallowed", code_identity="ineffective_assertion.v2"),
-    DetectorDescriptor(rule_id="assertion_after_return", code_identity="ineffective_assertion.v2"),
-    DetectorDescriptor(rule_id="assertion_on_mock_only", code_identity="ineffective_assertion.v2"),
-    DetectorDescriptor(rule_id="assertion_absent", code_identity="ineffective_assertion.v2"),
-    DetectorDescriptor(rule_id="tautological_assertion", code_identity="tautological_assertion.v2"),
+    DetectorDescriptor(rule_id="assertion_swallowed", code_identity="ineffective_assertion.v3"),
+    DetectorDescriptor(rule_id="assertion_after_return", code_identity="ineffective_assertion.v3"),
+    DetectorDescriptor(rule_id="assertion_on_mock_only", code_identity="ineffective_assertion.v3"),
+    DetectorDescriptor(rule_id="assertion_absent", code_identity="ineffective_assertion.v3"),
+    DetectorDescriptor(rule_id="tautological_assertion", code_identity="tautological_assertion.v3"),
 )
 
 

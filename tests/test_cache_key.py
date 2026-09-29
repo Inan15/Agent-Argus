@@ -129,9 +129,14 @@ def test_golden_key_pinned() -> None:
     ``tautological_assertion.v2``, when both family detectors gained the runner-may-skip exit
     (wq-1091 probes p2, p3) and ``assertion_absent`` (b) stopped counting an input-validating
     builtin as pure.
+
+    Regenerated a SEVENTH time 2026-09-29 by wq-1134: ``vacuous_test.cannot_fail.v3``,
+    ``ineffective_assertion.v3`` and ``tautological_assertion.v3``, when wq-1128's four new false
+    blocks (q1-q4) were closed: an uncollected fake-class method is not a test, a reflexive assert
+    on a call-bound name is the not-NaN idiom, and an item read or ``ord`` is a validating callee.
     """
     golden = derive_cache_key(_baseline())
-    assert golden == "ff8dcbdde44b8b48d54da64921fdee86c89915ff41756017931b09670917d617"
+    assert golden == "2bad6d2793a53a89635f7554e4dadd3f6745897c597a4dd64235371670be500e"
 
 
 # ── AC2: the bidirectional CI canary — each input perturbation moves the key ──

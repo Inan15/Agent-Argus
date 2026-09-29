@@ -226,12 +226,53 @@ def _is_call_free_operand(node: ast.AST) -> bool:
     return False
 
 
-def is_tautology(node: ast.AST, consts: Mapping[str, Any], *, allow_reflexive: bool = True) -> bool:
+def _root_name(node: ast.AST) -> str | None:
+    while isinstance(node, (ast.Attribute, ast.Subscript)):
+        node = node.value
+    return node.id if isinstance(node, ast.Name) else None
+
+
+def call_bound_names(func: FunctionNode) -> frozenset[str]:
+    """Names the test binds from an expression holding a call (PURE).
+
+    ``m = mean(xs); assert m == m`` is the not-NaN idiom: the value is computed, and ``nan != nan``,
+    so the assert can fail. A reflexive comparison on such a name is not a tautology (wq-1134).
+    """
+    bound: set[str] = set()
+
+    def _holds_call(value: ast.AST | None) -> bool:
+        return value is not None and any(isinstance(n, ast.Call) for n in ast.walk(value))
+
+    def _add(target: ast.AST) -> None:
+        bound.update(n.id for n in ast.walk(target) if isinstance(n, ast.Name))
+
+    for node in ast.walk(func):
+        if isinstance(node, ast.Assign) and _holds_call(node.value):
+            for target in node.targets:
+                _add(target)
+        elif isinstance(node, (ast.AnnAssign, ast.AugAssign, ast.NamedExpr)) and _holds_call(node.value):
+            _add(node.target)
+        elif isinstance(node, (ast.For, ast.AsyncFor, ast.comprehension)) and _holds_call(node.iter):
+            _add(node.target)
+        elif isinstance(node, ast.withitem) and node.optional_vars is not None and _holds_call(node.context_expr):
+            _add(node.optional_vars)
+    return frozenset(bound)
+
+
+def is_tautology(
+    node: ast.AST,
+    consts: Mapping[str, Any],
+    *,
+    allow_reflexive: bool = True,
+    call_bound: frozenset[str] = frozenset(),
+) -> bool:
     """Whether the ``assert`` test expression *node* holds whatever the code under test does (PURE)."""
     if isinstance(node, ast.Tuple) and node.elts:
         return True
     if isinstance(node, ast.BoolOp):
-        verdicts = [is_tautology(v, consts, allow_reflexive=allow_reflexive) for v in node.values]
+        verdicts = [
+            is_tautology(v, consts, allow_reflexive=allow_reflexive, call_bound=call_bound) for v in node.values
+        ]
         if isinstance(node.op, ast.Or) and any(verdicts):
             return True
         if isinstance(node.op, ast.And) and all(verdicts):
@@ -243,6 +284,7 @@ def is_tautology(node: ast.AST, consts: Mapping[str, Any], *, allow_reflexive: b
         and isinstance(node.ops[0], _REFLEXIVE_OPS)
         and _is_call_free_operand(node.left)
         and not isinstance(node.left, ast.Constant)
+        and _root_name(node.left) not in call_bound
         and ast.dump(node.left) == ast.dump(node.comparators[0])
     ):
         return True
@@ -312,7 +354,10 @@ def all_assertions_tautological(func: FunctionNode, same_file: frozenset[str]) -
         return False
     consts = test_bound_literals(func)
     allow_reflexive = _EQUALITY_CONTRACT_NAME.search(func.name) is None
-    return all(is_tautology(a.test, consts, allow_reflexive=allow_reflexive) for a in asserts)
+    call_bound = call_bound_names(func)
+    return all(
+        is_tautology(a.test, consts, allow_reflexive=allow_reflexive, call_bound=call_bound) for a in asserts
+    )
 
 
 class TautologicalAssertionDetector:

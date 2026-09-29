@@ -40,6 +40,7 @@ __all__ = [
     "body_without_docstring",
     "callee_name",
     "chain_root",
+    "collected_class_names",
     "delegates",
     "is_assertion_call",
     "is_collected_test_module",
@@ -49,6 +50,7 @@ __all__ = [
     "runner_may_skip",
     "same_file_functions",
     "test_functions",
+    "uncollected_test_methods",
 ]
 
 FunctionNode = ast.FunctionDef | ast.AsyncFunctionDef
@@ -82,16 +84,65 @@ def parse_module(source: str) -> ast.Module | None:
         return None
 
 
-def test_functions(tree: ast.Module) -> list[FunctionNode]:
-    """Every ``test*`` function at module level and every ``test*`` method of a module-level class.
+def _base_name(base: ast.expr) -> str | None:
+    if isinstance(base, ast.Name):
+        return base.id
+    if isinstance(base, ast.Attribute):
+        return base.attr
+    return None
 
+
+def collected_class_names(tree: ast.Module) -> frozenset[str]:
+    """Module-level classes a default runner collects test methods from (PURE).
+
+    pytest collects a class named ``Test*``; unittest collects any ``TestCase`` subclass whatever
+    its name. A base is read as ``TestCase`` when its bare name ends in ``TestCase``, or when it
+    is a collected class of the same file (inheritance). A base imported under another name is
+    not resolved: the class stays uncollected, the direction that cannot accuse a non-test.
+    """
+    classes = [n for n in tree.body if isinstance(n, ast.ClassDef)]
+    collected = {c.name for c in classes if c.name.startswith("Test")}
+    changed = True
+    while changed:
+        changed = False
+        for cls in classes:
+            if cls.name in collected:
+                continue
+            bases = {_base_name(b) for b in cls.bases}
+            if any(b is not None and (b.endswith("TestCase") or b in collected) for b in bases):
+                collected.add(cls.name)
+                changed = True
+    return frozenset(collected)
+
+
+def uncollected_test_methods(tree: ast.Module) -> list[FunctionNode]:
+    """Every ``test*`` method of a module-level class no runner collects from (a fake, a helper)."""
+    collected = collected_class_names(tree)
+    return sorted(
+        (
+            member
+            for node in tree.body
+            if isinstance(node, ast.ClassDef) and node.name not in collected
+            for member in node.body
+            if isinstance(member, (ast.FunctionDef, ast.AsyncFunctionDef)) and member.name.startswith("test")
+        ),
+        key=lambda f: (f.lineno, f.name),
+    )
+
+
+def test_functions(tree: ast.Module) -> list[FunctionNode]:
+    """Every ``test*`` function at module level and every ``test*`` method of a COLLECTED class.
+
+    A method of a class that is neither ``Test*`` nor a ``TestCase`` subclass is never run, so it
+    is not a test (wq-1134: a ``FakeDriver.test_connection`` is a fake's method, not a test).
     Sorted by ``def`` line so emission order never rests on dict or set order (AR4).
     """
+    collected = collected_class_names(tree)
     found: list[FunctionNode] = []
     for node in tree.body:
         if isinstance(node, (ast.FunctionDef, ast.AsyncFunctionDef)) and node.name.startswith("test"):
             found.append(node)
-        elif isinstance(node, ast.ClassDef):
+        elif isinstance(node, ast.ClassDef) and node.name in collected:
             for member in node.body:
                 if isinstance(member, (ast.FunctionDef, ast.AsyncFunctionDef)) and member.name.startswith("test"):
                     found.append(member)
