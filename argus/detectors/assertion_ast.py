@@ -92,16 +92,23 @@ def _base_name(base: ast.expr) -> str | None:
     return None
 
 
+def _defines_constructor(cls: ast.ClassDef) -> bool:
+    return any(
+        isinstance(m, (ast.FunctionDef, ast.AsyncFunctionDef)) and m.name in ("__init__", "__new__")
+        for m in cls.body
+    )
+
+
 def collected_class_names(tree: ast.Module) -> frozenset[str]:
     """Module-level classes a default runner collects test methods from (PURE).
 
-    pytest collects a class named ``Test*``; unittest collects any ``TestCase`` subclass whatever
-    its name. A base is read as ``TestCase`` when its bare name ends in ``TestCase``, or when it
+    pytest collects a class named ``Test*`` unless it defines ``__init__`` or ``__new__`` (it warns
+    and skips it, wq-1164); unittest collects any ``TestCase`` subclass whatever its name. A base is read as ``TestCase`` when its bare name ends in ``TestCase``, or when it
     is a collected class of the same file (inheritance). A base imported under another name is
     not resolved: the class stays uncollected, the direction that cannot accuse a non-test.
     """
     classes = [n for n in tree.body if isinstance(n, ast.ClassDef)]
-    collected = {c.name for c in classes if c.name.startswith("Test")}
+    collected = {c.name for c in classes if c.name.startswith("Test") and not _defines_constructor(c)}
     changed = True
     while changed:
         changed = False

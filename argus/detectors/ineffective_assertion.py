@@ -112,20 +112,15 @@ _MOCK_CONSTRUCTORS = frozenset(
 _TEST_FRAMEWORKS = frozenset({"pytest", "_pytest", "unittest", "mock", "hypothesis", "pytest_mock"})
 _STDLIB = frozenset(sys.stdlib_module_names)
 
-# Builtins that return a value and change nothing. Deliberately absent (wq-1127): the builtins
-# that REJECT a well-typed value by raising — ``int``/``float``/``bytes``/``chr``/``range`` on
-# content, ``max``/``min`` on an empty iterable, ``divmod``/``pow`` on a zero, ``format`` on a
-# spec. A callee that runs its input through one of them validates it, and a test that feeds it
-# a valid literal and discards the result is a "should not raise" test, not an absent assertion.
-# ``ord`` joins them (wq-1134: it raises TypeError unless given a length-1 string), as does any
-# item read ``d[k]`` (KeyError/IndexError) — see ``_is_pure``.
-_PURE_BUILTINS = frozenset(
-    {
-        "abs", "all", "any", "bin", "bool", "callable", "dict", "enumerate", "filter", "frozenset",
-        "hex", "isinstance", "len", "list", "map", "oct", "repr", "reversed", "round", "set",
-        "sorted", "str", "sum", "tuple", "zip",
-    }
-)
+# Builtins KNOWN never to raise on any argument (wq-1164): they convert or test a value and cannot
+# reject one. Every other builtin can fail on some input — ``int``/``float``/``bytes``/``chr``/``ord``/
+# ``dict``/``list``/``set``/``tuple``/``sum``/``len`` on content or type, ``max``/``min`` on an empty
+# iterable, ``divmod``/``pow`` on a zero — and a callee that runs its input through one validates
+# it, so a test that feeds it a valid literal and discards the result is a "should not raise" test,
+# not an absent assertion. Closing the class means listing what cannot raise, not what has been
+# seen to (wq-1127 removed ``int`` and kin, wq-1134 ``ord``, wq-1147 ``dict``). An item read
+# ``d[k]`` (KeyError/IndexError) is excluded the same way — see ``_is_pure``.
+_NEVER_RAISE_BUILTINS = frozenset({"bool", "callable", "repr", "str"})
 # Methods of builtin values that return a value and change nothing the caller can see. The
 # codec and format methods (``decode``/``encode``/``format``) raise on content and are absent
 # for the reason above.
@@ -504,7 +499,7 @@ def _is_pure(fn: ast.FunctionDef, module: ast.Module, depth: int, seen: frozense
             continue
         func = node.func
         if isinstance(func, ast.Name):
-            if func.id in _PURE_BUILTINS:
+            if func.id in _NEVER_RAISE_BUILTINS:
                 continue
             callee = _top_level_def(module, func.id)
             if callee is not None and _is_pure(callee, module, depth + 1, seen | {fn.name}):

@@ -233,12 +233,18 @@ def _root_name(node: ast.AST) -> str | None:
 
 
 def call_bound_names(func: FunctionNode) -> frozenset[str]:
-    """Names the test binds from an expression holding a call (PURE).
+    """Names the test binds from an expression holding a call, or takes as a parameter (PURE).
 
     ``m = mean(xs); assert m == m`` is the not-NaN idiom: the value is computed, and ``nan != nan``,
-    so the assert can fail. A reflexive comparison on such a name is not a tautology (wq-1134).
+    so the assert can fail. A reflexive comparison on such a name is not a tautology (wq-1134). A
+    parameter (a fixture value) is computed by the caller, so it counts too (wq-1164).
     """
-    bound: set[str] = set()
+    args = func.args
+    bound: set[str] = {
+        a.arg
+        for a in (*args.posonlyargs, *args.args, *args.kwonlyargs, args.vararg, args.kwarg)
+        if a is not None and a.arg not in ("self", "cls")
+    }
 
     def _holds_call(value: ast.AST | None) -> bool:
         return value is not None and any(isinstance(n, ast.Call) for n in ast.walk(value))
