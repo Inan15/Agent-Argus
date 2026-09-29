@@ -35,7 +35,9 @@ Four facts, one rule id each, at most ONE finding per test (checked in this orde
    ``try``/``with``, no store to an attribute or item, at least one ``return`` and every
    ``return`` carries a value, and every call it makes is to a pure builtin, a pure method of a
    builtin value, or another function of its own module meeting the same bar. Its arguments are
-   all literals.
+   all literals. A builtin that rejects a well-typed value (``int("x")``, ``max([])``) is NOT
+   pure: a callee that validates its input that way can fail, and a test feeding it a valid
+   literal is a "should not raise" test (wq-1127).
 
    **Why (b) and not "asserts nothing".** Measured on wq-1083: "zero assertion sites" blocked
    9 legitimate Minions tests — import-smoke tests and "should not raise" tests
@@ -46,7 +48,11 @@ Four facts, one rule id each, at most ONE finding per test (checked in this orde
 
 Exits shared by all four: a call into a def of the SAME file (a helper may assert), a module no
 default runner collects (``assertion_ast.is_collected_test_module`` — fixture data under
-``tests/``), a file that does not parse, a test the 1.4 index did not anchor (see
+``tests/``), a test the runner may SKIP (``assertion_ast.runner_may_skip``: a skip/xfail marker
+on the def, any decorator on its class, a ``pytestmark``, a module-level skip — added in wq-1127
+after wq-1091 probes p2 and p3, a class-level ``skip`` and a module ``pytestmark``, still
+blocked here once ``structural_blocking`` had stopped blocking them; (a)'s own-decorator check
+only ever read the def), a file that does not parse, a test the 1.4 index did not anchor (see
 ``assertion_ast``).
 
 Blocking, not advisory: each finding carries ``depth_supported=AUDITED_SHALLOW``, the depth
@@ -73,6 +79,7 @@ from argus.detectors.assertion_ast import (
     own_nodes,
     parse_module,
     raise_statements,
+    runner_may_skip,
     same_file_functions,
     test_functions,
 )
@@ -105,22 +112,27 @@ _MOCK_CONSTRUCTORS = frozenset(
 _TEST_FRAMEWORKS = frozenset({"pytest", "_pytest", "unittest", "mock", "hypothesis", "pytest_mock"})
 _STDLIB = frozenset(sys.stdlib_module_names)
 
+# Builtins that return a value and change nothing. Deliberately absent (wq-1127): the builtins
+# that REJECT a well-typed value by raising — ``int``/``float``/``bytes``/``chr``/``range`` on
+# content, ``max``/``min`` on an empty iterable, ``divmod``/``pow`` on a zero, ``format`` on a
+# spec. A callee that runs its input through one of them validates it, and a test that feeds it
+# a valid literal and discards the result is a "should not raise" test, not an absent assertion.
 _PURE_BUILTINS = frozenset(
     {
-        "abs", "all", "any", "bin", "bool", "bytes", "callable", "chr", "dict", "divmod", "enumerate",
-        "filter", "float", "format", "frozenset", "hex", "int", "isinstance", "len", "list", "map",
-        "max", "min", "oct", "ord", "pow", "range", "repr", "reversed", "round", "set", "sorted",
-        "str", "sum", "tuple", "zip",
+        "abs", "all", "any", "bin", "bool", "callable", "dict", "enumerate", "filter", "frozenset",
+        "hex", "isinstance", "len", "list", "map", "oct", "ord", "repr", "reversed", "round", "set",
+        "sorted", "str", "sum", "tuple", "zip",
     }
 )
-# Methods of builtin values that return a value and change nothing the caller can see.
+# Methods of builtin values that return a value and change nothing the caller can see. The
+# codec and format methods (``decode``/``encode``/``format``) raise on content and are absent
+# for the reason above.
 _PURE_METHODS = frozenset(
     {
-        "capitalize", "casefold", "center", "copy", "count", "decode", "encode", "endswith", "find",
-        "format", "get", "isalnum", "isalpha", "isdigit", "islower", "isspace", "isupper", "items",
-        "join", "keys", "ljust", "lower", "lstrip", "partition", "replace", "rfind", "rjust",
-        "rpartition", "rsplit", "rstrip", "split", "splitlines", "startswith", "strip", "title",
-        "upper", "values", "zfill",
+        "capitalize", "casefold", "center", "copy", "count", "endswith", "find", "get", "isalnum",
+        "isalpha", "isdigit", "islower", "isspace", "isupper", "items", "join", "keys", "ljust",
+        "lower", "lstrip", "partition", "replace", "rfind", "rjust", "rpartition", "rsplit",
+        "rstrip", "split", "splitlines", "startswith", "strip", "title", "upper", "values", "zfill",
     }
 )
 # Mutators, admitted only on a container the function itself created (invisible to its caller).
@@ -601,6 +613,8 @@ class IneffectiveAssertionDetector:
         sources: Mapping[str, str] = module_sources if module_sources is not None else {}
         findings: list[Recording] = []
         for func in test_functions(tree):
+            if runner_may_skip(tree, func):
+                continue
             rule_id = ineffective_assertion_rule(
                 func, same_file=same_file, imports=imports, test_path=file_path, module_sources=sources
             )

@@ -37,6 +37,9 @@ Exits that keep a test silent, each on the side of not accusing
   testing ``__eq__`` itself, where ``obj == obj`` is the point;
 - **a module no default runner collects** — ``tests/**/fixtures/**/dispatch_check.py`` is test
   DATA; its ``assert True`` never runs (``assertion_ast.is_collected_test_module``);
+- **a test the runner may skip** — a skip/xfail marker on the def, any decorator on its class,
+  a ``pytestmark``, a module-level skip (``assertion_ast.runner_may_skip``, wq-1127): a skipped
+  ``assert True`` placeholder never passes green;
 - **a file that does not parse, or a test the index did not anchor** — silent (see
   ``assertion_ast``).
 
@@ -65,6 +68,7 @@ from argus.detectors.assertion_ast import (
     own_nodes,
     parse_module,
     raise_statements,
+    runner_may_skip,
     same_file_functions,
     test_functions,
 )
@@ -334,7 +338,7 @@ class TautologicalAssertionDetector:
         same_file = same_file_functions(tree)
         findings: list[Recording] = []
         for func in test_functions(tree):
-            if not all_assertions_tautological(func, same_file):
+            if runner_may_skip(tree, func) or not all_assertions_tautological(func, same_file):
                 continue
             definition = anchor(ast_entry, func)
             if definition is None:

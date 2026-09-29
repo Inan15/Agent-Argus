@@ -1,6 +1,7 @@
 """wq-1084 — family A: a test with no effective assertion on the code under test BLOCKS.
 
-Verification area ArgusAgent-DETECT (``-170``..``-184``). Drivers:
+Verification area ArgusAgent-DETECT (``-170``..``-184``, and ``-187``..``-190`` added by
+wq-1127 for the runner-may-skip exit and the validating-callee narrowing). Drivers:
 ``argus/detectors/ineffective_assertion.py`` (four facts, their exits, and the wq-1083
 measurement that forced fact 4's callee-purity bar), ``evaluation/seeded-defect-harness/``
 (``a1``/``a2``/``a4``/``a5``/``a6`` are planted verbatim in ``-170``), cross-cutting #6 (every
@@ -359,6 +360,82 @@ def test_relative_import_resolves(tmp_path: Path) -> None:
     assert _flagged(tmp_path, source, {"tests/slug.py": _SLUG}) == {"test_slugify": RULE_ASSERTION_ABSENT}
 
 
+# ── a test the runner may skip (wq-1127) ────────────────────────────────────────────────────
+
+_SKIPPED_BODIES = (
+    "        pass\n",
+    '        slugify("Hello World")\n',
+    '        try:\n            slugify("A")\n        except Exception:\n            pass\n',
+)
+
+
+@pytest.mark.parametrize("body", _SKIPPED_BODIES, ids=["absent-a", "absent-b", "swallowed"])
+@pytest.mark.parametrize(
+    "wrap",
+    [
+        "import pytest\n\n\n@pytest.mark.skip(reason='later')\nclass TestLater:\n    def test_later(self):\n{body}",
+        "import unittest\n\n\n@unittest.skipIf(True, 'later')\nclass TestLater(unittest.TestCase):\n"
+        "    def test_later(self):\n{body}",
+        "import pytest\n\n\nclass TestLater:\n    pytestmark = pytest.mark.skip(reason='later')\n\n"
+        "    def test_later(self):\n{body}",
+        "import pytest\n\npytestmark = pytest.mark.skip(reason='later')\n\n\nclass TestLater:\n"
+        "    def test_later(self):\n{body}",
+        "import sys\n\nimport pytest\n\nif sys.platform == 'win32':\n"
+        "    pytest.skip('posix only', allow_module_level=True)\n\n\nclass TestLater:\n    def test_later(self):\n{body}",
+        "import pytest\n\nnumpy = pytest.importorskip('numpy')\n\n\nclass TestLater:\n    def test_later(self):\n{body}",
+        "import pytest\n\n\nclass TestLater:\n    @pytest.mark.xfail(reason='known bug')\n    def test_later(self):\n{body}",
+    ],
+    ids=["class-skip", "class-unittest-skipif", "class-pytestmark", "module-pytestmark", "module-skip",
+         "module-importorskip", "own-xfail"],
+)
+def test_runner_may_skip_stays_silent(tmp_path: Path, wrap: str, body: str) -> None:
+    """TC-ArgusAgent-DETECT-001-187 — wq-1091 probes p2/p3 and their neighbours: a skip reaching
+    the test from its class, a ``pytestmark``, a module-level skip or its own xfail marker keeps
+    every family-A fact silent; a test the runner does not run is not a test that passes."""
+    source = "from text.slug import slugify\n" + wrap.format(body=body)
+    assert _flagged(tmp_path, source, {"text/slug.py": _SLUG}) == {}
+
+
+def test_undecorated_class_still_blocks(tmp_path: Path) -> None:
+    """TC-ArgusAgent-DETECT-001-188 — the class read is an exit only when something can skip:
+    a plain ``TestCase`` method whose body is ``pass`` under a "Skipped:" comment (Minions'
+    ``tests/test_remaining_engines.py:566`` shape) is not skipped; it runs and passes."""
+    source = (
+        "import unittest\n\n\nclass TestLater(unittest.TestCase):\n"
+        "    def test_later(self):\n        # Skipped: not implemented\n        pass\n"
+    )
+    assert _flagged(tmp_path, source) == {"test_later": RULE_ASSERTION_ABSENT}
+
+
+def test_should_not_raise_on_a_validating_callee_stays_silent(tmp_path: Path) -> None:
+    """TC-ArgusAgent-DETECT-001-189 — a callee that runs its input through a builtin which rejects
+    a well-typed value (``int``, ``float``, ``max``) validates it: feeding it a valid literal and
+    discarding the value is a "should not raise" test. Import-smoke through ``importlib`` stays
+    silent too; the ``slugify`` neighbour (``lower``/``split``/``join`` only) still blocks."""
+    ports = (
+        "def parse_port(text):\n    return int(text.strip())\n\n\n"
+        "def parse_ratio(text):\n    return float(text)\n\n\n"
+        "def widest(values):\n    return max(len(v) for v in values)\n"
+    )
+    source = (
+        "from importlib import import_module\n"
+        "from net.ports import parse_port, parse_ratio, widest\n"
+        "from text.slug import slugify\n\n\n"
+        "def test_parse_port_accepts_valid():\n"
+        '    parse_port(" 8080 ")\n\n\n'
+        "def test_parse_ratio_accepts_valid():\n"
+        '    parse_ratio("0.5")\n\n\n'
+        "def test_widest_accepts_non_empty():\n"
+        '    widest(["a", "bb"])\n\n\n'
+        "def test_module_imports():\n"
+        '    import_module("net.ports")\n\n\n'
+        "def test_slugify():\n"
+        '    slugify("Hello World")\n'
+    )
+    modules = {"net/ports.py": ports, "text/slug.py": _SLUG}
+    assert _flagged(tmp_path, source, modules) == {"test_slugify": RULE_ASSERTION_ABSENT}
+
+
 # ── end to end ──────────────────────────────────────────────────────────────────────────────
 
 
@@ -418,3 +495,29 @@ def test_pipeline_keeps_the_demo_span_to_one_finding(tmp_path: Path) -> None:
         ),
     })
     assert _blocking(repo) == [(RULE_AST, "tests/test_cart.py", 6)]
+
+
+@pytest.mark.parametrize(
+    "tests",
+    [
+        {"tests/test_cart.py": "import pytest\n\n\n@pytest.mark.skip(reason='refunds')\nclass TestRefunds:\n"
+         "    def test_refund_pending(self):\n        pass\n"},
+        {"tests/test_refunds.py": "import pytest\n\npytestmark = pytest.mark.skip(reason='refunds')\n\n\n"
+         "def test_refund_pending():\n    pass\n"},
+    ],
+    ids=["p2-class-level-skip", "p3-module-pytestmark"],
+)
+def test_pipeline_does_not_block_wq1091_p2_p3(tmp_path: Path, tests: dict[str, str]) -> None:
+    """TC-ArgusAgent-DETECT-001-190 — wq-1091 probes p2 and p3 through ``run_audit_detailed``:
+    after wq-1120 they blocked ONLY through ``assertion_absent``; now nothing blocks."""
+    repo = tmp_path / "probe"
+    _write(repo, {
+        "src/__init__.py": "",
+        "src/cart.py": _SUT,
+        "tests/__init__.py": "",
+        "tests/test_subtotal.py": (
+            "from src.cart import subtotal\n\n\ndef test_subtotal():\n    assert subtotal([(10, 2), (5, 1)]) == 25\n"
+        ),
+        **tests,
+    })
+    assert _blocking(repo) == []

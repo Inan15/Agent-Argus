@@ -175,3 +175,23 @@ def test_unparseable_and_non_test_files_stay_silent(tmp_path: Path) -> None:
     """TC-ArgusAgent-DETECT-001-166 — a file ``ast`` cannot parse, and a production module."""
     assert _flagged(tmp_path, "def test_x(:\n    assert True\n") == []
     assert _flagged(tmp_path, "def test_x():\n    assert True\n", rel="src/helpers.py") == []
+
+
+@pytest.mark.parametrize(
+    "source",
+    [
+        "import pytest\n\n\n@pytest.mark.skip(reason='later')\ndef test_later():\n    assert True\n",
+        "import pytest\n\n\n@pytest.mark.skip(reason='later')\nclass TestLater:\n    def test_later(self):\n"
+        "        assert True\n",
+        "import pytest\n\npytestmark = pytest.mark.skip(reason='later')\n\n\ndef test_later():\n    assert True\n",
+        "import unittest\n\nraise unittest.SkipTest('later')\n\n\ndef test_later():\n    assert True\n",
+    ],
+    ids=["own-skip", "class-skip", "module-pytestmark", "module-skiptest"],
+)
+def test_runner_may_skip_stays_silent(tmp_path: Path, source: str) -> None:
+    """TC-ArgusAgent-DETECT-001-167 — a skipped ``assert True`` placeholder never passes green
+    (wq-1127, the family-A exit of wq-1091 probes p2/p3 applied to family B); the same test
+    in an undecorated class still blocks."""
+    assert _flagged(tmp_path, source) == []
+    plain = "class TestLater:\n    def test_later(self):\n        assert True\n"
+    assert _flagged(tmp_path, plain) == ["test_later"]

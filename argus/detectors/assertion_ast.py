@@ -46,6 +46,7 @@ __all__ = [
     "own_nodes",
     "parse_module",
     "raise_statements",
+    "runner_may_skip",
     "same_file_functions",
     "test_functions",
 ]
@@ -163,6 +164,68 @@ def chain_root(node: ast.AST) -> ast.AST:
             node = node.value
         else:
             return node
+
+
+# Marker and decorator names that tell a runner not to run a test, or not to fail it: pytest's
+# ``skip``/``skipif``/``xfail``/``importorskip`` and unittest's ``skip``/``skipIf``/
+# ``skipUnless``/``expectedFailure``/``SkipTest``. Matched on a bare name or an attribute tail.
+_SKIP_NAMES = frozenset(
+    {"skip", "skipif", "xfail", "importorskip", "skipIf", "skipUnless", "expectedFailure", "SkipTest"}
+)
+
+
+def _names_a_skip(node: ast.AST) -> bool:
+    return any(
+        (isinstance(n, ast.Name) and n.id in _SKIP_NAMES) or (isinstance(n, ast.Attribute) and n.attr in _SKIP_NAMES)
+        for n in ast.walk(node)
+    )
+
+
+def _assigns_pytestmark(stmt: ast.stmt) -> bool:
+    if isinstance(stmt, ast.Assign):
+        targets = stmt.targets
+    elif isinstance(stmt, (ast.AnnAssign, ast.AugAssign)):
+        targets = [stmt.target]
+    else:
+        return False
+    return any(isinstance(t, ast.Name) and t.id == "pytestmark" for t in targets)
+
+
+def runner_may_skip(tree: ast.Module, func: FunctionNode) -> bool:
+    """Whether the runner may SKIP *func* (or not fail it), read from anything that can say so.
+
+    A test the runner skips never passes green, so no family fact about a green-but-vacuous test
+    holds for it (wq-1091 probes p2, p3). Four places, each read in the silent direction:
+
+    - a skip/xfail marker among *func*'s OWN decorators (``@pytest.mark.skip``,
+      ``@unittest.skipIf(...)``, ``@pytest.mark.xfail``);
+    - ANY decorator on the module-level class that holds *func* — pytest and unittest both
+      apply a class marker to every method, and the rule never has to parse what it means;
+    - a ``pytestmark`` assignment at module level or in that class's body;
+    - a module-level statement that can skip the whole module: a ``skip``/``importorskip``
+      call or a ``raise ... SkipTest`` anywhere outside a def or class (an ``if`` guarding
+      ``pytest.skip(..., allow_module_level=True)`` included).
+
+    A runner configured elsewhere (``conftest.py`` hooks, ``-m`` expressions, ``setup.cfg``)
+    is out of reach; the rule stays as it was for those.
+    """
+    if any(_names_a_skip(d) for d in func.decorator_list):
+        return True
+    for node in tree.body:
+        if isinstance(node, ast.ClassDef) and any(member is func for member in node.body):
+            if node.decorator_list or any(_assigns_pytestmark(s) for s in node.body):
+                return True
+    for stmt in tree.body:
+        if _assigns_pytestmark(stmt):
+            return True
+        if isinstance(stmt, (ast.FunctionDef, ast.AsyncFunctionDef, ast.ClassDef)):
+            continue
+        for node in ast.walk(stmt):
+            if isinstance(node, ast.Call) and callee_name(node) in ("skip", "importorskip"):
+                return True
+            if isinstance(node, ast.Raise) and node.exc is not None and _names_a_skip(node.exc):
+                return True
+    return False
 
 
 def same_file_functions(tree: ast.Module) -> frozenset[str]:

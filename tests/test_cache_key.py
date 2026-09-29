@@ -124,9 +124,14 @@ def test_golden_key_pinned() -> None:
     combined tree: it bumped ``vacuous_test.cannot_fail.v2`` and ``orphan_code.v3`` when each
     rule gained exits answering wq-1091's probes, so a result memoized under the narrower-exit
     code would over-block.
+
+    Regenerated a SIXTH time 2026-09-29 by wq-1127: ``ineffective_assertion.v2`` and
+    ``tautological_assertion.v2``, when both family detectors gained the runner-may-skip exit
+    (wq-1091 probes p2, p3) and ``assertion_absent`` (b) stopped counting an input-validating
+    builtin as pure.
     """
     golden = derive_cache_key(_baseline())
-    assert golden == "a5b0296fc4eb6cc30946e3b110385753c82e85470687b18d7cb70052d279e76f"
+    assert golden == "ff8dcbdde44b8b48d54da64921fdee86c89915ff41756017931b09670917d617"
 
 
 # ── AC2: the bidirectional CI canary — each input perturbation moves the key ──
