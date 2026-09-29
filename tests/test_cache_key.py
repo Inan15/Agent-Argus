@@ -119,9 +119,14 @@ def test_golden_key_pinned() -> None:
     The two THIRD regenerations above were made on parallel branches, each over ae5ea25; neither
     value survives. Regenerated a FOURTH time 2026-09-29 by wq-1119, which combined them: the set
     now carries wq-1083's two descriptors followed by wq-1084's five, and this is that set's key.
+
+    Regenerated a FIFTH time 2026-09-29 by wq-1120, carrying wq-1101's narrowing onto the
+    combined tree: it bumped ``vacuous_test.cannot_fail.v2`` and ``orphan_code.v3`` when each
+    rule gained exits answering wq-1091's probes, so a result memoized under the narrower-exit
+    code would over-block.
     """
     golden = derive_cache_key(_baseline())
-    assert golden == "f71607ba015f573964f48b9d2053223610377cbdafbd9e8614ca40f073495dc5"
+    assert golden == "a5b0296fc4eb6cc30946e3b110385753c82e85470687b18d7cb70052d279e76f"
 
 
 # ── AC2: the bidirectional CI canary — each input perturbation moves the key ──

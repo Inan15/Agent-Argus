@@ -88,6 +88,7 @@ from argus.detectors.vacuous_test import (
 )
 from argus.index.ast_index import AstIndex, AstIndexEntry
 from argus.index.partitioner import PartitionPlan, compute_loc_by_file, partition_repository
+from argus.intake.source_state import walk_reference_texts
 from argus.ledger.coverage_ledger import (
     CoverageDepth,
     CoverageLedger,
@@ -423,9 +424,18 @@ def _detect_per_file(
 # console-script target is never blocked as unreferenced (wq-1083).
 _ENTRY_POINT_MANIFESTS = ("pyproject.toml", "setup.cfg", "setup.py")
 
+# Config text that can name a def by dotted path (a YAML hook table, a JSON route map, an
+# INI plugin list) but is never ingested as source. Walked under the audit's own ignore
+# rules and folded in too, so a handler named only there is never blocked (wq-1101,
+# answering wq-1091 probe p6). Prose (``.md``/``.rst``) is deliberately NOT here: a doc
+# mention does not dispatch anything.
+_CONFIG_REFERENCE_SUFFIXES = frozenset(
+    {".yaml", ".yml", ".json", ".toml", ".cfg", ".ini", ".conf"}
+)
+
 
 def _orphan_reference_sources(repo_root: Path, index: AstIndex) -> dict[str, str] | None:
-    """Every indexed file's text + the entry-point manifests — the orphan reference universe.
+    """Every indexed file's text + manifests + config text — the orphan reference universe.
 
     The WHOLE index, not the assessed slice: a reference from a file the budget did not
     reach is still a reference. ``None`` when any indexed file cannot be read, because a
@@ -438,7 +448,11 @@ def _orphan_reference_sources(repo_root: Path, index: AstIndex) -> dict[str, str
             sources[entry.file_path] = _read_source(repo_root, entry.file_path)
     except OSError:
         return None
-    for name in _ENTRY_POINT_MANIFESTS:
+    try:
+        config_texts = walk_reference_texts(repo_root, _CONFIG_REFERENCE_SUFFIXES)
+    except OSError:
+        return None
+    for name in (*_ENTRY_POINT_MANIFESTS, *config_texts):
         if name not in sources and (repo_root / name).is_file():
             try:
                 sources[name] = _read_source(repo_root, name)

@@ -23,8 +23,13 @@ that fails any exit stays exactly as advisory as it was.
    whose body, after its docstring, is only ``pass``/``...`` — or is ONE ``try`` whose
    single handler is a broad ``except``/``except Exception``/``except BaseException`` that
    only ``pass``-es. Exits that keep it advisory: a ``raise`` in the body, any decorator
-   (skip/xfail/parametrize/given markers), or a call that DELEGATES — to a def in the same
-   file, or to a ``check*``/``verify*``/``expect*``/``ensure*``/``validate*`` helper.
+   (skip/xfail/parametrize/given markers — a comment line between it and the ``def`` does
+   not end the decorator list), any marker pytest can apply from outside the def (a
+   decorator on an enclosing class, a ``pytestmark`` assignment, a module-level
+   ``pytest.skip``/``importorskip``/``SkipTest``), or a call that DELEGATES — to a def in
+   the same file, or to a ``check*``/``verify*``/``expect*``/``ensure*``/``validate*`` helper.
+   The marker exits were added in wq-1101: wq-1091's probes p1-p3 were tests pytest reports
+   SKIPPED, which the first cut blocked as "cannot fail".
 
    **Why "cannot fail" and not "asserts nothing"** — measured, not argued. The first cut
    of this rule was *zero assertion sites plus the exits above*. It took seeded ``a1``
@@ -43,8 +48,11 @@ that fails any exit stays exactly as advisory as it was.
    no fixture parameter. Further exits: the def must be TOP-LEVEL (column 0 — a method may
    be reached by override or protocol dispatch the name graph cannot see), UNDECORATED (a
    decorator is a framework registration), in a NON-test Python file (test helpers and
-   ``conftest.py`` fixtures are reached by the runner), NOT re-exported by a package
-   ``__init__`` (public API), and in a module a TEST file imports.
+   ``conftest.py`` fixtures are reached by the runner), NOT imported by name into any
+   non-test module (a package ``__init__`` or an ``api.py`` re-export is public API), in a
+   module whose namespace nothing reads by a computed name (``globals()``, ``vars()``,
+   ``sys.modules[``, ``getattr(<module>, ...)``), and in a module a TEST file imports. The
+   re-export and computed-name exits were added in wq-1101 (wq-1091 probes p4, p5).
 
    **Why the module must be imported by a test** — measured twice, not argued. Without
    any module exit the rule blocked four of this repository's own cartridges whose verdict
@@ -58,10 +66,14 @@ that fails any exit stays exactly as advisory as it was.
    ``src/cart.py``) is not, so ``a2`` stays advisory.
 
 What stays advisory, said plainly: a test whose only assertion is on a mock (seeded
-``d2``) needs value provenance, which this module does not attempt; a module-level def
-reached only from a non-ingested file (``pyproject.toml`` entry points, YAML config) is
-out of reach of the token scan — ``pyproject.toml``/``setup.cfg`` text is folded in by the
-pipeline for exactly that reason.
+``d2``) needs value provenance, which this module does not attempt. What the token scan
+reads is exactly what the pipeline hands it: every indexed source file, the
+``pyproject.toml``/``setup.cfg``/``setup.py`` manifests, and config text
+(``.yaml``/``.yml``/``.json``/``.toml``/``.cfg``/``.ini``/``.conf``) under the audit's own
+ignore rules — the last added in wq-1101 after wq-1091 probe p6 blocked a handler named
+only in YAML. A def named only in a file of any OTHER kind (a shell script, a Makefile, a
+template) is out of reach and could still be blocked; that is a stated limit, not a claim
+that "any text" is read.
 """
 
 from __future__ import annotations
@@ -98,6 +110,13 @@ _BROAD_EXCEPT = re.compile(r"\Aexcept\s*(?:\(?\s*(?:Exception|BaseException)\s*\
 _DOCSTRING_OPEN = re.compile(r"\A[rRuUbB]?(\"\"\"|'''|\"|')")
 
 _IDENTIFIER = re.compile(r"[A-Za-z_][A-Za-z0-9_]*")
+# A module reading its OWN namespace by a computed name, and any file reading ANOTHER
+# module's namespace that way. Crude in the silent direction: ``getattr(self, ...)`` adds
+# the harmless name ``self``.
+_OWN_NAMESPACE_LOOKUP = re.compile(r"\b(?:globals|vars)\(\s*\)|\bsys\.modules\[")
+_MODULE_NAMESPACE_LOOKUP = re.compile(
+    r"\bgetattr\(\s*([A-Za-z_]\w*)\s*,|\bvars\(\s*([A-Za-z_]\w*)\s*\)|\b([A-Za-z_]\w*)\.__dict__\b"
+)
 _TOP_LEVEL_DEF = re.compile(r"\A(?:async\s+def|def|class)\s+([A-Za-z_][A-Za-z0-9_]*)")
 
 
@@ -107,14 +126,59 @@ def _line(source_lines: list[str], line_no: int) -> str:
 
 
 def _is_decorated(source_lines: list[str], def_line: int) -> bool:
-    """True iff the nearest non-blank line above *def_line* opens a decorator."""
+    """True iff the nearest code line above *def_line* opens a decorator.
+
+    Comment lines are skipped, not read as the end of the decorator list: Python lets a
+    comment sit between ``@pytest.mark.skip`` and its ``def`` (wq-1091 probe p1).
+    """
     line_no = def_line - 1
     while line_no >= 1:
         text = _line(source_lines, line_no).strip()
-        if text:
+        if text and not text.startswith("#"):
             return text.startswith("@")
         line_no -= 1
     return False
+
+
+# A module- or class-level marker assignment (``pytestmark = pytest.mark.skip``) or a
+# module-level skip call. Any of them can keep pytest from running the test, so its
+# presence keeps a cannot-fail finding advisory (wq-1091 probe p3).
+_MARKER_ASSIGNMENT = re.compile(r"\A\s*pytestmark\s*[:=]")
+_MODULE_LEVEL_SKIP = re.compile(r"\A(?:pytest\.skip\(|pytest\.importorskip\(|\w+\s*=\s*pytest\.importorskip\(|raise\s+(?:unittest\.)?SkipTest\b)")
+
+
+def _enclosing_classes(source_lines: list[str], def_line: int) -> list[int]:
+    """Header line numbers of every ``class`` that lexically encloses the def at *def_line*."""
+    header = _line(source_lines, def_line)
+    indent = len(header) - len(header.lstrip())
+    found: list[int] = []
+    line_no = def_line - 1
+    while indent > 0 and line_no >= 1:
+        raw = _line(source_lines, line_no)
+        text = raw.strip()
+        if text and not text.startswith("#"):
+            level = len(raw) - len(raw.lstrip())
+            if level < indent:
+                if text.startswith("class "):
+                    found.append(line_no)
+                indent = level
+        line_no -= 1
+    return found
+
+
+def _skip_may_apply(source_lines: list[str], definition: Definition) -> bool:
+    """True iff a marker outside the def's own decorators may keep pytest from running it.
+
+    Three places pytest reads a skip from besides the def itself (wq-1091 probes p2, p3):
+    a decorator on an ENCLOSING class, a ``pytestmark`` assignment in the module or a
+    class body, and a module-level ``pytest.skip``/``importorskip``/``SkipTest``. Any
+    marker counts, not only ``skip``: the rule never has to parse what a marker means.
+    """
+    if any(_is_decorated(source_lines, header) for header in _enclosing_classes(source_lines, definition.start_line)):
+        return True
+    return any(
+        _MARKER_ASSIGNMENT.match(raw) or _MODULE_LEVEL_SKIP.match(raw) for raw in source_lines
+    )
 
 
 def _code(text: str) -> str:
@@ -192,6 +256,8 @@ def cannot_fail_established(
         return False
     if _is_decorated(source_lines, definition.start_line):
         return False
+    if _skip_may_apply(source_lines, definition):
+        return False
     for line_no in range(definition.start_line + 1, definition.end_line + 1):
         text = _line(source_lines, line_no).strip()
         if text == "raise" or text.startswith(("raise ", "raise(")):
@@ -235,13 +301,21 @@ class ReferenceUniverse:
     ``tokens`` — identifier occurrences on every NON-import line of every source.
     ``test_import_tokens`` — the identifiers on the ``import`` lines of TEST files (module
     and imported names alike), which is how a module is known to be exercised by the suite.
-    ``reexported`` — every identifier on an ``import`` line of an ``__init__.py``: a
-    package re-export is public API, whether or not anything in the repository calls it.
+    ``reexported`` — every identifier on an ``import`` line of a NON-test Python file: an
+    import into a package ``__init__`` or into any other module (``api.py`` re-exporting
+    ``impl.helper``) may be public API, whether or not anything in the repository calls it
+    (wq-1091 probe p5). Only a TEST file's import of a name nothing calls stays blocking —
+    seeded ``c3``.
+    ``dynamic_modules`` — module names whose namespace is read by a computed name:
+    ``globals()``/``vars()``/``sys.modules[`` inside the module, or ``getattr(<module>, ``/
+    ``vars(<module>)``/``<module>.__dict__`` anywhere. A def in such a module may be reached
+    by a string the token scan never sees (wq-1091 probe p4).
     """
 
     tokens: Counter[str]
     test_import_tokens: frozenset[str]
     reexported: frozenset[str]
+    dynamic_modules: frozenset[str] = frozenset()
 
 
 def reference_universe(sources: Mapping[str, str], *, test_paths: frozenset[str]) -> ReferenceUniverse:
@@ -250,14 +324,17 @@ def reference_universe(sources: Mapping[str, str], *, test_paths: frozenset[str]
     *test_paths* names which of *sources* are test files; the caller classifies them, so
     this module never re-derives the test-file convention. Deliberately crude in the
     SILENT direction: strings, comments and docstrings count as references, and so does
-    any language's text, because a mention is not proof of use but its absence is the only
-    fact the blocking rule needs.
+    every non-Python text in *sources*, because a mention is not proof of use but its
+    absence is the only fact the blocking rule needs. It can only be as complete as
+    *sources*: which files those are is the caller's decision (see the module docstring).
     """
     tokens: Counter[str] = Counter()
     test_imported: set[str] = set()
     reexported: set[str] = set()
+    dynamic: set[str] = set()
     for path in sorted(sources):
-        lines = sources[path].split("\n")
+        text = sources[path]
+        lines = text.split("\n")
         imports = _import_line_numbers(lines) if path.endswith(".py") else set()
         imported: set[str] = set()
         for line_no, raw in enumerate(lines, start=1):
@@ -267,10 +344,17 @@ def reference_universe(sources: Mapping[str, str], *, test_paths: frozenset[str]
                 tokens.update(_IDENTIFIER.findall(raw))
         if path in test_paths:
             test_imported.update(imported)
-        if path.rsplit("/", 1)[-1] == "__init__.py":
+        elif path.endswith(".py"):
             reexported.update(imported)
+        if path.endswith(".py") and _OWN_NAMESPACE_LOOKUP.search(text):
+            dynamic.add(_module_name(path))
+        for match in _MODULE_NAMESPACE_LOOKUP.finditer(text):
+            dynamic.add(match.group(1) or match.group(2) or match.group(3))
     return ReferenceUniverse(
-        tokens=tokens, test_import_tokens=frozenset(test_imported), reexported=frozenset(reexported)
+        tokens=tokens,
+        test_import_tokens=frozenset(test_imported),
+        reexported=frozenset(reexported),
+        dynamic_modules=frozenset(dynamic),
     )
 
 
@@ -317,7 +401,8 @@ def unreferenced_top_level(
         return False
     if definition.name in universe.reexported:
         return False
-    if _module_name(file_path) not in universe.test_import_tokens:
+    module = _module_name(file_path)
+    if module not in universe.test_import_tokens or module in universe.dynamic_modules:
         return False
     within_span = sum(
         _IDENTIFIER.findall(_line(lines, line_no)).count(definition.name)

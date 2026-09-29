@@ -188,14 +188,17 @@ class DetectorDescriptor(BaseModel):
 #     now block, so a memoized advisory-only result must not be served across that change)
 #   detectors/ineffective_assertion.py::RULE_ASSERTION_* (wq-1084, family A: four facts)
 #   detectors/tautological_assertion.py::RULE_TAUTOLOGICAL_ASSERTION (wq-1084, family B)
+# wq-1101 bumped cannot_fail v1 -> v2 and orphan_code v2 -> v3: both blocking facts gained
+# exits (skip markers outside the def; re-exports, computed-name lookup, config text), so a
+# result memoized under the narrower-exit code would over-block.
 FROZEN_DETECTOR_SET: tuple[DetectorDescriptor, ...] = (
     DetectorDescriptor(rule_id="hardcoded_secret", code_identity="secret_scan.v2"),
     DetectorDescriptor(rule_id="tool_failure", code_identity="tool_runner.v1"),
     DetectorDescriptor(rule_id="traceability_not_establishable", code_identity="tool_runner.v1"),
     DetectorDescriptor(rule_id="vacuous_test_heuristic", code_identity="vacuous_test.heuristic.v1"),
     DetectorDescriptor(rule_id="vacuous_test_ast", code_identity="vacuous_test.ast.v1"),
-    DetectorDescriptor(rule_id="vacuous_test_cannot_fail", code_identity="vacuous_test.cannot_fail.v1"),
-    DetectorDescriptor(rule_id="orphan_code", code_identity="orphan_code.v2"),
+    DetectorDescriptor(rule_id="vacuous_test_cannot_fail", code_identity="vacuous_test.cannot_fail.v2"),
+    DetectorDescriptor(rule_id="orphan_code", code_identity="orphan_code.v3"),
     DetectorDescriptor(rule_id="assertion_swallowed", code_identity="ineffective_assertion.v1"),
     DetectorDescriptor(rule_id="assertion_after_return", code_identity="ineffective_assertion.v1"),
     DetectorDescriptor(rule_id="assertion_on_mock_only", code_identity="ineffective_assertion.v1"),

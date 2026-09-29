@@ -6,7 +6,8 @@ ArgusAgent-ORPHAN (``-18``..) for the blocking ``orphan_code`` subset. Drivers:
 their exits), ``evaluation/seeded-defect-harness/`` (the shapes ``a4``/``a6``/``c1``/``c2``/
 ``c3`` are planted verbatim below), cross-cutting #6 (every exit keeps a finding exactly as
 advisory as it was — each exit has its own case here, because an exit nothing pins is an
-exit the next change can delete silently).
+exit the next change can delete silently). wq-1101 added the exits wq-1091's six probes
+showed were missing (``-185``/``-186``, ``ORPHAN-001-26``..``-28``).
 
 Every case stands up the REAL Story-1.4 index via ``build_ast_index`` and runs the real
 detector, so a case measures what the pipeline would emit, not a reconstruction of it.
@@ -156,6 +157,37 @@ def test_try_that_can_still_fail_stays_advisory(tmp_path: Path, handler: str) ->
     _assert_advisory(_vacuous(tmp_path, source), RULE_HEURISTIC)
 
 
+@pytest.mark.parametrize(
+    "source",
+    [
+        "import pytest\n\n\n@pytest.mark.skip(reason='later')\n# TODO: re-enable\ndef test_later():\n    pass\n",
+        "import pytest\n\n\n@pytest.mark.skip(reason='later')\nclass TestLater:\n    def test_later(self):\n        pass\n",
+        "import pytest\n\npytestmark = pytest.mark.skip(reason='later')\n\n\ndef test_later():\n    pass\n",
+        "import pytest\n\n\nclass TestLater:\n    pytestmark = pytest.mark.skip(reason='later')\n\n"
+        "    def test_later(self):\n        pass\n",
+        "import pytest\n\npytest.skip('later', allow_module_level=True)\n\n\ndef test_later():\n    pass\n",
+    ],
+    ids=["comment-between-decorator", "class-decorator", "module-pytestmark", "class-pytestmark", "module-skip"],
+)
+def test_skip_marker_outside_the_def_stays_advisory(tmp_path: Path, source: str) -> None:
+    """TC-ArgusAgent-DETECT-001-185 — wq-1091 probes p1-p3: pytest reports these SKIPPED.
+
+    A skip can reach a test from a comment-separated decorator, an enclosing class, or a
+    ``pytestmark``/module-level skip; a test pytest does not run is not a test that passes.
+    """
+    _assert_advisory(_vacuous(tmp_path, source), RULE_HEURISTIC)
+
+
+def test_pass_body_in_undecorated_class_still_blocks(tmp_path: Path) -> None:
+    """TC-ArgusAgent-DETECT-001-186 — the class walk is an exit only when a class carries a marker.
+
+    Minions' two real blocks (``tests/test_remaining_engines.py:566``/``:570``) are this
+    shape: a ``unittest.TestCase`` method whose body is ``pass``, which runs and passes.
+    """
+    source = "import unittest\n\n\nclass TestLater(unittest.TestCase):\n    def test_later(self):\n        pass\n"
+    _assert_blocks(_vacuous(tmp_path, source), RULE_CANNOT_FAIL, CoverageDepth.AUDITED_SHALLOW)
+
+
 # ── orphan_code: the shapes that block ─────────────────────────────────────────
 
 _CART_TEST = "from src.cart import subtotal\n\n\ndef test_subtotal():\n    assert subtotal([(10, 2)]) == 20\n"
@@ -241,6 +273,65 @@ def test_any_mention_or_reexport_stays_advisory(tmp_path: Path, extra: dict[str,
         **extra,
     }
     _assert_advisory(_orphans(tmp_path, files)["orphan_fn"], RULE_ORPHAN_CODE)
+
+
+def test_non_init_reexport_stays_advisory(tmp_path: Path) -> None:
+    """TC-ArgusAgent-ORPHAN-001-26 — wq-1091 probe p5: a re-export from ``api.py`` is public API.
+
+    Only a TEST file's import of a name nothing calls stays blocking (seeded ``c3``).
+    """
+    files = {
+        "src/cart.py": _SUT + "\n\ndef orphan_fn(x):\n    return x\n",
+        "src/api.py": "from src.cart import subtotal, orphan_fn  # re-exported\n",
+        "tests/test_cart.py": _CART_TEST,
+    }
+    _assert_advisory(_orphans(tmp_path, files)["orphan_fn"], RULE_ORPHAN_CODE)
+
+
+@pytest.mark.parametrize(
+    "dispatch",
+    [
+        {"src/cart.py": _SUT + '\n\ndef handle_add(x):\n    return x + 1\n\n\n'
+         'def dispatch(kind, x):\n    return globals()["handle_" + kind](x)\n'},
+        {"src/cart.py": _SUT + "\n\ndef handle_add(x):\n    return x + 1\n",
+         "src/router.py": 'from src import cart\n\n\ndef dispatch(kind, x):\n    return getattr(cart, "handle_" + kind)(x)\n'},
+    ],
+    ids=["own-globals", "getattr-on-module"],
+)
+def test_computed_name_lookup_stays_advisory(tmp_path: Path, dispatch: dict[str, str]) -> None:
+    """TC-ArgusAgent-ORPHAN-001-27 — wq-1091 probe p4: a def reached by a computed name."""
+    files = {**dispatch, "tests/test_cart.py": _CART_TEST}
+    _assert_advisory(_orphans(tmp_path, files)["handle_add"], RULE_ORPHAN_CODE)
+
+
+def test_pipeline_reads_config_text_as_references(tmp_path: Path) -> None:
+    """TC-ArgusAgent-ORPHAN-001-28 — wq-1091 probe p6: a handler named only in YAML stays advisory.
+
+    Through ``run_audit_detailed``, so the pipeline's config walk is what is measured: the
+    same repository without the YAML file still blocks the handler.
+    """
+    def _repo(root: Path, with_yaml: bool) -> Path:
+        files = {
+            "src/__init__.py": "",
+            "src/cart.py": _SUT + "\n\ndef on_created(event):\n    return event\n",
+            "tests/__init__.py": "",
+            "tests/test_cart.py": _CART_TEST,
+        }
+        if with_yaml:
+            files["config/hooks.yaml"] = "created: src.cart.on_created\n"
+        for rel, text in files.items():
+            path = root / rel
+            path.parent.mkdir(parents=True, exist_ok=True)
+            path.write_text(text, encoding="utf-8")
+        return root
+
+    def _blocking(repo: Path) -> list[str]:
+        request = AuditRequest(repo_path=str(repo), commit="HEAD", budget=0, materiality_bar="")
+        verdict = run_audit_detailed(request).verdict
+        return [f.rule_id for f in verdict.ordered_findings if is_verdict_blocking(f)]
+
+    assert _blocking(_repo(tmp_path / "without", with_yaml=False)) == [RULE_ORPHAN_CODE]
+    assert _blocking(_repo(tmp_path / "with", with_yaml=True)) == []
 
 
 def test_decorated_or_test_file_def_stays_advisory(tmp_path: Path) -> None:
