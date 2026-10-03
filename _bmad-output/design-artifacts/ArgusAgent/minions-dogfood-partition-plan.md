@@ -4,10 +4,10 @@
 
 ## Provenance
 
-- Commit descriptor (`git rev-parse HEAD` at generation): `e623260ebc61aab38dc3a4d4c4306e751fb6c84d`
+- Commit descriptor (`git rev-parse HEAD` at generation): `13d063e2221b900b233cf31a4533ef2f4b998f71`
 - Enumerated population (the HONEST label — Story 12.1, closing `DF-10-4-D`): the file list in this artifact is enumerated from the git INDEX (`git ls-files`), NOT from the tree at the commit descriptor above. The two are the same tree exactly when `argus/` carries no staged-or-uncommitted change, and `TC-ArgusAgent-DOGFOOD-001-50` fails unless they agree — so this artifact cannot quietly describe one tree while citing another.
 - Source files (tracked `argus/`): **113**
-- Total physical LOC (build-cost proxy): **38277**
+- Total physical LOC (build-cost proxy): **38296**
 - NFR-SC1 scale envelope: soft ≤40 files / ≤15000 LOC; hard ≤60 / ≤25000.
 - Reused planner: `partition_repository` (Story 2.4) — no fork (AR7).
 
@@ -20,7 +20,7 @@
 |---|---|---|---|---|---|
 | 1 | `0273edf01a63` | 19 | 7629 | True | True |
 | 2 | `260c3c8b9087` | 33 | 14657 | True | True |
-| 3 | `9be693bf8dd1` | 35 | 14872 | True | True |
+| 3 | `9be693bf8dd1` | 35 | 14891 | True | True |
 | 4 | `b0effb32c0ae` | 26 | 1119 | False | True |
 
 ## AC2 — every TARGETED unit clears the 20%-deep coverage floor
