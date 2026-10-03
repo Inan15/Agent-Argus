@@ -59,6 +59,11 @@ _ARTIFACT_DIR = _REPO_ROOT / "_bmad-output" / "design-artifacts" / "ArgusAgent"
 # too — so a future edit can neither quietly drop the exit-code contract nor bolt on an
 # unreviewed claim section.
 _NOTE_SECTIONS: tuple[str, ...] = (
+    # `## Unreleased` — added 2026-10-03 by wq-1211 (closes wq-1168 row 12: the changelog recorded
+    # only the module-count edits of the six blocking rules and the orphan block). A PURE INSERTION,
+    # placed FIRST because it is the one entry that can turn a green pipeline red on an unchanged
+    # repository: a repository that audited to exit 0 can now audit to exit 2.
+    "### Changed — six new rules and one existing rule can now block a verdict (wq-1083, wq-1084, wq-1119, wq-1120, wq-1127, wq-1134, wq-1164, wq-1211)",
     "### Added — Post-V1 E2E Integration & Verification Suite (`tests/test_post_v1_integration.py`)",
     # `## Unreleased` — added 2026-08-15 by Story 12.8 (AC3 + AC8). A PURE INSERTION: no existing
     # section moved relative to any other, and nothing was demoted.

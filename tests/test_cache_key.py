@@ -134,9 +134,13 @@ def test_golden_key_pinned() -> None:
     ``ineffective_assertion.v3`` and ``tautological_assertion.v3``, when wq-1128's four new false
     blocks (q1-q4) were closed: an uncollected fake-class method is not a test, a reflexive assert
     on a call-bound name is the not-NaN idiom, and an item read or ``ord`` is a validating callee.
+
+    Regenerated an EIGHTH time 2026-10-03 by wq-1211: ``ineffective_assertion.v4``, when
+    wq-1147's r3 was closed — a callee that divides, raises to a power or shifts can reject an
+    operand, so ``assertion_absent`` (b) no longer reads it as pure.
     """
     golden = derive_cache_key(_baseline())
-    assert golden == "2bad6d2793a53a89635f7554e4dadd3f6745897c597a4dd64235371670be500e"
+    assert golden == "d556c2a6e25623cd389e30bff0cf45f87fad6317c14f64143d6841f3f35fdaf7"
 
 
 # ── AC2: the bidirectional CI canary — each input perturbation moves the key ──

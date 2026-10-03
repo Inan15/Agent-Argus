@@ -735,7 +735,7 @@ def render_ship_readiness(
                 )
             elif assessed_ratio < RELEASE_READY_DEEP_THRESHOLD and scope is not None:
                 next_steps.append(
-                    f"assessed deep coverage ratio {assessed_ratio} is below the 80% threshold ({RELEASE_READY_DEEP_THRESHOLD}) — add deep-auditable tests or definitions for application modules"
+                    f"assessed deep coverage ratio {assessed_ratio} is below the {float(RELEASE_READY_DEEP_THRESHOLD):.0%} threshold ({RELEASE_READY_DEEP_THRESHOLD}) — add deep-auditable tests or definitions for application modules"
                 )
 
         if assessed_ratio < RELEASE_READY_DEEP_THRESHOLD and scope is None and not verdict.is_below_floor:
