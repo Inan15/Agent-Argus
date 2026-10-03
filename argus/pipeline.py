@@ -220,6 +220,7 @@ from argus.pipeline_persist import (
 # test that monkeypatches `argus.pipeline._detect_per_file` still intercepts the real call —
 # the orchestrators below look the name up in THIS module's namespace at call time.
 from argus.pipeline_stages import (
+    _assertion_family_findings,
     _assessment_scope_paths,
     _build_cost_ledger,
     _build_cost_units,
@@ -232,8 +233,10 @@ from argus.pipeline_stages import (
     _grade_non_test_source,
     _is_python,
     _orphan_findings,
+    _orphan_reference_sources,
     _project_halt,
     _read_source,
+    _RepoSources,
     _skipped_remainder_entries,
     _unit_cost,
 )
@@ -675,7 +678,8 @@ def run_audit_detailed(
             staged, found, cands = _detect_per_file(repo_root, assessed_entries, request)
             return RecordedStageResult(
                 entries=tuple(staged),
-                findings=tuple(found) + tuple(_orphan_findings(index, assessed_entries, request)),
+                findings=tuple(found)
+                + tuple(_orphan_findings(repo_root, index, assessed_entries, request)),
                 candidates=tuple(cands),
             )
 
@@ -1026,7 +1030,7 @@ def resume_audit_detailed(
         # `assessed_resume_entries` is the SAME population the critical-candidate set
         # above was derived over — resolved once, so the two cannot disagree.
         merged_findings = _merge_findings(
-            merged_findings, _orphan_findings(index, assessed_resume_entries, request)
+            merged_findings, _orphan_findings(repo_root, index, assessed_resume_entries, request)
         )
         # The resumed halt report is RE-PROJECTED over the FULL current index at the
         # RAISED ceiling — the EXACT SAME call an uninterrupted run(raised_budget)

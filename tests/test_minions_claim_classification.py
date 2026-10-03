@@ -105,6 +105,20 @@ _TRUE_HISTORICAL_SITES: dict[str, tuple[tuple[str, str], ...]] = {
             "KEEP — past tense, describes the Story-3.1 arrangement.",
         ),
     ),
+    # wq-1084 (2026-09-28): both occurrences name WHERE a measurement was taken — the real
+    # repository whose false blocks justify an exit of the family detectors.
+    "argus/detectors/assertion_ast.py": (
+        (
+            "measured on Minions at ``dcd90233``",
+            "KEEP — measurement provenance for the one fixture-data block the collection exit removes.",
+        ),
+    ),
+    "argus/detectors/ineffective_assertion.py": (
+        (
+            "9 legitimate Minions tests",
+            "KEEP — measurement provenance (wq-1083) for the callee-purity bar on the absent rule.",
+        ),
+    ),
     "argus/dogfood/proof_render.py": (
         (
             "The independent Story-7.2 run over the Minions",
@@ -116,6 +130,18 @@ _TRUE_HISTORICAL_SITES: dict[str, tuple[tuple[str, str], ...]] = {
             "Story 7.2 originally ran it over the Minions platform",
             "KEEP — explicitly past tense and explicitly superseded. Also byte-fenced "
             "by AC1.5 and in unit 2, so a rewrite would spend budget to make it worse.",
+        ),
+    ),
+    # wq-1083 (2026-09-28): both occurrences name WHERE a measurement was taken — the real
+    # repository whose finding counts justify each exit of the blocking rules.
+    "argus/detectors/structural_blocking.py": (
+        (
+            "over Minions at ``dcd90233``",
+            "KEEP — measurement provenance: the repository and sha the 645/1,064 counts came from.",
+        ),
+        (
+            "on Minions it blocked **11**",
+            "KEEP — measurement provenance for the 9 false blocks that narrowed the vacuous rule.",
         ),
     ),
     "argus/evidence/__init__.py": (

@@ -47,7 +47,10 @@ Locked contract decisions (frozen for downstream consumers — 1.6 / Epic-6)
   KNOWN cost, and the AST subset (below) is the corroboration that protects the
   moat (a heuristic flag alone is advisory-only).
 - **rule_id vocabulary.** ``"vacuous_test_heuristic"`` (advisory-only, NOT
-  verdict-eligible) vs ``"vacuous_test_ast"`` (AST-corroborated, verdict-eligible).
+  verdict-eligible) vs ``"vacuous_test_ast"`` (AST-corroborated, verdict-eligible) vs
+  ``"vacuous_test_cannot_fail"`` (wq-1083: a flagged test with zero assertion sites whose
+  body cannot fail — see ``structural_blocking.cannot_fail_established`` — verdict-eligible
+  at ``AUDITED_SHALLOW``, the same depth as the corroborated rule).
 - **Verdict-eligibility surface (read by Story 1.6).** A heuristic-only finding is
   ``advisory=True`` + ``depth_supported=None`` (no depth the verdict folds) →
   the 1.6 gate MUST NOT 🔴 on it. An AST-corroborated finding is ``advisory=True``
@@ -177,6 +180,7 @@ from argus.detectors.base import (
     FindingDraft,
     build_recording,
 )
+from argus.detectors.assertion_ast import parse_module, uncollected_test_methods
 from argus.detectors.assertion_strength import grade_span_assertions, s1_corroborated
 from argus.detectors.provenance_scan import (
     body_statement_count,
@@ -184,6 +188,7 @@ from argus.detectors.provenance_scan import (
     opens_bare_assert,
     provenance_evidence,
 )
+from argus.detectors.structural_blocking import RULE_CANNOT_FAIL, cannot_fail_established
 from argus.detectors.vacuous_vocabulary import (
     _ASSERTION_CALLEES,
     _ASSERTION_NAMING_CONVENTION,
@@ -692,6 +697,16 @@ class VacuousTestDetector:
         # `source.splitlines()`, which splits on eleven things where `ast_entry` counts one.
         source_lines = index_aligned_lines(source)
         test_defs = [d for d in ast_entry.definitions if _is_test_function(d)]
+        # wq-1134: a `test*` method of a class no runner collects from (neither `Test*` nor a
+        # `TestCase` subclass) never runs — it is a fake's method, not a test. Unparseable
+        # source keeps every definition: this exit only ever removes an accusation.
+        module = parse_module(source)
+        if module is not None:
+            uncollected = uncollected_test_methods(module)
+            test_defs = [
+                d for d in test_defs
+                if not any(m.name == d.name and d.start_line <= m.lineno <= d.end_line for m in uncollected)
+            ]
         if not test_defs:
             return DetectorResult(
                 degraded=(DegradedCondition(file_path=file_path, reason="no_test_functions"),)
@@ -699,22 +714,39 @@ class VacuousTestDetector:
 
         findings = []
         any_flagged = False
+        same_file_names = frozenset(d.name for d in ast_entry.definitions)
         for definition in sorted(test_defs, key=lambda d: (d.start_line, d.end_line, d.name)):
             score = self._score(source_lines, ast_entry.edges, definition)
             if not score.heuristically_vacuous:
                 continue
             any_flagged = True
             corroborated = score.ast_corroborated
+            # wq-1083: a flagged test that CANNOT FAIL is a fact read off the source, not a
+            # heuristic reading — see `structural_blocking` for the exits that keep a
+            # delegating, raising or decorated test advisory.
+            cannot_fail = not corroborated and cannot_fail_established(
+                source_lines=source_lines,
+                span_edges=_edges_in_span(ast_entry.edges, definition.start_line, definition.end_line),
+                definition=definition,
+                assertion_sites=score.assertion_sites,
+                same_file_names=same_file_names,
+            )
+            if corroborated:
+                rule_id = RULE_AST
+            elif cannot_fail:
+                rule_id = RULE_CANNOT_FAIL
+            else:
+                rule_id = RULE_HEURISTIC
             draft = FindingDraft(
                 file_path=file_path,
                 start_line=definition.start_line,
                 end_line=definition.end_line,
                 ast_span=definition.ast_span,
-                rule_id=RULE_AST if corroborated else RULE_HEURISTIC,
+                rule_id=rule_id,
                 advisory=True,
                 coverage_envelope_slice=coverage_envelope_slice,
             )
-            depth = CoverageDepth.AUDITED_SHALLOW if corroborated else None
+            depth = CoverageDepth.AUDITED_SHALLOW if corroborated or cannot_fail else None
             findings.append(
                 build_recording(draft, depth_supported=depth, claim_present=False)
             )

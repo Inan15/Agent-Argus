@@ -287,7 +287,11 @@ def test_TC_ArgusAgent_VERDICT_001_30_a_blocking_verdict_is_reachable_with_no_ll
         f"got {sorted({f.rule_id for f in blocking})}. The measurement is specifically "
         "that the ZERO-TOKEN, NO-SIGN-OFF path can block."
     )
-    assert all(f.depth_supported is CoverageDepth.AUDITED_SHALLOW for f in blocking)
+    # Scoped to the vacuous rule since wq-1083: the corpus's unreferenced `subtract` /
+    # `multiply` now also block, as `orphan_code` at TOOL_SCANNED_ONLY (a token scan).
+    assert all(
+        f.depth_supported is CoverageDepth.AUDITED_SHALLOW for f in blocking if f.rule_id == RULE_AST
+    )
 
     # NO LLM was involved: the deep pass was never requested, so the verdict carries no
     # deep-pass record at all.
@@ -521,6 +525,8 @@ def test_TC_ArgusAgent_VERDICT_001_31_the_bare_cli_exits_2_on_that_corpus(
         f"a bare CLI invocation must exit 2 on a blocking verdict; got {proc.returncode}"
     )
     assert "verdict=NOT_READY_FOR_RELEASE" in proc.stdout
-    assert "blocking_findings=1" in proc.stdout
+    # 1 vacuous_test_ast + 2 orphan_code: since wq-1083, `subtract` and `multiply` — mentioned
+    # nowhere, in a module the test imports — block as unreferenced code (was 1 before).
+    assert "blocking_findings=3" in proc.stdout
     # And the run must not claim any deep read, because none was requested.
     assert "a deep read was dispatched" not in proc.stderr

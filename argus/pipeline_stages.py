@@ -64,6 +64,7 @@ module is an implementation detail of it and is not part of any documented impor
 from __future__ import annotations
 
 from pathlib import Path
+from typing import Iterable, Iterator, Mapping
 
 from argus.audit.grounding import is_deep_claim_grounded
 from argus.cost.budget_governor import (
@@ -74,8 +75,10 @@ from argus.cost.budget_governor import (
 )
 from argus.cost.exhaustion import CostUnit, HaltProjection, project_halt_point
 from argus.detectors.bandit_scan import BanditScanDetector
+from argus.detectors.ineffective_assertion import IneffectiveAssertionDetector
 from argus.detectors.orphan_code import OrphanCodeDetector
 from argus.detectors.secret_scan import SecretScanDetector
+from argus.detectors.tautological_assertion import TautologicalAssertionDetector
 from argus.detectors.tool_runner import ToolRunnerDetector
 from argus.detectors.vacuous_test import (
     VacuousTestDetector,
@@ -85,6 +88,7 @@ from argus.detectors.vacuous_test import (
 )
 from argus.index.ast_index import AstIndex, AstIndexEntry
 from argus.index.partitioner import PartitionPlan, compute_loc_by_file, partition_repository
+from argus.intake.source_state import walk_reference_texts
 from argus.ledger.coverage_ledger import (
     CoverageDepth,
     CoverageLedger,
@@ -226,6 +230,70 @@ def _critical_candidates(
     return [_critical_candidate(repo_root, entry) for entry in entries]
 
 
+class _RepoSources(Mapping[str, str]):
+    """Read-on-demand view of the per-file stage's Python sources (wq-1084).
+
+    The family-A detector resolves a test's callee to its source through this mapping, so
+    the read stays HERE in the impure shell (AR8) and only the few modules a no-assertion
+    test imports are ever read a second time. Membership is the path set alone; a file that
+    cannot be read is simply absent, and the detector stays silent on what it cannot see.
+    """
+
+    def __init__(self, repo_root: Path, paths: Iterable[str]) -> None:
+        self._repo_root = repo_root
+        self._paths = frozenset(paths)
+        self._cache: dict[str, str] = {}
+
+    def __contains__(self, key: object) -> bool:
+        return key in self._paths
+
+    def __getitem__(self, key: str) -> str:
+        if key not in self._paths:
+            raise KeyError(key)
+        if key not in self._cache:
+            try:
+                self._cache[key] = _read_source(self._repo_root, key)
+            except OSError as exc:
+                raise KeyError(key) from exc
+        return self._cache[key]
+
+    def __iter__(self) -> Iterator[str]:
+        return iter(sorted(self._paths))
+
+    def __len__(self) -> int:
+        return len(self._paths)
+
+
+def _assertion_family_findings(
+    rel: str,
+    source: str,
+    entry: AstIndexEntry,
+    vacuous_findings: tuple[Recording, ...],
+    module_sources: Mapping[str, str],
+) -> list[Recording]:
+    """The family-A and family-B findings for one Python test file (wq-1084).
+
+    One blocking finding per test span: a span the vacuous detector already made
+    verdict-eligible is not re-accused, and family A is asked before family B. The demo's
+    ``vacuous_test_ast`` line therefore stays the only finding on its span.
+    """
+    claimed = {
+        f.locators[0].start_line for f in vacuous_findings if f.depth_supported is not None
+    }
+    out: list[Recording] = []
+    family_a = IneffectiveAssertionDetector().run(
+        file_path=rel, source=source, ast_entry=entry, module_sources=module_sources
+    )
+    family_b = TautologicalAssertionDetector().run(file_path=rel, source=source, ast_entry=entry)
+    for finding in (*family_a.findings, *family_b.findings):
+        start = finding.locators[0].start_line
+        if start in claimed:
+            continue
+        claimed.add(start)
+        out.append(finding)
+    return out
+
+
 def _detect_per_file(
     repo_root: Path,
     index_entries: tuple[AstIndexEntry, ...],
@@ -258,6 +326,9 @@ def _detect_per_file(
     bandit_targets: list[str] = []
 
     enabled_passes = request.enabled_passes
+    module_sources = _RepoSources(
+        repo_root, (e.file_path for e in index_entries if _is_python(e.file_path))
+    )
 
     for entry in index_entries:
         rel = entry.file_path
@@ -320,6 +391,9 @@ def _detect_per_file(
                 result = detector.run(file_path=rel, source=source, ast_entry=entry)
                 entries.extend(result.entries)
                 findings.extend(result.findings)
+                findings.extend(
+                    _assertion_family_findings(rel, source, entry, result.findings, module_sources)
+                )
             else:
                 # A non-Python test file is graded shallow WITHOUT being run through
                 # the Python-idiom vacuous detector — recorded honestly as examined,
@@ -345,7 +419,50 @@ def _detect_per_file(
     return entries, findings, candidates
 
 
+# Packaging files that name entry points (``[project.scripts]``, ``console_scripts``) and
+# are never ingested as source. Their text joins the orphan pass's reference universe so a
+# console-script target is never blocked as unreferenced (wq-1083).
+_ENTRY_POINT_MANIFESTS = ("pyproject.toml", "setup.cfg", "setup.py")
+
+# Config text that can name a def by dotted path (a YAML hook table, a JSON route map, an
+# INI plugin list) but is never ingested as source. Walked under the audit's own ignore
+# rules and folded in too, so a handler named only there is never blocked (wq-1101,
+# answering wq-1091 probe p6). Prose (``.md``/``.rst``) is deliberately NOT here: a doc
+# mention does not dispatch anything.
+_CONFIG_REFERENCE_SUFFIXES = frozenset(
+    {".yaml", ".yml", ".json", ".toml", ".cfg", ".ini", ".conf"}
+)
+
+
+def _orphan_reference_sources(repo_root: Path, index: AstIndex) -> dict[str, str] | None:
+    """Every indexed file's text + manifests + config text — the orphan reference universe.
+
+    The WHOLE index, not the assessed slice: a reference from a file the budget did not
+    reach is still a reference. ``None`` when any indexed file cannot be read, because a
+    universe with a hole in it could make a referenced def look unreferenced — the orphan
+    pass then stays advisory-only, which is the direction a missing input must fail in.
+    """
+    sources: dict[str, str] = {}
+    try:
+        for entry in index.entries:
+            sources[entry.file_path] = _read_source(repo_root, entry.file_path)
+    except OSError:
+        return None
+    try:
+        config_texts = walk_reference_texts(repo_root, _CONFIG_REFERENCE_SUFFIXES)
+    except OSError:
+        return None
+    for name in (*_ENTRY_POINT_MANIFESTS, *config_texts):
+        if name not in sources and (repo_root / name).is_file():
+            try:
+                sources[name] = _read_source(repo_root, name)
+            except OSError:
+                return None
+    return sources
+
+
 def _orphan_findings(
+    repo_root: Path,
     index: AstIndex,
     assessed_entries: tuple[AstIndexEntry, ...],
     request: AuditRequest,
@@ -354,7 +471,8 @@ def _orphan_findings(
 
     ``request`` is REQUIRED for the reason recorded on :func:`_detect_per_file`:
     both production call sites previously omitted it, so the ``orphan`` pass ran
-    unconditionally even when the operator had deselected it.
+    unconditionally even when the operator had deselected it. ``repo_root`` supplies
+    the reference universe the wq-1083 blocking fact is read against.
     """
     if "orphan" not in request.enabled_passes:
         return []
@@ -362,7 +480,8 @@ def _orphan_findings(
         scoped = index
     else:
         scoped = index.model_copy(update={"entries": assessed_entries})
-    return list(OrphanCodeDetector().run(index=scoped).findings)
+    sources = _orphan_reference_sources(repo_root, index)
+    return list(OrphanCodeDetector().run(index=scoped, sources=sources).findings)
 
 
 

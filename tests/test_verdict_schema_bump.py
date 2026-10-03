@@ -52,6 +52,7 @@ from _cartridge import stage_cartridge  # noqa: E402
 from argus.ledger.critical_subsystems import (  # noqa: E402
     CRITICAL_SUBSYSTEMS_SCHEMA_VERSION,
 )
+from argus import pipeline_stages  # noqa: E402
 from argus.models import AuditRequest  # noqa: E402
 from argus.pipeline import run_audit_detailed  # noqa: E402
 from argus.pipeline_persist import CRITICAL_SUBSYSTEMS_PRODUCER  # noqa: E402
@@ -90,12 +91,24 @@ def _sole_locator(artifacts: dict[str, str], producer: str) -> str:
 
 
 def _run(tmp_path: Path) -> tuple[ApaaStoreReader, object]:
+    """Audit ``vacuous_basic`` with the orphan pass's reference universe withheld.
+
+    wq-1083 made ``orphan_code`` findings BLOCK when their name is mentioned nowhere, which
+    promotes this cartridge's ``apply_discount`` and so moves the finding's bytes and the
+    verdict's blocking count — an intentional content change that is NOT this module's
+    subject. Withholding the universe is the detector's own documented pre-wq-1083 path
+    (``sources=None`` → every orphan advisory), so every byte this module sees move is still
+    attributable to the schema bump alone. The promotion itself is proved in
+    ``tests/test_structural_blocking.py``.
+    """
     repo, _sha = stage_cartridge("vacuous_basic", tmp_path / "repo")
-    result = run_audit_detailed(
-        AuditRequest(
-            repo_path=str(repo), commit="HEAD", budget=100, materiality_bar="default"
+    with pytest.MonkeyPatch.context() as patch:
+        patch.setattr(pipeline_stages, "_orphan_reference_sources", lambda *_args: None)
+        result = run_audit_detailed(
+            AuditRequest(
+                repo_path=str(repo), commit="HEAD", budget=100, materiality_bar="default"
+            )
         )
-    )
     return ApaaStoreReader(repo), result
 
 

@@ -70,6 +70,7 @@ __all__ = [
     "SourceState",
     "resolve_source_state",
     "SourceStateError",
+    "walk_reference_texts",
 ]
 
 _SOURCE_SUFFIXES: frozenset[str] = AUDITABLE_SUFFIXES
@@ -158,6 +159,24 @@ def _walk_sources(root: Path) -> tuple[tuple[str, ...], dict[str, int]]:
     Counts are per FILE (of an auditable suffix), so the reported exclusion total is
     comparable with the audited total rather than counting directories.
     """
+    excluded: Counter[str] = Counter()
+    found = _walk(root, _SOURCE_SUFFIXES, excluded)
+    return tuple(sorted(found)), dict(excluded)
+
+
+def walk_reference_texts(root: str | Path, suffixes: frozenset[str]) -> tuple[str, ...]:
+    """Sorted repo-relative paths of every file with one of *suffixes*, under the SAME
+    pruning as the audited source walk (ignore rules + ``.gitignore``).
+
+    For text that is never audited but can name a def — YAML/TOML/JSON/INI config that
+    dispatches a handler by dotted path (wq-1101, answering wq-1091 probe p6). Nothing is
+    counted as excluded: these files were never candidates for audit.
+    """
+    return tuple(sorted(_walk(Path(root).resolve(), suffixes, None)))
+
+
+def _walk(root: Path, suffixes: frozenset[str], excluded: Counter[str] | None) -> list[str]:
+    """The pruned walk behind both public walks; counts exclusions only when asked."""
     root_entries = frozenset(entry.name for entry in os.scandir(root))
     tier2 = corroborated_tier2_components(root_entries)
 
@@ -166,7 +185,6 @@ def _walk_sources(root: Path) -> tuple[tuple[str, ...], dict[str, int]]:
         if gitignore.is_file() else ()
 
     found: list[str] = []
-    excluded: Counter[str] = Counter()
 
     for dirpath, dirnames, filenames in os.walk(root):
         rel_dir = Path(dirpath).relative_to(root).as_posix()
@@ -177,24 +195,27 @@ def _walk_sources(root: Path) -> tuple[tuple[str, ...], dict[str, int]]:
             rel = f"{rel_dir}/{name}" if rel_dir else name
             decision = classify_path(f"{rel}/x", tier2_enabled=tier2)
             if decision.ignored:
-                excluded[decision.reason or "unknown"] += _count_sources_under(root / rel)
+                if excluded is not None:
+                    excluded[decision.reason or "unknown"] += _count_sources_under(root / rel)
                 continue
             if patterns and gitignore_matches(rel, patterns, is_dir=True):
-                excluded[IgnoreReason.GITIGNORED] += _count_sources_under(root / rel)
+                if excluded is not None:
+                    excluded[IgnoreReason.GITIGNORED] += _count_sources_under(root / rel)
                 continue
             kept_dirs.append(name)
         dirnames[:] = kept_dirs  # prune in place — os.walk honours this
 
         for name in sorted(filenames):
-            if Path(name).suffix not in _SOURCE_SUFFIXES:
+            if Path(name).suffix not in suffixes:
                 continue
             rel = f"{rel_dir}/{name}" if rel_dir else name
             if patterns and gitignore_matches(rel, patterns):
-                excluded[IgnoreReason.GITIGNORED] += 1
+                if excluded is not None:
+                    excluded[IgnoreReason.GITIGNORED] += 1
                 continue
             found.append(rel)
 
-    return tuple(sorted(found)), dict(excluded)
+    return found
 
 
 def _count_sources_under(directory: Path) -> int:

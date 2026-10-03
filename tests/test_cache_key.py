@@ -104,9 +104,39 @@ def test_golden_key_pinned() -> None:
     252 tracked files). That is the AR6 invalidation lever working exactly as DN-DETECTORSET
     documents it, so this move is the intended consequence and not a silent regeneration: without
     it a memoized re-audit would be served the PRE-FIX detect-stage result.
+
+    Regenerated a THIRD time 2026-09-28 by wq-1083, which added two descriptors —
+    ``vacuous_test_cannot_fail`` and ``orphan_code`` ("orphan_code.v2") — because both rules
+    can now emit a BLOCKING finding. The same lever: without the move a memoized re-audit
+    would be served the pre-change, advisory-only detect-stage result.
+
+    Regenerated a THIRD time 2026-09-28 by wq-1084, which added five descriptors (the family-A
+    ``assertion_*`` rules and family-B ``tautological_assertion``) because the detect stage now
+    emits BLOCKING findings it did not emit before. Same lever, same reason: without the move a
+    memoized re-audit of a repository with a tautological test would be served the pre-wq-1084
+    advisory-only result.
+
+    The two THIRD regenerations above were made on parallel branches, each over ae5ea25; neither
+    value survives. Regenerated a FOURTH time 2026-09-29 by wq-1119, which combined them: the set
+    now carries wq-1083's two descriptors followed by wq-1084's five, and this is that set's key.
+
+    Regenerated a FIFTH time 2026-09-29 by wq-1120, carrying wq-1101's narrowing onto the
+    combined tree: it bumped ``vacuous_test.cannot_fail.v2`` and ``orphan_code.v3`` when each
+    rule gained exits answering wq-1091's probes, so a result memoized under the narrower-exit
+    code would over-block.
+
+    Regenerated a SIXTH time 2026-09-29 by wq-1127: ``ineffective_assertion.v2`` and
+    ``tautological_assertion.v2``, when both family detectors gained the runner-may-skip exit
+    (wq-1091 probes p2, p3) and ``assertion_absent`` (b) stopped counting an input-validating
+    builtin as pure.
+
+    Regenerated a SEVENTH time 2026-09-29 by wq-1134: ``vacuous_test.cannot_fail.v3``,
+    ``ineffective_assertion.v3`` and ``tautological_assertion.v3``, when wq-1128's four new false
+    blocks (q1-q4) were closed: an uncollected fake-class method is not a test, a reflexive assert
+    on a call-bound name is the not-NaN idiom, and an item read or ``ord`` is a validating callee.
     """
     golden = derive_cache_key(_baseline())
-    assert golden == "78239f689c6dd3c92e3268d0787d3e96293c607f66fc0b710e9d76b19cb92850"
+    assert golden == "2bad6d2793a53a89635f7554e4dadd3f6745897c597a4dd64235371670be500e"
 
 
 # ── AC2: the bidirectional CI canary — each input perturbation moves the key ──
