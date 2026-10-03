@@ -157,6 +157,55 @@ necessary, not sufficient, and is recorded as LOCAL (architecture.md §H).
 
 ## Unreleased
 
+### Changed — six new rules and one existing rule can now block a verdict (wq-1083, wq-1084, wq-1119, wq-1120, wq-1127, wq-1134, wq-1164, wq-1211)
+
+> **Consumer-visible: a repository that audited to exit 0 on `1.0.0` can audit to exit 2 on this tree,
+> with no change to its code.** Pin accordingly. Until this entry the file recorded only the module-count
+> edits (108 to 113) that these changes caused; it said nothing about the behaviour (wq-1168 row 12).
+
+**Six rule ids that did not exist in `1.0.0` now produce verdict-blocking findings** (each carries
+`depth_supported=AUDITED_SHALLOW`, which the verdict gate counts):
+
+| Rule id | Blocks when |
+|---|---|
+| `assertion_absent` | a test has no assertion site and its body is only `pass`/`...`, or every statement is a discarded call, with literal arguments, to a repository function whose source shows it cannot signal failure (no `raise`, no `assert`, no division, power or shift, no item read) |
+| `assertion_swallowed` | every assertion site sits inside a `try` whose broad `except` neither re-raises nor asserts |
+| `assertion_after_return` | every assertion site comes after a `return` that ends the test on a path with no assertion |
+| `assertion_on_mock_only` | every asserted value is a mock the test built itself and no such mock escapes |
+| `tautological_assertion` | every `assert` in the test is true by construction (a truthy literal, a literal comparison that holds, a reflexive comparison) |
+| `vacuous_test_cannot_fail` | the test has no assertion site and its body is only `pass`/`...` or a `try` whose single broad handler only passes |
+
+**`orphan_code` now blocks in one case.** Previously advisory in every case, it blocks — at
+`depth_supported=TOOL_SCANNED_ONLY`, a whole-repository token scan and not an AST fact — when the def is a
+top-level, undecorated function or class in a non-test module that a test imports, its name occurs nowhere
+else in the repository, and it is not re-exported by a package `__init__`. Every other orphan stays
+advisory. The README sentence that said orphan code "never fails your build on its own" was true of `1.0.0`
+and false of this tree, and has been rewritten (wq-1211).
+
+**Rendered string.** The next-step sentence on an under-threshold application-scope run read "below the
+**80%** threshold (3/5)"; the gate is `3/5`, which is **60%**. It now derives the percentage from
+`RELEASE_READY_DEEP_THRESHOLD` (`tests/test_threshold_wording.py`).
+
+**The demo.** `examples/demo.py` carried a second, unused function (`apply_discount`) that became a
+blocking `orphan_code` finding, so on this tree its "fixed" run exited 2 and the script reported
+`The demo did NOT behave as described above` (exit 1). The unused function is gone; the demo exits 0 and
+`tests/test_demo_end_to_end.py` now runs it and asserts the exit codes.
+
+**Precision narrowing that shipped with the above** (so the new `assertion_absent` does not fire on a
+"should not raise" test): a callee that uses any builtin other than `bool`/`callable`/`repr`/`str`, an item
+read, or one of the operators `/ // % ** << >> @` is read as able to fail and stays silent (wq-1127, wq-1134,
+wq-1164, wq-1211 — the last closes wq-1147's r3, a callee that divides). Known limit, pinned by a test rather
+than hidden: `bool`/`str`/`repr` call the argument's own `__bool__`/`__str__`/`__repr__`, which can raise, so
+a callee that stringifies a module-level object with a raising `__str__` is still read as unable to fail.
+The memoization identity of the four `assertion_*` rules moved `ineffective_assertion.v3` to `.v4`, so a
+result cached before r3 was closed is not served after it.
+
+**What this does and does not show.** On the repository's seeded-defect harness the tree blocks
+**17 of 20 harness cases, in-sample** (the detectors were written against those cases; it is not a detection
+rate) and raises no blocking finding on the 4 clean controls. It misses `b3`, `d4` and `d5`. The six rules were
+not re-run over the five ratified corpus repositories in any record on disk, so the README's corpus figures
+describe the rules that existed before them.
+
 ### Added — Post-V1 E2E Integration & Verification Suite (`tests/test_post_v1_integration.py`)
 
 Comprehensive end-to-end integration and verification suite (`tests/test_post_v1_integration.py`) validating Post-V1 capabilities across multi-language AST parsers (`TSParser`, `GoParser`, `JavaParser`), defect remediation engine (`RemediationEngine`, `verify_patch_dry_run`, `apply_patch` workspace path containment), and LSP diagnostic streaming (`LSPDiagnosticAdapter`, `LSPDiagnosticServer` over stdio and socket transports with standard JSON-RPC 2.0 Content-Length framing).

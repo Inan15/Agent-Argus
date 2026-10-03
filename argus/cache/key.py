@@ -198,6 +198,8 @@ class DetectorDescriptor(BaseModel):
 # is not a test), ineffective_assertion v2 -> v3 (same collection rule; an item read and ``ord``
 # are validating, not pure) and tautological_assertion v2 -> v3 (same collection rule; a
 # reflexive assert on a name bound from a call is the not-NaN idiom).
+# wq-1211 bumped ineffective_assertion v3 -> v4: a callee that divides, raises to a power, shifts or
+# matrix-multiplies can reject an operand, so assertion_absent (b) no longer reads it as pure (r3).
 FROZEN_DETECTOR_SET: tuple[DetectorDescriptor, ...] = (
     DetectorDescriptor(rule_id="hardcoded_secret", code_identity="secret_scan.v2"),
     DetectorDescriptor(rule_id="tool_failure", code_identity="tool_runner.v1"),
@@ -206,10 +208,10 @@ FROZEN_DETECTOR_SET: tuple[DetectorDescriptor, ...] = (
     DetectorDescriptor(rule_id="vacuous_test_ast", code_identity="vacuous_test.ast.v1"),
     DetectorDescriptor(rule_id="vacuous_test_cannot_fail", code_identity="vacuous_test.cannot_fail.v3"),
     DetectorDescriptor(rule_id="orphan_code", code_identity="orphan_code.v3"),
-    DetectorDescriptor(rule_id="assertion_swallowed", code_identity="ineffective_assertion.v3"),
-    DetectorDescriptor(rule_id="assertion_after_return", code_identity="ineffective_assertion.v3"),
-    DetectorDescriptor(rule_id="assertion_on_mock_only", code_identity="ineffective_assertion.v3"),
-    DetectorDescriptor(rule_id="assertion_absent", code_identity="ineffective_assertion.v3"),
+    DetectorDescriptor(rule_id="assertion_swallowed", code_identity="ineffective_assertion.v4"),
+    DetectorDescriptor(rule_id="assertion_after_return", code_identity="ineffective_assertion.v4"),
+    DetectorDescriptor(rule_id="assertion_on_mock_only", code_identity="ineffective_assertion.v4"),
+    DetectorDescriptor(rule_id="assertion_absent", code_identity="ineffective_assertion.v4"),
     DetectorDescriptor(rule_id="tautological_assertion", code_identity="tautological_assertion.v3"),
 )
 

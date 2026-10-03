@@ -41,11 +41,10 @@ def subtotal(items):
     for price, qty in items:
         total = total + price * qty
     return total
-
-
-def apply_discount(total, rate):
-    return total - (total * rate)
 '''
+# The SUT is one function, deliberately: every definition in it is called by the tests. A second
+# function nothing calls (this demo once carried `apply_discount`) is `orphan_code`, which blocks on
+# its own, and the "fixed" run would then still exit 2 (wq-1168, wq-1211).
 
 # The defect. It calls subtotal(...) — so a "does the test touch the SUT?" check
 # passes — and then asserts a Mock's own configured return value. Green forever.

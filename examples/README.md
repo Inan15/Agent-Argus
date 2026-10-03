@@ -33,9 +33,12 @@ from a clone, or the published pin from the README.
 
 ### What it deliberately does not show
 
-Argus's other detectors — orphan code, hardcoded secrets, tool-runner findings —
-are **advisory by contract**: they inform a reader and cannot on their own move a
-verdict to blocking. That is a design decision rather than an omission, and it is
-the reason this demo is trustworthy: a wrong 🔴 is the failure that gets a tool
-removed from a pipeline, so only an AST-corroborated finding is allowed to block
-a release. The demo shows the one class that earns it.
+Argus's other detectors — hardcoded secrets, tool-runner findings and most orphan
+code — are **advisory**: they inform a reader and do not on their own move a
+verdict to blocking. The exception is one narrow `orphan_code` case: a top-level
+function or class whose name occurs nowhere else in the repository, in a module
+the tests import, blocks (a token scan, not an AST fact). The demo's code is kept
+to a single function that its test calls precisely so that case cannot fire: a
+second, unused function would make the "fixed" run exit 2 as well. A wrong 🔴 is
+the failure that gets a tool removed from a pipeline, so blocking is kept narrow.
+The demo shows the main class that earns it.

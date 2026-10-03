@@ -33,8 +33,10 @@ Four facts, one rule id each, at most ONE finding per test (checked in this orde
    is a call whose result is thrown away, to a function imported from the repository whose
    source shows it CANNOT signal failure: no ``raise``, no ``assert``, no ``yield``, no
    ``try``/``with``, no store to an attribute or item, no item read (``d[k]``), at least one ``return`` and every
-   ``return`` carries a value, and every call it makes is to a pure builtin, a pure method of a
-   builtin value, or another function of its own module meeting the same bar. Its arguments are
+   ``return`` carries a value, it divides, raises to a power, shifts or matrix-multiplies nowhere
+   (``/ // % ** << >> @`` reject some operand, wq-1211), and every call it makes is to a pure
+   builtin, a pure method of a builtin value, or another function of its own module meeting the
+   same bar. Its arguments are
    all literals. A builtin that rejects a well-typed value (``int("x")``, ``max([])``, ``ord("ab")``) is NOT
    pure (wq-1134 adds ``ord``): a callee that validates its input that way can fail, and a test feeding it a valid
    literal is a "should not raise" test (wq-1127).
@@ -120,7 +122,20 @@ _STDLIB = frozenset(sys.stdlib_module_names)
 # not an absent assertion. Closing the class means listing what cannot raise, not what has been
 # seen to (wq-1127 removed ``int`` and kin, wq-1134 ``ord``, wq-1147 ``dict``). An item read
 # ``d[k]`` (KeyError/IndexError) is excluded the same way — see ``_is_pure``.
+#
+# Caveat (wq-1211): "cannot raise" holds for a value of a builtin type. ``bool``/``str``/``repr`` call
+# the argument's own ``__bool__``/``__str__``/``__repr__``, which can raise (``bool`` of a numpy
+# array raises ``ValueError``). A test can only feed this rule's callee literals, so the exposure is
+# a value the callee reads from OUTSIDE its arguments — a module-level instance — and a callee that
+# runs one through these builtins is still read as unable to fail. The residual false block is
+# pinned by ``test_precision_probes_r3_dunder.py::test_dunder_caveat_*``, not hidden.
 _NEVER_RAISE_BUILTINS = frozenset({"bool", "callable", "repr", "str"})
+# Operators that reject a well-typed operand (wq-1211, wq-1147's r3): ``/ // %`` on a zero divisor,
+# ``**`` on ``0 ** -1``, ``<< >>`` on a negative count, ``@`` on mismatched shapes. They are
+# ``BinOp``/``AugAssign`` nodes, not ``Call`` nodes, so the builtin list above never saw them — a
+# callee that divides validates its input exactly as one that calls ``divmod`` does. ``+ - *`` and
+# the bitwise operators on numbers stay admitted.
+_RAISING_OPERATORS = (ast.Div, ast.FloorDiv, ast.Mod, ast.Pow, ast.LShift, ast.RShift, ast.MatMult)
 # Methods of builtin values that return a value and change nothing the caller can see. The
 # codec and format methods (``decode``/``encode``/``format``) raise on content and are absent
 # for the reason above.
@@ -495,6 +510,8 @@ def _is_pure(fn: ast.FunctionDef, module: ast.Module, depth: int, seen: frozense
             return False
         if isinstance(node, ast.Subscript) and not isinstance(node.slice, ast.Slice):
             return False  # an item read raises KeyError/IndexError on input: a validating callee
+        if isinstance(node, (ast.BinOp, ast.AugAssign)) and isinstance(node.op, _RAISING_OPERATORS):
+            return False  # a division/power/shift raises on some operand: a validating callee
         if not isinstance(node, ast.Call):
             continue
         func = node.func

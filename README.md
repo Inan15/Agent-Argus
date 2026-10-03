@@ -15,13 +15,27 @@ argus audit .
 **See it in 90 seconds** — `python examples/demo.py` builds a repository whose test suite is green
 under `pytest`, watches Argus block the release (`exit 2`) because the test asserts a value it
 invented rather than the one the code returned, then fixes the test and watches it clear (`exit 0`).
-Hermetic, no network, and nothing in it is pre-recorded. See [examples/](examples/).
+Hermetic, no network, and nothing in it is pre-recorded. The demo itself exits `0` when it behaved
+as described and `1` when it did not, and `tests/test_demo_end_to_end.py` runs it and asserts both.
+See [examples/](examples/).
 
-**Which findings can block, stated plainly.** Only an **AST-corroborated** finding is allowed to move
-a verdict to blocking. Orphan code, hardcoded secrets and tool-runner findings are **advisory by
-contract** — they are reported and they never fail your build on their own. That is deliberate: a
-wrong 🔴 is the failure that gets a tool deleted from a pipeline, so Argus would rather tell you
-about something than block you over a guess.
+**Which findings can block, stated plainly.** Two kinds of finding can move a verdict to blocking:
+an **AST-corroborated** finding (a test that asserts nothing, cannot fail, or asserts only a mock),
+and **one narrow `orphan_code` case** — a top-level, undecorated function or class whose name occurs
+nowhere else in the repository (a token scan, not an AST fact) in a module that your tests import.
+Every other orphan, and every hardcoded-secret and tool-runner finding, is **advisory** — reported,
+and it does not fail your build on its own. A blocking orphan is a *token-scan* finding; it is the
+one blocking rule here that does not rest on an AST span. That is deliberate in the other direction
+too: a wrong 🔴 is the failure that gets a tool deleted from a pipeline, so Argus would rather tell
+you about something than block you over a guess.
+
+**What it catches, measured on its own cases.** On the repository's seeded-defect harness
+(`evaluation/seeded-defect-harness/`, 24 cases: 20 defects and 4 clean controls) Argus blocks
+**17 of 20 harness cases, in-sample**, and raises no blocking finding on any of the 4 controls.
+"In-sample" is the caveat that matters: the detectors were written against those same cases, so
+this is a regression score and not a detection rate. The three it misses are
+`b3_assert_x_eq_x`, `d4_mock_via_patch_decorator` and `d5_mock_assert_called_with_style`; `b3`
+stopped blocking when a false block on correct code was removed (wq-1134).
 
 No API key. No account. **No network call at all** on the default path, and zero LLM tokens — the
 verdict is a pure function of what was measured, so the same commit gives the same answer on any
