@@ -8556,3 +8556,14 @@ charter is falsified by its own execution can close with the falsification stand
   - target_story: 21-1-cd2-consumption-points-and-rollup-covers-verdict
   - category: process
   - severity: 🟡
+  ⚠️ **Completion note, 2026-09-25 (dispatched agent, wq-727, disposing Story 21.1's Review
+  Findings).** Tasks 1 and 2 landed 2026-09-08 (owner's manual paste into
+  `.claude/skills/bmad-dev-loop/SKILL.md` §3, confirmed by Cadmus, wq-083 — see Story 21.1's Dev
+  Agent Record) — the epic ENTRY gate and roll-up `Covers:` re-derivation described above are now
+  installed in the live skill file, so *"Nothing in the loop re-derives an epic's `Covers:` list
+  at roll-up"* is no longer true of the loop. One further gap surfaced by wq-648's code review of
+  Story 21.1 remains: §4's loop *pseudocode* does not yet show the entry gate as an explicit step
+  (§3's prose states it; §4 does not mirror it) — exact replacement prose is preserved in Story
+  21.1's Dev Agent Record for the owner to apply by hand the same way Tasks 1 and 2 were applied.
+  - target_status: OPEN — Tasks 1/2 landed 2026-09-08; §4 pseudocode mirror still pending an
+    owner-only edit (Story 21.1 Review Finding #8, `.claude/skills/bmad-dev-loop/SKILL.md:93`)

@@ -83,10 +83,13 @@ def _console_safe(s: str) -> str:
     while ``PYTHONIOENCODING=utf-8`` exited 0. Per the module docstring, a
     non-zero exit from this script means it could not READ its inputs, never
     that a finding was made; that crash was a FALSE "cannot read" signal, the
-    exact false-failure class the advisory disposition exists to avoid. Every
-    string built from ``epics.md`` prose that reaches a ``print`` call is
-    routed through this function so no future prose byte can turn a clean
-    parse into a non-zero exit, regardless of where in the string it falls.
+    exact false-failure class the advisory disposition exists to avoid. The
+    one call site where arbitrary ``epics.md`` prose reaches a ``print`` call
+    is ``report_epics``'s ``capability`` line, and it is already sliced to
+    ``cap[:64]`` before being passed here, so this function only has to make
+    that 64-character slice safe, not the full ``capability`` string; every
+    byte within that slice is covered, regardless of where in the slice it
+    falls.
     """
     enc = getattr(sys.stdout, "encoding", None) or "utf-8"
     return s.encode(enc, errors="backslashreplace").decode(enc, errors="replace")
@@ -160,7 +163,7 @@ def report_epics(rows: list[dict]) -> None:
         cap = r["capability"]
         if cap is None:
             print("    !!epic seed carries no **Capability delivered:** field")
-        elif cap.lower().startswith(("nothing", "none")):
+        elif cap.lstrip("*_ ").lower().startswith(("nothing", "none")):
             ok = re.search(r"ruling|approved by|operator", cap, re.I)
             print(f'    {"  " if ok else "!!"}capability = "Nothing"'
                   f'{" (ruling cited)" if ok else " — NO RULING CITED"}')

@@ -52,7 +52,9 @@ sys.path.insert(0, str(_REPO_ROOT / "scripts"))
 import check_meta_drift as cmd  # noqa: E402
 
 
-def _run_advisory(env_overrides: dict[str, str] | None = None) -> subprocess.CompletedProcess[bytes]:
+def _run_advisory(
+    env_overrides: dict[str, str] | None = None, extra_args: list[str] | None = None
+) -> subprocess.CompletedProcess[bytes]:
     """Run the real script as a subprocess against the real, committed ``epics.md``."""
     import os
 
@@ -64,7 +66,7 @@ def _run_advisory(env_overrides: dict[str, str] | None = None) -> subprocess.Com
     if env_overrides:
         env.update(env_overrides)
     return subprocess.run(
-        [sys.executable, str(_REPO_ROOT / "scripts" / "check_meta_drift.py")],
+        [sys.executable, str(_REPO_ROOT / "scripts" / "check_meta_drift.py"), *(extra_args or [])],
         cwd=str(_REPO_ROOT),
         capture_output=True,
         env=env,
@@ -92,14 +94,16 @@ def test_default_stdout_encoding_is_the_regression_precondition() -> None:
         timeout=30,
     )
     encoding = probe.stdout.strip().lower()
-    assert encoding not in ("utf-8", "utf8"), (
-        f"a bare child Python process on this machine now defaults to stdout encoding "
-        f"{encoding!r}, not a legacy code page. The §CD-2 regression this file pins can no "
-        "longer be reproduced by omitting PYTHONUTF8/PYTHONIOENCODING alone; "
-        "test_advisory_path_exits_zero_on_a_clean_parse_of_the_real_repo would pass without "
-        "ever having exercised the crash path. Re-derive a real reproduction (e.g. force the "
-        "legacy code page explicitly) before trusting that test again."
-    )
+    if encoding in ("utf-8", "utf8"):
+        pytest.skip(
+            f"a bare child Python process on this machine now defaults to stdout encoding "
+            f"{encoding!r}, not a legacy code page. The §CD-2 regression this file pins can no "
+            "longer be reproduced by omitting PYTHONUTF8/PYTHONIOENCODING alone; "
+            "test_advisory_path_exits_zero_on_a_clean_parse_of_the_real_repo would pass without "
+            "ever having exercised the crash path. This is an environment change, not a code "
+            "defect — re-derive a real reproduction (e.g. force the legacy code page explicitly) "
+            "before trusting that test again."
+        )
 
 
 def test_advisory_path_exits_zero_on_a_clean_parse_of_the_real_repo() -> None:
@@ -128,13 +132,11 @@ def test_advisory_path_exits_zero_via_json_mode_too() -> None:
     """The ``--json`` path shares ``classify``/``guard_evidence``/``duplication`` with the text
     path but not ``report_epics`` (the function the regression actually broke) — asserted
     separately so a future change to ``main`` cannot silently narrow AC3 to only the text mode.
+    Routed through ``_run_advisory`` for the same environment isolation as the other subprocess
+    tests, rather than inheriting whatever PYTHONUTF8/PYTHONIOENCODING the ambient test run has
+    set, so this test's result does not depend on ambient environment state.
     """
-    result_json = subprocess.run(
-        [sys.executable, str(_REPO_ROOT / "scripts" / "check_meta_drift.py"), "--json"],
-        cwd=str(_REPO_ROOT),
-        capture_output=True,
-        timeout=60,
-    )
+    result_json = _run_advisory(extra_args=["--json"])
     assert result_json.returncode == 0, (
         f"--json mode exited {result_json.returncode}; stderr: "
         f"{result_json.stderr.decode('utf-8', 'replace')}"
@@ -185,13 +187,14 @@ def test_console_safe_neutralises_relative_to_the_live_stdout_encoding() -> None
         unsafe.encode("cp1252")  # sanity: the raw string really is the regression's shape
 
     old_stdout = sys.stdout
-    sys.stdout = io.TextIOWrapper(io.BytesIO(), encoding="cp1252", errors="strict")
+    strict_cp1252 = io.TextIOWrapper(io.BytesIO(), encoding="cp1252", errors="strict")
+    sys.stdout = strict_cp1252
     try:
         safe = cmd._console_safe(unsafe)
         safe.encode("cp1252")  # raises if _console_safe did not actually neutralise it
     finally:
-        sys.stdout.close()
         sys.stdout = old_stdout
+        strict_cp1252.close()
 
 
 def test_console_safe_is_actually_wired_into_the_capability_print() -> None:

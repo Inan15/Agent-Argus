@@ -312,8 +312,61 @@ is left untouched — that transition belongs to the SM phase per SKILL.md §3 (
 `epic-<id>` → `in-progress` on the epic's first story"), not to this round, same as originally
 noted.
 
+**Update, 2026-09-25 (dispatched agent, wq-727) — Review Finding #8 disposition, prose preserved,
+not applied.** wq-648's code review left an eighth Review Finding: *"Add entry gate check to
+Section 4 loop pseudocode"* `[.claude/skills/bmad-dev-loop/SKILL.md:93]`. §3's prose (line 62)
+already states the Epic ENTRY gate in full, but §4's pseudocode (the "## 4. The loop" block) never
+shows it as a step — it goes straight from "pick first non-done story in that epic" to
+`route(story.status)`, so a reader following only the pseudocode (as an implementer skimming for
+the literal steps to code) would miss that the entry gate must run once, before a `backlog`
+epic's first story is routed to `bmad-sm`. Same harness-level Edit/Write denial on
+`.claude/skills/bmad-dev-loop/SKILL.md` as Tasks 1 and 2 above (confirmed again this round, same
+refusal wq-593 hit on Story 21.3) — not attempted a second way, per this agent's own operating
+rule. Exact replacement prose, preserved so the owner can paste it directly:
+
+> Insert immediately after `pick first non-done story in that epic (top-to-bottom)` and before
+> `route(story.status):                  # per §3 table`, at the same indentation as the
+> surrounding `pick`/`route` lines:
+>
+> ```
+>       if story.status == backlog and story is epic-<id>'s first story and epic-<id> has not
+>       yet been entered:
+>         entry_gate(epic_id)  # §3 Epic ENTRY gate: epics.md's seed block for epic-<id> must
+>                               # carry non-empty **Capability delivered:** and **Covers:**
+>                               # fields (or **Capability delivered:** Nothing/NONE + a dated
+>                               # operator ruling in the same seed block) — else HALT, naming
+>                               # the epic and the missing field, and do not spawn bmad-sm.
+>                               # On pass, require this epic's first story to record a
+>                               # META-DRIFT: verdict line (the project's advisory meta-work
+>                               # drift reader's output for this epic, read at the same HEAD
+>                               # the story is contexted at) before continuing to route().
+> ```
+>
+> This mirrors §3's own wording exactly (same HALT condition, same "missing fields only, never a
+> correctness judgment" scope, same META-DRIFT verdict requirement) so the pseudocode and the
+> prose it is supposed to summarize cannot drift apart. No other line in the `## 4. The loop`
+> block changes; the existing `route(story.status):` table and fix-loop logic below it are
+> untouched.
+
+Left unchecked in Review Findings below; this story stays at `review`, not `done`, until the
+owner applies this by hand the same way Tasks 1 and 2 were applied.
+
 ### Completion Notes List
 
+- **META-DRIFT (AC #1, this epic's first story):** `python scripts/check_meta_drift.py` against
+  `epics.md` §"Epic 21" at HEAD `5b7729c` reports — process-derived work budget: 4/4 stories
+  process-traced (100%, over the 20% budget; permitted only as the named corrective epic
+  `sprint-change-proposal-2026-08-29b.md` authorizes, per that epic's own seed prose); `**Covers:**`
+  present but names no FR/NFR driver (expected — stated plainly as process provenance, not
+  manufactured); `**Capability delivered:**` correctly read as the declared `Nothing` case
+  (fixed this round — see the `check_meta_drift.py:163` finding below; before the fix the
+  bolded `**NOTHING...**` value fell through to the generic branch instead), but the reporter
+  still prints `NO RULING CITED` because its `**Capability delivered:**` regex captures only
+  that one line and the epic's dated operator ruling (`2026-08-29`) sits on the following line —
+  the reporter is reading correctly per its own single-line-capture design, and the ruling itself
+  genuinely is present in the seed, just one line below where the reporter looks. Recorded here
+  as the honest current reporter output, not silently corrected; multi-line ruling capture is a
+  new, separate finding for a future round, not one of this round's eight.
 - Story judged genuinely ready for dev on its own merits (ACs and Dev Notes verified against
   live files); not a rubber stamp.
 - Task 1, Task 2: **DONE** (2026-09-08 update). `.claude/skills/bmad-dev-loop/SKILL.md` is
@@ -357,3 +410,50 @@ noted.
   the owner fixed.
 
 ### Review Findings
+
+- [x] [Review][Patch] Missing META-DRIFT verdict line in Story 21.1 [_bmad-output/design-artifacts/ArgusAgent/stories/21-1-cd2-consumption-points-and-rollup-covers-verdict.md:315]
+  — **Disposition (2026-09-25, wq-727):** added a `META-DRIFT (AC #1, this epic's first story):`
+  bullet as the first item of Completion Notes List, reporting the corrected script's live
+  output for Epic 21 (process budget, `Covers:` driver check, and the `Nothing`-capability read,
+  including the honest "NO RULING CITED" caveat the single-line regex still produces).
+- [x] [Review][Patch] Strip Markdown formatting before checking Nothing capability declaration in check_meta_drift.py [scripts/check_meta_drift.py:163]
+  — **Disposition (2026-09-25, wq-727):** `cap.lower().startswith(...)` changed to
+  `cap.lstrip("*_ ").lower().startswith(...)` so a bolded `**Nothing...**` value (Epic 21's own
+  seed, line 3940 of `epics.md`) is recognized instead of falling through to the generic
+  capability-text branch. Verified by re-running `python scripts/check_meta_drift.py` before/after:
+  Epic 21 now prints `capability = "Nothing" — NO RULING CITED` instead of a truncated raw string.
+- [x] [Review][Patch] Align _console_safe docstring claim with actual call sites and slicing [scripts/check_meta_drift.py:74]
+  — **Disposition (2026-09-25, wq-727):** rewrote the last two sentences of the docstring to name
+  the one real call site (`report_epics`'s `cap[:64]` capability print) instead of claiming
+  "every string built from epics.md prose that reaches a print call", and to note the slice
+  happens before `_console_safe` runs, so the function only has to cover the 64-char slice.
+- [x] [Review][Patch] Safe stream cleanup in test_console_safe (restore old_stdout before closing stream) [tests/test_check_meta_drift.py:139]
+  — **Disposition (2026-09-25, wq-727):** in
+  `test_console_safe_neutralises_relative_to_the_live_stdout_encoding`, swapped the `finally`
+  block's order from `sys.stdout.close(); sys.stdout = old_stdout` to
+  `sys.stdout = old_stdout; strict_cp1252.close()`, matching the safe order already used by
+  `test_console_safe_survives_a_leading_non_cp1252_glyph` — so a raised/failed `close()` can no
+  longer leave `sys.stdout` pointed at a closed stream for the rest of the test session.
+- [x] [Review][Patch] Skip instead of failing precondition test if Windows platform defaults to UTF-8 [tests/test_check_meta_drift.py:38]
+  — **Disposition (2026-09-25, wq-727):** `test_default_stdout_encoding_is_the_regression_precondition`
+  now calls `pytest.skip(...)` with the same explanatory message when the probed child-process
+  encoding is already `utf-8`/`utf8`, instead of `assert`-failing — an environment change (not a
+  code defect) no longer reads as a broken test.
+- [x] [Review][Patch] Isolate environment variables in test_advisory_path_exits_zero_via_json_mode_too [tests/test_check_meta_drift.py:64]
+  — **Disposition (2026-09-25, wq-727):** `_run_advisory` now accepts an `extra_args` list, and
+  `test_advisory_path_exits_zero_via_json_mode_too` calls `_run_advisory(extra_args=["--json"])`
+  instead of a bare `subprocess.run([...])` with no `env=`, so it runs with the same
+  PYTHONUTF8/PYTHONIOENCODING-stripped environment as the other subprocess tests rather than
+  whatever the ambient test run happens to have set.
+- [x] [Review][Patch] Append completion note and update target status for DF-DRIFT-UNREAD-A [_bmad-output/design-artifacts/ArgusAgent/deferred-work.md:8543]
+  — **Disposition (2026-09-25, wq-727):** appended (pure append, `CR` byte invariant unchanged at
+  1, `LF` 8558 → 8569) a completion note recording that Tasks 1/2 landed 2026-09-08 and a
+  `target_status: OPEN — ...` field explaining the entry stays open pending the owner-only §4
+  pseudocode edit (Review Finding #8 below).
+- [ ] [Review][Patch] Add entry gate check to Section 4 loop pseudocode [.claude/skills/bmad-dev-loop/SKILL.md:93]
+  — **Disposition (2026-09-25, wq-727):** NOT attempted — `.claude/skills/bmad-dev-loop/SKILL.md`
+  is Edit/Write-denied to every dispatched agent at the harness level (same refusal wq-593 hit on
+  Story 21.3). Exact replacement prose for the §4 pseudocode is preserved verbatim in this file's
+  Dev Agent Record ("Update, 2026-09-25 ... Review Finding #8 disposition") for the owner to paste
+  directly. This item stays unchecked and this story stays at `review`, not `done`, until the
+  owner applies it.
