@@ -35,7 +35,9 @@ you about something than block you over a guess.
 "In-sample" is the caveat that matters: the detectors were written against those same cases, so
 this is a regression score and not a detection rate. The three it misses are
 `b3_assert_x_eq_x`, `d4_mock_via_patch_decorator` and `d5_mock_assert_called_with_style`; `b3`
-stopped blocking when a false block on correct code was removed (wq-1134).
+stopped blocking when a false block on correct code was removed (wq-1134). Check it yourself:
+`python evaluation/seeded-defect-harness/run_harness.py` writes every case's verdict to
+`evaluation/seeded-defect-harness/results.json`.
 
 No API key. No account. **No network call at all** on the default path, and zero LLM tokens — the
 verdict is a pure function of what was measured, so the same commit gives the same answer on any
